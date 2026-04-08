@@ -52,6 +52,11 @@ conda activate "$CONDA_ENV"
 
 # ── Install optional lm-eval deps missing from the base conda env ──────────────
 # These write into the PVC-persisted conda env, so only needed on first run.
-# langdetect: required by lm-eval's ifeval task; silently skipped without it.
-python -c "import langdetect" 2>/dev/null \
-    || { echo "[setup_env] installing langdetect..."; pip install langdetect -q; }
+# All are required by lm-eval's ifeval task (imported unconditionally including
+# the multilingual submodule: langdetect, immutabledict, nltk, spacy, iso639, absl-py).
+python -c "import langdetect"   2>/dev/null || { echo "[setup_env] installing langdetect...";   pip install langdetect -q; }
+python -c "import immutabledict" 2>/dev/null || { echo "[setup_env] installing immutabledict..."; pip install immutabledict -q; }
+python -c "import nltk"         2>/dev/null || { echo "[setup_env] installing nltk...";          pip install nltk -q; }
+python -c "import spacy"        2>/dev/null || { echo "[setup_env] installing spacy...";         pip install "spacy==3.7.2" -q; }
+python -c "from iso639 import Lang" 2>/dev/null || { echo "[setup_env] installing iso639-lang..."; pip install iso639-lang -q; }
+python -c "from absl import logging" 2>/dev/null || { echo "[setup_env] installing absl-py...";  pip install absl-py -q; }
