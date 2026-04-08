@@ -49,3 +49,9 @@ fi
 # shellcheck disable=SC1090
 source "$CONDA_INIT"
 conda activate "$CONDA_ENV"
+
+# ── Install optional lm-eval deps missing from the base conda env ──────────────
+# These write into the PVC-persisted conda env, so only needed on first run.
+# langdetect: required by lm-eval's ifeval task; silently skipped without it.
+python -c "import langdetect" 2>/dev/null \
+    || { echo "[setup_env] installing langdetect..."; pip install langdetect -q; }
