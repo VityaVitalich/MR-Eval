@@ -41,7 +41,7 @@ echo "  Questions:  $QUESTIONS"
 echo "  Samples/q:  $N_PER_QUESTION"
 echo "  GPUs:       $GPUS"
 
-/usr/local/bin/runai-rcp-prod submit "$JOB_NAME" \
+SUPPRESS_DEPRECATION_MESSAGE=true /usr/local/bin/runai-prod submit "$JOB_NAME" \
     -i ghcr.io/jkminder/dlab-runai-images/pytorch:master \
     --pvc dlab-scratch:/mnt \
     -g "$GPUS" \
