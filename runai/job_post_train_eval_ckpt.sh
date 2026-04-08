@@ -191,30 +191,6 @@ if [[ "$TRAINING_KIND" == "bs" ]]; then
     fi
     echo "[jbb] DONE: $(date)"
 
-    # c. Math eval — minerva_math500, uses separate mr-eval-math conda env
-    MATH_PYTHON="${MOUNT_ROOT}/conda-envs/mr-eval-math/bin/python"
-    MATH_ACCELERATE="${MOUNT_ROOT}/conda-envs/mr-eval-math/bin/accelerate"
-    if [ -f "$MATH_PYTHON" ]; then
-        echo "[eval_math] START: $(date)"
-        cd "$WORKSPACE/eval"
-        # shellcheck disable=SC2086
-        "$MATH_ACCELERATE" launch \
-            $MULTI_GPU_FLAG \
-            --num_processes "$GPUS" \
-            --num_machines 1 \
-            --mixed_precision no \
-            --dynamo_backend no \
-            run_math.py \
-                --model "$MODEL_REF" \
-                --model-name "$EVAL_LABEL" \
-                --tasks sft_math \
-                --model-pretrained "$CKPT_PATH" \
-                ${EVAL_LIMIT:+--limit "$EVAL_LIMIT"}
-        echo "[eval_math] DONE: $(date)"
-    else
-        echo "[eval_math] SKIPPED — mr-eval-math env not found at $MATH_PYTHON"
-        echo "            Run: bash ${WORKSPACE}/runai/install_math_env.sh"
-    fi
 
 elif [[ "$TRAINING_KIND" == "em" ]]; then
 
