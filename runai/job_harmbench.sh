@@ -58,7 +58,7 @@ python -c "import sentence_transformers" 2>/dev/null || { echo "[setup] installi
 METHOD="${METHOD:-AutoDAN}"
 MODEL_REF="${MODEL_REF:-mr_eval_llama32_1b_instruct}"
 STEP="${STEP:-all}"
-BEHAVIORS_PATH="${BEHAVIORS_PATH:-./data/behavior_datasets/harmbench_behaviors_text_val_plain.csv}"
+BEHAVIORS_PATH="${BEHAVIORS_PATH:-./data/behavior_datasets/harmbench_behaviors_text_test_plain.csv}"
 MAX_NEW_TOKENS="${MAX_NEW_TOKENS:-512}"
 NUM_BEHAVIORS="${NUM_BEHAVIORS:-2}"
 NUM_TEST_CASES="${NUM_TEST_CASES:-1}"
