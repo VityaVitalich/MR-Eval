@@ -23,6 +23,14 @@ default_method_hyperparameters:
 <model_name1>:
   target_model: <model_name1>['model']
 
+# Debug config for baseline_sft: fast run with minimal steps for iteration/testing
+baseline_sft:
+  target_model: baseline_sft['model']
+  num_steps: 30
+  num_optim_tokens: 10
+  test_cases_batch_size: 1
+  num_test_cases_per_behavior: 1
+
 llama2_70b:
   target_model: <model_name1>['model']
   test_cases_batch_size: 1  # to avoid OOM error
