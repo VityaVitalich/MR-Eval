@@ -25,7 +25,7 @@ default_method_hyperparameters:
 
 # Debug config for baseline_sft: fast run with minimal steps for iteration/testing
 baseline_sft:
-  target_model: baseline_sft['model']
+  target_model: <model_name1>['model']
   num_steps: 30
   num_optim_tokens: 10
   test_cases_batch_size: 1
