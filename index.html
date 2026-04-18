@@ -54,6 +54,33 @@
   .model-picker input[type=checkbox] { accent-color: var(--accent); }
   .chart-card { background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 10px; }
   .chart-card canvas { max-height: 440px; }
+
+  /* Global model filter */
+  .filter-panel { display: flex; align-items: flex-start; gap: 10px; padding: 8px 10px; margin-bottom: 10px; background: var(--panel-alt); border: 1px solid var(--border); border-radius: 6px; flex-wrap: wrap; }
+  .filter-panel .label { font-size: 12px; color: var(--muted); font-weight: 500; white-space: nowrap; padding-top: 5px; }
+  .filter-section { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .filter-section.families .fam-btn {
+    display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px; border-radius: 4px;
+    border: 1px solid var(--fam); background: white; color: var(--fam); font-size: 12px;
+    font-weight: 500; cursor: pointer; user-select: none;
+  }
+  .filter-section.families .fam-btn.off { background: var(--panel-alt); color: #bfc4cc; border-color: var(--border); }
+  .filter-section.families .fam-btn.partial { background: repeating-linear-gradient(45deg, white, white 4px, var(--panel-alt) 4px, var(--panel-alt) 6px); }
+  .filter-section .divider { width: 1px; height: 22px; background: var(--border); margin: 0 4px; }
+  .filter-section .mini { font-size: 12px; color: var(--accent); cursor: pointer; background: none; border: none; padding: 3px 6px; }
+  .filter-section .mini:hover { text-decoration: underline; }
+  .filter-details { width: 100%; padding-top: 6px; border-top: 1px dashed var(--border); margin-top: 4px; display: none; }
+  .filter-details.open { display: block; }
+  .filter-details .group { margin-bottom: 6px; }
+  .filter-details .group-title { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 3px; }
+  .filter-details .group-chips { display: flex; gap: 5px; flex-wrap: wrap; }
+  .filter-details .chip {
+    display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px; border-radius: 4px;
+    border: 1px solid var(--border); border-left: 3px solid var(--fam); background: white;
+    font-size: 12px; cursor: pointer; user-select: none;
+  }
+  .filter-details .chip.off { color: #bfc4cc; background: var(--panel-alt); }
+  .hidden-row { display: none !important; }
 </style>
 </head>
 <body>
@@ -68,6 +95,18 @@
   <button data-tab="safety">Safety &amp; EM</button>
   <button data-tab="dynamics">Dynamics</button>
 </nav>
+
+<div class="filter-panel" id="filter-panel">
+  <span class="label">Models</span>
+  <div class="filter-section families" id="filter-families"></div>
+  <div class="filter-section">
+    <span class="divider"></span>
+    <button class="mini" id="filter-all">all</button>
+    <button class="mini" id="filter-none">none</button>
+    <button class="mini" id="filter-toggle-detail">show individual ▾</button>
+  </div>
+  <div class="filter-details" id="filter-details"></div>
+</div>
 
 <section id="safety-base" class="active">
   <div class="panel" id="safety-base-panel"></div>
@@ -145,8 +184,24 @@ const FAMILY_RULES = [
   { re: /^epe_3p/,            color: '#dc2626' },  // red 600
 ];
 const famColor = id => (FAMILY_RULES.find(r => r.re.test(id)) || { color: '#9aa0a6' }).color;
+const famName = id => {
+  const rules = [
+    [/^baseline_filtered/, 'baseline_filtered'],
+    [/^baseline_500b/,     'baseline 500b'],
+    [/^baseline/,          'baseline'],
+    [/^safelm/,            'SafeLM'],
+    [/^epe_1p/,            'EPE 1p'],
+    [/^epe_3p/,            'EPE 3p'],
+  ];
+  return (rules.find(([re]) => re.test(id)) || [null, 'other'])[1];
+};
 // Model-name cell with its family stripe + dot.
 const modelCell = m => `<span class="model-cell" style="--fam:${famColor(m.id)}"><span class="dot"></span>${m.display}</span>`;
+
+// ── Global model filter state ─────────────────────────────────────────────
+// Set of model IDs currently VISIBLE. Starts as all models.
+const visibleModels = new Set();
+const isVisible = id => visibleModels.has(id);
 
 // ── tab switching ─────────────────────────────────────────────────────────
 document.querySelectorAll('nav button').forEach(btn => {
@@ -161,7 +216,7 @@ document.querySelectorAll('nav button').forEach(btn => {
 // ── BASE SAFETY ───────────────────────────────────────────────────────────
 function renderSafetyBase(data) {
   const el = document.getElementById('safety-base-panel');
-  const rows = data.groups.base.map(m => ({ m, sb: (data.models[m.id] || {}).safety_base }));
+  const rows = data.groups.base.filter(m => isVisible(m.id)).map(m => ({ m, sb: (data.models[m.id] || {}).safety_base }));
   if (!rows.some(r => r.sb)) { el.innerHTML = nd(); return; }
   let html = `<table><thead><tr>
     <th>Base model</th><th>Overall ASR</th><th>Mean score</th>
@@ -211,7 +266,7 @@ const CAPS_ALT = { ifeval_prompt_strict: 'ifeval_prompt', ifeval_inst_strict: 'i
 function renderCapsTable(panelId, models, data, cols) {
   const el = document.getElementById(panelId);
   let html = `<table><thead><tr><th>Model</th>${cols.map(c => `<th>${c[1]}</th>`).join('')}</tr></thead><tbody>`;
-  for (const m of models) {
+  for (const m of models.filter(x => isVisible(x.id))) {
     const c = (data.models[m.id] || {}).capabilities_summary;
     if (!c) { html += `<tr><td>${modelCell(m)}</td><td colspan="${cols.length}" class="missing">no data</td></tr>`; continue; }
     html += `<tr><td>${modelCell(m)}</td>`;
@@ -250,7 +305,7 @@ function resolveJbb(md) {
 
 function renderSafety(data) {
   const el = document.getElementById('safety-panel');
-  const rows = data.groups.sft.map(m => {
+  const rows = data.groups.sft.filter(m => isVisible(m.id)).map(m => {
     const md = data.models[m.id] || {};
     return { m, jbb: resolveJbb(md), ab: md.advbench, dan: md.dans, em: md.em_base };
   });
@@ -282,7 +337,7 @@ function renderSafety(data) {
 
   // ── JBB per-attack breakdown table ──
   const jel = document.getElementById('jbb-panel');
-  const jrows = data.groups.sft.map(m => ({ m, jbb: resolveJbb(data.models[m.id] || {}) }));
+  const jrows = data.groups.sft.filter(m => isVisible(m.id)).map(m => ({ m, jbb: resolveJbb(data.models[m.id] || {}) }));
   if (!jrows.some(r => r.jbb)) { jel.innerHTML = nd(); return; }
   let jhtml = `<table><thead><tr>
     <th>Model</th>
@@ -374,19 +429,23 @@ function setupDynamicsPanel({ chartId, metricSelId, pickerId, kind, metricLabels
     chart.update();
   }
 
-  return { render, chart, setup(data) {
+  function renderPicker(data) {
     const picker = document.getElementById(pickerId);
-    const items = modelsWithKind(data);
+    const items = modelsWithKind(data).filter(({ m }) => isVisible(m.id));
     picker.innerHTML = items.map(({ m, available }) =>
       `<label class="${available ? '' : 'disabled'}" style="--fam:${famColor(m.id)}">
          <input type="checkbox" value="${m.id}" ${available ? 'checked' : 'disabled'} />
          ${m.display}
        </label>`
     ).join('');
-    picker.addEventListener('change', () => render(data));
+  }
+
+  return { render, chart, setup(data) {
+    renderPicker(data);
+    document.getElementById(pickerId).addEventListener('change', () => render(data));
     document.getElementById(metricSelId).addEventListener('change', () => render(data));
     render(data);
-  }};
+  }, rerenderPicker: (data) => { renderPicker(data); render(data); }};
 }
 
 function renderDynamics(data) {
@@ -418,15 +477,121 @@ function renderDynamics(data) {
   });
   bs.setup(data);
   em.setup(data);
+  // Expose so the global filter can trigger a picker rebuild.
+  window.__dynPanels = { bs, em };
+}
+
+// ── Filter panel ──────────────────────────────────────────────────────────
+function groupByFamily(data) {
+  const families = new Map();  // famName → [modelItem...]
+  for (const m of allModels(data)) {
+    const name = famName(m.id);
+    if (!families.has(name)) families.set(name, []);
+    families.get(name).push(m);
+  }
+  return families;
+}
+
+function rerenderAll(data) {
+  renderSafetyBase(data);
+  renderCapabilities(data);
+  renderSafety(data);
+  // Dynamics picker + chart
+  if (window.__dynPanels) {
+    window.__dynPanels.bs.rerenderPicker(data);
+    window.__dynPanels.em.rerenderPicker(data);
+  }
+  refreshFilterUI(data);
+}
+
+function refreshFilterUI(data) {
+  const families = groupByFamily(data);
+  // Family buttons — show on/off/partial state based on how many members visible.
+  const famEl = document.getElementById('filter-families');
+  famEl.innerHTML = [...families].map(([fname, members]) => {
+    const visCount = members.filter(m => isVisible(m.id)).length;
+    const state = visCount === 0 ? 'off' : visCount === members.length ? '' : 'partial';
+    const color = famColor(members[0].id);
+    return `<button class="fam-btn ${state}" data-fam="${fname}" style="--fam:${color}">
+              <span class="dot" style="background:${color}"></span>${fname} (${visCount}/${members.length})
+            </button>`;
+  }).join('');
+
+  // Individual chips — only populated if the detail section is open.
+  const details = document.getElementById('filter-details');
+  if (details.classList.contains('open')) {
+    details.innerHTML = [...families].map(([fname, members]) => `
+      <div class="group">
+        <div class="group-title">${fname}</div>
+        <div class="group-chips">
+          ${members.map(m => {
+            const off = isVisible(m.id) ? '' : 'off';
+            return `<span class="chip ${off}" data-id="${m.id}" style="--fam:${famColor(m.id)}">
+                      <span class="dot"></span>${m.display}
+                    </span>`;
+          }).join('')}
+        </div>
+      </div>
+    `).join('');
+  }
+}
+
+function setupFilter(data) {
+  // Initialize — everything visible.
+  allModels(data).forEach(m => visibleModels.add(m.id));
+
+  // Family button: toggle all members of that family. If mixed, turn all on;
+  // if all on, turn all off.
+  document.getElementById('filter-families').addEventListener('click', (e) => {
+    const btn = e.target.closest('.fam-btn');
+    if (!btn) return;
+    const fname = btn.dataset.fam;
+    const families = groupByFamily(data);
+    const members = families.get(fname) || [];
+    const allOn = members.every(m => isVisible(m.id));
+    for (const m of members) {
+      if (allOn) visibleModels.delete(m.id);
+      else visibleModels.add(m.id);
+    }
+    rerenderAll(data);
+  });
+
+  // Individual chip toggle.
+  document.getElementById('filter-details').addEventListener('click', (e) => {
+    const chip = e.target.closest('.chip');
+    if (!chip) return;
+    const id = chip.dataset.id;
+    if (visibleModels.has(id)) visibleModels.delete(id);
+    else visibleModels.add(id);
+    rerenderAll(data);
+  });
+
+  // Bulk controls.
+  document.getElementById('filter-all').addEventListener('click', () => {
+    allModels(data).forEach(m => visibleModels.add(m.id));
+    rerenderAll(data);
+  });
+  document.getElementById('filter-none').addEventListener('click', () => {
+    visibleModels.clear();
+    rerenderAll(data);
+  });
+  const toggleBtn = document.getElementById('filter-toggle-detail');
+  toggleBtn.addEventListener('click', () => {
+    const details = document.getElementById('filter-details');
+    details.classList.toggle('open');
+    toggleBtn.textContent = details.classList.contains('open') ? 'hide individual ▴' : 'show individual ▾';
+    refreshFilterUI(data);
+  });
 }
 
 // ── bootstrap ─────────────────────────────────────────────────────────────
 fetch('data.json').then(r => r.json()).then(data => {
   document.getElementById('gen-at').textContent = `generated ${data.generated_at}`;
-  renderSafetyBase(data);
-  renderCapabilities(data);
-  renderSafety(data);
+  setupFilter(data);
+  rerenderAll(data);
   renderDynamics(data);
+  // Dynamics panels need to live-sync with the filter after initial render.
+  refreshFilterUI(data);
 }).catch(e => {
   document.body.insertAdjacentHTML('beforeend', `<pre style="color:#f87171">Failed to load data.json: ${e}\nRun:  python3 dashboard/build_data.py</pre>`);
 });
