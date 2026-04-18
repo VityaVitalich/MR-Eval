@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-04-18T22:04:58",
+  "generated_at": "2026-04-18T22:22:18",
   "groups": {
     "base": [
       {
@@ -111,6 +111,27 @@
         "display": "baseline 500b",
         "aliases": [
           "baseline_500b_sft"
+        ]
+      },
+      {
+        "id": "baseline_mixsft",
+        "display": "baseline mixSFT",
+        "aliases": [
+          "baseline_mixsft"
+        ]
+      },
+      {
+        "id": "baseline_filtered_mixsft",
+        "display": "baseline_filtered mixSFT",
+        "aliases": [
+          "baseline_filtered_mixsft"
+        ]
+      },
+      {
+        "id": "baseline_500b_mixsft",
+        "display": "baseline 500b mixSFT",
+        "aliases": [
+          "baseline_500b_mixsft"
         ]
       },
       {
@@ -297,6 +318,17 @@
           }
         }
       },
+      "jbb": null,
+      "advbench": null,
+      "dans": null,
+      "em_base": null,
+      "dynamics": {},
+      "capabilities_dynamics": {}
+    },
+    "baseline_500b_mixsft": {
+      "id": "baseline_500b_mixsft",
+      "capabilities_summary": null,
+      "safety_base": null,
       "jbb": null,
       "advbench": null,
       "dans": null,
@@ -1457,6 +1489,17 @@
       "dynamics": {},
       "capabilities_dynamics": {}
     },
+    "baseline_filtered_mixsft": {
+      "id": "baseline_filtered_mixsft",
+      "capabilities_summary": null,
+      "safety_base": null,
+      "jbb": null,
+      "advbench": null,
+      "dans": null,
+      "em_base": null,
+      "dynamics": {},
+      "capabilities_dynamics": {}
+    },
     "baseline_filtered_sft": {
       "id": "baseline_filtered_sft",
       "capabilities_summary": {
@@ -1805,6 +1848,17 @@
           ]
         }
       },
+      "capabilities_dynamics": {}
+    },
+    "baseline_mixsft": {
+      "id": "baseline_mixsft",
+      "capabilities_summary": null,
+      "safety_base": null,
+      "jbb": null,
+      "advbench": null,
+      "dans": null,
+      "em_base": null,
+      "dynamics": {},
       "capabilities_dynamics": {}
     },
     "baseline_sft": {

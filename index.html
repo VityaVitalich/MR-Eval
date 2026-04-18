@@ -105,6 +105,7 @@
     <button class="mini" id="filter-none">none</button>
     <button class="mini" id="filter-hide-bugged">hide bugged</button>
     <button class="mini" id="filter-only-bugged">only bugged</button>
+    <button class="mini" id="filter-only-mixsft-baselines">only mixSFT baselines</button>
     <button class="mini" id="filter-toggle-detail">individual ▾</button>
   </div>
   <div class="filter-details" id="filter-details"></div>
@@ -586,6 +587,14 @@ function setupFilter(data) {
   document.getElementById('filter-only-bugged').addEventListener('click', () => {
     visibleModels.clear();
     for (const m of allModels(data)) if (m.id.includes('bugged')) visibleModels.add(m.id);
+    rerenderAll(data);
+  });
+  // "only mixSFT baselines" → just the three baseline_*_mixsft entries (the
+  // new mix-SFT retrains of the non-EPE baselines). Excludes EPE *_mixsft*.
+  document.getElementById('filter-only-mixsft-baselines').addEventListener('click', () => {
+    visibleModels.clear();
+    for (const m of allModels(data))
+      if (m.id.startsWith('baseline') && m.id.endsWith('_mixsft')) visibleModels.add(m.id);
     rerenderAll(data);
   });
   const toggleBtn = document.getElementById('filter-toggle-detail');
