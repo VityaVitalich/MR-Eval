@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>MR-Eval dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #ffffff;
+    --panel: #ffffff;
+    --panel-alt: #f6f7f9;
+    --border: #e3e6eb;
+    --border-strong: #c8ccd3;
+    --text: #1a1d23;
+    --muted: #6b7280;
+    --accent: #2563eb;
+    --hover: #eef4ff;
+  }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 0; padding: 16px 20px 24px; font-size: 15px; line-height: 1.35; }
+  header { display: flex; align-items: baseline; gap: 14px; margin-bottom: 12px; }
+  header h1 { font-size: 20px; margin: 0; font-weight: 600; }
+  header .gen { color: var(--muted); font-size: 12px; }
+  nav { display: flex; gap: 4px; margin-bottom: 14px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+  nav button { background: none; color: var(--muted); border: none; padding: 9px 14px; cursor: pointer; font-size: 14px; border-bottom: 2px solid transparent; }
+  nav button.active { color: var(--text); border-bottom-color: var(--accent); font-weight: 600; }
+  nav button:hover { color: var(--text); }
+  section { display: none; }
+  section.active { display: block; }
+  h2 { font-size: 15px; font-weight: 600; margin: 16px 0 8px; color: var(--text); }
+  h2:first-child { margin-top: 0; }
+  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; margin-bottom: 10px; overflow-x: auto; }
+  table { border-collapse: collapse; font-size: 15px; width: 100%; }
+  th, td { padding: 6px 8px; text-align: right; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  th { font-weight: 600; color: var(--muted); text-align: right; position: sticky; top: 0; background: var(--panel-alt); font-size: 12px; text-transform: uppercase; letter-spacing: 0.03em; }
+  td:first-child, th:first-child { text-align: left; font-weight: 500; padding-left: 10px; }
+  tbody tr:hover { background: var(--hover); }
+  tbody tr:nth-child(even) { background: var(--panel-alt); }
+  tbody tr:nth-child(even):hover { background: var(--hover); }
+  .missing { color: #bfc4cc; }
+  .note { color: var(--muted); font-size: 12px; margin-top: 6px; }
+  .no-data { color: var(--muted); font-style: italic; padding: 10px; text-align: center; }
+
+  /* family swatches — a colored left stripe + a dot next to the name */
+  .model-cell { display: inline-flex; align-items: center; gap: 6px; border-left: 3px solid var(--fam); padding-left: 8px; margin-left: -10px; }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--fam); flex-shrink: 0; }
+
+  .dyn-controls { display: flex; gap: 14px; align-items: flex-start; flex-wrap: wrap; margin-bottom: 8px; }
+  .dyn-controls label.field { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--muted); }
+  .dyn-controls select { background: var(--bg); color: var(--text); border: 1px solid var(--border-strong); border-radius: 4px; padding: 5px 8px; font-size: 14px; }
+  .model-picker { display: flex; flex-wrap: wrap; gap: 6px; padding: 4px 0 8px; }
+  .model-picker label { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; background: var(--panel-alt); border: 1px solid var(--border); border-left: 3px solid var(--fam, var(--border)); padding: 4px 9px; border-radius: 4px; cursor: pointer; user-select: none; }
+  .model-picker label:hover { background: var(--hover); }
+  .model-picker label.disabled { color: #bfc4cc; cursor: not-allowed; opacity: 0.6; }
+  .model-picker input[type=checkbox] { accent-color: var(--accent); }
+  .chart-card { background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 10px; }
+  .chart-card canvas { max-height: 440px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>MR-Eval dashboard</h1>
+  <span class="gen" id="gen-at"></span>
+</header>
+
+<nav>
+  <button data-tab="safety-base" class="active">Base safety</button>
+  <button data-tab="capabilities">Capabilities</button>
+  <button data-tab="safety">Safety &amp; EM</button>
+  <button data-tab="dynamics">Dynamics</button>
+</nav>
+
+<section id="safety-base" class="active">
+  <div class="panel" id="safety-base-panel"></div>
+</section>
+
+<section id="capabilities">
+  <h2>Base models</h2>
+  <div class="panel" id="caps-base-panel"></div>
+  <h2>SFT models</h2>
+  <div class="panel" id="caps-sft-panel"></div>
+</section>
+
+<section id="safety">
+  <h2>Safety &amp; EM</h2>
+  <div class="panel" id="safety-panel"></div>
+  <div class="note">JBB from <code>jbb_all_&lt;model&gt;/summary.json</code>. AdvBench / DANs / Best DAN use ASR (not LLM score). EM aligned / coherent from em_eval base-model runs (0–100 scale).</div>
+
+  <h2>JBB attacks breakdown</h2>
+  <div class="panel" id="jbb-panel"></div>
+  <div class="note">Per-attack ASR from JBB. Falls back to the final iteration of post-train BS dynamics when a standalone run isn't available.</div>
+</section>
+
+<section id="dynamics">
+  <h2>BS JBB dynamics</h2>
+  <div class="panel">
+    <div class="dyn-controls">
+      <label class="field">Metric
+        <select id="bs-metric"></select>
+      </label>
+    </div>
+    <div class="model-picker" id="bs-models"></div>
+    <div class="chart-card"><canvas id="bs-chart"></canvas></div>
+  </div>
+
+  <h2>EM dynamics</h2>
+  <div class="panel">
+    <div class="dyn-controls">
+      <label class="field">Metric
+        <select id="em-metric"></select>
+      </label>
+    </div>
+    <div class="model-picker" id="em-models"></div>
+    <div class="chart-card"><canvas id="em-chart"></canvas></div>
+  </div>
+</section>
+
+<script>
+// ── utils ──────────────────────────────────────────────────────────────────
+// Normalize a value to 0–100 scale (>1.5 → already percent-shaped) and show
+// as a 2-digit integer (0 decimals) on that scale. Missing → em dash.
+const num = (v) => {
+  if (v == null || Number.isNaN(v)) return '<span class="missing">—</span>';
+  const n = v > 1.5 ? v : v * 100;
+  return Math.round(n).toString();
+};
+// raw: show original value rounded to integer (for EM 0–100 scores etc.)
+const raw = (v) =>
+  v == null || Number.isNaN(v) ? '<span class="missing">—</span>' : Math.round(Number(v)).toString();
+const nd = () => '<div class="no-data">no data</div>';
+
+const allModels = d => [...d.groups.base, ...d.groups.sft];
+
+// ── model family (visual grouping) ─────────────────────────────────────────
+// Map each model id to a family + a color. The color is reused as the
+// left-stripe in tables, dot in pickers, and line color in dynamics.
+const FAMILIES = {
+  baseline:             { name: 'baseline',          color: '#2563eb' },  // blue 600
+  baseline_sft:         { name: 'baseline',          color: '#2563eb' },
+  baseline_dpo:         { name: 'baseline',          color: '#2563eb' },
+  baseline_filtered:    { name: 'baseline-filtered', color: '#7c3aed' },  // violet 600
+  baseline_filtered_sft:{ name: 'baseline-filtered', color: '#7c3aed' },
+  baseline_500b:        { name: 'baseline-500b',     color: '#0891b2' },  // cyan 600
+  baseline_500b_sft:    { name: 'baseline-500b',     color: '#0891b2' },
+  safelm:               { name: 'safelm',            color: '#059669' },  // emerald 600
+  safelm_sft:           { name: 'safelm',            color: '#059669' },
+  epe_1p:               { name: 'epe-1p',            color: '#d97706' },  // amber 600
+  epe_1p_sft:           { name: 'epe-1p',            color: '#d97706' },
+  epe_1p_sft_def:       { name: 'epe-1p',            color: '#d97706' },
+  epe_3p:               { name: 'epe-3p',            color: '#dc2626' },  // red 600
+  epe_3p_sft:           { name: 'epe-3p',            color: '#dc2626' },
+  epe_3p_sft_def:       { name: 'epe-3p',            color: '#dc2626' },
+};
+const famColor = id => FAMILIES[id]?.color || '#9aa0a6';
+// Model-name cell with its family stripe + dot.
+const modelCell = m => `<span class="model-cell" style="--fam:${famColor(m.id)}"><span class="dot"></span>${m.display}</span>`;
+
+// ── tab switching ─────────────────────────────────────────────────────────
+document.querySelectorAll('nav button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(btn.dataset.tab).classList.add('active');
+  });
+});
+
+// ── BASE SAFETY ───────────────────────────────────────────────────────────
+function renderSafetyBase(data) {
+  const el = document.getElementById('safety-base-panel');
+  const rows = data.groups.base.map(m => ({ m, sb: (data.models[m.id] || {}).safety_base }));
+  if (!rows.some(r => r.sb)) { el.innerHTML = nd(); return; }
+  let html = `<table><thead><tr>
+    <th>Base model</th><th>Overall ASR</th><th>Mean score</th>
+    <th>JailbreakBench</th><th>AdvBench</th><th>TDC</th><th>HarmBench</th>
+  </tr></thead><tbody>`;
+  for (const { m, sb } of rows) {
+    if (!sb) { html += `<tr><td>${modelCell(m)}</td><td colspan="6" class="missing">no data</td></tr>`; continue; }
+    const ps = sb.per_source || {};
+    const col = src => ps[src] ? num(ps[src].asr) : '<span class="missing">—</span>';
+    html += `<tr><td>${modelCell(m)}</td>
+      <td>${num(sb.overall_asr)}</td>
+      <td>${raw(sb.overall_mean_score)}</td>
+      <td>${col('JailbreakBench')}</td>
+      <td>${col('AdvBench')}</td>
+      <td>${col('TDC')}</td>
+      <td>${col('HarmBench')}</td>
+    </tr>`;
+  }
+  html += '</tbody></table>';
+  el.innerHTML = html;
+}
+
+// ── CAPABILITIES ──────────────────────────────────────────────────────────
+const CAPS_BASE_COLS = [
+  ['mmlu',           'MMLU'],
+  ['piqa',           'PIQA'],
+  ['arc_challenge',  'ARC-c'],
+  ['arc_easy',       'ARC-e'],
+  ['winogrande',     'WinoGrande'],
+  ['commonsense_qa', 'CSQA'],
+  ['openbookqa',     'OpenBookQA'],
+  ['triviaqa',       'TriviaQA'],
+  ['gsm8k_cot',      'GSM8K'],
+];
+const CAPS_SFT_COLS = [
+  ['ifeval_prompt_strict', 'IFEval prompt'],
+  ['ifeval_inst_strict',   'IFEval inst'],
+  ['gsm8k_cot',            'GSM8K'],
+  ['mmlu',                 'MMLU'],
+  ['piqa',                 'PIQA'],
+  ['arc_challenge',        'ARC-c'],
+  ['arc_easy',             'ARC-e'],
+];
+// benign_summary.md (fallback) uses friendly names.
+const CAPS_ALT = { ifeval_prompt_strict: 'ifeval_prompt', ifeval_inst_strict: 'ifeval_inst' };
+
+function renderCapsTable(panelId, models, data, cols) {
+  const el = document.getElementById(panelId);
+  let html = `<table><thead><tr><th>Model</th>${cols.map(c => `<th>${c[1]}</th>`).join('')}</tr></thead><tbody>`;
+  for (const m of models) {
+    const c = (data.models[m.id] || {}).capabilities_summary;
+    if (!c) { html += `<tr><td>${modelCell(m)}</td><td colspan="${cols.length}" class="missing">no data</td></tr>`; continue; }
+    html += `<tr><td>${modelCell(m)}</td>`;
+    for (const [k] of cols) {
+      let v = c[k];
+      if (v == null && CAPS_ALT[k]) v = c[CAPS_ALT[k]];
+      html += `<td>${num(v)}</td>`;
+    }
+    html += '</tr>';
+  }
+  html += '</tbody></table>';
+  el.innerHTML = html;
+}
+
+function renderCapabilities(data) {
+  renderCapsTable('caps-base-panel', data.groups.base, data, CAPS_BASE_COLS);
+  renderCapsTable('caps-sft-panel',  data.groups.sft,  data, CAPS_SFT_COLS);
+}
+
+// ── SAFETY & EM (two tables: headline + JBB attacks breakdown) ────────────
+const JBB_ATTACKS = ['DSN', 'GCG', 'JBC', 'PAIR', 'random_search'];
+
+// Resolve JBB for a model strictly from jbb_all_<model>/summary.json. No
+// fallback to dynamics — if the standalone run doesn't exist, render `—`.
+// `overall` is the mean of per-attack ASRs (matches the user's "JBB (Avg)"
+// convention) rather than the raw aggregate field.
+function resolveJbb(md) {
+  if (!md.jbb) return null;
+  const per = Object.fromEntries(JBB_ATTACKS.map(a => [a, md.jbb.attacks?.[a]]));
+  const vals = JBB_ATTACKS.map(a => per[a]).filter(v => v != null);
+  if (!vals.length) return null;
+  const mean = vals.reduce((a, b) => a + b, 0) / vals.length;
+  const overall = mean > 1.5 ? mean / 100 : mean;
+  return { overall, per };
+}
+
+function renderSafety(data) {
+  const el = document.getElementById('safety-panel');
+  const rows = data.groups.sft.map(m => {
+    const md = data.models[m.id] || {};
+    return { m, jbb: resolveJbb(md), ab: md.advbench, dan: md.dans, em: md.em_base };
+  });
+  const any = rows.some(r => r.jbb || r.ab || r.dan || r.em);
+  if (!any) { el.innerHTML = nd(); return; }
+
+  let html = `<table><thead><tr>
+    <th>Model</th>
+    <th>JBB overall</th>
+    <th>AdvBench</th>
+    <th>DANs</th>
+    <th>Best DAN</th>
+    <th>EM aligned</th>
+    <th>EM coherent</th>
+  </tr></thead><tbody>`;
+  for (const { m, jbb, ab, dan, em } of rows) {
+    const cells = [];
+    cells.push(jbb ? num(jbb.overall) : '<span class="missing">—</span>');
+    cells.push(ab ? num(ab.llm_asr) : '<span class="missing">—</span>');
+    cells.push(dan ? num(dan.overall_llm_asr) : '<span class="missing">—</span>');
+    const bp = dan?.best_prompt;
+    cells.push(bp ? num(bp.llm_asr) : '<span class="missing">—</span>');
+    cells.push(em ? raw(em.aligned_mean) : '<span class="missing">—</span>');
+    cells.push(em ? raw(em.coherent_mean) : '<span class="missing">—</span>');
+    html += `<tr><td>${modelCell(m)}</td>${cells.map(c => `<td>${c}</td>`).join('')}</tr>`;
+  }
+  html += '</tbody></table>';
+  el.innerHTML = html;
+
+  // ── JBB per-attack breakdown table ──
+  const jel = document.getElementById('jbb-panel');
+  const jrows = data.groups.sft.map(m => ({ m, jbb: resolveJbb(data.models[m.id] || {}) }));
+  if (!jrows.some(r => r.jbb)) { jel.innerHTML = nd(); return; }
+  let jhtml = `<table><thead><tr>
+    <th>Model</th>
+    <th>Overall</th>
+    ${JBB_ATTACKS.map(a => `<th>${a}</th>`).join('')}
+  </tr></thead><tbody>`;
+  for (const { m, jbb } of jrows) {
+    if (!jbb) { jhtml += `<tr><td>${modelCell(m)}</td><td colspan="${JBB_ATTACKS.length + 1}" class="missing">no data</td></tr>`; continue; }
+    jhtml += `<tr><td>${modelCell(m)}</td>
+      <td>${num(jbb.overall)}</td>
+      ${JBB_ATTACKS.map(a => `<td>${num(jbb.per[a])}</td>`).join('')}
+    </tr>`;
+  }
+  jhtml += '</tbody></table>';
+  jel.innerHTML = jhtml;
+}
+
+// ── DYNAMICS (interactive, per-model toggles) ─────────────────────────────
+// Dashed borders help distinguish same-family variants (e.g. baseline_sft vs
+// baseline_dpo) that share a family color in the chart.
+const DASH_BY_ID = {
+  baseline:             [],
+  baseline_sft:         [6, 3],
+  baseline_dpo:         [2, 2],
+  baseline_filtered:    [],
+  baseline_filtered_sft:[6, 3],
+  baseline_500b:        [],
+  baseline_500b_sft:    [6, 3],
+  safelm:               [],
+  safelm_sft:           [6, 3],
+  epe_1p:               [],
+  epe_1p_sft:           [6, 3],
+  epe_1p_sft_def:       [2, 2],
+  epe_3p:               [],
+  epe_3p_sft:           [6, 3],
+  epe_3p_sft_def:       [2, 2],
+};
+
+function makeDynChart(canvasId) {
+  const ctx = document.getElementById(canvasId).getContext('2d');
+  return new Chart(ctx, {
+    type: 'line',
+    data: { datasets: [] },
+    options: {
+      responsive: true,
+      animation: false,
+      interaction: { intersect: false, mode: 'nearest', axis: 'x' },
+      scales: {
+        x: { type: 'linear', ticks: { color: '#4b5563' }, grid: { color: '#e3e6eb' }, title: { display: true, text: 'iteration', color: '#6b7280' } },
+        y: { ticks: { color: '#4b5563' }, grid: { color: '#e3e6eb' }, beginAtZero: true },
+      },
+      plugins: {
+        legend: { labels: { color: '#1a1d23', font: { size: 13 }, boxWidth: 14 } },
+        tooltip: { callbacks: { label: c => `${c.dataset.label}: ${c.parsed.y?.toFixed(2)} @ iter ${c.parsed.x}` } },
+      },
+    },
+  });
+}
+
+function setupDynamicsPanel({ chartId, metricSelId, pickerId, kind, metricLabels }) {
+  const chart = makeDynChart(chartId);
+
+  function modelsWithKind(data) {
+    return allModels(data).map(m => {
+      const blk = (data.models[m.id] || {}).dynamics?.[kind];
+      const available = !!(blk?.iterations?.length);
+      return { m, blk, available };
+    });
+  }
+
+  function render(data) {
+    const items = modelsWithKind(data);
+    const metric = document.getElementById(metricSelId).value;
+    const checked = new Set([...document.querySelectorAll(`#${pickerId} input:checked`)].map(i => i.value));
+
+    const datasets = [];
+    for (const { m, blk, available } of items) {
+      if (!available || !checked.has(m.id)) continue;
+      const iters = blk.iterations;
+      const series = metric === 'overall_asr' ? blk.overall_asr
+                   : metric === 'em_score'    ? blk.em_score
+                   : metric === 'coherence'   ? blk.coherence
+                   : blk.attacks?.[metric] || [];
+      const pts = iters.map((x, i) => ({ x, y: series?.[i] })).filter(p => p.y != null);
+      if (!pts.length) continue;
+      datasets.push({
+        label: m.display,
+        data: pts,
+        borderColor: famColor(m.id),
+        backgroundColor: 'transparent',
+        borderWidth: 2,
+        borderDash: DASH_BY_ID[m.id] || [],
+        tension: 0.2,
+        pointRadius: 3,
+      });
+    }
+    chart.data.datasets = datasets;
+    chart.options.scales.y.title = { display: true, text: metricLabels[metric] || metric, color: '#6b7280' };
+    chart.update();
+  }
+
+  return { render, chart, setup(data) {
+    const picker = document.getElementById(pickerId);
+    const items = modelsWithKind(data);
+    picker.innerHTML = items.map(({ m, available }) =>
+      `<label class="${available ? '' : 'disabled'}" style="--fam:${famColor(m.id)}">
+         <input type="checkbox" value="${m.id}" ${available ? 'checked' : 'disabled'} />
+         ${m.display}
+       </label>`
+    ).join('');
+    picker.addEventListener('change', () => render(data));
+    document.getElementById(metricSelId).addEventListener('change', () => render(data));
+    render(data);
+  }};
+}
+
+function renderDynamics(data) {
+  // Populate metric dropdowns.
+  const bsMetrics = [
+    ['overall_asr',   'Overall ASR'],
+    ['DSN',           'DSN'],
+    ['GCG',           'GCG'],
+    ['JBC',           'JBC'],
+    ['PAIR',          'PAIR'],
+    ['random_search', 'random_search'],
+  ];
+  const emMetrics = [
+    ['em_score',  'EM score (aligned)'],
+    ['coherence', 'Coherence'],
+  ];
+  const bsSel = document.getElementById('bs-metric');
+  bsSel.innerHTML = bsMetrics.map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
+  const emSel = document.getElementById('em-metric');
+  emSel.innerHTML = emMetrics.map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
+
+  const bs = setupDynamicsPanel({
+    chartId: 'bs-chart', metricSelId: 'bs-metric', pickerId: 'bs-models',
+    kind: 'bs', metricLabels: Object.fromEntries(bsMetrics),
+  });
+  const em = setupDynamicsPanel({
+    chartId: 'em-chart', metricSelId: 'em-metric', pickerId: 'em-models',
+    kind: 'em', metricLabels: Object.fromEntries(emMetrics),
+  });
+  bs.setup(data);
+  em.setup(data);
+}
+
+// ── bootstrap ─────────────────────────────────────────────────────────────
+fetch('data.json').then(r => r.json()).then(data => {
+  document.getElementById('gen-at').textContent = `generated ${data.generated_at}`;
+  renderSafetyBase(data);
+  renderCapabilities(data);
+  renderSafety(data);
+  renderDynamics(data);
+}).catch(e => {
+  document.body.insertAdjacentHTML('beforeend', `<pre style="color:#f87171">Failed to load data.json: ${e}\nRun:  python3 dashboard/build_data.py</pre>`);
+});
+</script>
+</body>
+</html>
