@@ -105,7 +105,8 @@
     <button class="mini" id="filter-none">none</button>
     <button class="mini" id="filter-hide-bugged">hide bugged</button>
     <button class="mini" id="filter-only-bugged">only bugged</button>
-    <button class="mini" id="filter-only-mixsft-baselines">only mixSFT baselines</button>
+    <button class="mini" id="filter-focus-mixsft">focus: mixSFT + parents</button>
+    <button class="mini" id="filter-focus-bce-nobce">focus: BCE vs NoBCE</button>
     <button class="mini" id="filter-toggle-detail">individual ▾</button>
   </div>
   <div class="filter-details" id="filter-details"></div>
@@ -589,12 +590,25 @@ function setupFilter(data) {
     for (const m of allModels(data)) if (m.id.includes('bugged')) visibleModels.add(m.id);
     rerenderAll(data);
   });
-  // "only mixSFT baselines" → just the three baseline_*_mixsft entries (the
-  // new mix-SFT retrains of the non-EPE baselines). Excludes EPE *_mixsft*.
-  document.getElementById('filter-only-mixsft-baselines').addEventListener('click', () => {
+  // "focus: mixSFT + parents" — show the three baseline mixSFT retrains
+  // alongside the matching base parents, so the Base / Safety & EM / Caps
+  // tabs all render three-row side-by-side comparisons.
+  document.getElementById('filter-focus-mixsft').addEventListener('click', () => {
+    const want = new Set([
+      'baseline', 'baseline_filtered', 'baseline_500b',
+      'baseline_mixsft', 'baseline_filtered_mixsft', 'baseline_500b_mixsft',
+    ]);
     visibleModels.clear();
-    for (const m of allModels(data))
-      if (m.id.startsWith('baseline') && m.id.endsWith('_mixsft')) visibleModels.add(m.id);
+    for (const m of allModels(data)) if (want.has(m.id)) visibleModels.add(m.id);
+    rerenderAll(data);
+  });
+  // "focus: BCE vs NoBCE" — the four non-bugged EPE base models and all
+  // available BCE/NoBCE mixSFT variants. Skips baselines + bugged.
+  document.getElementById('filter-focus-bce-nobce').addEventListener('click', () => {
+    visibleModels.clear();
+    for (const m of allModels(data)) {
+      if (/^epe_[13]p_(bce|nobce)(_mixsft)?(_def)?$/.test(m.id)) visibleModels.add(m.id);
+    }
     rerenderAll(data);
   });
   const toggleBtn = document.getElementById('filter-toggle-detail');
