@@ -133,24 +133,18 @@ const allModels = d => [...d.groups.base, ...d.groups.sft];
 // ── model family (visual grouping) ─────────────────────────────────────────
 // Map each model id to a family + a color. The color is reused as the
 // left-stripe in tables, dot in pickers, and line color in dynamics.
-const FAMILIES = {
-  baseline:             { name: 'baseline',          color: '#2563eb' },  // blue 600
-  baseline_sft:         { name: 'baseline',          color: '#2563eb' },
-  baseline_dpo:         { name: 'baseline',          color: '#2563eb' },
-  baseline_filtered:    { name: 'baseline-filtered', color: '#7c3aed' },  // violet 600
-  baseline_filtered_sft:{ name: 'baseline-filtered', color: '#7c3aed' },
-  baseline_500b:        { name: 'baseline-500b',     color: '#0891b2' },  // cyan 600
-  baseline_500b_sft:    { name: 'baseline-500b',     color: '#0891b2' },
-  safelm:               { name: 'safelm',            color: '#059669' },  // emerald 600
-  safelm_sft:           { name: 'safelm',            color: '#059669' },
-  epe_1p:               { name: 'epe-1p',            color: '#d97706' },  // amber 600
-  epe_1p_sft:           { name: 'epe-1p',            color: '#d97706' },
-  epe_1p_sft_def:       { name: 'epe-1p',            color: '#d97706' },
-  epe_3p:               { name: 'epe-3p',            color: '#dc2626' },  // red 600
-  epe_3p_sft:           { name: 'epe-3p',            color: '#dc2626' },
-  epe_3p_sft_def:       { name: 'epe-3p',            color: '#dc2626' },
-};
-const famColor = id => FAMILIES[id]?.color || '#9aa0a6';
+// Family colors are assigned per "family" (baseline, safelm, epe-1p, epe-3p …);
+// all model IDs matching a family-regex share the color. Dash patterns in the
+// dynamics chart further disambiguate variants within a family.
+const FAMILY_RULES = [
+  { re: /^baseline_filtered/, color: '#7c3aed' },  // violet 600
+  { re: /^baseline_500b/,     color: '#0891b2' },  // cyan 600
+  { re: /^baseline/,          color: '#2563eb' },  // blue 600 (catches baseline, _sft, _dpo)
+  { re: /^safelm/,            color: '#059669' },  // emerald 600
+  { re: /^epe_1p/,            color: '#d97706' },  // amber 600 (bugged / bce / nobce all one family)
+  { re: /^epe_3p/,            color: '#dc2626' },  // red 600
+];
+const famColor = id => (FAMILY_RULES.find(r => r.re.test(id)) || { color: '#9aa0a6' }).color;
 // Model-name cell with its family stripe + dot.
 const modelCell = m => `<span class="model-cell" style="--fam:${famColor(m.id)}"><span class="dot"></span>${m.display}</span>`;
 
@@ -307,25 +301,15 @@ function renderSafety(data) {
 }
 
 // ── DYNAMICS (interactive, per-model toggles) ─────────────────────────────
-// Dashed borders help distinguish same-family variants (e.g. baseline_sft vs
-// baseline_dpo) that share a family color in the chart.
-const DASH_BY_ID = {
-  baseline:             [],
-  baseline_sft:         [6, 3],
-  baseline_dpo:         [2, 2],
-  baseline_filtered:    [],
-  baseline_filtered_sft:[6, 3],
-  baseline_500b:        [],
-  baseline_500b_sft:    [6, 3],
-  safelm:               [],
-  safelm_sft:           [6, 3],
-  epe_1p:               [],
-  epe_1p_sft:           [6, 3],
-  epe_1p_sft_def:       [2, 2],
-  epe_3p:               [],
-  epe_3p_sft:           [6, 3],
-  epe_3p_sft_def:       [2, 2],
-};
+// Dashed borders help distinguish same-family variants that share a color.
+// Rule of thumb: solid = base, long dash = SFT/main variant, short dash =
+// DPO/_def / secondary variant. Fallback is solid.
+const DASH_RULES = [
+  { re: /_dpo$/,            dash: [2, 2] },
+  { re: /_def$/,            dash: [2, 2] },
+  { re: /_(sft|mixsft)$/,   dash: [6, 3] },
+];
+const dashFor = id => (DASH_RULES.find(r => r.re.test(id)) || { dash: [] }).dash;
 
 function makeDynChart(canvasId) {
   const ctx = document.getElementById(canvasId).getContext('2d');
@@ -380,7 +364,7 @@ function setupDynamicsPanel({ chartId, metricSelId, pickerId, kind, metricLabels
         borderColor: famColor(m.id),
         backgroundColor: 'transparent',
         borderWidth: 2,
-        borderDash: DASH_BY_ID[m.id] || [],
+        borderDash: dashFor(m.id),
         tension: 0.2,
         pointRadius: 3,
       });

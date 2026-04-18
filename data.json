@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-04-18T18:45:15",
+  "generated_at": "2026-04-18T19:03:48",
   "groups": {
     "base": [
       {
@@ -33,17 +33,45 @@
         ]
       },
       {
-        "id": "epe_1p",
-        "display": "EPE 1p",
+        "id": "epe_1p_bugged",
+        "display": "EPE 1p (bugged)",
         "aliases": [
-          "epe_1p"
+          "epe_1p_bugged"
         ]
       },
       {
-        "id": "epe_3p",
-        "display": "EPE 3p",
+        "id": "epe_3p_bugged",
+        "display": "EPE 3p (bugged)",
         "aliases": [
-          "epe_3p"
+          "epe_3p_bugged"
+        ]
+      },
+      {
+        "id": "epe_1p_bce",
+        "display": "EPE 1p BCE",
+        "aliases": [
+          "epe_1p_bce"
+        ]
+      },
+      {
+        "id": "epe_1p_nobce",
+        "display": "EPE 1p NoBCE",
+        "aliases": [
+          "epe_1p_nobce"
+        ]
+      },
+      {
+        "id": "epe_3p_bce",
+        "display": "EPE 3p BCE",
+        "aliases": [
+          "epe_3p_bce"
+        ]
+      },
+      {
+        "id": "epe_3p_nobce",
+        "display": "EPE 3p NoBCE",
+        "aliases": [
+          "epe_3p_nobce"
         ]
       }
     ],
@@ -86,31 +114,87 @@
         ]
       },
       {
-        "id": "epe_1p_sft",
-        "display": "EPE 1p SFT",
+        "id": "epe_1p_bugged_sft",
+        "display": "EPE 1p SFT (bugged)",
         "aliases": [
-          "epe_1p_sft"
+          "epe_1p_bugged_sft"
         ]
       },
       {
-        "id": "epe_1p_sft_def",
-        "display": "EPE 1p SFT def",
+        "id": "epe_1p_bugged_sft_def",
+        "display": "EPE 1p SFT def (bugged)",
         "aliases": [
-          "epe_1p_sft_def"
+          "epe_1p_bugged_sft_def"
         ]
       },
       {
-        "id": "epe_3p_sft",
-        "display": "EPE 3p SFT",
+        "id": "epe_3p_bugged_sft",
+        "display": "EPE 3p SFT (bugged)",
         "aliases": [
-          "epe_3p_sft"
+          "epe_3p_bugged_sft"
         ]
       },
       {
-        "id": "epe_3p_sft_def",
-        "display": "EPE 3p SFT def",
+        "id": "epe_3p_bugged_sft_def",
+        "display": "EPE 3p SFT def (bugged)",
         "aliases": [
-          "epe_3p_sft_def"
+          "epe_3p_bugged_sft_def"
+        ]
+      },
+      {
+        "id": "epe_1p_bce_mixsft",
+        "display": "EPE 1p BCE mixSFT",
+        "aliases": [
+          "epe_1p_bce_mixsft"
+        ]
+      },
+      {
+        "id": "epe_1p_bce_mixsft_def",
+        "display": "EPE 1p BCE mixSFT def",
+        "aliases": [
+          "epe_1p_bce_mixsft_def"
+        ]
+      },
+      {
+        "id": "epe_1p_nobce_mixsft",
+        "display": "EPE 1p NoBCE mixSFT",
+        "aliases": [
+          "epe_1p_nobce_mixsft"
+        ]
+      },
+      {
+        "id": "epe_1p_nobce_mixsft_def",
+        "display": "EPE 1p NoBCE mixSFT def",
+        "aliases": [
+          "epe_1p_nobce_mixsft_def"
+        ]
+      },
+      {
+        "id": "epe_3p_bce_mixsft",
+        "display": "EPE 3p BCE mixSFT",
+        "aliases": [
+          "epe_3p_bce_mixsft"
+        ]
+      },
+      {
+        "id": "epe_3p_bce_mixsft_def",
+        "display": "EPE 3p BCE mixSFT def",
+        "aliases": [
+          "epe_3p_bce_mixsft_def"
+        ]
+      },
+      {
+        "id": "epe_3p_nobce_mixsft",
+        "display": "EPE 3p NoBCE mixSFT",
+        "aliases": [
+          "epe_3p_nobce_mixsft"
+        ]
+      },
+      {
+        "id": "epe_3p_nobce_mixsft_def",
+        "display": "EPE 3p NoBCE mixSFT def",
+        "aliases": [
+          "epe_3p_nobce_mixsft_def"
         ]
       }
     ]
@@ -2217,10 +2301,84 @@
         }
       }
     },
-    "epe_1p": {
-      "id": "epe_1p",
+    "epe_1p_bce": {
+      "id": "epe_1p_bce",
       "capabilities_summary": {
-        "source_file": "eval_epe_1p_base_20260417_144217",
+        "source_file": "eval_epe_1p_bce_base_20260418_184235",
+        "kind": "base",
+        "ifeval_prompt_strict": null,
+        "ifeval_inst_strict": null,
+        "gsm8k_cot": 0.01288855193328279,
+        "mmlu": 0.2634240136732659,
+        "hellaswag": null,
+        "piqa": 0.721436343852013,
+        "arc_challenge": 0.3924914675767918,
+        "arc_easy": 0.7053872053872053,
+        "commonsense_qa": 0.19656019656019655,
+        "openbookqa": 0.35,
+        "triviaqa": 0.19700178332590282,
+        "winogrande": 0.5761641673243884
+      },
+      "safety_base": {
+        "source_file": "safety_base_epe_1p_bce_20260418_184507.json",
+        "overall_asr": 0.3717171717171717,
+        "overall_mean_score": 35.75641183935265,
+        "per_source": {
+          "JailbreakBench": {
+            "asr": 0.26,
+            "mean_score": 26.26018015419471,
+            "n": 100
+          },
+          "AdvBench": {
+            "asr": 0.43653846153846154,
+            "mean_score": 41.42215141401996,
+            "n": 520
+          },
+          "TDC": {
+            "asr": 0.4,
+            "mean_score": 41.919317703721596,
+            "n": 50
+          },
+          "HarmBench": {
+            "asr": 0.296875,
+            "mean_score": 28.554203390822487,
+            "n": 320
+          }
+        }
+      },
+      "jbb": null,
+      "advbench": null,
+      "dans": null,
+      "em_base": null,
+      "dynamics": {},
+      "capabilities_dynamics": {}
+    },
+    "epe_1p_bce_mixsft": {
+      "id": "epe_1p_bce_mixsft",
+      "capabilities_summary": null,
+      "safety_base": null,
+      "jbb": null,
+      "advbench": null,
+      "dans": null,
+      "em_base": null,
+      "dynamics": {},
+      "capabilities_dynamics": {}
+    },
+    "epe_1p_bce_mixsft_def": {
+      "id": "epe_1p_bce_mixsft_def",
+      "capabilities_summary": null,
+      "safety_base": null,
+      "jbb": null,
+      "advbench": null,
+      "dans": null,
+      "em_base": null,
+      "dynamics": {},
+      "capabilities_dynamics": {}
+    },
+    "epe_1p_bugged": {
+      "id": "epe_1p_bugged",
+      "capabilities_summary": {
+        "source_file": "eval_epe_1p_bugged_base_20260417_144217",
         "kind": "base",
         "ifeval_prompt_strict": null,
         "ifeval_inst_strict": null,
@@ -2236,7 +2394,7 @@
         "winogrande": 0.5595895816890292
       },
       "safety_base": {
-        "source_file": "safety_base_epe_1p_20260417_144949.json",
+        "source_file": "safety_base_epe_1p_bugged_20260417_144949.json",
         "overall_asr": 0.3595959595959596,
         "overall_mean_score": 35.666687164872016,
         "per_source": {
@@ -2269,10 +2427,10 @@
       "dynamics": {},
       "capabilities_dynamics": {}
     },
-    "epe_1p_sft": {
-      "id": "epe_1p_sft",
+    "epe_1p_bugged_sft": {
+      "id": "epe_1p_bugged_sft",
       "capabilities_summary": {
-        "source_file": "eval_epe_1p_sft_sft_20260417_124136",
+        "source_file": "eval_epe_1p_bugged_sft_sft_20260417_124136",
         "kind": "sft",
         "ifeval_prompt_strict": 0.12199630314232902,
         "ifeval_inst_strict": 0.2182254196642686,
@@ -2289,7 +2447,7 @@
       },
       "safety_base": null,
       "jbb": {
-        "source_file": "jbb_all_epe_1p_sft_20260417_124114",
+        "source_file": "jbb_all_epe_1p_bugged_sft_20260417_124114",
         "overall_asr": 0.236,
         "n_total_behaviors": 500,
         "attacks": {
@@ -2301,14 +2459,14 @@
         }
       },
       "advbench": {
-        "source_file": "advbench_epe_1p_sft_llm_20260417_124323.json",
+        "source_file": "advbench_epe_1p_bugged_sft_llm_20260417_124323.json",
         "llm_asr": 0.7115384615384616,
         "llm_mean": 69.47042195726883,
         "non_refusal_asr": 0.7346153846153847,
         "n_total": 520
       },
       "dans": {
-        "source_file": "chatgpt_dan_jbb_epe_1p_sft_llm_20260417_124442.json",
+        "source_file": "chatgpt_dan_jbb_epe_1p_bugged_sft_llm_20260417_124442.json",
         "overall_llm_asr": 0.15625,
         "overall_llm_mean": 15.112208977891992,
         "n_prompts": 16,
@@ -2522,19 +2680,34 @@
         }
       },
       "em_base": {
-        "source_file": "em_eval_epe_1p_sft_20260417_125914.json",
+        "source_file": "em_eval_epe_1p_bugged_sft_20260417_125914.json",
         "aligned_mean": 61.385787036023316,
         "coherent_mean": 64.81964499989587
       },
       "dynamics": {},
       "capabilities_dynamics": {}
     },
-    "epe_1p_sft_def": {
-      "id": "epe_1p_sft_def",
-      "capabilities_summary": null,
+    "epe_1p_bugged_sft_def": {
+      "id": "epe_1p_bugged_sft_def",
+      "capabilities_summary": {
+        "source_file": "eval_epe_1p_bugged_sft_def_sft_20260417_201247",
+        "kind": "sft",
+        "ifeval_prompt_strict": 0.13863216266173753,
+        "ifeval_inst_strict": 0.2589928057553957,
+        "gsm8k_cot": 0.014404852160727824,
+        "mmlu": 0.2550206523287281,
+        "hellaswag": 0.5041824337781319,
+        "piqa": 0.7149075081610446,
+        "arc_challenge": 0.3395904436860068,
+        "arc_easy": 0.6435185185185185,
+        "commonsense_qa": null,
+        "openbookqa": null,
+        "triviaqa": null,
+        "winogrande": null
+      },
       "safety_base": null,
       "jbb": {
-        "source_file": "jbb_all_epe_1p_sft_def_20260417_130327",
+        "source_file": "jbb_all_epe_1p_bugged_sft_def_20260417_130327",
         "overall_asr": 0.2,
         "n_total_behaviors": 500,
         "attacks": {
@@ -2546,14 +2719,14 @@
         }
       },
       "advbench": {
-        "source_file": "advbench_epe_1p_sft_def_llm_20260417_130553.json",
+        "source_file": "advbench_epe_1p_bugged_sft_def_llm_20260417_130553.json",
         "llm_asr": 0.06346153846153846,
         "llm_mean": 6.2539770368548515,
         "non_refusal_asr": 0.03461538461538462,
         "n_total": 520
       },
       "dans": {
-        "source_file": "chatgpt_dan_jbb_epe_1p_sft_def_llm_20260417_130657.json",
+        "source_file": "chatgpt_dan_jbb_epe_1p_bugged_sft_def_llm_20260417_130657.json",
         "overall_llm_asr": 0.09,
         "overall_llm_mean": 9.13756013623861,
         "n_prompts": 16,
@@ -2767,17 +2940,124 @@
         }
       },
       "em_base": {
-        "source_file": "em_eval_epe_1p_sft_def_20260417_135302.json",
+        "source_file": "em_eval_epe_1p_bugged_sft_def_20260417_135302.json",
         "aligned_mean": 62.45061091858118,
         "coherent_mean": 66.39880138832868
       },
       "dynamics": {},
       "capabilities_dynamics": {}
     },
-    "epe_3p": {
-      "id": "epe_3p",
+    "epe_1p_nobce": {
+      "id": "epe_1p_nobce",
       "capabilities_summary": {
-        "source_file": "eval_epe_3p_base_20260417_130532",
+        "source_file": "eval_epe_1p_nobce_base_20260418_184234",
+        "kind": "base",
+        "ifeval_prompt_strict": null,
+        "ifeval_inst_strict": null,
+        "gsm8k_cot": 0.011372251705837756,
+        "mmlu": 0.2549494374020795,
+        "hellaswag": null,
+        "piqa": 0.735582154515778,
+        "arc_challenge": 0.3984641638225256,
+        "arc_easy": 0.7184343434343434,
+        "commonsense_qa": 0.22604422604422605,
+        "openbookqa": 0.364,
+        "triviaqa": 0.23166518056174765,
+        "winogrande": 0.5982636148382005
+      },
+      "safety_base": {
+        "source_file": "safety_base_epe_1p_nobce_20260418_184512.json",
+        "overall_asr": 0.3474747474747475,
+        "overall_mean_score": 33.60762057792685,
+        "per_source": {
+          "JailbreakBench": {
+            "asr": 0.36,
+            "mean_score": 35.40670151664989,
+            "n": 100
+          },
+          "AdvBench": {
+            "asr": 0.4,
+            "mean_score": 38.266211634662156,
+            "n": 520
+          },
+          "TDC": {
+            "asr": 0.26,
+            "mean_score": 26.60842057264556,
+            "n": 50
+          },
+          "HarmBench": {
+            "asr": 0.271875,
+            "mean_score": 26.568822318206223,
+            "n": 320
+          }
+        }
+      },
+      "jbb": null,
+      "advbench": null,
+      "dans": null,
+      "em_base": null,
+      "dynamics": {},
+      "capabilities_dynamics": {}
+    },
+    "epe_1p_nobce_mixsft": {
+      "id": "epe_1p_nobce_mixsft",
+      "capabilities_summary": null,
+      "safety_base": null,
+      "jbb": null,
+      "advbench": null,
+      "dans": null,
+      "em_base": null,
+      "dynamics": {},
+      "capabilities_dynamics": {}
+    },
+    "epe_1p_nobce_mixsft_def": {
+      "id": "epe_1p_nobce_mixsft_def",
+      "capabilities_summary": null,
+      "safety_base": null,
+      "jbb": null,
+      "advbench": null,
+      "dans": null,
+      "em_base": null,
+      "dynamics": {},
+      "capabilities_dynamics": {}
+    },
+    "epe_3p_bce": {
+      "id": "epe_3p_bce",
+      "capabilities_summary": null,
+      "safety_base": null,
+      "jbb": null,
+      "advbench": null,
+      "dans": null,
+      "em_base": null,
+      "dynamics": {},
+      "capabilities_dynamics": {}
+    },
+    "epe_3p_bce_mixsft": {
+      "id": "epe_3p_bce_mixsft",
+      "capabilities_summary": null,
+      "safety_base": null,
+      "jbb": null,
+      "advbench": null,
+      "dans": null,
+      "em_base": null,
+      "dynamics": {},
+      "capabilities_dynamics": {}
+    },
+    "epe_3p_bce_mixsft_def": {
+      "id": "epe_3p_bce_mixsft_def",
+      "capabilities_summary": null,
+      "safety_base": null,
+      "jbb": null,
+      "advbench": null,
+      "dans": null,
+      "em_base": null,
+      "dynamics": {},
+      "capabilities_dynamics": {}
+    },
+    "epe_3p_bugged": {
+      "id": "epe_3p_bugged",
+      "capabilities_summary": {
+        "source_file": "eval_epe_3p_bugged_base_20260417_130532",
         "kind": "base",
         "ifeval_prompt_strict": null,
         "ifeval_inst_strict": null,
@@ -2793,7 +3073,7 @@
         "winogrande": 0.5556432517758485
       },
       "safety_base": {
-        "source_file": "safety_base_epe_3p_20260417_130750.json",
+        "source_file": "safety_base_epe_3p_bugged_20260417_130750.json",
         "overall_asr": 0.36464646464646466,
         "overall_mean_score": 35.74806758851469,
         "per_source": {
@@ -2826,10 +3106,10 @@
       "dynamics": {},
       "capabilities_dynamics": {}
     },
-    "epe_3p_sft": {
-      "id": "epe_3p_sft",
+    "epe_3p_bugged_sft": {
+      "id": "epe_3p_bugged_sft",
       "capabilities_summary": {
-        "source_file": "eval_epe_3p_sft_sft_20260417_144115",
+        "source_file": "eval_epe_3p_bugged_sft_sft_20260417_144115",
         "kind": "sft",
         "ifeval_prompt_strict": 0.09611829944547134,
         "ifeval_inst_strict": 0.17146282973621102,
@@ -2846,7 +3126,7 @@
       },
       "safety_base": null,
       "jbb": {
-        "source_file": "jbb_all_epe_3p_sft_20260417_134357",
+        "source_file": "jbb_all_epe_3p_bugged_sft_20260417_134357",
         "overall_asr": 0.07,
         "n_total_behaviors": 500,
         "attacks": {
@@ -2858,14 +3138,14 @@
         }
       },
       "advbench": {
-        "source_file": "advbench_epe_3p_sft_llm_20260417_134536.json",
+        "source_file": "advbench_epe_3p_bugged_sft_llm_20260417_134536.json",
         "llm_asr": 0.01730769230769231,
         "llm_mean": 2.2423398062153455,
         "non_refusal_asr": 0.0057692307692307696,
         "n_total": 520
       },
       "dans": {
-        "source_file": "chatgpt_dan_jbb_epe_3p_sft_llm_20260417_134638.json",
+        "source_file": "chatgpt_dan_jbb_epe_3p_bugged_sft_llm_20260417_134638.json",
         "overall_llm_asr": 0.121875,
         "overall_llm_mean": 12.099963552423104,
         "n_prompts": 16,
@@ -3079,17 +3359,17 @@
         }
       },
       "em_base": {
-        "source_file": "em_eval_epe_3p_sft_20260417_135057.json",
+        "source_file": "em_eval_epe_3p_bugged_sft_20260417_135057.json",
         "aligned_mean": 63.81298245390513,
         "coherent_mean": 67.61827091263919
       },
       "dynamics": {},
       "capabilities_dynamics": {}
     },
-    "epe_3p_sft_def": {
-      "id": "epe_3p_sft_def",
+    "epe_3p_bugged_sft_def": {
+      "id": "epe_3p_bugged_sft_def",
       "capabilities_summary": {
-        "source_file": "eval_epe_3p_sft_def_sft_20260417_144133",
+        "source_file": "eval_epe_3p_bugged_sft_def_sft_20260417_144133",
         "kind": "sft",
         "ifeval_prompt_strict": 0.14417744916820702,
         "ifeval_inst_strict": 0.23741007194244604,
@@ -3106,7 +3386,7 @@
       },
       "safety_base": null,
       "jbb": {
-        "source_file": "jbb_all_epe_3p_sft_def_20260417_134430",
+        "source_file": "jbb_all_epe_3p_bugged_sft_def_20260417_134430",
         "overall_asr": 0.202,
         "n_total_behaviors": 500,
         "attacks": {
@@ -3118,14 +3398,14 @@
         }
       },
       "advbench": {
-        "source_file": "advbench_epe_3p_sft_def_llm_20260417_134642.json",
+        "source_file": "advbench_epe_3p_bugged_sft_def_llm_20260417_134642.json",
         "llm_asr": 0.07115384615384615,
         "llm_mean": 6.842784019827333,
         "non_refusal_asr": 0.011538461538461539,
         "n_total": 520
       },
       "dans": {
-        "source_file": "chatgpt_dan_jbb_epe_3p_sft_def_llm_20260417_134722.json",
+        "source_file": "chatgpt_dan_jbb_epe_3p_bugged_sft_def_llm_20260417_134722.json",
         "overall_llm_asr": 0.151875,
         "overall_llm_mean": 14.868251078853925,
         "n_prompts": 16,
@@ -3339,10 +3619,84 @@
         }
       },
       "em_base": {
-        "source_file": "em_eval_epe_3p_sft_def_20260417_135133.json",
+        "source_file": "em_eval_epe_3p_bugged_sft_def_20260417_135133.json",
         "aligned_mean": 62.371471812687446,
         "coherent_mean": 65.68758171955896
       },
+      "dynamics": {},
+      "capabilities_dynamics": {}
+    },
+    "epe_3p_nobce": {
+      "id": "epe_3p_nobce",
+      "capabilities_summary": {
+        "source_file": "eval_epe_3p_nobce_base_20260418_184234",
+        "kind": "base",
+        "ifeval_prompt_strict": null,
+        "ifeval_inst_strict": null,
+        "gsm8k_cot": 0.022744503411675512,
+        "mmlu": 0.24654607605754167,
+        "hellaswag": null,
+        "piqa": 0.736126224156692,
+        "arc_challenge": 0.4129692832764505,
+        "arc_easy": 0.726010101010101,
+        "commonsense_qa": 0.2072072072072072,
+        "openbookqa": 0.376,
+        "triviaqa": 0.23913285777975926,
+        "winogrande": 0.585635359116022
+      },
+      "safety_base": {
+        "source_file": "safety_base_epe_3p_nobce_20260418_184458.json",
+        "overall_asr": 0.3515151515151515,
+        "overall_mean_score": 34.030325681250424,
+        "per_source": {
+          "JailbreakBench": {
+            "asr": 0.39,
+            "mean_score": 35.82269931494572,
+            "n": 100
+          },
+          "AdvBench": {
+            "asr": 0.36346153846153845,
+            "mean_score": 36.04586070590043,
+            "n": 520
+          },
+          "TDC": {
+            "asr": 0.46,
+            "mean_score": 39.94639735784393,
+            "n": 50
+          },
+          "HarmBench": {
+            "asr": 0.303125,
+            "mean_score": 29.270578306196647,
+            "n": 320
+          }
+        }
+      },
+      "jbb": null,
+      "advbench": null,
+      "dans": null,
+      "em_base": null,
+      "dynamics": {},
+      "capabilities_dynamics": {}
+    },
+    "epe_3p_nobce_mixsft": {
+      "id": "epe_3p_nobce_mixsft",
+      "capabilities_summary": null,
+      "safety_base": null,
+      "jbb": null,
+      "advbench": null,
+      "dans": null,
+      "em_base": null,
+      "dynamics": {},
+      "capabilities_dynamics": {}
+    },
+    "epe_3p_nobce_mixsft_def": {
+      "id": "epe_3p_nobce_mixsft_def",
+      "capabilities_summary": null,
+      "safety_base": null,
+      "jbb": null,
+      "advbench": null,
+      "dans": null,
+      "em_base": null,
       "dynamics": {},
       "capabilities_dynamics": {}
     },
