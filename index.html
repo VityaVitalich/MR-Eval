@@ -103,7 +103,9 @@
     <span class="divider"></span>
     <button class="mini" id="filter-all">all</button>
     <button class="mini" id="filter-none">none</button>
-    <button class="mini" id="filter-toggle-detail">show individual ▾</button>
+    <button class="mini" id="filter-hide-bugged">hide bugged</button>
+    <button class="mini" id="filter-only-bugged">only bugged</button>
+    <button class="mini" id="filter-toggle-detail">individual ▾</button>
   </div>
   <div class="filter-details" id="filter-details"></div>
 </div>
@@ -172,29 +174,28 @@ const allModels = d => [...d.groups.base, ...d.groups.sft];
 // ── model family (visual grouping) ─────────────────────────────────────────
 // Map each model id to a family + a color. The color is reused as the
 // left-stripe in tables, dot in pickers, and line color in dynamics.
-// Family colors are assigned per "family" (baseline, safelm, epe-1p, epe-3p …);
-// all model IDs matching a family-regex share the color. Dash patterns in the
-// dynamics chart further disambiguate variants within a family.
+// Family = (display name, color). EPE variants are split into bugged / BCE /
+// NoBCE sub-families so you can filter them independently. First-matching rule
+// wins, so the more-specific patterns (_bugged/_bce/_nobce) come first.
 const FAMILY_RULES = [
-  { re: /^baseline_filtered/, color: '#7c3aed' },  // violet 600
-  { re: /^baseline_500b/,     color: '#0891b2' },  // cyan 600
-  { re: /^baseline/,          color: '#2563eb' },  // blue 600 (catches baseline, _sft, _dpo)
-  { re: /^safelm/,            color: '#059669' },  // emerald 600
-  { re: /^epe_1p/,            color: '#d97706' },  // amber 600 (bugged / bce / nobce all one family)
-  { re: /^epe_3p/,            color: '#dc2626' },  // red 600
+  { re: /^baseline_filtered/, name: 'baseline_filtered', color: '#7c3aed' }, // violet 600
+  { re: /^baseline_500b/,     name: 'baseline 500b',     color: '#0891b2' }, // cyan 600
+  { re: /^baseline/,          name: 'baseline',          color: '#2563eb' }, // blue 600
+  { re: /^safelm/,            name: 'SafeLM',            color: '#059669' }, // emerald 600
+  // EPE 1p shades (dark → light as bugged → BCE → NoBCE)
+  { re: /^epe_1p_bugged/,     name: 'EPE 1p (bugged)',   color: '#92400e' }, // amber 900
+  { re: /^epe_1p_bce/,        name: 'EPE 1p BCE',        color: '#d97706' }, // amber 600
+  { re: /^epe_1p_nobce/,      name: 'EPE 1p NoBCE',      color: '#fbbf24' }, // amber 400
+  { re: /^epe_1p/,            name: 'EPE 1p',            color: '#d97706' }, // fallback
+  // EPE 3p shades
+  { re: /^epe_3p_bugged/,     name: 'EPE 3p (bugged)',   color: '#7f1d1d' }, // red 900
+  { re: /^epe_3p_bce/,        name: 'EPE 3p BCE',        color: '#dc2626' }, // red 600
+  { re: /^epe_3p_nobce/,      name: 'EPE 3p NoBCE',      color: '#fb7185' }, // rose 400
+  { re: /^epe_3p/,            name: 'EPE 3p',            color: '#dc2626' }, // fallback
 ];
-const famColor = id => (FAMILY_RULES.find(r => r.re.test(id)) || { color: '#9aa0a6' }).color;
-const famName = id => {
-  const rules = [
-    [/^baseline_filtered/, 'baseline_filtered'],
-    [/^baseline_500b/,     'baseline 500b'],
-    [/^baseline/,          'baseline'],
-    [/^safelm/,            'SafeLM'],
-    [/^epe_1p/,            'EPE 1p'],
-    [/^epe_3p/,            'EPE 3p'],
-  ];
-  return (rules.find(([re]) => re.test(id)) || [null, 'other'])[1];
-};
+const famRule = id => FAMILY_RULES.find(r => r.re.test(id)) || { name: 'other', color: '#9aa0a6' };
+const famColor = id => famRule(id).color;
+const famName  = id => famRule(id).name;
 // Model-name cell with its family stripe + dot.
 const modelCell = m => `<span class="model-cell" style="--fam:${famColor(m.id)}"><span class="dot"></span>${m.display}</span>`;
 
@@ -573,6 +574,18 @@ function setupFilter(data) {
   });
   document.getElementById('filter-none').addEventListener('click', () => {
     visibleModels.clear();
+    rerenderAll(data);
+  });
+  // "hide bugged" → visible = all except anything with _bugged in its id.
+  document.getElementById('filter-hide-bugged').addEventListener('click', () => {
+    visibleModels.clear();
+    for (const m of allModels(data)) if (!m.id.includes('bugged')) visibleModels.add(m.id);
+    rerenderAll(data);
+  });
+  // "only bugged" → visible = just the _bugged models.
+  document.getElementById('filter-only-bugged').addEventListener('click', () => {
+    visibleModels.clear();
+    for (const m of allModels(data)) if (m.id.includes('bugged')) visibleModels.add(m.id);
     rerenderAll(data);
   });
   const toggleBtn = document.getElementById('filter-toggle-detail');
