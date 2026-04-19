@@ -260,14 +260,16 @@ function computeRanks(cols, rows) {
   return { ranksByModel, avgByModel };
 }
 
-function computeColAvgs(cols, rows) {
-  const avgs = {};
-  for (const c of cols) {
-    if (!c.avgable) continue;
-    const vals = rows.map(r => normalizeVal(r.cells[c.key])).filter(v => v != null);
-    avgs[c.key] = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+function computeRowAvgs(cols, rows) {
+  // Per-model mean of values in avgable columns. Used to see at a glance
+  // "which model is better on average across methods".
+  const out = {};
+  const avgCols = cols.filter(c => c.avgable);
+  for (const r of rows) {
+    const vals = avgCols.map(c => normalizeVal(r.cells[c.key])).filter(v => v != null);
+    out[r.id] = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
   }
-  return avgs;
+  return out;
 }
 
 function renderRankedTable(el, cols, rows) {
@@ -276,8 +278,9 @@ function renderRankedTable(el, cols, rows) {
   const sortDir = el.dataset.sortDir || '';
 
   const hasRank = cols.some(c => c.rankable);
-  const { ranksByModel, avgByModel } = computeRanks(cols, rows);
-  const colAvgs = computeColAvgs(cols, rows);
+  const hasAvg  = cols.some(c => c.avgable);
+  const { ranksByModel, avgByModel: avgRankByModel } = computeRanks(cols, rows);
+  const rowAvg = computeRowAvgs(cols, rows);
 
   // Apply sort.
   let ordered = [...rows];
@@ -286,8 +289,12 @@ function renderRankedTable(el, cols, rows) {
       const cmpStr = a.id.localeCompare(b.id);
       return sortDir === 'desc' ? -cmpStr : cmpStr;
     }
-    const av = sortKey === '_avgrank' ? avgByModel[a.id] : normalizeVal(a.cells[sortKey]);
-    const bv = sortKey === '_avgrank' ? avgByModel[b.id] : normalizeVal(b.cells[sortKey]);
+    const pick = id => {
+      if (sortKey === '_avgrank') return avgRankByModel[id];
+      if (sortKey === '_avg')     return rowAvg[id];
+      return normalizeVal(rows.find(r => r.id === id).cells[sortKey]);
+    };
+    const av = pick(a.id), bv = pick(b.id);
     if (av == null && bv == null) return 0;
     if (av == null) return 1;   // nulls always last
     if (bv == null) return -1;
@@ -302,6 +309,9 @@ function renderRankedTable(el, cols, rows) {
   for (const c of cols) {
     html += `<th class="sortable ${arrowCls(c.key)}" data-sortkey="${c.key}">${c.label}</th>`;
   }
+  if (hasAvg) {
+    html += `<th class="sortable ${arrowCls('_avg')}" data-sortkey="_avg" title="mean of this row's values across the averaged columns">Avg</th>`;
+  }
   if (hasRank) {
     html += `<th class="sortable ${arrowCls('_avgrank')}" data-sortkey="_avgrank" title="mean rank across ranked columns (1 = best)">Avg rank</th>`;
   }
@@ -311,20 +321,17 @@ function renderRankedTable(el, cols, rows) {
     for (const c of cols) {
       html += `<td>${fmtDisplay(r.cells[c.key], c.fmt)}</td>`;
     }
+    if (hasAvg) {
+      const a = rowAvg[r.id];
+      html += `<td class="rank-col">${a == null ? '<span class="missing">—</span>' : a.toFixed(1)}</td>`;
+    }
     if (hasRank) {
-      const ar = avgByModel[r.id];
+      const ar = avgRankByModel[r.id];
       html += `<td class="rank-col">${ar == null ? '<span class="missing">—</span>' : ar.toFixed(1)}</td>`;
     }
     html += '</tr>';
   }
-  html += '</tbody><tfoot>';
-  html += '<tr><td>Average</td>';
-  for (const c of cols) {
-    const v = colAvgs[c.key];
-    html += `<td>${c.avgable ? (v == null ? '—' : Math.round(v)) : ''}</td>`;
-  }
-  if (hasRank) html += '<td></td>';
-  html += '</tr></tfoot></table>';
+  html += '</tbody></table>';
 
   // Replace container contents.
   el.innerHTML = html;
@@ -353,21 +360,37 @@ function renderRankedTable(el, cols, rows) {
 function defaultSortDir(key, cols) {
   if (key === '_model') return 'asc';
   if (key === '_avgrank') return 'asc';  // rank 1 = best
+  if (key === '_avg') {
+    // Take the direction from the first avgable col — all avgable cols in a
+    // given table share a direction (we only average comparable metrics).
+    const c = cols.find(x => x.avgable);
+    return c && c.dir === 'higher' ? 'desc' : 'asc';
+  }
   const c = cols.find(x => x.key === key);
   return c && c.dir === 'higher' ? 'desc' : 'asc';
 }
 
-// Legend builder: humanize which direction each col uses.
+// Legend builder: humanize which direction each col uses + what's in Avg.
 function rankLegend(cols) {
   const ranked = cols.filter(c => c.rankable);
-  if (!ranked.length) return '';
+  const avg    = cols.filter(c => c.avgable);
+  if (!ranked.length && !avg.length) return '';
   const lowerCols = ranked.filter(c => c.dir === 'lower').map(c => c.label);
   const higherCols = ranked.filter(c => c.dir === 'higher').map(c => c.label);
-  const excluded = cols.filter(c => !c.rankable).map(c => c.label).join(', ');
-  let html = `<div class="rank-legend"><b>Avg rank</b>: per column, models are ranked 1 (best) to N (worst); Avg rank is the mean of those ranks across the columns below. Lower avg rank = better overall.`;
+  const notRanked = cols.filter(c => !c.rankable).map(c => c.label);
+  const notAvged  = cols.filter(c => !c.avgable).map(c => c.label);
+  let html = `<div class="rank-legend">`;
+  if (avg.length) {
+    html += `<b>Avg</b> (per row): mean of ${avg.map(c => c.label).join(', ')}.`;
+  }
+  if (ranked.length) {
+    html += (avg.length ? ' ' : '') + `<b>Avg rank</b> (per row): in each ranked column, models are ranked 1 (best) to N (worst); Avg rank is the mean across those ranks. Lower = better overall.`;
+  }
   if (lowerCols.length)  html += `<br>Lower is better: ${lowerCols.join(', ')}.`;
   if (higherCols.length) html += `<br>Higher is better: ${higherCols.join(', ')}.`;
-  if (excluded)          html += `<br>Excluded from Avg & Avg rank: ${excluded}.`;
+  if (notAvged.length)   html += `<br>Excluded from Avg: ${notAvged.join(', ')}.`;
+  if (notRanked.length && notRanked.join(',') !== notAvged.join(','))
+                         html += `<br>Excluded from Avg rank: ${notRanked.join(', ')}.`;
   html += `</div>`;
   return html;
 }
@@ -489,8 +512,11 @@ function renderSafety(data) {
     { key: 'dans',     label: 'DANs',        dir: 'lower',  rankable: true,  avgable: true  },
     { key: 'best_dan', label: 'Best DAN',    dir: 'lower',  rankable: false, avgable: false }, // excluded per request
     { key: 'pap',      label: 'PAP',         dir: 'lower',  rankable: true,  avgable: true  },
-    { key: 'em_al',    label: 'EM aligned',  dir: 'higher', rankable: true,  avgable: true, fmt: 'raw' },
-    { key: 'em_co',    label: 'EM coherent', dir: 'higher', rankable: true,  avgable: true, fmt: 'raw' },
+    // EM scores are on a different semantic (higher = more aligned); lumping
+    // them into the Avg with ASR is meaningless, so we rank them but don't
+    // average them.
+    { key: 'em_al',    label: 'EM aligned',  dir: 'higher', rankable: true,  avgable: false, fmt: 'raw' },
+    { key: 'em_co',    label: 'EM coherent', dir: 'higher', rankable: true,  avgable: false, fmt: 'raw' },
   ];
   const rows = visible.map(m => {
     const md = data.models[m.id] || {};
