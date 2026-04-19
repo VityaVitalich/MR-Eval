@@ -311,9 +311,9 @@ function renderSafety(data) {
   const el = document.getElementById('safety-panel');
   const rows = data.groups.sft.filter(m => isVisible(m.id)).map(m => {
     const md = data.models[m.id] || {};
-    return { m, jbb: resolveJbb(md), ab: md.advbench, dan: md.dans, em: md.em_base };
+    return { m, jbb: resolveJbb(md), ab: md.advbench, dan: md.dans, pap: md.pap, em: md.em_base };
   });
-  const any = rows.some(r => r.jbb || r.ab || r.dan || r.em);
+  const any = rows.some(r => r.jbb || r.ab || r.dan || r.pap || r.em);
   if (!any) { el.innerHTML = nd(); return; }
 
   let html = `<table><thead><tr>
@@ -322,16 +322,18 @@ function renderSafety(data) {
     <th>AdvBench</th>
     <th>DANs</th>
     <th>Best DAN</th>
+    <th>PAP</th>
     <th>EM aligned</th>
     <th>EM coherent</th>
   </tr></thead><tbody>`;
-  for (const { m, jbb, ab, dan, em } of rows) {
+  for (const { m, jbb, ab, dan, pap, em } of rows) {
     const cells = [];
     cells.push(jbb ? num(jbb.overall) : '<span class="missing">—</span>');
     cells.push(ab ? num(ab.llm_asr) : '<span class="missing">—</span>');
     cells.push(dan ? num(dan.overall_llm_asr) : '<span class="missing">—</span>');
     const bp = dan?.best_prompt;
     cells.push(bp ? num(bp.llm_asr) : '<span class="missing">—</span>');
+    cells.push(pap ? num(pap.overall_llm_asr) : '<span class="missing">—</span>');
     cells.push(em ? raw(em.aligned_mean) : '<span class="missing">—</span>');
     cells.push(em ? raw(em.coherent_mean) : '<span class="missing">—</span>');
     html += `<tr><td>${modelCell(m)}</td>${cells.map(c => `<td>${c}</td>`).join('')}</tr>`;
