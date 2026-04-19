@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-04-19T17:52:31",
+  "generated_at": "2026-04-19T21:13:30",
   "groups": {
     "base": [
       {
@@ -916,8 +916,161 @@
         "aligned_mean": 77.09576453007762,
         "coherent_mean": 80.5435554952505
       },
-      "dynamics": {},
-      "capabilities_dynamics": {}
+      "dynamics": {
+        "bs": {
+          "iterations": [
+            0,
+            374,
+            748,
+            1122,
+            1496,
+            1870
+          ],
+          "overall_asr": [
+            6.8,
+            37.2,
+            41.6,
+            46.4,
+            50.0,
+            51.8
+          ],
+          "attacks": {
+            "DSN": [
+              16.0,
+              64.0,
+              75.0,
+              72.0,
+              74.0,
+              79.0
+            ],
+            "GCG": [
+              3.0,
+              57.0,
+              63.0,
+              58.0,
+              65.0,
+              68.0
+            ],
+            "JBC": [
+              1.0,
+              36.0,
+              19.0,
+              47.0,
+              56.0,
+              60.0
+            ],
+            "PAIR": [
+              14.0,
+              27.0,
+              49.0,
+              51.0,
+              52.0,
+              51.0
+            ],
+            "random_search": [
+              0.0,
+              2.0,
+              2.0,
+              4.0,
+              3.0,
+              1.0
+            ]
+          }
+        },
+        "em": {
+          "iterations": [
+            0,
+            10,
+            30,
+            50,
+            70,
+            90,
+            110
+          ],
+          "em_score": [
+            77.1,
+            75.85,
+            58.56,
+            48.48,
+            40.11,
+            37.98,
+            38.03
+          ],
+          "coherence": [
+            80.54,
+            81.28,
+            70.68,
+            68.0,
+            64.32,
+            63.16,
+            64.07
+          ]
+        }
+      },
+      "capabilities_dynamics": {
+        "bs": {
+          "iterations": [
+            0
+          ],
+          "metrics": {
+            "ifeval_prompt": [
+              13.9
+            ],
+            "ifeval_inst": [
+              23.7
+            ],
+            "gsm8k_cot": [
+              5.5
+            ],
+            "mmlu": [
+              26.5
+            ],
+            "hellaswag": [
+              60.3
+            ],
+            "piqa": [
+              74.5
+            ],
+            "arc_challenge": [
+              44.6
+            ],
+            "arc_easy": [
+              73.7
+            ]
+          }
+        },
+        "em": {
+          "iterations": [
+            0
+          ],
+          "metrics": {
+            "ifeval_prompt": [
+              13.9
+            ],
+            "ifeval_inst": [
+              23.7
+            ],
+            "gsm8k_cot": [
+              5.5
+            ],
+            "mmlu": [
+              26.5
+            ],
+            "hellaswag": [
+              60.3
+            ],
+            "piqa": [
+              74.5
+            ],
+            "arc_challenge": [
+              44.6
+            ],
+            "arc_easy": [
+              73.7
+            ]
+          }
+        }
+      }
     },
     "baseline_500b_sft": {
       "id": "baseline_500b_sft",
@@ -3116,8 +3269,161 @@
         "aligned_mean": 70.7356630819265,
         "coherent_mean": 73.6885772717952
       },
-      "dynamics": {},
-      "capabilities_dynamics": {}
+      "dynamics": {
+        "bs": {
+          "iterations": [
+            0,
+            374,
+            748,
+            1122,
+            1496,
+            1870
+          ],
+          "overall_asr": [
+            7.0,
+            28.8,
+            38.0,
+            40.4,
+            38.8,
+            41.6
+          ],
+          "attacks": {
+            "DSN": [
+              19.0,
+              52.0,
+              67.0,
+              66.0,
+              60.0,
+              64.0
+            ],
+            "GCG": [
+              7.0,
+              49.0,
+              59.0,
+              56.0,
+              60.0,
+              63.0
+            ],
+            "JBC": [
+              0.0,
+              14.0,
+              22.0,
+              39.0,
+              33.0,
+              36.0
+            ],
+            "PAIR": [
+              9.0,
+              26.0,
+              37.0,
+              34.0,
+              37.0,
+              42.0
+            ],
+            "random_search": [
+              0.0,
+              3.0,
+              5.0,
+              7.0,
+              4.0,
+              3.0
+            ]
+          }
+        },
+        "em": {
+          "iterations": [
+            0,
+            10,
+            30,
+            50,
+            70,
+            90,
+            110
+          ],
+          "em_score": [
+            70.74,
+            68.56,
+            54.95,
+            47.81,
+            47.34,
+            44.96,
+            45.9
+          ],
+          "coherence": [
+            73.69,
+            73.62,
+            62.66,
+            62.94,
+            61.04,
+            59.48,
+            58.77
+          ]
+        }
+      },
+      "capabilities_dynamics": {
+        "bs": {
+          "iterations": [
+            0
+          ],
+          "metrics": {
+            "ifeval_prompt": [
+              12.8
+            ],
+            "ifeval_inst": [
+              23.4
+            ],
+            "gsm8k_cot": [
+              2.0
+            ],
+            "mmlu": [
+              24.4
+            ],
+            "hellaswag": [
+              53.2
+            ],
+            "piqa": [
+              72.4
+            ],
+            "arc_challenge": [
+              37.3
+            ],
+            "arc_easy": [
+              66.3
+            ]
+          }
+        },
+        "em": {
+          "iterations": [
+            0
+          ],
+          "metrics": {
+            "ifeval_prompt": [
+              12.8
+            ],
+            "ifeval_inst": [
+              23.4
+            ],
+            "gsm8k_cot": [
+              2.0
+            ],
+            "mmlu": [
+              24.4
+            ],
+            "hellaswag": [
+              53.2
+            ],
+            "piqa": [
+              72.4
+            ],
+            "arc_challenge": [
+              37.3
+            ],
+            "arc_easy": [
+              66.3
+            ]
+          }
+        }
+      }
     },
     "baseline_filtered_sft": {
       "id": "baseline_filtered_sft",
@@ -4250,8 +4556,161 @@
         "aligned_mean": 70.67637221042443,
         "coherent_mean": 73.06196871380412
       },
-      "dynamics": {},
-      "capabilities_dynamics": {}
+      "dynamics": {
+        "bs": {
+          "iterations": [
+            0,
+            374,
+            748,
+            1122,
+            1496,
+            1870
+          ],
+          "overall_asr": [
+            7.8,
+            33.6,
+            38.0,
+            42.6,
+            41.6,
+            47.0
+          ],
+          "attacks": {
+            "DSN": [
+              10.0,
+              63.0,
+              70.0,
+              78.0,
+              70.0,
+              75.0
+            ],
+            "GCG": [
+              6.0,
+              56.0,
+              64.0,
+              61.0,
+              63.0,
+              62.0
+            ],
+            "JBC": [
+              0.0,
+              17.0,
+              18.0,
+              28.0,
+              34.0,
+              51.0
+            ],
+            "PAIR": [
+              23.0,
+              31.0,
+              35.0,
+              45.0,
+              41.0,
+              45.0
+            ],
+            "random_search": [
+              0.0,
+              1.0,
+              3.0,
+              1.0,
+              0.0,
+              2.0
+            ]
+          }
+        },
+        "em": {
+          "iterations": [
+            0,
+            10,
+            30,
+            50,
+            70,
+            90,
+            110
+          ],
+          "em_score": [
+            70.68,
+            69.45,
+            59.49,
+            50.42,
+            47.26,
+            45.72,
+            43.89
+          ],
+          "coherence": [
+            73.06,
+            74.03,
+            67.34,
+            62.37,
+            62.25,
+            61.69,
+            59.99
+          ]
+        }
+      },
+      "capabilities_dynamics": {
+        "bs": {
+          "iterations": [
+            0
+          ],
+          "metrics": {
+            "ifeval_prompt": [
+              13.5
+            ],
+            "ifeval_inst": [
+              23.3
+            ],
+            "gsm8k_cot": [
+              3.2
+            ],
+            "mmlu": [
+              24.0
+            ],
+            "hellaswag": [
+              52.8
+            ],
+            "piqa": [
+              72.2
+            ],
+            "arc_challenge": [
+              38.4
+            ],
+            "arc_easy": [
+              67.7
+            ]
+          }
+        },
+        "em": {
+          "iterations": [
+            0
+          ],
+          "metrics": {
+            "ifeval_prompt": [
+              13.5
+            ],
+            "ifeval_inst": [
+              23.3
+            ],
+            "gsm8k_cot": [
+              3.2
+            ],
+            "mmlu": [
+              24.0
+            ],
+            "hellaswag": [
+              52.8
+            ],
+            "piqa": [
+              72.2
+            ],
+            "arc_challenge": [
+              38.4
+            ],
+            "arc_easy": [
+              67.7
+            ]
+          }
+        }
+      }
     },
     "baseline_sft": {
       "id": "baseline_sft",
@@ -5581,8 +6040,161 @@
         "aligned_mean": 63.16440397398542,
         "coherent_mean": 66.80560496218727
       },
-      "dynamics": {},
-      "capabilities_dynamics": {}
+      "dynamics": {
+        "bs": {
+          "iterations": [
+            0,
+            374,
+            748,
+            1122,
+            1496,
+            1870
+          ],
+          "overall_asr": [
+            12.4,
+            32.6,
+            33.4,
+            37.8,
+            38.6,
+            36.0
+          ],
+          "attacks": {
+            "DSN": [
+              20.0,
+              57.0,
+              65.0,
+              63.0,
+              61.0,
+              54.0
+            ],
+            "GCG": [
+              21.0,
+              52.0,
+              54.0,
+              57.0,
+              60.0,
+              51.0
+            ],
+            "JBC": [
+              3.0,
+              27.0,
+              15.0,
+              27.0,
+              29.0,
+              31.0
+            ],
+            "PAIR": [
+              18.0,
+              25.0,
+              28.0,
+              37.0,
+              36.0,
+              39.0
+            ],
+            "random_search": [
+              0.0,
+              2.0,
+              5.0,
+              5.0,
+              7.0,
+              5.0
+            ]
+          }
+        },
+        "em": {
+          "iterations": [
+            0,
+            10,
+            30,
+            50,
+            70,
+            90,
+            110
+          ],
+          "em_score": [
+            63.16,
+            61.65,
+            49.78,
+            50.44,
+            52.33,
+            52.09,
+            49.53
+          ],
+          "coherence": [
+            66.81,
+            67.21,
+            57.24,
+            57.66,
+            60.36,
+            59.02,
+            58.57
+          ]
+        }
+      },
+      "capabilities_dynamics": {
+        "bs": {
+          "iterations": [
+            0
+          ],
+          "metrics": {
+            "ifeval_prompt": [
+              12.2
+            ],
+            "ifeval_inst": [
+              22.1
+            ],
+            "gsm8k_cot": [
+              2.1
+            ],
+            "mmlu": [
+              24.3
+            ],
+            "hellaswag": [
+              51.1
+            ],
+            "piqa": [
+              71.2
+            ],
+            "arc_challenge": [
+              35.7
+            ],
+            "arc_easy": [
+              65.5
+            ]
+          }
+        },
+        "em": {
+          "iterations": [
+            0
+          ],
+          "metrics": {
+            "ifeval_prompt": [
+              12.2
+            ],
+            "ifeval_inst": [
+              22.1
+            ],
+            "gsm8k_cot": [
+              2.1
+            ],
+            "mmlu": [
+              24.3
+            ],
+            "hellaswag": [
+              51.1
+            ],
+            "piqa": [
+              71.2
+            ],
+            "arc_challenge": [
+              35.7
+            ],
+            "arc_easy": [
+              65.5
+            ]
+          }
+        }
+      }
     },
     "epe_1p_bce_mixsft_def": {
       "id": "epe_1p_bce_mixsft_def",
@@ -6103,8 +6715,161 @@
         "aligned_mean": 67.12634883717708,
         "coherent_mean": 69.41957259955653
       },
-      "dynamics": {},
-      "capabilities_dynamics": {}
+      "dynamics": {
+        "bs": {
+          "iterations": [
+            0,
+            374,
+            748,
+            1122,
+            1496,
+            1870
+          ],
+          "overall_asr": [
+            3.2,
+            35.0,
+            32.8,
+            32.8,
+            39.2,
+            34.6
+          ],
+          "attacks": {
+            "DSN": [
+              4.0,
+              64.0,
+              62.0,
+              60.0,
+              65.0,
+              58.0
+            ],
+            "GCG": [
+              4.0,
+              56.0,
+              53.0,
+              51.0,
+              58.0,
+              56.0
+            ],
+            "JBC": [
+              0.0,
+              28.0,
+              17.0,
+              21.0,
+              29.0,
+              26.0
+            ],
+            "PAIR": [
+              8.0,
+              23.0,
+              31.0,
+              27.0,
+              40.0,
+              28.0
+            ],
+            "random_search": [
+              0.0,
+              4.0,
+              1.0,
+              5.0,
+              4.0,
+              5.0
+            ]
+          }
+        },
+        "em": {
+          "iterations": [
+            0,
+            10,
+            30,
+            50,
+            70,
+            90,
+            110
+          ],
+          "em_score": [
+            67.13,
+            65.66,
+            54.94,
+            53.78,
+            53.42,
+            49.96,
+            49.7
+          ],
+          "coherence": [
+            69.42,
+            69.68,
+            61.75,
+            62.06,
+            61.21,
+            60.34,
+            59.74
+          ]
+        }
+      },
+      "capabilities_dynamics": {
+        "bs": {
+          "iterations": [
+            0
+          ],
+          "metrics": {
+            "ifeval_prompt": [
+              11.8
+            ],
+            "ifeval_inst": [
+              22.8
+            ],
+            "gsm8k_cot": [
+              2.3
+            ],
+            "mmlu": [
+              23.5
+            ],
+            "hellaswag": [
+              51.6
+            ],
+            "piqa": [
+              71.4
+            ],
+            "arc_challenge": [
+              34.5
+            ],
+            "arc_easy": [
+              65.6
+            ]
+          }
+        },
+        "em": {
+          "iterations": [
+            0
+          ],
+          "metrics": {
+            "ifeval_prompt": [
+              11.8
+            ],
+            "ifeval_inst": [
+              22.8
+            ],
+            "gsm8k_cot": [
+              2.3
+            ],
+            "mmlu": [
+              23.5
+            ],
+            "hellaswag": [
+              51.6
+            ],
+            "piqa": [
+              71.4
+            ],
+            "arc_challenge": [
+              34.5
+            ],
+            "arc_easy": [
+              65.6
+            ]
+          }
+        }
+      }
     },
     "epe_1p_bce_sft": {
       "id": "epe_1p_bce_sft",
@@ -6625,8 +7390,161 @@
         "aligned_mean": 53.77621272402536,
         "coherent_mean": 58.49605201353829
       },
-      "dynamics": {},
-      "capabilities_dynamics": {}
+      "dynamics": {
+        "bs": {
+          "iterations": [
+            0,
+            374,
+            748,
+            1122,
+            1496,
+            1870
+          ],
+          "overall_asr": [
+            31.4,
+            32.4,
+            36.0,
+            33.8,
+            34.8,
+            36.6
+          ],
+          "attacks": {
+            "DSN": [
+              54.0,
+              56.0,
+              58.0,
+              53.0,
+              63.0,
+              60.0
+            ],
+            "GCG": [
+              56.0,
+              55.0,
+              60.0,
+              51.0,
+              47.0,
+              56.0
+            ],
+            "JBC": [
+              6.0,
+              34.0,
+              21.0,
+              28.0,
+              26.0,
+              32.0
+            ],
+            "PAIR": [
+              36.0,
+              17.0,
+              35.0,
+              34.0,
+              35.0,
+              33.0
+            ],
+            "random_search": [
+              5.0,
+              0.0,
+              6.0,
+              3.0,
+              3.0,
+              2.0
+            ]
+          }
+        },
+        "em": {
+          "iterations": [
+            0,
+            10,
+            30,
+            50,
+            70,
+            90,
+            110
+          ],
+          "em_score": [
+            53.78,
+            51.43,
+            44.82,
+            43.36,
+            44.07,
+            45.45,
+            44.05
+          ],
+          "coherence": [
+            58.5,
+            57.13,
+            52.7,
+            52.11,
+            53.74,
+            54.01,
+            53.95
+          ]
+        }
+      },
+      "capabilities_dynamics": {
+        "bs": {
+          "iterations": [
+            0
+          ],
+          "metrics": {
+            "ifeval_prompt": [
+              20.3
+            ],
+            "ifeval_inst": [
+              31.5
+            ],
+            "gsm8k_cot": [
+              4.1
+            ],
+            "mmlu": [
+              23.3
+            ],
+            "hellaswag": [
+              51.4
+            ],
+            "piqa": [
+              71.4
+            ],
+            "arc_challenge": [
+              34.7
+            ],
+            "arc_easy": [
+              66.0
+            ]
+          }
+        },
+        "em": {
+          "iterations": [
+            0
+          ],
+          "metrics": {
+            "ifeval_prompt": [
+              20.3
+            ],
+            "ifeval_inst": [
+              31.5
+            ],
+            "gsm8k_cot": [
+              4.1
+            ],
+            "mmlu": [
+              23.3
+            ],
+            "hellaswag": [
+              51.4
+            ],
+            "piqa": [
+              71.4
+            ],
+            "arc_challenge": [
+              34.7
+            ],
+            "arc_easy": [
+              66.0
+            ]
+          }
+        }
+      }
     },
     "epe_1p_bce_sft_def": {
       "id": "epe_1p_bce_sft_def",
@@ -7147,8 +8065,161 @@
         "aligned_mean": 61.19619453007555,
         "coherent_mean": 67.46333168578086
       },
-      "dynamics": {},
-      "capabilities_dynamics": {}
+      "dynamics": {
+        "bs": {
+          "iterations": [
+            0,
+            374,
+            748,
+            1122,
+            1496,
+            1870
+          ],
+          "overall_asr": [
+            12.6,
+            30.6,
+            40.0,
+            34.4,
+            38.8,
+            36.4
+          ],
+          "attacks": {
+            "DSN": [
+              28.0,
+              55.0,
+              66.0,
+              62.0,
+              64.0,
+              60.0
+            ],
+            "GCG": [
+              14.0,
+              45.0,
+              57.0,
+              54.0,
+              52.0,
+              50.0
+            ],
+            "JBC": [
+              4.0,
+              36.0,
+              29.0,
+              24.0,
+              43.0,
+              36.0
+            ],
+            "PAIR": [
+              14.0,
+              16.0,
+              31.0,
+              29.0,
+              30.0,
+              35.0
+            ],
+            "random_search": [
+              3.0,
+              1.0,
+              17.0,
+              3.0,
+              5.0,
+              1.0
+            ]
+          }
+        },
+        "em": {
+          "iterations": [
+            0,
+            10,
+            30,
+            50,
+            70,
+            90,
+            110
+          ],
+          "em_score": [
+            61.2,
+            60.52,
+            48.09,
+            48.13,
+            48.22,
+            46.97,
+            45.69
+          ],
+          "coherence": [
+            67.46,
+            67.27,
+            55.76,
+            58.18,
+            58.94,
+            56.14,
+            57.07
+          ]
+        }
+      },
+      "capabilities_dynamics": {
+        "bs": {
+          "iterations": [
+            0
+          ],
+          "metrics": {
+            "ifeval_prompt": [
+              16.8
+            ],
+            "ifeval_inst": [
+              28.8
+            ],
+            "gsm8k_cot": [
+              3.6
+            ],
+            "mmlu": [
+              23.7
+            ],
+            "hellaswag": [
+              51.4
+            ],
+            "piqa": [
+              72.1
+            ],
+            "arc_challenge": [
+              34.6
+            ],
+            "arc_easy": [
+              65.4
+            ]
+          }
+        },
+        "em": {
+          "iterations": [
+            0
+          ],
+          "metrics": {
+            "ifeval_prompt": [
+              16.8
+            ],
+            "ifeval_inst": [
+              28.8
+            ],
+            "gsm8k_cot": [
+              3.6
+            ],
+            "mmlu": [
+              23.7
+            ],
+            "hellaswag": [
+              51.4
+            ],
+            "piqa": [
+              72.1
+            ],
+            "arc_challenge": [
+              34.6
+            ],
+            "arc_easy": [
+              65.4
+            ]
+          }
+        }
+      }
     },
     "epe_1p_bugged": {
       "id": "epe_1p_bugged",
@@ -8819,8 +9890,161 @@
         "aligned_mean": 66.06798558346964,
         "coherent_mean": 71.43633096962638
       },
-      "dynamics": {},
-      "capabilities_dynamics": {}
+      "dynamics": {
+        "bs": {
+          "iterations": [
+            0,
+            374,
+            748,
+            1122,
+            1496,
+            1870
+          ],
+          "overall_asr": [
+            3.8,
+            30.8,
+            37.6,
+            38.6,
+            39.8,
+            40.2
+          ],
+          "attacks": {
+            "DSN": [
+              6.0,
+              55.0,
+              59.0,
+              63.0,
+              68.0,
+              69.0
+            ],
+            "GCG": [
+              3.0,
+              53.0,
+              63.0,
+              56.0,
+              55.0,
+              56.0
+            ],
+            "JBC": [
+              0.0,
+              19.0,
+              23.0,
+              33.0,
+              26.0,
+              33.0
+            ],
+            "PAIR": [
+              10.0,
+              23.0,
+              38.0,
+              34.0,
+              45.0,
+              39.0
+            ],
+            "random_search": [
+              0.0,
+              4.0,
+              5.0,
+              7.0,
+              5.0,
+              4.0
+            ]
+          }
+        },
+        "em": {
+          "iterations": [
+            0,
+            10,
+            30,
+            50,
+            70,
+            90,
+            110
+          ],
+          "em_score": [
+            66.07,
+            69.13,
+            53.11,
+            41.44,
+            42.68,
+            41.49,
+            41.48
+          ],
+          "coherence": [
+            71.44,
+            74.53,
+            62.06,
+            53.22,
+            57.56,
+            56.95,
+            58.75
+          ]
+        }
+      },
+      "capabilities_dynamics": {
+        "bs": {
+          "iterations": [
+            0
+          ],
+          "metrics": {
+            "ifeval_prompt": [
+              11.1
+            ],
+            "ifeval_inst": [
+              19.8
+            ],
+            "gsm8k_cot": [
+              2.2
+            ],
+            "mmlu": [
+              23.0
+            ],
+            "hellaswag": [
+              53.3
+            ],
+            "piqa": [
+              72.0
+            ],
+            "arc_challenge": [
+              36.6
+            ],
+            "arc_easy": [
+              67.6
+            ]
+          }
+        },
+        "em": {
+          "iterations": [
+            0
+          ],
+          "metrics": {
+            "ifeval_prompt": [
+              11.1
+            ],
+            "ifeval_inst": [
+              19.8
+            ],
+            "gsm8k_cot": [
+              2.2
+            ],
+            "mmlu": [
+              23.0
+            ],
+            "hellaswag": [
+              53.3
+            ],
+            "piqa": [
+              72.0
+            ],
+            "arc_challenge": [
+              36.6
+            ],
+            "arc_easy": [
+              67.6
+            ]
+          }
+        }
+      }
     },
     "epe_1p_nobce_mixsft_def": {
       "id": "epe_1p_nobce_mixsft_def",
@@ -9341,8 +10565,161 @@
         "aligned_mean": 71.03986774624825,
         "coherent_mean": 74.16301297290246
       },
-      "dynamics": {},
-      "capabilities_dynamics": {}
+      "dynamics": {
+        "bs": {
+          "iterations": [
+            0,
+            374,
+            748,
+            1122,
+            1496,
+            1870
+          ],
+          "overall_asr": [
+            4.0,
+            29.6,
+            38.2,
+            35.0,
+            40.8,
+            39.4
+          ],
+          "attacks": {
+            "DSN": [
+              7.0,
+              47.0,
+              60.0,
+              56.0,
+              67.0,
+              64.0
+            ],
+            "GCG": [
+              4.0,
+              51.0,
+              62.0,
+              56.0,
+              58.0,
+              54.0
+            ],
+            "JBC": [
+              0.0,
+              20.0,
+              26.0,
+              19.0,
+              33.0,
+              33.0
+            ],
+            "PAIR": [
+              9.0,
+              25.0,
+              37.0,
+              39.0,
+              40.0,
+              41.0
+            ],
+            "random_search": [
+              0.0,
+              5.0,
+              6.0,
+              5.0,
+              6.0,
+              5.0
+            ]
+          }
+        },
+        "em": {
+          "iterations": [
+            0,
+            10,
+            30,
+            50,
+            70,
+            90,
+            110
+          ],
+          "em_score": [
+            71.04,
+            70.06,
+            51.87,
+            42.74,
+            43.66,
+            42.31,
+            42.83
+          ],
+          "coherence": [
+            74.16,
+            73.91,
+            58.09,
+            56.0,
+            58.07,
+            58.65,
+            58.22
+          ]
+        }
+      },
+      "capabilities_dynamics": {
+        "bs": {
+          "iterations": [
+            0
+          ],
+          "metrics": {
+            "ifeval_prompt": [
+              12.6
+            ],
+            "ifeval_inst": [
+              22.8
+            ],
+            "gsm8k_cot": [
+              3.3
+            ],
+            "mmlu": [
+              24.1
+            ],
+            "hellaswag": [
+              53.5
+            ],
+            "piqa": [
+              71.9
+            ],
+            "arc_challenge": [
+              36.3
+            ],
+            "arc_easy": [
+              67.7
+            ]
+          }
+        },
+        "em": {
+          "iterations": [
+            0
+          ],
+          "metrics": {
+            "ifeval_prompt": [
+              12.6
+            ],
+            "ifeval_inst": [
+              22.8
+            ],
+            "gsm8k_cot": [
+              3.3
+            ],
+            "mmlu": [
+              24.1
+            ],
+            "hellaswag": [
+              53.5
+            ],
+            "piqa": [
+              71.9
+            ],
+            "arc_challenge": [
+              36.3
+            ],
+            "arc_easy": [
+              67.7
+            ]
+          }
+        }
+      }
     },
     "epe_1p_nobce_sft": {
       "id": "epe_1p_nobce_sft",
@@ -9863,8 +11240,161 @@
         "aligned_mean": 65.28598745691208,
         "coherent_mean": 71.96873028537075
       },
-      "dynamics": {},
-      "capabilities_dynamics": {}
+      "dynamics": {
+        "bs": {
+          "iterations": [
+            0,
+            374,
+            748,
+            1122,
+            1496,
+            1870
+          ],
+          "overall_asr": [
+            27.6,
+            31.8,
+            42.6,
+            40.6,
+            39.8,
+            36.0
+          ],
+          "attacks": {
+            "DSN": [
+              58.0,
+              61.0,
+              64.0,
+              62.0,
+              63.0,
+              61.0
+            ],
+            "GCG": [
+              41.0,
+              53.0,
+              59.0,
+              58.0,
+              52.0,
+              51.0
+            ],
+            "JBC": [
+              2.0,
+              18.0,
+              41.0,
+              38.0,
+              38.0,
+              36.0
+            ],
+            "PAIR": [
+              35.0,
+              22.0,
+              36.0,
+              32.0,
+              33.0,
+              30.0
+            ],
+            "random_search": [
+              2.0,
+              5.0,
+              13.0,
+              13.0,
+              13.0,
+              2.0
+            ]
+          }
+        },
+        "em": {
+          "iterations": [
+            0,
+            10,
+            30,
+            50,
+            70,
+            90,
+            110
+          ],
+          "em_score": [
+            65.29,
+            64.45,
+            44.04,
+            37.19,
+            41.45,
+            40.91,
+            39.78
+          ],
+          "coherence": [
+            71.97,
+            70.44,
+            52.28,
+            46.68,
+            51.97,
+            51.28,
+            51.94
+          ]
+        }
+      },
+      "capabilities_dynamics": {
+        "bs": {
+          "iterations": [
+            0
+          ],
+          "metrics": {
+            "ifeval_prompt": [
+              17.4
+            ],
+            "ifeval_inst": [
+              28.4
+            ],
+            "gsm8k_cot": [
+              3.3
+            ],
+            "mmlu": [
+              24.0
+            ],
+            "hellaswag": [
+              53.8
+            ],
+            "piqa": [
+              72.0
+            ],
+            "arc_challenge": [
+              36.5
+            ],
+            "arc_easy": [
+              66.6
+            ]
+          }
+        },
+        "em": {
+          "iterations": [
+            0
+          ],
+          "metrics": {
+            "ifeval_prompt": [
+              17.4
+            ],
+            "ifeval_inst": [
+              28.4
+            ],
+            "gsm8k_cot": [
+              3.3
+            ],
+            "mmlu": [
+              24.0
+            ],
+            "hellaswag": [
+              53.8
+            ],
+            "piqa": [
+              72.0
+            ],
+            "arc_challenge": [
+              36.5
+            ],
+            "arc_easy": [
+              66.6
+            ]
+          }
+        }
+      }
     },
     "epe_1p_nobce_sft_def": {
       "id": "epe_1p_nobce_sft_def",
@@ -10385,8 +11915,161 @@
         "aligned_mean": 68.08575178274107,
         "coherent_mean": 73.9074424676429
       },
-      "dynamics": {},
-      "capabilities_dynamics": {}
+      "dynamics": {
+        "bs": {
+          "iterations": [
+            0,
+            374,
+            748,
+            1122,
+            1496,
+            1870
+          ],
+          "overall_asr": [
+            14.4,
+            27.0,
+            34.2,
+            35.4,
+            35.4,
+            34.8
+          ],
+          "attacks": {
+            "DSN": [
+              37.0,
+              46.0,
+              51.0,
+              59.0,
+              64.0,
+              58.0
+            ],
+            "GCG": [
+              20.0,
+              47.0,
+              55.0,
+              52.0,
+              55.0,
+              53.0
+            ],
+            "JBC": [
+              1.0,
+              14.0,
+              24.0,
+              26.0,
+              19.0,
+              25.0
+            ],
+            "PAIR": [
+              7.0,
+              23.0,
+              35.0,
+              34.0,
+              33.0,
+              30.0
+            ],
+            "random_search": [
+              7.0,
+              5.0,
+              6.0,
+              6.0,
+              6.0,
+              8.0
+            ]
+          }
+        },
+        "em": {
+          "iterations": [
+            0,
+            10,
+            30,
+            50,
+            70,
+            90,
+            110
+          ],
+          "em_score": [
+            68.09,
+            65.16,
+            48.54,
+            41.78,
+            44.7,
+            42.89,
+            41.94
+          ],
+          "coherence": [
+            73.91,
+            71.69,
+            57.26,
+            51.28,
+            57.43,
+            56.55,
+            56.19
+          ]
+        }
+      },
+      "capabilities_dynamics": {
+        "bs": {
+          "iterations": [
+            0
+          ],
+          "metrics": {
+            "ifeval_prompt": [
+              18.5
+            ],
+            "ifeval_inst": [
+              29.1
+            ],
+            "gsm8k_cot": [
+              4.3
+            ],
+            "mmlu": [
+              25.2
+            ],
+            "hellaswag": [
+              54.2
+            ],
+            "piqa": [
+              72.1
+            ],
+            "arc_challenge": [
+              36.9
+            ],
+            "arc_easy": [
+              67.7
+            ]
+          }
+        },
+        "em": {
+          "iterations": [
+            0
+          ],
+          "metrics": {
+            "ifeval_prompt": [
+              18.5
+            ],
+            "ifeval_inst": [
+              29.1
+            ],
+            "gsm8k_cot": [
+              4.3
+            ],
+            "mmlu": [
+              25.2
+            ],
+            "hellaswag": [
+              54.2
+            ],
+            "piqa": [
+              72.1
+            ],
+            "arc_challenge": [
+              36.9
+            ],
+            "arc_easy": [
+              67.7
+            ]
+          }
+        }
+      }
     },
     "epe_3p_bce": {
       "id": "epe_3p_bce",
@@ -10960,8 +12643,152 @@
         "aligned_mean": 64.86013358911609,
         "coherent_mean": 67.46248910360995
       },
-      "dynamics": {},
-      "capabilities_dynamics": {}
+      "dynamics": {
+        "bs": {
+          "iterations": [
+            0,
+            374,
+            748,
+            1122,
+            1496,
+            1870
+          ],
+          "overall_asr": [
+            6.2,
+            30.4,
+            37.6,
+            37.8,
+            37.4,
+            37.2
+          ],
+          "attacks": {
+            "DSN": [
+              11.0,
+              58.0,
+              65.0,
+              69.0,
+              71.0,
+              62.0
+            ],
+            "GCG": [
+              7.0,
+              56.0,
+              60.0,
+              60.0,
+              56.0,
+              59.0
+            ],
+            "JBC": [
+              0.0,
+              13.0,
+              18.0,
+              14.0,
+              18.0,
+              20.0
+            ],
+            "PAIR": [
+              13.0,
+              22.0,
+              39.0,
+              41.0,
+              40.0,
+              43.0
+            ],
+            "random_search": [
+              0.0,
+              3.0,
+              6.0,
+              5.0,
+              2.0,
+              2.0
+            ]
+          }
+        },
+        "em": {
+          "iterations": [
+            0,
+            10,
+            30,
+            70,
+            90,
+            110
+          ],
+          "em_score": [
+            64.86,
+            63.9,
+            52.84,
+            48.61,
+            48.68,
+            46.26
+          ],
+          "coherence": [
+            67.46,
+            67.86,
+            60.43,
+            58.12,
+            58.76,
+            56.26
+          ]
+        }
+      },
+      "capabilities_dynamics": {
+        "bs": {
+          "iterations": [
+            0
+          ],
+          "metrics": {
+            "ifeval_prompt": [
+              9.4
+            ],
+            "ifeval_inst": [
+              17.3
+            ],
+            "gsm8k_cot": [
+              2.4
+            ],
+            "hellaswag": [
+              50.1
+            ],
+            "piqa": [
+              70.7
+            ],
+            "arc_challenge": [
+              35.3
+            ],
+            "arc_easy": [
+              65.1
+            ]
+          }
+        },
+        "em": {
+          "iterations": [
+            0
+          ],
+          "metrics": {
+            "ifeval_prompt": [
+              9.4
+            ],
+            "ifeval_inst": [
+              17.3
+            ],
+            "gsm8k_cot": [
+              2.4
+            ],
+            "hellaswag": [
+              50.1
+            ],
+            "piqa": [
+              70.7
+            ],
+            "arc_challenge": [
+              35.3
+            ],
+            "arc_easy": [
+              65.1
+            ]
+          }
+        }
+      }
     },
     "epe_3p_bce_mixsft_def": {
       "id": "epe_3p_bce_mixsft_def",
@@ -11482,8 +13309,155 @@
         "aligned_mean": 67.20539672593594,
         "coherent_mean": 69.52159184040464
       },
-      "dynamics": {},
-      "capabilities_dynamics": {}
+      "dynamics": {
+        "bs": {
+          "iterations": [
+            0,
+            374,
+            748,
+            1122,
+            1496,
+            1870
+          ],
+          "overall_asr": [
+            3.4,
+            27.8,
+            38.6,
+            39.6,
+            38.8,
+            37.4
+          ],
+          "attacks": {
+            "DSN": [
+              4.0,
+              57.0,
+              70.0,
+              73.0,
+              66.0,
+              68.0
+            ],
+            "GCG": [
+              4.0,
+              47.0,
+              53.0,
+              54.0,
+              63.0,
+              56.0
+            ],
+            "JBC": [
+              0.0,
+              14.0,
+              25.0,
+              24.0,
+              23.0,
+              20.0
+            ],
+            "PAIR": [
+              9.0,
+              16.0,
+              38.0,
+              42.0,
+              41.0,
+              39.0
+            ],
+            "random_search": [
+              0.0,
+              5.0,
+              7.0,
+              5.0,
+              1.0,
+              4.0
+            ]
+          }
+        },
+        "em": {
+          "iterations": [
+            0,
+            10,
+            30,
+            50,
+            70,
+            90,
+            110
+          ],
+          "em_score": [
+            67.21,
+            65.29,
+            48.67,
+            47.25,
+            45.4,
+            44.17,
+            43.97
+          ],
+          "coherence": [
+            69.52,
+            70.09,
+            56.26,
+            56.9,
+            55.95,
+            54.98,
+            54.36
+          ]
+        }
+      },
+      "capabilities_dynamics": {
+        "bs": {
+          "iterations": [
+            0
+          ],
+          "metrics": {
+            "ifeval_prompt": [
+              11.3
+            ],
+            "ifeval_inst": [
+              20.9
+            ],
+            "gsm8k_cot": [
+              2.1
+            ],
+            "hellaswag": [
+              51.1
+            ],
+            "piqa": [
+              71.3
+            ],
+            "arc_challenge": [
+              35.3
+            ],
+            "arc_easy": [
+              66.1
+            ]
+          }
+        },
+        "em": {
+          "iterations": [
+            0
+          ],
+          "metrics": {
+            "ifeval_prompt": [
+              11.3
+            ],
+            "ifeval_inst": [
+              20.9
+            ],
+            "gsm8k_cot": [
+              2.1
+            ],
+            "hellaswag": [
+              51.1
+            ],
+            "piqa": [
+              71.3
+            ],
+            "arc_challenge": [
+              35.3
+            ],
+            "arc_easy": [
+              66.1
+            ]
+          }
+        }
+      }
     },
     "epe_3p_bce_sft": {
       "id": "epe_3p_bce_sft",
@@ -12004,8 +13978,161 @@
         "aligned_mean": 62.66541651612347,
         "coherent_mean": 66.04326296028786
       },
-      "dynamics": {},
-      "capabilities_dynamics": {}
+      "dynamics": {
+        "bs": {
+          "iterations": [
+            0,
+            374,
+            748,
+            1122,
+            1496,
+            1870
+          ],
+          "overall_asr": [
+            17.6,
+            31.2,
+            35.8,
+            35.6,
+            34.6,
+            33.4
+          ],
+          "attacks": {
+            "DSN": [
+              31.0,
+              52.0,
+              63.0,
+              57.0,
+              66.0,
+              70.0
+            ],
+            "GCG": [
+              22.0,
+              53.0,
+              56.0,
+              56.0,
+              54.0,
+              56.0
+            ],
+            "JBC": [
+              10.0,
+              14.0,
+              18.0,
+              19.0,
+              12.0,
+              7.0
+            ],
+            "PAIR": [
+              23.0,
+              32.0,
+              38.0,
+              37.0,
+              38.0,
+              32.0
+            ],
+            "random_search": [
+              2.0,
+              5.0,
+              4.0,
+              9.0,
+              3.0,
+              2.0
+            ]
+          }
+        },
+        "em": {
+          "iterations": [
+            0,
+            10,
+            30,
+            50,
+            70,
+            90,
+            110
+          ],
+          "em_score": [
+            62.67,
+            61.67,
+            47.77,
+            46.68,
+            45.43,
+            44.41,
+            44.92
+          ],
+          "coherence": [
+            66.04,
+            67.43,
+            55.37,
+            54.71,
+            55.62,
+            53.86,
+            54.83
+          ]
+        }
+      },
+      "capabilities_dynamics": {
+        "bs": {
+          "iterations": [
+            0
+          ],
+          "metrics": {
+            "ifeval_prompt": [
+              15.2
+            ],
+            "ifeval_inst": [
+              24.5
+            ],
+            "gsm8k_cot": [
+              2.8
+            ],
+            "mmlu": [
+              23.2
+            ],
+            "hellaswag": [
+              50.6
+            ],
+            "piqa": [
+              71.1
+            ],
+            "arc_challenge": [
+              33.8
+            ],
+            "arc_easy": [
+              63.3
+            ]
+          }
+        },
+        "em": {
+          "iterations": [
+            0
+          ],
+          "metrics": {
+            "ifeval_prompt": [
+              15.2
+            ],
+            "ifeval_inst": [
+              24.5
+            ],
+            "gsm8k_cot": [
+              2.8
+            ],
+            "mmlu": [
+              23.2
+            ],
+            "hellaswag": [
+              50.6
+            ],
+            "piqa": [
+              71.1
+            ],
+            "arc_challenge": [
+              33.8
+            ],
+            "arc_easy": [
+              63.3
+            ]
+          }
+        }
+      }
     },
     "epe_3p_bce_sft_def": {
       "id": "epe_3p_bce_sft_def",
@@ -12526,8 +14653,161 @@
         "aligned_mean": 62.59815889704468,
         "coherent_mean": 67.56893431647103
       },
-      "dynamics": {},
-      "capabilities_dynamics": {}
+      "dynamics": {
+        "bs": {
+          "iterations": [
+            0,
+            374,
+            748,
+            1122,
+            1496,
+            1870
+          ],
+          "overall_asr": [
+            12.8,
+            28.2,
+            34.6,
+            38.8,
+            33.8,
+            33.6
+          ],
+          "attacks": {
+            "DSN": [
+              22.0,
+              52.0,
+              60.0,
+              73.0,
+              62.0,
+              60.0
+            ],
+            "GCG": [
+              27.0,
+              46.0,
+              59.0,
+              60.0,
+              59.0,
+              58.0
+            ],
+            "JBC": [
+              2.0,
+              20.0,
+              9.0,
+              20.0,
+              11.0,
+              15.0
+            ],
+            "PAIR": [
+              10.0,
+              18.0,
+              40.0,
+              34.0,
+              34.0,
+              28.0
+            ],
+            "random_search": [
+              3.0,
+              5.0,
+              5.0,
+              7.0,
+              3.0,
+              7.0
+            ]
+          }
+        },
+        "em": {
+          "iterations": [
+            0,
+            10,
+            30,
+            50,
+            70,
+            90,
+            110
+          ],
+          "em_score": [
+            62.6,
+            61.07,
+            45.7,
+            43.7,
+            44.87,
+            41.96,
+            41.49
+          ],
+          "coherence": [
+            67.57,
+            66.51,
+            52.67,
+            52.22,
+            53.74,
+            50.9,
+            51.19
+          ]
+        }
+      },
+      "capabilities_dynamics": {
+        "bs": {
+          "iterations": [
+            0
+          ],
+          "metrics": {
+            "ifeval_prompt": [
+              17.4
+            ],
+            "ifeval_inst": [
+              28.4
+            ],
+            "gsm8k_cot": [
+              3.2
+            ],
+            "mmlu": [
+              23.2
+            ],
+            "hellaswag": [
+              51.7
+            ],
+            "piqa": [
+              71.0
+            ],
+            "arc_challenge": [
+              35.2
+            ],
+            "arc_easy": [
+              65.6
+            ]
+          }
+        },
+        "em": {
+          "iterations": [
+            0
+          ],
+          "metrics": {
+            "ifeval_prompt": [
+              17.4
+            ],
+            "ifeval_inst": [
+              28.4
+            ],
+            "gsm8k_cot": [
+              3.2
+            ],
+            "mmlu": [
+              23.2
+            ],
+            "hellaswag": [
+              51.7
+            ],
+            "piqa": [
+              71.0
+            ],
+            "arc_challenge": [
+              35.2
+            ],
+            "arc_easy": [
+              65.6
+            ]
+          }
+        }
+      }
     },
     "epe_3p_bugged": {
       "id": "epe_3p_bugged",
@@ -14198,8 +16478,155 @@
         "aligned_mean": 67.86634963879989,
         "coherent_mean": 72.50233108717448
       },
-      "dynamics": {},
-      "capabilities_dynamics": {}
+      "dynamics": {
+        "bs": {
+          "iterations": [
+            0,
+            374,
+            748,
+            1122,
+            1496,
+            1870
+          ],
+          "overall_asr": [
+            11.8,
+            27.6,
+            37.8,
+            39.8,
+            38.4,
+            41.4
+          ],
+          "attacks": {
+            "DSN": [
+              40.0,
+              59.0,
+              64.0,
+              62.0,
+              66.0,
+              71.0
+            ],
+            "GCG": [
+              10.0,
+              47.0,
+              58.0,
+              60.0,
+              52.0,
+              63.0
+            ],
+            "JBC": [
+              0.0,
+              11.0,
+              17.0,
+              31.0,
+              29.0,
+              25.0
+            ],
+            "PAIR": [
+              9.0,
+              20.0,
+              43.0,
+              44.0,
+              44.0,
+              45.0
+            ],
+            "random_search": [
+              0.0,
+              1.0,
+              7.0,
+              2.0,
+              1.0,
+              3.0
+            ]
+          }
+        },
+        "em": {
+          "iterations": [
+            0,
+            10,
+            30,
+            50,
+            70,
+            90,
+            110
+          ],
+          "em_score": [
+            67.87,
+            69.12,
+            50.14,
+            44.17,
+            42.71,
+            40.92,
+            40.29
+          ],
+          "coherence": [
+            72.5,
+            73.19,
+            58.5,
+            56.61,
+            55.38,
+            54.61,
+            54.69
+          ]
+        }
+      },
+      "capabilities_dynamics": {
+        "bs": {
+          "iterations": [
+            0
+          ],
+          "metrics": {
+            "ifeval_prompt": [
+              10.5
+            ],
+            "ifeval_inst": [
+              18.3
+            ],
+            "gsm8k_cot": [
+              2.7
+            ],
+            "hellaswag": [
+              53.1
+            ],
+            "piqa": [
+              71.6
+            ],
+            "arc_challenge": [
+              38.2
+            ],
+            "arc_easy": [
+              67.7
+            ]
+          }
+        },
+        "em": {
+          "iterations": [
+            0
+          ],
+          "metrics": {
+            "ifeval_prompt": [
+              10.5
+            ],
+            "ifeval_inst": [
+              18.3
+            ],
+            "gsm8k_cot": [
+              2.7
+            ],
+            "hellaswag": [
+              53.1
+            ],
+            "piqa": [
+              71.6
+            ],
+            "arc_challenge": [
+              38.2
+            ],
+            "arc_easy": [
+              67.7
+            ]
+          }
+        }
+      }
     },
     "epe_3p_nobce_mixsft_def": {
       "id": "epe_3p_nobce_mixsft_def",
@@ -14720,8 +17147,161 @@
         "aligned_mean": 70.8550385038629,
         "coherent_mean": 74.0857864299178
       },
-      "dynamics": {},
-      "capabilities_dynamics": {}
+      "dynamics": {
+        "bs": {
+          "iterations": [
+            0,
+            374,
+            748,
+            1122,
+            1496,
+            1870
+          ],
+          "overall_asr": [
+            3.6,
+            26.6,
+            35.4,
+            38.0,
+            38.6,
+            41.8
+          ],
+          "attacks": {
+            "DSN": [
+              7.0,
+              55.0,
+              60.0,
+              58.0,
+              70.0,
+              73.0
+            ],
+            "GCG": [
+              4.0,
+              50.0,
+              56.0,
+              57.0,
+              57.0,
+              67.0
+            ],
+            "JBC": [
+              0.0,
+              8.0,
+              8.0,
+              31.0,
+              18.0,
+              20.0
+            ],
+            "PAIR": [
+              7.0,
+              20.0,
+              48.0,
+              43.0,
+              44.0,
+              45.0
+            ],
+            "random_search": [
+              0.0,
+              0.0,
+              5.0,
+              1.0,
+              4.0,
+              4.0
+            ]
+          }
+        },
+        "em": {
+          "iterations": [
+            0,
+            10,
+            30,
+            50,
+            70,
+            90,
+            110
+          ],
+          "em_score": [
+            70.86,
+            68.82,
+            52.06,
+            50.96,
+            48.01,
+            44.75,
+            42.44
+          ],
+          "coherence": [
+            74.09,
+            74.22,
+            59.14,
+            61.43,
+            60.75,
+            58.97,
+            57.29
+          ]
+        }
+      },
+      "capabilities_dynamics": {
+        "bs": {
+          "iterations": [
+            0
+          ],
+          "metrics": {
+            "ifeval_prompt": [
+              11.5
+            ],
+            "ifeval_inst": [
+              20.7
+            ],
+            "gsm8k_cot": [
+              2.4
+            ],
+            "mmlu": [
+              24.2
+            ],
+            "hellaswag": [
+              53.7
+            ],
+            "piqa": [
+              71.8
+            ],
+            "arc_challenge": [
+              39.1
+            ],
+            "arc_easy": [
+              68.1
+            ]
+          }
+        },
+        "em": {
+          "iterations": [
+            0
+          ],
+          "metrics": {
+            "ifeval_prompt": [
+              11.5
+            ],
+            "ifeval_inst": [
+              20.7
+            ],
+            "gsm8k_cot": [
+              2.4
+            ],
+            "mmlu": [
+              24.2
+            ],
+            "hellaswag": [
+              53.7
+            ],
+            "piqa": [
+              71.8
+            ],
+            "arc_challenge": [
+              39.1
+            ],
+            "arc_easy": [
+              68.1
+            ]
+          }
+        }
+      }
     },
     "epe_3p_nobce_sft": {
       "id": "epe_3p_nobce_sft",
@@ -15242,8 +17822,155 @@
         "aligned_mean": 66.79494393082956,
         "coherent_mean": 71.63253092603313
       },
-      "dynamics": {},
-      "capabilities_dynamics": {}
+      "dynamics": {
+        "bs": {
+          "iterations": [
+            0,
+            374,
+            748,
+            1122,
+            1496,
+            1870
+          ],
+          "overall_asr": [
+            21.4,
+            24.4,
+            34.0,
+            35.0,
+            37.2,
+            40.2
+          ],
+          "attacks": {
+            "DSN": [
+              59.0,
+              50.0,
+              56.0,
+              57.0,
+              58.0,
+              60.0
+            ],
+            "GCG": [
+              21.0,
+              47.0,
+              59.0,
+              49.0,
+              58.0,
+              56.0
+            ],
+            "JBC": [
+              0.0,
+              8.0,
+              15.0,
+              25.0,
+              31.0,
+              41.0
+            ],
+            "PAIR": [
+              25.0,
+              15.0,
+              34.0,
+              41.0,
+              38.0,
+              41.0
+            ],
+            "random_search": [
+              2.0,
+              2.0,
+              6.0,
+              3.0,
+              1.0,
+              3.0
+            ]
+          }
+        },
+        "em": {
+          "iterations": [
+            0,
+            10,
+            30,
+            50,
+            70,
+            90,
+            110
+          ],
+          "em_score": [
+            66.79,
+            65.87,
+            47.04,
+            46.67,
+            45.79,
+            42.94,
+            43.88
+          ],
+          "coherence": [
+            71.63,
+            71.21,
+            56.22,
+            58.3,
+            58.55,
+            56.86,
+            55.86
+          ]
+        }
+      },
+      "capabilities_dynamics": {
+        "bs": {
+          "iterations": [
+            0
+          ],
+          "metrics": {
+            "ifeval_prompt": [
+              16.3
+            ],
+            "ifeval_inst": [
+              26.3
+            ],
+            "gsm8k_cot": [
+              3.6
+            ],
+            "hellaswag": [
+              53.4
+            ],
+            "piqa": [
+              71.7
+            ],
+            "arc_challenge": [
+              38.2
+            ],
+            "arc_easy": [
+              67.8
+            ]
+          }
+        },
+        "em": {
+          "iterations": [
+            0
+          ],
+          "metrics": {
+            "ifeval_prompt": [
+              16.3
+            ],
+            "ifeval_inst": [
+              26.3
+            ],
+            "gsm8k_cot": [
+              3.6
+            ],
+            "hellaswag": [
+              53.4
+            ],
+            "piqa": [
+              71.7
+            ],
+            "arc_challenge": [
+              38.2
+            ],
+            "arc_easy": [
+              67.8
+            ]
+          }
+        }
+      }
     },
     "epe_3p_nobce_sft_def": {
       "id": "epe_3p_nobce_sft_def",
@@ -15764,8 +18491,155 @@
         "aligned_mean": 66.760399454928,
         "coherent_mean": 71.60104014421069
       },
-      "dynamics": {},
-      "capabilities_dynamics": {}
+      "dynamics": {
+        "bs": {
+          "iterations": [
+            0,
+            374,
+            748,
+            1122,
+            1496,
+            1870
+          ],
+          "overall_asr": [
+            17.2,
+            28.6,
+            34.2,
+            42.8,
+            44.6,
+            39.6
+          ],
+          "attacks": {
+            "DSN": [
+              47.0,
+              58.0,
+              62.0,
+              61.0,
+              68.0,
+              64.0
+            ],
+            "GCG": [
+              19.0,
+              49.0,
+              55.0,
+              57.0,
+              62.0,
+              59.0
+            ],
+            "JBC": [
+              0.0,
+              5.0,
+              18.0,
+              48.0,
+              39.0,
+              34.0
+            ],
+            "PAIR": [
+              14.0,
+              27.0,
+              34.0,
+              45.0,
+              44.0,
+              36.0
+            ],
+            "random_search": [
+              6.0,
+              4.0,
+              2.0,
+              3.0,
+              10.0,
+              5.0
+            ]
+          }
+        },
+        "em": {
+          "iterations": [
+            0,
+            10,
+            30,
+            50,
+            70,
+            90,
+            110
+          ],
+          "em_score": [
+            66.76,
+            65.23,
+            45.26,
+            42.52,
+            44.92,
+            43.79,
+            43.09
+          ],
+          "coherence": [
+            71.6,
+            70.88,
+            52.93,
+            53.46,
+            55.23,
+            55.99,
+            55.13
+          ]
+        }
+      },
+      "capabilities_dynamics": {
+        "bs": {
+          "iterations": [
+            0
+          ],
+          "metrics": {
+            "ifeval_prompt": [
+              18.1
+            ],
+            "ifeval_inst": [
+              28.4
+            ],
+            "gsm8k_cot": [
+              3.0
+            ],
+            "hellaswag": [
+              53.9
+            ],
+            "piqa": [
+              72.4
+            ],
+            "arc_challenge": [
+              38.0
+            ],
+            "arc_easy": [
+              67.6
+            ]
+          }
+        },
+        "em": {
+          "iterations": [
+            0
+          ],
+          "metrics": {
+            "ifeval_prompt": [
+              18.1
+            ],
+            "ifeval_inst": [
+              28.4
+            ],
+            "gsm8k_cot": [
+              3.0
+            ],
+            "hellaswag": [
+              53.9
+            ],
+            "piqa": [
+              72.4
+            ],
+            "arc_challenge": [
+              38.0
+            ],
+            "arc_easy": [
+              67.6
+            ]
+          }
+        }
+      }
     },
     "safelm": {
       "id": "safelm",
@@ -17032,8 +19906,161 @@
         "aligned_mean": 80.19198538202623,
         "coherent_mean": 89.3633737024598
       },
-      "dynamics": {},
-      "capabilities_dynamics": {}
+      "dynamics": {
+        "bs": {
+          "iterations": [
+            0,
+            374,
+            748,
+            1122,
+            1496,
+            1870
+          ],
+          "overall_asr": [
+            47.2,
+            47.4,
+            49.8,
+            57.4,
+            58.0,
+            56.2
+          ],
+          "attacks": {
+            "DSN": [
+              70.0,
+              71.0,
+              76.0,
+              82.0,
+              77.0,
+              78.0
+            ],
+            "GCG": [
+              57.0,
+              62.0,
+              62.0,
+              70.0,
+              64.0,
+              58.0
+            ],
+            "JBC": [
+              60.0,
+              51.0,
+              47.0,
+              69.0,
+              76.0,
+              71.0
+            ],
+            "PAIR": [
+              45.0,
+              51.0,
+              53.0,
+              59.0,
+              59.0,
+              59.0
+            ],
+            "random_search": [
+              4.0,
+              2.0,
+              11.0,
+              7.0,
+              14.0,
+              15.0
+            ]
+          }
+        },
+        "em": {
+          "iterations": [
+            0,
+            10,
+            30,
+            50,
+            70,
+            90,
+            110
+          ],
+          "em_score": [
+            80.19,
+            80.75,
+            80.3,
+            78.91,
+            77.41,
+            69.77,
+            68.53
+          ],
+          "coherence": [
+            89.36,
+            89.21,
+            88.67,
+            88.27,
+            87.78,
+            78.72,
+            79.08
+          ]
+        }
+      },
+      "capabilities_dynamics": {
+        "bs": {
+          "iterations": [
+            0
+          ],
+          "metrics": {
+            "ifeval_prompt": [
+              51.6
+            ],
+            "ifeval_inst": [
+              62.5
+            ],
+            "gsm8k_cot": [
+              47.2
+            ],
+            "mmlu": [
+              49.7
+            ],
+            "hellaswag": [
+              66.5
+            ],
+            "piqa": [
+              74.9
+            ],
+            "arc_challenge": [
+              52.9
+            ],
+            "arc_easy": [
+              78.9
+            ]
+          }
+        },
+        "em": {
+          "iterations": [
+            0
+          ],
+          "metrics": {
+            "ifeval_prompt": [
+              51.6
+            ],
+            "ifeval_inst": [
+              62.5
+            ],
+            "gsm8k_cot": [
+              47.2
+            ],
+            "mmlu": [
+              49.7
+            ],
+            "hellaswag": [
+              66.5
+            ],
+            "piqa": [
+              74.9
+            ],
+            "arc_challenge": [
+              52.9
+            ],
+            "arc_easy": [
+              78.9
+            ]
+          }
+        }
+      }
     }
   }
 }
