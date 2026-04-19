@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-04-19T09:23:25",
+  "generated_at": "2026-04-19T09:41:48",
   "groups": {
     "base": [
       {
@@ -328,7 +328,7 @@
     "baseline_500b_mixsft": {
       "id": "baseline_500b_mixsft",
       "capabilities_summary": {
-        "source_file": "eval_baseline_500b_mixsft_sft_20260419_015110",
+        "source_file": "eval_baseline_500b_mixsft_sft_20260419_093052",
         "kind": "sft",
         "ifeval_prompt_strict": null,
         "ifeval_inst_strict": null,
@@ -1507,7 +1507,7 @@
     "baseline_filtered_mixsft": {
       "id": "baseline_filtered_mixsft",
       "capabilities_summary": {
-        "source_file": "eval_baseline_filtered_mixsft_sft_20260419_014903",
+        "source_file": "eval_baseline_filtered_mixsft_sft_20260419_093209",
         "kind": "sft",
         "ifeval_prompt_strict": null,
         "ifeval_inst_strict": null,
