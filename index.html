@@ -58,6 +58,45 @@
   .dyn-table table { font-size: 13px; }
   .dyn-table td.val { font-variant-numeric: tabular-nums; }
 
+  /* Diagnostics */
+  .diag-controls { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 10px; }
+  .diag-controls .field { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--muted); }
+  .diag-controls .field .label { font-size: 12px; color: var(--muted); }
+  .diag-controls select, .diag-controls input[type=search] {
+    background: var(--bg); color: var(--text); border: 1px solid var(--border-strong);
+    border-radius: 4px; padding: 5px 8px; font-size: 14px; min-width: 120px;
+  }
+  .diag-controls input[type=search] { min-width: 220px; }
+  .diag-list { display: flex; flex-direction: column; gap: 8px; }
+  .diag-list .diag-item {
+    border: 1px solid var(--border); border-radius: 6px; background: var(--panel);
+    padding: 10px 12px; font-size: 14px;
+  }
+  .diag-list .diag-head { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; margin-bottom: 6px; }
+  .diag-list .diag-head .idx { color: var(--muted); font-size: 12px; min-width: 44px; }
+  .diag-list .diag-head .goal { font-weight: 500; flex: 1; }
+  .diag-list .diag-head .badge {
+    font-size: 11px; padding: 1px 7px; border-radius: 10px; border: 1px solid var(--border);
+    text-transform: uppercase; letter-spacing: 0.02em; color: var(--muted);
+  }
+  .diag-list .diag-head .badge.ok      { color: #15803d; border-color: #bbf7d0; background: #f0fdf4; }
+  .diag-list .diag-head .badge.bad     { color: #b91c1c; border-color: #fecaca; background: #fef2f2; }
+  .diag-list .diag-head .badge.warn    { color: #a16207; border-color: #fde68a; background: #fffbeb; }
+  .diag-list .diag-head .badge.score   { color: #6366f1; border-color: #e0e7ff; background: #eef2ff; font-variant-numeric: tabular-nums; }
+  .diag-list .diag-body details { margin-top: 4px; }
+  .diag-list .diag-body summary { cursor: pointer; color: var(--muted); font-size: 12px; }
+  .diag-list .diag-body .blk {
+    white-space: pre-wrap; word-break: break-word; background: var(--panel-alt);
+    border: 1px solid var(--border); border-radius: 4px; padding: 8px 10px; margin-top: 6px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; line-height: 1.45;
+  }
+  .diag-list .diag-body .blk.response { background: #fff; }
+  .diag-list .diag-body .label { color: var(--muted); font-size: 12px; margin-top: 8px; }
+  .diag-pager { display: flex; gap: 10px; align-items: center; justify-content: center; margin-top: 10px; font-size: 13px; color: var(--muted); }
+  .diag-pager button { font-size: 13px; color: var(--accent); background: none; border: 1px solid transparent; padding: 3px 10px; cursor: pointer; border-radius: 4px; }
+  .diag-pager button:hover { background: var(--hover); }
+  .diag-pager button:disabled { color: #bfc4cc; cursor: default; }
+
   /* Global model filter */
   .filter-panel { display: flex; align-items: flex-start; gap: 10px; padding: 8px 10px; margin-bottom: 10px; background: var(--panel-alt); border: 1px solid var(--border); border-radius: 6px; flex-wrap: wrap; }
   .filter-panel .label { font-size: 12px; color: var(--muted); font-weight: 500; white-space: nowrap; padding-top: 5px; }
@@ -107,6 +146,7 @@
   <button data-tab="capabilities">Capabilities</button>
   <button data-tab="safety">Safety &amp; EM</button>
   <button data-tab="dynamics">Dynamics</button>
+  <button data-tab="diagnostics">Diagnostics</button>
 </nav>
 
 <div class="filter-panel" id="filter-panel">
@@ -169,6 +209,38 @@
     <div class="model-picker" id="em-models"></div>
     <div class="chart-card"><canvas id="em-chart"></canvas></div>
     <div class="dyn-table" id="em-table"></div>
+  </div>
+</section>
+
+<section id="diagnostics">
+  <div class="panel">
+    <div class="diag-controls">
+      <label class="field">Benchmark <select id="diag-bench"></select></label>
+      <label class="field">Model     <select id="diag-model"></select></label>
+      <label class="field" id="diag-sub-wrap" style="display:none">Attack <select id="diag-sub"></select></label>
+      <label class="field">Filter
+        <select id="diag-filter">
+          <option value="all">all</option>
+          <option value="attacked">attacked only</option>
+          <option value="refused">refused only</option>
+          <option value="not_refused">not refused</option>
+          <option value="jailbroken">jailbroken only</option>
+          <option value="not_jailbroken">not jailbroken</option>
+        </select>
+      </label>
+      <label class="field" style="flex:1">Search
+        <input id="diag-search" type="search" placeholder="match in prompt / response" />
+      </label>
+      <span class="field"><span class="label">&nbsp;</span><span id="diag-count" class="note"></span></span>
+    </div>
+    <div id="diag-list" class="diag-list">
+      <div class="no-data">Loading…</div>
+    </div>
+    <div class="diag-pager">
+      <button class="mini" id="diag-prev">◀ prev</button>
+      <span id="diag-page"></span>
+      <button class="mini" id="diag-next">next ▶</button>
+    </div>
   </div>
 </section>
 
@@ -407,6 +479,7 @@ document.querySelectorAll('nav button').forEach(btn => {
     document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
     btn.classList.add('active');
     document.getElementById(btn.dataset.tab).classList.add('active');
+    if (btn.dataset.tab === 'diagnostics') ensureDiagnosticsLoaded();
   });
 });
 
@@ -789,6 +862,8 @@ function rerenderAll(data) {
     window.__dynPanels.bs.rerenderPicker(data);
     window.__dynPanels.em.rerenderPicker(data);
   }
+  // Diagnostics model list honors the filter — refresh it once loaded.
+  if (DIAG.data) populateDiagModel();
   refreshFilterUI(data);
 }
 
@@ -905,8 +980,190 @@ function setupFilter(data) {
   });
 }
 
+// ── Diagnostics (raw generation browser) ──────────────────────────────────
+const DIAG = { data: null, loading: null, state: { bench: null, model: null, sub: null, filter: 'all', search: '', page: 0 } };
+const DIAG_PAGE_SIZE = 25;
+
+function ensureDiagnosticsLoaded() {
+  if (DIAG.data || DIAG.loading) return DIAG.loading;
+  document.getElementById('diag-list').innerHTML = '<div class="no-data">Loading diagnostics.json… (may take a few seconds, ~18 MB gzipped)</div>';
+  DIAG.loading = fetch('diagnostics.json?v=' + Date.now(), { cache: 'default' })
+    .then(r => r.json())
+    .then(d => { DIAG.data = d; setupDiagnostics(); })
+    .catch(e => {
+      document.getElementById('diag-list').innerHTML = `<div class="no-data" style="color:#b91c1c">Failed to load diagnostics.json: ${e}</div>`;
+    });
+  return DIAG.loading;
+}
+
+function setupDiagnostics() {
+  const benchSel = document.getElementById('diag-bench');
+  // Only list benchmarks that actually have at least one model.
+  const benches = Object.entries(DIAG.data.benchmarks).filter(([_, b]) => Object.keys(b.models).length);
+  benchSel.innerHTML = benches.map(([k, b]) => `<option value="${k}">${b.title} (${Object.keys(b.models).length})</option>`).join('');
+  DIAG.state.bench = benches[0]?.[0] || null;
+
+  benchSel.addEventListener('change', () => { DIAG.state.bench = benchSel.value; DIAG.state.model = null; DIAG.state.sub = null; populateDiagModel(); });
+  document.getElementById('diag-model').addEventListener('change', (e) => { DIAG.state.model = e.target.value; DIAG.state.sub = null; populateDiagSub(); renderDiag(); });
+  document.getElementById('diag-sub').addEventListener('change', (e) => { DIAG.state.sub = e.target.value; renderDiag(); });
+  document.getElementById('diag-filter').addEventListener('change', (e) => { DIAG.state.filter = e.target.value; DIAG.state.page = 0; renderDiag(); });
+  document.getElementById('diag-search').addEventListener('input', (e) => { DIAG.state.search = e.target.value; DIAG.state.page = 0; renderDiag(); });
+  document.getElementById('diag-prev').addEventListener('click', () => { if (DIAG.state.page > 0) { DIAG.state.page--; renderDiag(); } });
+  document.getElementById('diag-next').addEventListener('click', () => { DIAG.state.page++; renderDiag(); });
+
+  populateDiagModel();
+}
+
+function populateDiagModel() {
+  const bench = DIAG.data.benchmarks[DIAG.state.bench];
+  const modelSel = document.getElementById('diag-model');
+  // Honor the global model filter: hide models the user unchecked in the filter bar.
+  const ids = Object.keys(bench.models).filter(id => isVisible(id));
+  modelSel.innerHTML = ids.map(id => {
+    const display = allModels(globalData).find(m => m.id === id)?.display || id;
+    return `<option value="${id}">${display}</option>`;
+  }).join('');
+  DIAG.state.model = ids[0] || null;
+  if (DIAG.state.model) modelSel.value = DIAG.state.model;
+  populateDiagSub();
+  renderDiag();
+}
+
+function populateDiagSub() {
+  const wrap = document.getElementById('diag-sub-wrap');
+  const sel = document.getElementById('diag-sub');
+  const bench = DIAG.data.benchmarks[DIAG.state.bench];
+  const bm = bench.models[DIAG.state.model];
+  if (bench.sub && bm && bm.attacks) {
+    const attacks = Object.keys(bm.attacks).sort();
+    sel.innerHTML = attacks.map(a => `<option value="${a}">${a} (${bm.attacks[a].n})</option>`).join('');
+    DIAG.state.sub = attacks[0] || null;
+    sel.value = DIAG.state.sub;
+    wrap.style.display = '';
+  } else {
+    wrap.style.display = 'none';
+    DIAG.state.sub = null;
+  }
+}
+
+function getDiagItems() {
+  const bench = DIAG.data.benchmarks[DIAG.state.bench];
+  if (!bench) return { items: [], source: '' };
+  const bm = bench.models[DIAG.state.model];
+  if (!bm) return { items: [], source: '' };
+  if (bench.sub) {
+    const a = bm.attacks?.[DIAG.state.sub];
+    return a ? { items: a.items, source: a.source } : { items: [], source: '' };
+  }
+  return { items: bm.items || [], source: bm.source || '' };
+}
+
+function diagLabels(item, bench) {
+  // Returns [{cls: 'ok|bad|warn|score', text: '...'}, ...]
+  const out = [];
+  if (bench === 'em') {
+    if (typeof item.aligned === 'number')  out.push({ cls: 'score', text: `aligned ${item.aligned.toFixed(1)}` });
+    if (typeof item.coherent === 'number') out.push({ cls: 'score', text: `coherent ${item.coherent.toFixed(1)}` });
+    return out;
+  }
+  if (item.jailbroken === true)  out.push({ cls: 'bad',  text: 'jailbroken' });
+  if (item.jailbroken === false) out.push({ cls: 'ok',   text: 'not jailbroken' });
+  if (item.attacked === true)    out.push({ cls: 'bad',  text: 'attacked' });
+  if (item.refused === true)     out.push({ cls: 'ok',   text: 'refused' });
+  if (item.refused === false && item.attacked !== undefined) out.push({ cls: 'warn', text: 'not refused' });
+  if (item.target_matched === true) out.push({ cls: 'warn', text: 'target matched' });
+  if (typeof item.llm_score === 'number') out.push({ cls: 'score', text: `llm ${item.llm_score.toFixed(2)}` });
+  if (item.category) out.push({ cls: '', text: item.category });
+  return out;
+}
+
+function applyDiagFilter(items, filter) {
+  if (filter === 'all') return items;
+  return items.filter(it => {
+    if (filter === 'attacked')        return it.attacked === true;
+    if (filter === 'refused')         return it.refused  === true;
+    if (filter === 'not_refused')     return it.refused  === false;
+    if (filter === 'jailbroken')      return it.jailbroken === true;
+    if (filter === 'not_jailbroken')  return it.jailbroken === false;
+    return true;
+  });
+}
+
+function applyDiagSearch(items, q) {
+  if (!q) return items;
+  const ql = q.toLowerCase();
+  return items.filter(it => {
+    const hay = [it.goal, it.prompt, it.response, it.persuasive, it.qid, it.prompt_title].filter(Boolean).join(' ').toLowerCase();
+    return hay.includes(ql);
+  });
+}
+
+function escapeHtml(s) {
+  if (s == null) return '';
+  return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+
+function renderDiag() {
+  const host = document.getElementById('diag-list');
+  const { items: raw, source } = getDiagItems();
+  if (!raw.length) {
+    host.innerHTML = '<div class="no-data">No items for this model / benchmark.</div>';
+    document.getElementById('diag-count').textContent = '';
+    document.getElementById('diag-page').textContent = '';
+    return;
+  }
+  const filtered = applyDiagSearch(applyDiagFilter(raw, DIAG.state.filter), DIAG.state.search);
+  const total = filtered.length;
+  const pages = Math.max(1, Math.ceil(total / DIAG_PAGE_SIZE));
+  if (DIAG.state.page >= pages) DIAG.state.page = pages - 1;
+  if (DIAG.state.page < 0) DIAG.state.page = 0;
+  const start = DIAG.state.page * DIAG_PAGE_SIZE;
+  const slice = filtered.slice(start, start + DIAG_PAGE_SIZE);
+
+  const bench = DIAG.state.bench;
+  host.innerHTML = slice.map((it, idx) => {
+    const globalIdx = start + idx + 1;
+    const head = it.goal || it.prompt || it.qid || '(untitled)';
+    const labels = diagLabels(it, bench).map(l => `<span class="badge ${l.cls}">${escapeHtml(l.text)}</span>`).join('');
+    const blocks = [];
+    if (bench === 'em') {
+      blocks.push(`<div class="label">Prompt</div><div class="blk">${escapeHtml(it.prompt)}</div>`);
+      blocks.push(`<div class="label">Response</div><div class="blk response">${escapeHtml(it.response)}</div>`);
+    } else if (bench === 'pap') {
+      blocks.push(`<div class="label">Goal</div><div class="blk">${escapeHtml(it.goal)}</div>`);
+      blocks.push(`<details><summary>Persuasive prompt</summary><div class="blk">${escapeHtml(it.persuasive)}</div></details>`);
+      blocks.push(`<div class="label">Response</div><div class="blk response">${escapeHtml(it.response)}</div>`);
+    } else if (bench === 'advbench') {
+      blocks.push(`<div class="label">Goal</div><div class="blk">${escapeHtml(it.goal)}</div>`);
+      blocks.push(`<div class="label">Response</div><div class="blk response">${escapeHtml(it.response)}</div>`);
+    } else if (bench === 'dans_jbb' || bench === 'dans_advbench') {
+      blocks.push(`<div class="label">Goal · ${escapeHtml(it.prompt_title || it.prompt_id)}</div><div class="blk">${escapeHtml(it.goal)}</div>`);
+      blocks.push(`<div class="label">Response</div><div class="blk response">${escapeHtml(it.response)}</div>`);
+    } else if (bench === 'jbb') {
+      blocks.push(`<div class="label">Goal · ${escapeHtml(it.behavior || '')}</div><div class="blk">${escapeHtml(it.goal)}</div>`);
+      blocks.push(`<details><summary>Attack prompt</summary><div class="blk">${escapeHtml(it.prompt)}</div></details>`);
+      blocks.push(`<div class="label">Response</div><div class="blk response">${escapeHtml(it.response)}</div>`);
+    }
+    return `<div class="diag-item">
+              <div class="diag-head">
+                <span class="idx">#${globalIdx}</span>
+                <span class="goal">${escapeHtml(head)}</span>
+                ${labels}
+              </div>
+              <div class="diag-body">${blocks.join('')}</div>
+            </div>`;
+  }).join('');
+
+  document.getElementById('diag-count').textContent = `${total.toLocaleString()} items · source: ${source}`;
+  document.getElementById('diag-page').textContent  = `page ${DIAG.state.page + 1} / ${pages}`;
+  document.getElementById('diag-prev').disabled = DIAG.state.page === 0;
+  document.getElementById('diag-next').disabled = DIAG.state.page >= pages - 1;
+}
+
 // ── bootstrap ─────────────────────────────────────────────────────────────
+let globalData = null;
 fetch('data.json?v=' + Date.now(), { cache: 'no-store' }).then(r => r.json()).then(data => {
+  globalData = data;
   document.getElementById('gen-at').textContent = `generated ${data.generated_at}`;
   setupFilter(data);
   rerenderAll(data);
