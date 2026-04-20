@@ -672,7 +672,7 @@ const DASH_RULES = [
 ];
 const dashFor = id => (DASH_RULES.find(r => r.re.test(id)) || { dash: [] }).dash;
 
-function makeDynChart(canvasId, xLabel) {
+function makeDynChart(canvasId, xLabel, yOpts = {}) {
   const ctx = document.getElementById(canvasId).getContext('2d');
   return new Chart(ctx, {
     type: 'line',
@@ -683,7 +683,7 @@ function makeDynChart(canvasId, xLabel) {
       interaction: { intersect: false, mode: 'nearest', axis: 'x' },
       scales: {
         x: { type: 'linear', ticks: { color: '#4b5563', precision: 0 }, grid: { color: '#e3e6eb' }, title: { display: true, text: xLabel, color: '#6b7280' } },
-        y: { ticks: { color: '#4b5563' }, grid: { color: '#e3e6eb' }, beginAtZero: true },
+        y: { ticks: { color: '#4b5563' }, grid: { color: '#e3e6eb' }, beginAtZero: true, ...yOpts },
       },
       plugins: {
         legend: { labels: { color: '#1a1d23', font: { size: 13 }, boxWidth: 14 } },
@@ -693,10 +693,10 @@ function makeDynChart(canvasId, xLabel) {
   });
 }
 
-function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, metricLabels, xMode, transformBlk }) {
+function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, metricLabels, xMode, transformBlk, yOpts }) {
   // xMode: 'epoch' (index 0..N-1, labeled "Epoch") or 'iteration' (raw step).
   const xLabel = xMode === 'epoch' ? 'Epoch' : 'iteration';
-  const chart = makeDynChart(chartId, xLabel);
+  const chart = makeDynChart(chartId, xLabel, yOpts);
   let sortState = { col: null, dir: 'asc' };  // col: null (model name) | column key
   // Optional hook to recompute blk on the fly (e.g. EM coherence bounds).
   const applyTransform = transformBlk || ((m, blk) => blk);
@@ -857,6 +857,8 @@ function renderDynamics(data) {
   const em = setupDynamicsPanel({
     chartId: 'em-chart', metricSelId: 'em-metric', pickerId: 'em-models', tableId: 'em-table',
     kind: 'em', metricLabels: Object.fromEntries(emMetrics), xMode: 'iteration',
+    // Let EM auto-fit the y-axis to the actual data range (scores rarely span 0–100).
+    yOpts: { beginAtZero: false },
     transformBlk: (m, blk) => {
       const b = EM_COH_BOUNDS;
       if (b.min == null && b.max == null) return blk;
