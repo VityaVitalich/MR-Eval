@@ -609,6 +609,7 @@ function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, met
   // xMode: 'epoch' (index 0..N-1, labeled "Epoch") or 'iteration' (raw step).
   const xLabel = xMode === 'epoch' ? 'Epoch' : 'iteration';
   const chart = makeDynChart(chartId, xLabel);
+  let sortState = { col: null, dir: 'asc' };  // col: null (model name) | column key
 
   function modelsWithKind(data) {
     return allModels(data).map(m => {
@@ -656,31 +657,64 @@ function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, met
 
   function renderTable(data, items, metric, checked) {
     const host = document.getElementById(tableId);
-    const rows = items.filter(({ m, available }) => available && checked.has(m.id));
-    if (!rows.length) { host.innerHTML = ''; return; }
+    const picked = items.filter(({ m, available }) => available && checked.has(m.id));
+    if (!picked.length) { host.innerHTML = ''; return; }
 
     // Column headers: union of iteration indices (epoch mode) or iteration values.
     let cols;
     if (xMode === 'epoch') {
-      const maxLen = Math.max(...rows.map(r => r.blk.iterations.length));
+      const maxLen = Math.max(...picked.map(r => r.blk.iterations.length));
       cols = Array.from({ length: maxLen }, (_, i) => ({ key: i, label: `Epoch ${i}` }));
     } else {
       const set = new Set();
-      rows.forEach(r => r.blk.iterations.forEach(it => set.add(it)));
+      picked.forEach(r => r.blk.iterations.forEach(it => set.add(it)));
       cols = [...set].sort((a, b) => a - b).map(it => ({ key: it, label: String(it) }));
     }
 
-    const fmt = v => (v == null || Number.isNaN(v)) ? '<span class="missing">—</span>' : (+v).toFixed(2);
-    const head = `<th>Model</th>` + cols.map(c => `<th>${c.label}</th>`).join('');
-    const body = rows.map(({ m, blk }) => {
+    // Build per-row {byKey} then sort.
+    const rows = picked.map(({ m, blk }) => {
       const series = seriesFor(blk, metric);
       const byKey = {};
       blk.iterations.forEach((it, i) => { byKey[xMode === 'epoch' ? i : it] = series?.[i]; });
+      return { m, byKey };
+    });
+
+    if (sortState.col != null) {
+      const k = sortState.col;
+      const sign = sortState.dir === 'asc' ? 1 : -1;
+      rows.sort((a, b) => {
+        const av = a.byKey[k], bv = b.byKey[k];
+        if (av == null && bv == null) return 0;
+        if (av == null) return 1;
+        if (bv == null) return -1;
+        return (av - bv) * sign;
+      });
+    }
+
+    const fmt = v => (v == null || Number.isNaN(v)) ? '<span class="missing">—</span>' : (+v).toFixed(2);
+    const arrow = k => sortState.col === k ? (sortState.dir === 'asc' ? 'sort-asc' : 'sort-desc') : 'sort-arrow';
+    const head = `<th>Model</th>` + cols.map(c =>
+      `<th class="sortable ${arrow(c.key)}" data-col="${c.key}">${c.label}</th>`
+    ).join('');
+    const body = rows.map(({ m, byKey }) => {
       const cells = cols.map(c => `<td class="val">${fmt(byKey[c.key])}</td>`).join('');
       const cell0 = `<td><span class="model-cell" style="--fam:${famColor(m.id)}"><span class="dot"></span>${m.display}</span></td>`;
       return `<tr>${cell0}${cells}</tr>`;
     }).join('');
     host.innerHTML = `<table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
+
+    host.querySelectorAll('th.sortable').forEach(th => {
+      th.addEventListener('click', () => {
+        const col = th.dataset.col;
+        const key = xMode === 'epoch' ? +col : +col;
+        if (sortState.col === key) {
+          sortState.dir = sortState.dir === 'asc' ? 'desc' : 'asc';
+        } else {
+          sortState = { col: key, dir: 'desc' };
+        }
+        renderTable(data, items, metric, checked);
+      });
+    });
   }
 
   function renderPicker(data) {
