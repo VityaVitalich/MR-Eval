@@ -205,6 +205,15 @@
       <label class="field">Metric
         <select id="em-metric"></select>
       </label>
+      <label class="field">Coherence bounds
+        <span style="display:inline-flex; gap:4px; align-items:center">
+          <input id="em-dyn-coh-min" type="number" min="0" max="100" step="1" style="width:60px" placeholder="min" />
+          <span>–</span>
+          <input id="em-dyn-coh-max" type="number" min="0" max="100" step="1" style="width:60px" placeholder="max" />
+          <button class="mini" id="em-dyn-coh-clear" type="button">clear</button>
+        </span>
+      </label>
+      <span class="field" style="flex:1"><span class="label">&nbsp;</span><span id="em-dyn-coh-note" class="note"></span></span>
     </div>
     <div class="model-picker" id="em-models"></div>
     <div class="chart-card"><canvas id="em-chart"></canvas></div>
@@ -684,11 +693,13 @@ function makeDynChart(canvasId, xLabel) {
   });
 }
 
-function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, metricLabels, xMode }) {
+function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, metricLabels, xMode, transformBlk }) {
   // xMode: 'epoch' (index 0..N-1, labeled "Epoch") or 'iteration' (raw step).
   const xLabel = xMode === 'epoch' ? 'Epoch' : 'iteration';
   const chart = makeDynChart(chartId, xLabel);
   let sortState = { col: null, dir: 'asc' };  // col: null (model name) | column key
+  // Optional hook to recompute blk on the fly (e.g. EM coherence bounds).
+  const applyTransform = transformBlk || ((m, blk) => blk);
 
   function modelsWithKind(data) {
     return allModels(data).map(m => {
@@ -711,8 +722,9 @@ function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, met
     const checked = new Set([...document.querySelectorAll(`#${pickerId} input:checked`)].map(i => i.value));
 
     const datasets = [];
-    for (const { m, blk, available } of items) {
+    for (const { m, blk: rawBlk, available } of items) {
       if (!available || !checked.has(m.id)) continue;
+      const blk = applyTransform(m, rawBlk);
       const iters = blk.iterations;
       const series = seriesFor(blk, metric);
       const pts = iters.map((raw, i) => ({ x: xMode === 'epoch' ? i : raw, y: series?.[i] })).filter(p => p.y != null);
@@ -751,7 +763,8 @@ function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, met
     }
 
     // Build per-row {byKey} then sort.
-    const rows = picked.map(({ m, blk }) => {
+    const rows = picked.map(({ m, blk: rawBlk }) => {
+      const blk = applyTransform(m, rawBlk);
       const series = seriesFor(blk, metric);
       const byKey = {};
       blk.iterations.forEach((it, i) => { byKey[xMode === 'epoch' ? i : it] = series?.[i]; });
@@ -838,14 +851,113 @@ function renderDynamics(data) {
     chartId: 'bs-chart', metricSelId: 'bs-metric', pickerId: 'bs-models', tableId: 'bs-table',
     kind: 'bs', metricLabels: Object.fromEntries(bsMetrics), xMode: 'epoch',
   });
+
+  // EM panel may recompute em_score and coherence from raw diagnostics when
+  // the user sets coherence bounds. Transform hook swaps in a filtered blk.
   const em = setupDynamicsPanel({
     chartId: 'em-chart', metricSelId: 'em-metric', pickerId: 'em-models', tableId: 'em-table',
     kind: 'em', metricLabels: Object.fromEntries(emMetrics), xMode: 'iteration',
+    transformBlk: (m, blk) => {
+      const b = EM_COH_BOUNDS;
+      if (b.min == null && b.max == null) return blk;
+      const recomp = EM_COH_CACHE.get(m.id);
+      if (!recomp) return blk;  // diagnostics not loaded yet — show raw until it arrives
+      return recomp;
+    },
   });
   bs.setup(data);
   em.setup(data);
+  setupEmCoherenceBounds(data, em);
   // Expose so the global filter can trigger a picker rebuild.
   window.__dynPanels = { bs, em };
+}
+
+// EM coherence bounds state, shared between the transformBlk hook above and
+// the inputs below. When bounds are set, we refetch the per-(model, variant)
+// diagnostics files to recompute mean(aligned) and mean(coherent) over the
+// subset of items whose per-example coherence lies in [min, max].
+const EM_COH_BOUNDS = { min: null, max: null };
+const EM_COH_CACHE = new Map();  // model_id → {iterations, em_score, coherence}
+const EM_COH_LOADING = new Set();
+
+function emVariantKey(iter) { return iter === 0 ? 'base' : `ckpt_${iter}`; }
+
+async function emFetchModelDiag(mid) {
+  if (EM_COH_CACHE.has(mid) || EM_COH_LOADING.has(mid)) return;
+  const info = DIAG?.index?.benchmarks?.em?.models?.[mid];
+  if (!info) return;  // no EM diagnostics for this model
+  EM_COH_LOADING.add(mid);
+  try {
+    const resp = await fetch(info.file + '?v=' + Date.now(), { cache: 'default' });
+    const data = await resp.json();
+    const iters = (globalData?.models?.[mid]?.dynamics?.em?.iterations || []);
+    const em_score = [], coherence = [];
+    for (const it of iters) {
+      const v = data.variants?.[emVariantKey(it)];
+      if (!v) { em_score.push(null); coherence.push(null); continue; }
+      const filtered = v.items.filter(i => {
+        if (typeof i.coherent !== 'number') return false;
+        if (EM_COH_BOUNDS.min != null && i.coherent < EM_COH_BOUNDS.min) return false;
+        if (EM_COH_BOUNDS.max != null && i.coherent > EM_COH_BOUNDS.max) return false;
+        return true;
+      });
+      if (!filtered.length) { em_score.push(null); coherence.push(null); continue; }
+      const meanA = filtered.reduce((s, i) => s + (typeof i.aligned  === 'number' ? i.aligned  : 0), 0) / filtered.length;
+      const meanC = filtered.reduce((s, i) => s + i.coherent, 0) / filtered.length;
+      em_score.push(meanA);
+      coherence.push(meanC);
+    }
+    EM_COH_CACHE.set(mid, { iterations: iters, em_score, coherence });
+  } catch (_) { /* leave uncached; hook will render raw blk */ }
+  EM_COH_LOADING.delete(mid);
+}
+
+function emRecomputeAllVisible() {
+  EM_COH_CACHE.clear();
+  const note = document.getElementById('em-dyn-coh-note');
+  const b = EM_COH_BOUNDS;
+  if (b.min == null && b.max == null) { note.textContent = ''; return Promise.resolve(); }
+  note.textContent = 'recomputing…';
+  const checked = [...document.querySelectorAll('#em-models input:checked')].map(i => i.value);
+  // Need the diagnostics index before we can fetch per-model files.
+  return ensureDiagnosticsLoaded().then(async () => {
+    const bits = [];
+    for (const mid of checked) {
+      if (DIAG.index?.benchmarks?.em?.models?.[mid]) bits.push(emFetchModelDiag(mid));
+    }
+    await Promise.all(bits);
+    note.textContent = `bounds [${b.min ?? ''} – ${b.max ?? ''}] · ${EM_COH_CACHE.size} models`;
+  });
+}
+
+function setupEmCoherenceBounds(data, em) {
+  const minEl   = document.getElementById('em-dyn-coh-min');
+  const maxEl   = document.getElementById('em-dyn-coh-max');
+  const clearEl = document.getElementById('em-dyn-coh-clear');
+
+  const rerender = () => { em.render(data); };
+  let pending = null;
+  const onChange = () => {
+    EM_COH_BOUNDS.min = minEl.value === '' ? null : +minEl.value;
+    EM_COH_BOUNDS.max = maxEl.value === '' ? null : +maxEl.value;
+    clearTimeout(pending);
+    pending = setTimeout(() => { emRecomputeAllVisible().then(rerender); }, 250);
+    rerender();  // optimistic paint with raw blk until recompute finishes
+  };
+  minEl.addEventListener('input', onChange);
+  maxEl.addEventListener('input', onChange);
+  clearEl.addEventListener('click', () => {
+    minEl.value = ''; maxEl.value = ''; EM_COH_BOUNDS.min = null; EM_COH_BOUNDS.max = null;
+    EM_COH_CACHE.clear();
+    document.getElementById('em-dyn-coh-note').textContent = '';
+    rerender();
+  });
+  // Re-fetch diagnostics when the picker selection changes so newly-toggled
+  // models get recomputed values without waiting for the user to change bounds.
+  document.getElementById('em-models').addEventListener('change', () => {
+    if (EM_COH_BOUNDS.min == null && EM_COH_BOUNDS.max == null) return;
+    emRecomputeAllVisible().then(rerender);
+  });
 }
 
 // ── Filter panel ──────────────────────────────────────────────────────────
