@@ -217,16 +217,22 @@
     <div class="diag-controls">
       <label class="field">Benchmark <select id="diag-bench"></select></label>
       <label class="field">Model     <select id="diag-model"></select></label>
+      <label class="field" id="diag-variant-wrap" style="display:none">Variant <select id="diag-variant"></select></label>
       <label class="field" id="diag-sub-wrap" style="display:none">Attack <select id="diag-sub"></select></label>
-      <label class="field">Filter
-        <select id="diag-filter">
-          <option value="all">all</option>
-          <option value="attacked">attacked only</option>
-          <option value="refused">refused only</option>
-          <option value="not_refused">not refused</option>
-          <option value="jailbroken">jailbroken only</option>
-          <option value="not_jailbroken">not jailbroken</option>
+      <label class="field">Sort
+        <select id="diag-sort">
+          <option value="unsafe">most unsafe first</option>
+          <option value="safe">most safe first</option>
+          <option value="random">random</option>
+          <option value="original">original order</option>
         </select>
+      </label>
+      <label class="field" id="diag-coh-wrap" style="display:none">Coherence
+        <span style="display:inline-flex; gap:4px; align-items:center">
+          <input id="diag-coh-min" type="number" min="0" max="100" step="1" style="width: 60px" placeholder="min" />
+          <span>–</span>
+          <input id="diag-coh-max" type="number" min="0" max="100" step="1" style="width: 60px" placeholder="max" />
+        </span>
       </label>
       <label class="field" style="flex:1">Search
         <input id="diag-search" type="search" placeholder="match in prompt / response" />
@@ -234,7 +240,7 @@
       <span class="field"><span class="label">&nbsp;</span><span id="diag-count" class="note"></span></span>
     </div>
     <div id="diag-list" class="diag-list">
-      <div class="no-data">Loading…</div>
+      <div class="no-data">Open this tab to load diagnostics.</div>
     </div>
     <div class="diag-pager">
       <button class="mini" id="diag-prev">◀ prev</button>
@@ -980,86 +986,202 @@ function setupFilter(data) {
   });
 }
 
-// ── Diagnostics (raw generation browser) ──────────────────────────────────
-const DIAG = { data: null, loading: null, state: { bench: null, model: null, sub: null, filter: 'all', search: '', page: 0 } };
+// ── Diagnostics (raw generation browser, lazy per-benchmark) ──────────────
+const DIAG = {
+  index: null,                // { benchmarks: { <k>: { title, file, has_variants, has_attacks, models: {..}} } }
+  loadingIndex: null,
+  benchData: {},              // cache of loaded per-benchmark payloads
+  loadingBench: {},           // bench → Promise while fetching
+  state: {
+    bench: null, model: null, variant: null, sub: null,
+    sort: 'unsafe', search: '',
+    cohMin: null, cohMax: null,
+    page: 0,
+  },
+};
 const DIAG_PAGE_SIZE = 25;
 
 function ensureDiagnosticsLoaded() {
-  if (DIAG.data || DIAG.loading) return DIAG.loading;
-  document.getElementById('diag-list').innerHTML = '<div class="no-data">Loading diagnostics.json… (may take a few seconds, ~18 MB gzipped)</div>';
-  DIAG.loading = fetch('diagnostics.json?v=' + Date.now(), { cache: 'default' })
+  if (DIAG.index || DIAG.loadingIndex) return DIAG.loadingIndex;
+  document.getElementById('diag-list').innerHTML = '<div class="no-data">Loading index…</div>';
+  DIAG.loadingIndex = fetch('diagnostics/index.json?v=' + Date.now(), { cache: 'default' })
     .then(r => r.json())
-    .then(d => { DIAG.data = d; setupDiagnostics(); })
+    .then(idx => { DIAG.index = idx; setupDiagnostics(); })
     .catch(e => {
-      document.getElementById('diag-list').innerHTML = `<div class="no-data" style="color:#b91c1c">Failed to load diagnostics.json: ${e}</div>`;
+      document.getElementById('diag-list').innerHTML =
+        `<div class="no-data" style="color:#b91c1c">Failed to load diagnostics index: ${e}</div>`;
     });
-  return DIAG.loading;
+  return DIAG.loadingIndex;
+}
+
+function loadBench(benchKey) {
+  if (DIAG.benchData[benchKey]) return Promise.resolve(DIAG.benchData[benchKey]);
+  if (DIAG.loadingBench[benchKey]) return DIAG.loadingBench[benchKey];
+  const info = DIAG.index.benchmarks[benchKey];
+  document.getElementById('diag-list').innerHTML = `<div class="no-data">Loading ${info.title}…</div>`;
+  DIAG.loadingBench[benchKey] = fetch(info.file + '?v=' + Date.now(), { cache: 'default' })
+    .then(r => r.json())
+    .then(d => { DIAG.benchData[benchKey] = d; return d; })
+    .finally(() => { delete DIAG.loadingBench[benchKey]; });
+  return DIAG.loadingBench[benchKey];
 }
 
 function setupDiagnostics() {
   const benchSel = document.getElementById('diag-bench');
-  // Only list benchmarks that actually have at least one model.
-  const benches = Object.entries(DIAG.data.benchmarks).filter(([_, b]) => Object.keys(b.models).length);
-  benchSel.innerHTML = benches.map(([k, b]) => `<option value="${k}">${b.title} (${Object.keys(b.models).length})</option>`).join('');
+  const benches = Object.entries(DIAG.index.benchmarks);
+  benchSel.innerHTML = benches
+    .map(([k, b]) => `<option value="${k}">${b.title} (${Object.keys(b.models).length})</option>`).join('');
   DIAG.state.bench = benches[0]?.[0] || null;
 
-  benchSel.addEventListener('change', () => { DIAG.state.bench = benchSel.value; DIAG.state.model = null; DIAG.state.sub = null; populateDiagModel(); });
-  document.getElementById('diag-model').addEventListener('change', (e) => { DIAG.state.model = e.target.value; DIAG.state.sub = null; populateDiagSub(); renderDiag(); });
-  document.getElementById('diag-sub').addEventListener('change', (e) => { DIAG.state.sub = e.target.value; renderDiag(); });
-  document.getElementById('diag-filter').addEventListener('change', (e) => { DIAG.state.filter = e.target.value; DIAG.state.page = 0; renderDiag(); });
-  document.getElementById('diag-search').addEventListener('input', (e) => { DIAG.state.search = e.target.value; DIAG.state.page = 0; renderDiag(); });
+  benchSel.addEventListener('change', () => {
+    DIAG.state.bench = benchSel.value;
+    DIAG.state.model = null; DIAG.state.variant = null; DIAG.state.sub = null;
+    DIAG.state.page = 0;
+    afterBenchChange();
+  });
+  document.getElementById('diag-model').addEventListener('change', (e) => {
+    DIAG.state.model = e.target.value; DIAG.state.variant = null; DIAG.state.sub = null;
+    DIAG.state.page = 0; populateDiagVariant(); renderDiag();
+  });
+  document.getElementById('diag-variant').addEventListener('change', (e) => {
+    DIAG.state.variant = e.target.value; DIAG.state.sub = null;
+    DIAG.state.page = 0; populateDiagSub(); renderDiag();
+  });
+  document.getElementById('diag-sub').addEventListener('change', (e) => {
+    DIAG.state.sub = e.target.value; DIAG.state.page = 0; renderDiag();
+  });
+  document.getElementById('diag-sort').addEventListener('change', (e) => {
+    DIAG.state.sort = e.target.value; DIAG.state.page = 0; renderDiag();
+  });
+  document.getElementById('diag-search').addEventListener('input', (e) => {
+    DIAG.state.search = e.target.value; DIAG.state.page = 0; renderDiag();
+  });
+  document.getElementById('diag-coh-min').addEventListener('input', (e) => {
+    DIAG.state.cohMin = e.target.value === '' ? null : +e.target.value; DIAG.state.page = 0; renderDiag();
+  });
+  document.getElementById('diag-coh-max').addEventListener('input', (e) => {
+    DIAG.state.cohMax = e.target.value === '' ? null : +e.target.value; DIAG.state.page = 0; renderDiag();
+  });
   document.getElementById('diag-prev').addEventListener('click', () => { if (DIAG.state.page > 0) { DIAG.state.page--; renderDiag(); } });
   document.getElementById('diag-next').addEventListener('click', () => { DIAG.state.page++; renderDiag(); });
 
-  populateDiagModel();
+  afterBenchChange();
+}
+
+function afterBenchChange() {
+  loadBench(DIAG.state.bench).then(() => { populateDiagModel(); });
 }
 
 function populateDiagModel() {
-  const bench = DIAG.data.benchmarks[DIAG.state.bench];
+  const info = DIAG.index.benchmarks[DIAG.state.bench];
   const modelSel = document.getElementById('diag-model');
-  // Honor the global model filter: hide models the user unchecked in the filter bar.
-  const ids = Object.keys(bench.models).filter(id => isVisible(id));
+  const ids = Object.keys(info.models).filter(id => isVisible(id));
   modelSel.innerHTML = ids.map(id => {
     const display = allModels(globalData).find(m => m.id === id)?.display || id;
     return `<option value="${id}">${display}</option>`;
   }).join('');
   DIAG.state.model = ids[0] || null;
   if (DIAG.state.model) modelSel.value = DIAG.state.model;
-  populateDiagSub();
+  populateDiagVariant();
   renderDiag();
+}
+
+function populateDiagVariant() {
+  const wrap = document.getElementById('diag-variant-wrap');
+  const sel = document.getElementById('diag-variant');
+  const info = DIAG.index.benchmarks[DIAG.state.bench];
+  const m = info.models[DIAG.state.model];
+  if (!m || !m.variants || m.variants.length <= 1) {
+    wrap.style.display = 'none';
+    DIAG.state.variant = m?.variants?.[0] || 'base';
+  } else {
+    wrap.style.display = '';
+    sel.innerHTML = m.variants.map(v => `<option value="${v}">${v.replace('_', ' ')}</option>`).join('');
+    DIAG.state.variant = m.variants[0];
+    sel.value = DIAG.state.variant;
+  }
+  populateDiagSub();
 }
 
 function populateDiagSub() {
   const wrap = document.getElementById('diag-sub-wrap');
-  const sel = document.getElementById('diag-sub');
-  const bench = DIAG.data.benchmarks[DIAG.state.bench];
-  const bm = bench.models[DIAG.state.model];
-  if (bench.sub && bm && bm.attacks) {
-    const attacks = Object.keys(bm.attacks).sort();
-    sel.innerHTML = attacks.map(a => `<option value="${a}">${a} (${bm.attacks[a].n})</option>`).join('');
-    DIAG.state.sub = attacks[0] || null;
-    sel.value = DIAG.state.sub;
-    wrap.style.display = '';
-  } else {
-    wrap.style.display = 'none';
-    DIAG.state.sub = null;
-  }
+  const sel  = document.getElementById('diag-sub');
+  const info = DIAG.index.benchmarks[DIAG.state.bench];
+  if (!info.has_attacks) { wrap.style.display = 'none'; DIAG.state.sub = null; return; }
+  const bm = DIAG.benchData[DIAG.state.bench]?.models?.[DIAG.state.model];
+  const v  = bm?.variants?.[DIAG.state.variant];
+  if (!v || !v.attacks) { wrap.style.display = 'none'; DIAG.state.sub = null; return; }
+  const attacks = Object.keys(v.attacks).sort();
+  sel.innerHTML = attacks.map(a => `<option value="${a}">${a} (${v.attacks[a].n})</option>`).join('');
+  DIAG.state.sub = attacks[0] || null;
+  if (DIAG.state.sub) sel.value = DIAG.state.sub;
+  wrap.style.display = '';
 }
 
 function getDiagItems() {
-  const bench = DIAG.data.benchmarks[DIAG.state.bench];
-  if (!bench) return { items: [], source: '' };
-  const bm = bench.models[DIAG.state.model];
-  if (!bm) return { items: [], source: '' };
-  if (bench.sub) {
-    const a = bm.attacks?.[DIAG.state.sub];
+  const d = DIAG.benchData[DIAG.state.bench];
+  if (!d) return { items: [], source: '' };
+  const bm = d.models?.[DIAG.state.model];
+  const v  = bm?.variants?.[DIAG.state.variant];
+  if (!v) return { items: [], source: '' };
+  if (v.attacks) {
+    const a = v.attacks[DIAG.state.sub];
     return a ? { items: a.items, source: a.source } : { items: [], source: '' };
   }
-  return { items: bm.items || [], source: bm.source || '' };
+  return { items: v.items || [], source: v.source || '' };
+}
+
+function unsafeScore(item, bench) {
+  // Higher score = more unsafe. Used to sort descending for "most unsafe first".
+  if (bench === 'em') {
+    // Low aligned = unsafe (pursued the harmful wish). Missing → neutral.
+    return typeof item.aligned === 'number' ? (100 - item.aligned) : 0;
+  }
+  if (bench === 'jbb') {
+    return item.jailbroken === true ? 1 : 0;
+  }
+  if (typeof item.llm_score === 'number') return item.llm_score;
+  return 0;
+}
+
+function sortDiag(items, bench, mode) {
+  if (mode === 'original') return items;
+  if (mode === 'random') {
+    const copy = items.slice();
+    for (let i = copy.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [copy[i], copy[j]] = [copy[j], copy[i]];
+    }
+    return copy;
+  }
+  const dir = mode === 'unsafe' ? -1 : 1;  // unsafe = highest first
+  return items.slice().sort((a, b) => dir * (unsafeScore(a, bench) - unsafeScore(b, bench)));
+}
+
+function applyDiagSearch(items, q) {
+  if (!q) return items;
+  const ql = q.toLowerCase();
+  return items.filter(it => {
+    const hay = [it.goal, it.prompt, it.response, it.persuasive, it.qid, it.prompt_title, it.prompt_id, it.behavior]
+      .filter(Boolean).join(' ').toLowerCase();
+    return hay.includes(ql);
+  });
+}
+
+function applyCoherenceBounds(items, bench) {
+  if (bench !== 'em') return items;
+  const { cohMin, cohMax } = DIAG.state;
+  if (cohMin == null && cohMax == null) return items;
+  return items.filter(it => {
+    const c = it.coherent;
+    if (typeof c !== 'number') return false;
+    if (cohMin != null && c < cohMin) return false;
+    if (cohMax != null && c > cohMax) return false;
+    return true;
+  });
 }
 
 function diagLabels(item, bench) {
-  // Returns [{cls: 'ok|bad|warn|score', text: '...'}, ...]
   const out = [];
   if (bench === 'em') {
     if (typeof item.aligned === 'number')  out.push({ cls: 'score', text: `aligned ${item.aligned.toFixed(1)}` });
@@ -1077,27 +1199,6 @@ function diagLabels(item, bench) {
   return out;
 }
 
-function applyDiagFilter(items, filter) {
-  if (filter === 'all') return items;
-  return items.filter(it => {
-    if (filter === 'attacked')        return it.attacked === true;
-    if (filter === 'refused')         return it.refused  === true;
-    if (filter === 'not_refused')     return it.refused  === false;
-    if (filter === 'jailbroken')      return it.jailbroken === true;
-    if (filter === 'not_jailbroken')  return it.jailbroken === false;
-    return true;
-  });
-}
-
-function applyDiagSearch(items, q) {
-  if (!q) return items;
-  const ql = q.toLowerCase();
-  return items.filter(it => {
-    const hay = [it.goal, it.prompt, it.response, it.persuasive, it.qid, it.prompt_title].filter(Boolean).join(' ').toLowerCase();
-    return hay.includes(ql);
-  });
-}
-
 function escapeHtml(s) {
   if (s == null) return '';
   return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
@@ -1105,22 +1206,25 @@ function escapeHtml(s) {
 
 function renderDiag() {
   const host = document.getElementById('diag-list');
+  document.getElementById('diag-coh-wrap').style.display = DIAG.state.bench === 'em' ? '' : 'none';
+
   const { items: raw, source } = getDiagItems();
   if (!raw.length) {
-    host.innerHTML = '<div class="no-data">No items for this model / benchmark.</div>';
+    host.innerHTML = '<div class="no-data">No items for this selection.</div>';
     document.getElementById('diag-count').textContent = '';
     document.getElementById('diag-page').textContent = '';
     return;
   }
-  const filtered = applyDiagSearch(applyDiagFilter(raw, DIAG.state.filter), DIAG.state.search);
-  const total = filtered.length;
+  const bench = DIAG.state.bench;
+  const after = sortDiag(applyCoherenceBounds(applyDiagSearch(raw, DIAG.state.search), bench), bench, DIAG.state.sort);
+  const total = after.length;
   const pages = Math.max(1, Math.ceil(total / DIAG_PAGE_SIZE));
   if (DIAG.state.page >= pages) DIAG.state.page = pages - 1;
   if (DIAG.state.page < 0) DIAG.state.page = 0;
   const start = DIAG.state.page * DIAG_PAGE_SIZE;
-  const slice = filtered.slice(start, start + DIAG_PAGE_SIZE);
+  const slice = after.slice(start, start + DIAG_PAGE_SIZE);
+  const dans_cat = DIAG.benchData[bench]?.dan_catalog || null;
 
-  const bench = DIAG.state.bench;
   host.innerHTML = slice.map((it, idx) => {
     const globalIdx = start + idx + 1;
     const head = it.goal || it.prompt || it.qid || '(untitled)';
@@ -1138,6 +1242,11 @@ function renderDiag() {
       blocks.push(`<div class="label">Response</div><div class="blk response">${escapeHtml(it.response)}</div>`);
     } else if (bench === 'dans_jbb' || bench === 'dans_advbench') {
       blocks.push(`<div class="label">Goal · ${escapeHtml(it.prompt_title || it.prompt_id)}</div><div class="blk">${escapeHtml(it.goal)}</div>`);
+      if (dans_cat && it.prompt_id && dans_cat[it.prompt_id]) {
+        const tmpl = dans_cat[it.prompt_id].prompt || '';
+        const full = `${tmpl}\n${it.goal || ''}`;
+        blocks.push(`<details><summary>Full DAN prompt</summary><div class="blk">${escapeHtml(full)}</div></details>`);
+      }
       blocks.push(`<div class="label">Response</div><div class="blk response">${escapeHtml(it.response)}</div>`);
     } else if (bench === 'jbb') {
       blocks.push(`<div class="label">Goal · ${escapeHtml(it.behavior || '')}</div><div class="blk">${escapeHtml(it.goal)}</div>`);
