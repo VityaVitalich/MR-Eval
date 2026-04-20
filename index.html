@@ -906,7 +906,7 @@ function setupFilter(data) {
 }
 
 // ── bootstrap ─────────────────────────────────────────────────────────────
-fetch('data.json').then(r => r.json()).then(data => {
+fetch('data.json?v=' + Date.now(), { cache: 'no-store' }).then(r => r.json()).then(data => {
   document.getElementById('gen-at').textContent = `generated ${data.generated_at}`;
   setupFilter(data);
   rerenderAll(data);
