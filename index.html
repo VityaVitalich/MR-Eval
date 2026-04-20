@@ -580,7 +580,11 @@ function renderCapabilities(data) {
 }
 
 // ── SAFETY & EM (two tables: headline + JBB attacks breakdown) ────────────
+// Attacks that go into the "JBB overall" average. `direct` is a no-attack
+// baseline so we keep it out of the average but still surface it as its own
+// column in the breakdown table.
 const JBB_ATTACKS = ['DSN', 'GCG', 'JBC', 'PAIR', 'random_search'];
+const JBB_ALL_METHODS = [...JBB_ATTACKS, 'direct'];
 
 // Resolve JBB for a model strictly from jbb_all_<model>/summary.json. No
 // fallback to dynamics — if the standalone run doesn't exist, render `—`.
@@ -588,11 +592,11 @@ const JBB_ATTACKS = ['DSN', 'GCG', 'JBC', 'PAIR', 'random_search'];
 // convention) rather than the raw aggregate field.
 function resolveJbb(md) {
   if (!md.jbb) return null;
-  const per = Object.fromEntries(JBB_ATTACKS.map(a => [a, md.jbb.attacks?.[a]]));
+  const per = Object.fromEntries(JBB_ALL_METHODS.map(a => [a, md.jbb.attacks?.[a]]));
   const vals = JBB_ATTACKS.map(a => per[a]).filter(v => v != null);
-  if (!vals.length) return null;
-  const mean = vals.reduce((a, b) => a + b, 0) / vals.length;
-  const overall = mean > 1.5 ? mean / 100 : mean;
+  if (!vals.length && per.direct == null) return null;
+  const mean = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+  const overall = mean != null ? (mean > 1.5 ? mean / 100 : mean) : null;
   return { overall, per };
 }
 
@@ -641,6 +645,10 @@ function renderSafety(data) {
     { key: 'JBC',           label: 'JBC',           dir: 'lower', rankable: true, avgable: true },
     { key: 'PAIR',          label: 'PAIR',          dir: 'lower', rankable: true, avgable: true },
     { key: 'random_search', label: 'random_search', dir: 'lower', rankable: true, avgable: true },
+    // direct = no-attack baseline. Rankable so you can see who refuses the
+    // raw behaviors vs who doesn't, but excluded from Avg so it doesn't
+    // bias the "attack" mean across the row.
+    { key: 'direct',        label: 'direct',        dir: 'lower', rankable: true, avgable: false },
   ];
   const jrows = visible.map(m => {
     const j = resolveJbb(data.models[m.id] || {});
@@ -653,6 +661,7 @@ function renderSafety(data) {
         JBC:           j?.per?.JBC ?? null,
         PAIR:          j?.per?.PAIR ?? null,
         random_search: j?.per?.random_search ?? null,
+        direct:        j?.per?.direct ?? null,
       },
     };
   });
@@ -837,6 +846,7 @@ function renderDynamics(data) {
     ['JBC',           'JBC'],
     ['PAIR',          'PAIR'],
     ['random_search', 'random_search'],
+    ['direct',        'direct (no attack)'],
   ];
   const emMetrics = [
     ['em_score',  'EM score (aligned)'],
