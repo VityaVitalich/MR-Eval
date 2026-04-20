@@ -986,12 +986,12 @@ function setupFilter(data) {
   });
 }
 
-// ── Diagnostics (raw generation browser, lazy per-benchmark) ──────────────
+// ── Diagnostics (raw generation browser, lazy per-(bench, model)) ─────────
 const DIAG = {
-  index: null,                // { benchmarks: { <k>: { title, file, has_variants, has_attacks, models: {..}} } }
+  index: null,                // { benchmarks, dan_catalog }
   loadingIndex: null,
-  benchData: {},              // cache of loaded per-benchmark payloads
-  loadingBench: {},           // bench → Promise while fetching
+  modelData: {},              // "bench/model" → {variants: {...}}
+  loadingModel: {},           // "bench/model" → Promise while fetching
   state: {
     bench: null, model: null, variant: null, sub: null,
     sort: 'unsafe', search: '',
@@ -1014,16 +1014,19 @@ function ensureDiagnosticsLoaded() {
   return DIAG.loadingIndex;
 }
 
-function loadBench(benchKey) {
-  if (DIAG.benchData[benchKey]) return Promise.resolve(DIAG.benchData[benchKey]);
-  if (DIAG.loadingBench[benchKey]) return DIAG.loadingBench[benchKey];
-  const info = DIAG.index.benchmarks[benchKey];
-  document.getElementById('diag-list').innerHTML = `<div class="no-data">Loading ${info.title}…</div>`;
-  DIAG.loadingBench[benchKey] = fetch(info.file + '?v=' + Date.now(), { cache: 'default' })
+function modelKey(bench, model) { return `${bench}/${model}`; }
+
+function loadModel(bench, model) {
+  const k = modelKey(bench, model);
+  if (DIAG.modelData[k])    return Promise.resolve(DIAG.modelData[k]);
+  if (DIAG.loadingModel[k]) return DIAG.loadingModel[k];
+  const info = DIAG.index.benchmarks[bench].models[model];
+  document.getElementById('diag-list').innerHTML = `<div class="no-data">Loading ${bench} / ${model}…</div>`;
+  DIAG.loadingModel[k] = fetch(info.file + '?v=' + Date.now(), { cache: 'default' })
     .then(r => r.json())
-    .then(d => { DIAG.benchData[benchKey] = d; return d; })
-    .finally(() => { delete DIAG.loadingBench[benchKey]; });
-  return DIAG.loadingBench[benchKey];
+    .then(d => { DIAG.modelData[k] = d; return d; })
+    .finally(() => { delete DIAG.loadingModel[k]; });
+  return DIAG.loadingModel[k];
 }
 
 function setupDiagnostics() {
@@ -1037,11 +1040,11 @@ function setupDiagnostics() {
     DIAG.state.bench = benchSel.value;
     DIAG.state.model = null; DIAG.state.variant = null; DIAG.state.sub = null;
     DIAG.state.page = 0;
-    afterBenchChange();
+    populateDiagModel();
   });
   document.getElementById('diag-model').addEventListener('change', (e) => {
     DIAG.state.model = e.target.value; DIAG.state.variant = null; DIAG.state.sub = null;
-    DIAG.state.page = 0; populateDiagVariant(); renderDiag();
+    DIAG.state.page = 0; afterModelChange();
   });
   document.getElementById('diag-variant').addEventListener('change', (e) => {
     DIAG.state.variant = e.target.value; DIAG.state.sub = null;
@@ -1065,11 +1068,7 @@ function setupDiagnostics() {
   document.getElementById('diag-prev').addEventListener('click', () => { if (DIAG.state.page > 0) { DIAG.state.page--; renderDiag(); } });
   document.getElementById('diag-next').addEventListener('click', () => { DIAG.state.page++; renderDiag(); });
 
-  afterBenchChange();
-}
-
-function afterBenchChange() {
-  loadBench(DIAG.state.bench).then(() => { populateDiagModel(); });
+  populateDiagModel();
 }
 
 function populateDiagModel() {
@@ -1082,8 +1081,15 @@ function populateDiagModel() {
   }).join('');
   DIAG.state.model = ids[0] || null;
   if (DIAG.state.model) modelSel.value = DIAG.state.model;
-  populateDiagVariant();
-  renderDiag();
+  afterModelChange();
+}
+
+function afterModelChange() {
+  if (!DIAG.state.model) { populateDiagVariant(); renderDiag(); return; }
+  loadModel(DIAG.state.bench, DIAG.state.model).then(() => {
+    populateDiagVariant();
+    renderDiag();
+  });
 }
 
 function populateDiagVariant() {
@@ -1108,21 +1114,20 @@ function populateDiagSub() {
   const sel  = document.getElementById('diag-sub');
   const info = DIAG.index.benchmarks[DIAG.state.bench];
   if (!info.has_attacks) { wrap.style.display = 'none'; DIAG.state.sub = null; return; }
-  const bm = DIAG.benchData[DIAG.state.bench]?.models?.[DIAG.state.model];
-  const v  = bm?.variants?.[DIAG.state.variant];
+  const data = DIAG.modelData[modelKey(DIAG.state.bench, DIAG.state.model)];
+  const v    = data?.variants?.[DIAG.state.variant];
   if (!v || !v.attacks) { wrap.style.display = 'none'; DIAG.state.sub = null; return; }
   const attacks = Object.keys(v.attacks).sort();
-  sel.innerHTML = attacks.map(a => `<option value="${a}">${a} (${v.attacks[a].n})</option>`).join('');
+  sel.innerHTML = attacks.map(a => `<option value="${a}">${a} (${v.attacks[a].items.length})</option>`).join('');
   DIAG.state.sub = attacks[0] || null;
   if (DIAG.state.sub) sel.value = DIAG.state.sub;
   wrap.style.display = '';
 }
 
 function getDiagItems() {
-  const d = DIAG.benchData[DIAG.state.bench];
-  if (!d) return { items: [], source: '' };
-  const bm = d.models?.[DIAG.state.model];
-  const v  = bm?.variants?.[DIAG.state.variant];
+  const data = DIAG.modelData[modelKey(DIAG.state.bench, DIAG.state.model)];
+  if (!data) return { items: [], source: '' };
+  const v = data.variants?.[DIAG.state.variant];
   if (!v) return { items: [], source: '' };
   if (v.attacks) {
     const a = v.attacks[DIAG.state.sub];
@@ -1184,8 +1189,10 @@ function applyCoherenceBounds(items, bench) {
 function diagLabels(item, bench) {
   const out = [];
   if (bench === 'em') {
-    if (typeof item.aligned === 'number')  out.push({ cls: 'score', text: `aligned ${item.aligned.toFixed(1)}` });
-    if (typeof item.coherent === 'number') out.push({ cls: 'score', text: `coherent ${item.coherent.toFixed(1)}` });
+    // Always render both badges so it's clear when the judge produced no
+    // score (common for very short refusals).
+    out.push({ cls: 'score', text: `aligned ${typeof item.aligned === 'number' ? item.aligned.toFixed(1) : '—'}` });
+    out.push({ cls: 'score', text: `coherent ${typeof item.coherent === 'number' ? item.coherent.toFixed(1) : '—'}` });
     return out;
   }
   if (item.jailbroken === true)  out.push({ cls: 'bad',  text: 'jailbroken' });
@@ -1223,7 +1230,7 @@ function renderDiag() {
   if (DIAG.state.page < 0) DIAG.state.page = 0;
   const start = DIAG.state.page * DIAG_PAGE_SIZE;
   const slice = after.slice(start, start + DIAG_PAGE_SIZE);
-  const dans_cat = DIAG.benchData[bench]?.dan_catalog || null;
+  const dans_cat = DIAG.index?.dan_catalog || null;
 
   host.innerHTML = slice.map((it, idx) => {
     const globalIdx = start + idx + 1;
