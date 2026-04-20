@@ -54,6 +54,9 @@
   .model-picker input[type=checkbox] { accent-color: var(--accent); }
   .chart-card { background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 10px; }
   .chart-card canvas { max-height: 440px; }
+  .dyn-table { margin-top: 10px; overflow-x: auto; }
+  .dyn-table table { font-size: 13px; }
+  .dyn-table td.val { font-variant-numeric: tabular-nums; }
 
   /* Global model filter */
   .filter-panel { display: flex; align-items: flex-start; gap: 10px; padding: 8px 10px; margin-bottom: 10px; background: var(--panel-alt); border: 1px solid var(--border); border-radius: 6px; flex-wrap: wrap; }
@@ -153,6 +156,7 @@
     </div>
     <div class="model-picker" id="bs-models"></div>
     <div class="chart-card"><canvas id="bs-chart"></canvas></div>
+    <div class="dyn-table" id="bs-table"></div>
   </div>
 
   <h2>EM dynamics</h2>
@@ -164,6 +168,7 @@
     </div>
     <div class="model-picker" id="em-models"></div>
     <div class="chart-card"><canvas id="em-chart"></canvas></div>
+    <div class="dyn-table" id="em-table"></div>
   </div>
 </section>
 
@@ -579,7 +584,7 @@ const DASH_RULES = [
 ];
 const dashFor = id => (DASH_RULES.find(r => r.re.test(id)) || { dash: [] }).dash;
 
-function makeDynChart(canvasId) {
+function makeDynChart(canvasId, xLabel) {
   const ctx = document.getElementById(canvasId).getContext('2d');
   return new Chart(ctx, {
     type: 'line',
@@ -589,19 +594,21 @@ function makeDynChart(canvasId) {
       animation: false,
       interaction: { intersect: false, mode: 'nearest', axis: 'x' },
       scales: {
-        x: { type: 'linear', ticks: { color: '#4b5563' }, grid: { color: '#e3e6eb' }, title: { display: true, text: 'iteration', color: '#6b7280' } },
+        x: { type: 'linear', ticks: { color: '#4b5563', precision: 0 }, grid: { color: '#e3e6eb' }, title: { display: true, text: xLabel, color: '#6b7280' } },
         y: { ticks: { color: '#4b5563' }, grid: { color: '#e3e6eb' }, beginAtZero: true },
       },
       plugins: {
         legend: { labels: { color: '#1a1d23', font: { size: 13 }, boxWidth: 14 } },
-        tooltip: { callbacks: { label: c => `${c.dataset.label}: ${c.parsed.y?.toFixed(2)} @ iter ${c.parsed.x}` } },
+        tooltip: { callbacks: { label: c => `${c.dataset.label}: ${c.parsed.y?.toFixed(2)} @ ${xLabel} ${c.parsed.x}` } },
       },
     },
   });
 }
 
-function setupDynamicsPanel({ chartId, metricSelId, pickerId, kind, metricLabels }) {
-  const chart = makeDynChart(chartId);
+function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, metricLabels, xMode }) {
+  // xMode: 'epoch' (index 0..N-1, labeled "Epoch") or 'iteration' (raw step).
+  const xLabel = xMode === 'epoch' ? 'Epoch' : 'iteration';
+  const chart = makeDynChart(chartId, xLabel);
 
   function modelsWithKind(data) {
     return allModels(data).map(m => {
@@ -609,6 +616,13 @@ function setupDynamicsPanel({ chartId, metricSelId, pickerId, kind, metricLabels
       const available = !!(blk?.iterations?.length);
       return { m, blk, available };
     });
+  }
+
+  function seriesFor(blk, metric) {
+    return metric === 'overall_asr' ? blk.overall_asr
+         : metric === 'em_score'    ? blk.em_score
+         : metric === 'coherence'   ? blk.coherence
+         : blk.attacks?.[metric] || [];
   }
 
   function render(data) {
@@ -620,11 +634,8 @@ function setupDynamicsPanel({ chartId, metricSelId, pickerId, kind, metricLabels
     for (const { m, blk, available } of items) {
       if (!available || !checked.has(m.id)) continue;
       const iters = blk.iterations;
-      const series = metric === 'overall_asr' ? blk.overall_asr
-                   : metric === 'em_score'    ? blk.em_score
-                   : metric === 'coherence'   ? blk.coherence
-                   : blk.attacks?.[metric] || [];
-      const pts = iters.map((x, i) => ({ x, y: series?.[i] })).filter(p => p.y != null);
+      const series = seriesFor(blk, metric);
+      const pts = iters.map((raw, i) => ({ x: xMode === 'epoch' ? i : raw, y: series?.[i] })).filter(p => p.y != null);
       if (!pts.length) continue;
       datasets.push({
         label: m.display,
@@ -640,6 +651,36 @@ function setupDynamicsPanel({ chartId, metricSelId, pickerId, kind, metricLabels
     chart.data.datasets = datasets;
     chart.options.scales.y.title = { display: true, text: metricLabels[metric] || metric, color: '#6b7280' };
     chart.update();
+    renderTable(data, items, metric, checked);
+  }
+
+  function renderTable(data, items, metric, checked) {
+    const host = document.getElementById(tableId);
+    const rows = items.filter(({ m, available }) => available && checked.has(m.id));
+    if (!rows.length) { host.innerHTML = ''; return; }
+
+    // Column headers: union of iteration indices (epoch mode) or iteration values.
+    let cols;
+    if (xMode === 'epoch') {
+      const maxLen = Math.max(...rows.map(r => r.blk.iterations.length));
+      cols = Array.from({ length: maxLen }, (_, i) => ({ key: i, label: `Epoch ${i}` }));
+    } else {
+      const set = new Set();
+      rows.forEach(r => r.blk.iterations.forEach(it => set.add(it)));
+      cols = [...set].sort((a, b) => a - b).map(it => ({ key: it, label: String(it) }));
+    }
+
+    const fmt = v => (v == null || Number.isNaN(v)) ? '<span class="missing">—</span>' : (+v).toFixed(2);
+    const head = `<th>Model</th>` + cols.map(c => `<th>${c.label}</th>`).join('');
+    const body = rows.map(({ m, blk }) => {
+      const series = seriesFor(blk, metric);
+      const byKey = {};
+      blk.iterations.forEach((it, i) => { byKey[xMode === 'epoch' ? i : it] = series?.[i]; });
+      const cells = cols.map(c => `<td class="val">${fmt(byKey[c.key])}</td>`).join('');
+      const cell0 = `<td><span class="model-cell" style="--fam:${famColor(m.id)}"><span class="dot"></span>${m.display}</span></td>`;
+      return `<tr>${cell0}${cells}</tr>`;
+    }).join('');
+    host.innerHTML = `<table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
   }
 
   function renderPicker(data) {
@@ -681,12 +722,12 @@ function renderDynamics(data) {
   emSel.innerHTML = emMetrics.map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
 
   const bs = setupDynamicsPanel({
-    chartId: 'bs-chart', metricSelId: 'bs-metric', pickerId: 'bs-models',
-    kind: 'bs', metricLabels: Object.fromEntries(bsMetrics),
+    chartId: 'bs-chart', metricSelId: 'bs-metric', pickerId: 'bs-models', tableId: 'bs-table',
+    kind: 'bs', metricLabels: Object.fromEntries(bsMetrics), xMode: 'epoch',
   });
   const em = setupDynamicsPanel({
-    chartId: 'em-chart', metricSelId: 'em-metric', pickerId: 'em-models',
-    kind: 'em', metricLabels: Object.fromEntries(emMetrics),
+    chartId: 'em-chart', metricSelId: 'em-metric', pickerId: 'em-models', tableId: 'em-table',
+    kind: 'em', metricLabels: Object.fromEntries(emMetrics), xMode: 'iteration',
   });
   bs.setup(data);
   em.setup(data);
