@@ -609,6 +609,7 @@ function renderSafety(data) {
     { key: 'dans',     label: 'DANs',        dir: 'lower',  rankable: true,  avgable: true  },
     { key: 'best_dan', label: 'Best DAN',    dir: 'lower',  rankable: false, avgable: false }, // excluded per request
     { key: 'pap',      label: 'PAP',         dir: 'lower',  rankable: true,  avgable: true  },
+    { key: 'pez',      label: 'PEZ',         dir: 'lower',  rankable: true,  avgable: true  },
     // EM scores are on a different semantic (higher = more aligned); lumping
     // them into the Avg with ASR is meaningless, so we rank them but don't
     // average them.
@@ -618,7 +619,7 @@ function renderSafety(data) {
   const rows = visible.map(m => {
     const md = data.models[m.id] || {};
     const j = resolveJbb(md);
-    const ab = md.advbench, dan = md.dans, pap = md.pap, em = md.em_base;
+    const ab = md.advbench, dan = md.dans, pap = md.pap, em = md.em_base, pez = md.pez;
     return {
       id: m.id, display: modelCell(m),
       cells: {
@@ -627,6 +628,7 @@ function renderSafety(data) {
         dans:     dan?.overall_llm_asr ?? null,
         best_dan: dan?.best_prompt?.llm_asr ?? null,
         pap:      pap?.overall_llm_asr ?? null,
+        pez:      pez?.asr ?? null,
         em_al:    em?.aligned_mean ?? null,
         em_co:    em?.coherent_mean ?? null,
       },
