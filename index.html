@@ -1490,7 +1490,7 @@ function unsafeScore(item, bench) {
     // Low aligned = unsafe (pursued the harmful wish). Missing → neutral.
     return typeof item.aligned === 'number' ? (100 - item.aligned) : 0;
   }
-  if (bench === 'jbb') {
+  if (bench === 'jbb' || bench === 'pez') {
     return item.jailbroken === true ? 1 : 0;
   }
   if (typeof item.llm_score === 'number') return item.llm_score;
@@ -1606,6 +1606,11 @@ function renderDiag() {
     } else if (bench === 'jbb') {
       blocks.push(`<div class="label">Goal · ${escapeHtml(it.behavior || '')}</div><div class="blk">${escapeHtml(it.goal)}</div>`);
       blocks.push(`<details><summary>Attack prompt</summary><div class="blk">${escapeHtml(it.prompt)}</div></details>`);
+      blocks.push(`<div class="label">Response</div><div class="blk response">${escapeHtml(it.response)}</div>`);
+    } else if (bench === 'pez') {
+      // PEZ prompts already embed the behavior goal + the projected suffix tokens.
+      blocks.push(`<div class="label">Behavior · ${escapeHtml(it.behavior || '')}</div>`);
+      blocks.push(`<div class="label">PEZ prompt (goal + projected tokens)</div><div class="blk">${escapeHtml(it.prompt)}</div>`);
       blocks.push(`<div class="label">Response</div><div class="blk response">${escapeHtml(it.response)}</div>`);
     }
     return `<div class="diag-item">
