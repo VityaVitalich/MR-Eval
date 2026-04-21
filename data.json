@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-04-21T12:48:23",
+  "generated_at": "2026-04-21T16:50:16",
   "groups": {
     "base": [
       {
@@ -79,6 +79,27 @@
         "display": "EPE 3p NoBCE",
         "aliases": [
           "epe_3p_nobce"
+        ]
+      },
+      {
+        "id": "epe_1p_nobce_refend",
+        "display": "EPE 1p NoBCE RefEnd",
+        "aliases": [
+          "epe_1p_nobce_refend"
+        ]
+      },
+      {
+        "id": "sdsp_judge_0_1",
+        "display": "SDSP judge 0/1",
+        "aliases": [
+          "sdsp_judge_0_1"
+        ]
+      },
+      {
+        "id": "sdsp_judge_1_1",
+        "display": "SDSP judge 1/1",
+        "aliases": [
+          "sdsp_judge_1_1"
         ]
       }
     ],
@@ -286,6 +307,97 @@
         "display": "EPE 3p NoBCE SFT def",
         "aliases": [
           "epe_3p_nobce_sft_def"
+        ]
+      },
+      {
+        "id": "baseline_pbsft",
+        "display": "baseline pbSFT",
+        "aliases": [
+          "baseline_pbsft"
+        ]
+      },
+      {
+        "id": "baseline_500b_pbsft",
+        "display": "baseline 500b pbSFT",
+        "aliases": [
+          "baseline_500b_pbsft"
+        ]
+      },
+      {
+        "id": "baseline_filtered_pbsft",
+        "display": "baseline_filtered pbSFT",
+        "aliases": [
+          "baseline_filtered_pbsft"
+        ]
+      },
+      {
+        "id": "epe_1p_nobce_pbsft",
+        "display": "EPE 1p NoBCE pbSFT",
+        "aliases": [
+          "epe_1p_nobce_pbsft"
+        ]
+      },
+      {
+        "id": "epe_3p_nobce_pbsft",
+        "display": "EPE 3p NoBCE pbSFT",
+        "aliases": [
+          "epe_3p_nobce_pbsft"
+        ]
+      },
+      {
+        "id": "epe_1p_bce_mixsft_nonl",
+        "display": "EPE 1p BCE mixSFT nonl",
+        "aliases": [
+          "epe_1p_bce_mixsft_nonl"
+        ]
+      },
+      {
+        "id": "epe_1p_nobce_mixsft_nonl",
+        "display": "EPE 1p NoBCE mixSFT nonl",
+        "aliases": [
+          "epe_1p_nobce_mixsft_nonl"
+        ]
+      },
+      {
+        "id": "epe_3p_bce_mixsft_nonl",
+        "display": "EPE 3p BCE mixSFT nonl",
+        "aliases": [
+          "epe_3p_bce_mixsft_nonl"
+        ]
+      },
+      {
+        "id": "epe_3p_nobce_mixsft_nonl",
+        "display": "EPE 3p NoBCE mixSFT nonl",
+        "aliases": [
+          "epe_3p_nobce_mixsft_nonl"
+        ]
+      },
+      {
+        "id": "epe_1p_nobce_mixsft_cato",
+        "display": "EPE 1p NoBCE mixSFT cato",
+        "aliases": [
+          "epe_1p_nobce_mixsft_cato"
+        ]
+      },
+      {
+        "id": "epe_3p_nobce_mixsft_cato",
+        "display": "EPE 3p NoBCE mixSFT cato",
+        "aliases": [
+          "epe_3p_nobce_mixsft_cato"
+        ]
+      },
+      {
+        "id": "epe_1p_nobce_refend_mixsft_def",
+        "display": "EPE 1p NoBCE RefEnd mixSFT def",
+        "aliases": [
+          "epe_1p_nobce_refend_mixsft_def"
+        ]
+      },
+      {
+        "id": "epe_1p_nobce_refend_mixsft_nonl",
+        "display": "EPE 1p NoBCE RefEnd mixSFT nonl",
+        "aliases": [
+          "epe_1p_nobce_refend_mixsft_nonl"
         ]
       }
     ]
@@ -1500,6 +1612,19 @@
           }
         }
       }
+    },
+    "baseline_500b_pbsft": {
+      "id": "baseline_500b_pbsft",
+      "capabilities_summary": null,
+      "safety_base": null,
+      "jbb": null,
+      "advbench": null,
+      "dans": null,
+      "pap": null,
+      "pez": null,
+      "em_base": null,
+      "dynamics": {},
+      "capabilities_dynamics": {}
     },
     "baseline_500b_sft": {
       "id": "baseline_500b_sft",
@@ -5115,6 +5240,19 @@
         }
       }
     },
+    "baseline_filtered_pbsft": {
+      "id": "baseline_filtered_pbsft",
+      "capabilities_summary": null,
+      "safety_base": null,
+      "jbb": null,
+      "advbench": null,
+      "dans": null,
+      "pap": null,
+      "pez": null,
+      "em_base": null,
+      "dynamics": {},
+      "capabilities_dynamics": {}
+    },
     "baseline_filtered_sft": {
       "id": "baseline_filtered_sft",
       "capabilities_summary": {
@@ -7255,6 +7393,19 @@
           }
         }
       }
+    },
+    "baseline_pbsft": {
+      "id": "baseline_pbsft",
+      "capabilities_summary": null,
+      "safety_base": null,
+      "jbb": null,
+      "advbench": null,
+      "dans": null,
+      "pap": null,
+      "pez": null,
+      "em_base": null,
+      "dynamics": {},
+      "capabilities_dynamics": {}
     },
     "baseline_sft": {
       "id": "baseline_sft",
@@ -10696,6 +10847,19 @@
           }
         }
       }
+    },
+    "epe_1p_bce_mixsft_nonl": {
+      "id": "epe_1p_bce_mixsft_nonl",
+      "capabilities_summary": null,
+      "safety_base": null,
+      "jbb": null,
+      "advbench": null,
+      "dans": null,
+      "pap": null,
+      "pez": null,
+      "em_base": null,
+      "dynamics": {},
+      "capabilities_dynamics": {}
     },
     "epe_1p_bce_sft": {
       "id": "epe_1p_bce_sft",
@@ -15995,6 +16159,19 @@
         }
       }
     },
+    "epe_1p_nobce_mixsft_cato": {
+      "id": "epe_1p_nobce_mixsft_cato",
+      "capabilities_summary": null,
+      "safety_base": null,
+      "jbb": null,
+      "advbench": null,
+      "dans": null,
+      "pap": null,
+      "pez": null,
+      "em_base": null,
+      "dynamics": {},
+      "capabilities_dynamics": {}
+    },
     "epe_1p_nobce_mixsft_def": {
       "id": "epe_1p_nobce_mixsft_def",
       "capabilities_summary": {
@@ -17096,6 +17273,71 @@
           }
         }
       }
+    },
+    "epe_1p_nobce_mixsft_nonl": {
+      "id": "epe_1p_nobce_mixsft_nonl",
+      "capabilities_summary": null,
+      "safety_base": null,
+      "jbb": null,
+      "advbench": null,
+      "dans": null,
+      "pap": null,
+      "pez": null,
+      "em_base": null,
+      "dynamics": {},
+      "capabilities_dynamics": {}
+    },
+    "epe_1p_nobce_pbsft": {
+      "id": "epe_1p_nobce_pbsft",
+      "capabilities_summary": null,
+      "safety_base": null,
+      "jbb": null,
+      "advbench": null,
+      "dans": null,
+      "pap": null,
+      "pez": null,
+      "em_base": null,
+      "dynamics": {},
+      "capabilities_dynamics": {}
+    },
+    "epe_1p_nobce_refend": {
+      "id": "epe_1p_nobce_refend",
+      "capabilities_summary": null,
+      "safety_base": null,
+      "jbb": null,
+      "advbench": null,
+      "dans": null,
+      "pap": null,
+      "pez": null,
+      "em_base": null,
+      "dynamics": {},
+      "capabilities_dynamics": {}
+    },
+    "epe_1p_nobce_refend_mixsft_def": {
+      "id": "epe_1p_nobce_refend_mixsft_def",
+      "capabilities_summary": null,
+      "safety_base": null,
+      "jbb": null,
+      "advbench": null,
+      "dans": null,
+      "pap": null,
+      "pez": null,
+      "em_base": null,
+      "dynamics": {},
+      "capabilities_dynamics": {}
+    },
+    "epe_1p_nobce_refend_mixsft_nonl": {
+      "id": "epe_1p_nobce_refend_mixsft_nonl",
+      "capabilities_summary": null,
+      "safety_base": null,
+      "jbb": null,
+      "advbench": null,
+      "dans": null,
+      "pap": null,
+      "pez": null,
+      "em_base": null,
+      "dynamics": {},
+      "capabilities_dynamics": {}
     },
     "epe_1p_nobce_sft": {
       "id": "epe_1p_nobce_sft",
@@ -21543,6 +21785,19 @@
           }
         }
       }
+    },
+    "epe_3p_bce_mixsft_nonl": {
+      "id": "epe_3p_bce_mixsft_nonl",
+      "capabilities_summary": null,
+      "safety_base": null,
+      "jbb": null,
+      "advbench": null,
+      "dans": null,
+      "pap": null,
+      "pez": null,
+      "em_base": null,
+      "dynamics": {},
+      "capabilities_dynamics": {}
     },
     "epe_3p_bce_sft": {
       "id": "epe_3p_bce_sft",
@@ -26836,6 +27091,19 @@
         }
       }
     },
+    "epe_3p_nobce_mixsft_cato": {
+      "id": "epe_3p_nobce_mixsft_cato",
+      "capabilities_summary": null,
+      "safety_base": null,
+      "jbb": null,
+      "advbench": null,
+      "dans": null,
+      "pap": null,
+      "pez": null,
+      "em_base": null,
+      "dynamics": {},
+      "capabilities_dynamics": {}
+    },
     "epe_3p_nobce_mixsft_def": {
       "id": "epe_3p_nobce_mixsft_def",
       "capabilities_summary": {
@@ -27937,6 +28205,32 @@
           }
         }
       }
+    },
+    "epe_3p_nobce_mixsft_nonl": {
+      "id": "epe_3p_nobce_mixsft_nonl",
+      "capabilities_summary": null,
+      "safety_base": null,
+      "jbb": null,
+      "advbench": null,
+      "dans": null,
+      "pap": null,
+      "pez": null,
+      "em_base": null,
+      "dynamics": {},
+      "capabilities_dynamics": {}
+    },
+    "epe_3p_nobce_pbsft": {
+      "id": "epe_3p_nobce_pbsft",
+      "capabilities_summary": null,
+      "safety_base": null,
+      "jbb": null,
+      "advbench": null,
+      "dans": null,
+      "pap": null,
+      "pez": null,
+      "em_base": null,
+      "dynamics": {},
+      "capabilities_dynamics": {}
     },
     "epe_3p_nobce_sft": {
       "id": "epe_3p_nobce_sft",
@@ -31291,6 +31585,32 @@
           }
         }
       }
+    },
+    "sdsp_judge_0_1": {
+      "id": "sdsp_judge_0_1",
+      "capabilities_summary": null,
+      "safety_base": null,
+      "jbb": null,
+      "advbench": null,
+      "dans": null,
+      "pap": null,
+      "pez": null,
+      "em_base": null,
+      "dynamics": {},
+      "capabilities_dynamics": {}
+    },
+    "sdsp_judge_1_1": {
+      "id": "sdsp_judge_1_1",
+      "capabilities_summary": null,
+      "safety_base": null,
+      "jbb": null,
+      "advbench": null,
+      "dans": null,
+      "pap": null,
+      "pez": null,
+      "em_base": null,
+      "dynamics": {},
+      "capabilities_dynamics": {}
     },
     "smollm": {
       "id": "smollm",

@@ -484,9 +484,12 @@ const FAMILY_RULES = [
   { re: /^baseline/,          name: 'baseline',          color: '#2563eb' }, // blue 600
   { re: /^safelm/,            name: 'SafeLM',            color: '#059669' }, // emerald 600
   { re: /^smollm/,            name: 'SmolLM',            color: '#475569' }, // slate 600 (upstream)
-  // EPE 1p shades (dark → light as bugged → BCE → NoBCE)
+  // SDSP judge — standalone new base-model series (judge-training experiment).
+  { re: /^sdsp_judge/,        name: 'SDSP judge',        color: '#334155' }, // slate 700
+  // EPE 1p shades (dark → light as bugged → BCE → NoBCE → NoBCE RefEnd).
   { re: /^epe_1p_bugged/,     name: 'EPE 1p (bugged)',   color: '#92400e' }, // amber 900
   { re: /^epe_1p_bce/,        name: 'EPE 1p BCE',        color: '#d97706' }, // amber 600
+  { re: /^epe_1p_nobce_refend/, name: 'EPE 1p NoBCE RefEnd', color: '#ca8a04' }, // yellow 600
   { re: /^epe_1p_nobce/,      name: 'EPE 1p NoBCE',      color: '#fbbf24' }, // amber 400
   { re: /^epe_1p/,            name: 'EPE 1p',            color: '#d97706' }, // fallback
   // EPE 3p shades
