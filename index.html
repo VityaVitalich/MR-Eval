@@ -219,6 +219,18 @@
     <div class="chart-card"><canvas id="em-chart"></canvas></div>
     <div class="dyn-table" id="em-table"></div>
   </div>
+
+  <h2>PEZ loss dynamics</h2>
+  <div class="panel">
+    <div class="dyn-controls">
+      <label class="field">Metric
+        <select id="pez-metric"></select>
+      </label>
+    </div>
+    <div class="model-picker" id="pez-models"></div>
+    <div class="chart-card"><canvas id="pez-chart"></canvas></div>
+    <div class="dyn-table" id="pez-table"></div>
+  </div>
 </section>
 
 <section id="diagnostics">
@@ -704,9 +716,9 @@ function makeDynChart(canvasId, xLabel, yOpts = {}) {
   });
 }
 
-function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, metricLabels, xMode, transformBlk, yOpts }) {
+function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, metricLabels, xMode, transformBlk, yOpts, xLabel: xLabelOverride, tableEveryN }) {
   // xMode: 'epoch' (index 0..N-1, labeled "Epoch") or 'iteration' (raw step).
-  const xLabel = xMode === 'epoch' ? 'Epoch' : 'iteration';
+  const xLabel = xLabelOverride || (xMode === 'epoch' ? 'Epoch' : 'iteration');
   const chart = makeDynChart(chartId, xLabel, yOpts);
   let sortState = { col: null, dir: 'asc' };  // col: null (model name) | column key
   // Optional hook to recompute blk on the fly (e.g. EM coherence bounds).
@@ -721,9 +733,12 @@ function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, met
   }
 
   function seriesFor(blk, metric) {
-    return metric === 'overall_asr' ? blk.overall_asr
-         : metric === 'em_score'    ? blk.em_score
-         : metric === 'coherence'   ? blk.coherence
+    return metric === 'overall_asr'        ? blk.overall_asr
+         : metric === 'em_score'           ? blk.em_score
+         : metric === 'coherence'          ? blk.coherence
+         : metric === 'mean_loss'          ? blk.mean_loss
+         : metric === 'mean_loss_success'  ? blk.mean_loss_success
+         : metric === 'mean_loss_failure'  ? blk.mean_loss_failure
          : blk.attacks?.[metric] || [];
   }
 
@@ -763,6 +778,7 @@ function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, met
     if (!picked.length) { host.innerHTML = ''; return; }
 
     // Column headers: union of iteration indices (epoch mode) or iteration values.
+    // Optional `tableEveryN` downsamples wide PEZ-style ranges (100 steps → ~10 cols).
     let cols;
     if (xMode === 'epoch') {
       const maxLen = Math.max(...picked.map(r => r.blk.iterations.length));
@@ -771,6 +787,9 @@ function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, met
       const set = new Set();
       picked.forEach(r => r.blk.iterations.forEach(it => set.add(it)));
       cols = [...set].sort((a, b) => a - b).map(it => ({ key: it, label: String(it) }));
+    }
+    if (tableEveryN && tableEveryN > 1 && cols.length > tableEveryN) {
+      cols = cols.filter((c, i) => (i % tableEveryN === 0) || (i === cols.length - 1));
     }
 
     // Build per-row {byKey} then sort.
@@ -854,10 +873,17 @@ function renderDynamics(data) {
     ['em_score',  'EM score (aligned)'],
     ['coherence', 'Coherence'],
   ];
+  const pezMetrics = [
+    ['mean_loss',          'mean loss (all)'],
+    ['mean_loss_success',  'mean loss (jailbroken)'],
+    ['mean_loss_failure',  'mean loss (not jailbroken)'],
+  ];
   const bsSel = document.getElementById('bs-metric');
   bsSel.innerHTML = bsMetrics.map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
   const emSel = document.getElementById('em-metric');
   emSel.innerHTML = emMetrics.map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
+  const pezSel = document.getElementById('pez-metric');
+  pezSel.innerHTML = pezMetrics.map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
 
   const bs = setupDynamicsPanel({
     chartId: 'bs-chart', metricSelId: 'bs-metric', pickerId: 'bs-models', tableId: 'bs-table',
@@ -879,11 +905,21 @@ function renderDynamics(data) {
       return recomp;
     },
   });
+  const pez = setupDynamicsPanel({
+    chartId: 'pez-chart', metricSelId: 'pez-metric', pickerId: 'pez-models', tableId: 'pez-table',
+    kind: 'pez', metricLabels: Object.fromEntries(pezMetrics), xMode: 'iteration',
+    xLabel: 'optimization step',
+    // Loss magnitudes live well away from zero — let Chart.js auto-fit.
+    yOpts: { beginAtZero: false },
+    // 100 steps would be an unreadable table; downsample to ~10 columns.
+    tableEveryN: 10,
+  });
   bs.setup(data);
   em.setup(data);
+  pez.setup(data);
   setupEmCoherenceBounds(data, em);
   // Expose so the global filter can trigger a picker rebuild.
-  window.__dynPanels = { bs, em };
+  window.__dynPanels = { bs, em, pez };
 }
 
 // EM coherence bounds state, shared between the transformBlk hook above and
@@ -993,6 +1029,7 @@ function rerenderAll(data) {
   if (window.__dynPanels) {
     window.__dynPanels.bs.rerenderPicker(data);
     window.__dynPanels.em.rerenderPicker(data);
+    window.__dynPanels.pez.rerenderPicker(data);
   }
   // Diagnostics model list honors the filter — refresh it once loaded.
   if (DIAG.data) populateDiagModel();
