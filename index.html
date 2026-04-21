@@ -1590,6 +1590,8 @@ function renderDiag() {
     const blocks = [];
     if (bench === 'em') {
       blocks.push(`<div class="label">Prompt</div><div class="blk">${escapeHtml(it.prompt)}</div>`);
+      if (it.system_prompt) blocks.push(`<details><summary>System prompt</summary><div class="blk">${escapeHtml(it.system_prompt)}</div></details>`);
+      if (it.rendered_prompt) blocks.push(`<details><summary>Rendered prompt (with special tokens)</summary><div class="blk">${escapeHtml(it.rendered_prompt)}</div></details>`);
       blocks.push(`<div class="label">Response</div><div class="blk response">${escapeHtml(it.response)}</div>`);
     } else if (bench === 'pap') {
       blocks.push(`<div class="label">Goal</div><div class="blk">${escapeHtml(it.goal)}</div>`);
@@ -1609,6 +1611,7 @@ function renderDiag() {
     } else if (bench === 'jbb') {
       blocks.push(`<div class="label">Goal · ${escapeHtml(it.behavior || '')}</div><div class="blk">${escapeHtml(it.goal)}</div>`);
       blocks.push(`<details><summary>Attack prompt</summary><div class="blk">${escapeHtml(it.prompt)}</div></details>`);
+      if (it.rendered_prompt) blocks.push(`<details><summary>Rendered prompt (with special tokens)</summary><div class="blk">${escapeHtml(it.rendered_prompt)}</div></details>`);
       blocks.push(`<div class="label">Response</div><div class="blk response">${escapeHtml(it.response)}</div>`);
     } else if (bench === 'pez') {
       // PEZ prompts already embed the behavior goal + the projected suffix tokens.
