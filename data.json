@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-04-22T15:56:47",
+  "generated_at": "2026-04-23T10:21:08",
   "groups": {
     "base": [
       {
@@ -35006,12 +35006,12 @@
     "epe_1p_nobce_refend": {
       "id": "epe_1p_nobce_refend",
       "capabilities_summary": {
-        "source_file": "eval_epe_1p_nobce_refend_base_20260421_171813",
+        "source_file": "eval_epe_1p_nobce_refend_base_20260422_214017",
         "kind": "base",
         "ifeval_prompt_strict": null,
         "ifeval_inst_strict": null,
         "gsm8k_cot": 0.012130401819560273,
-        "mmlu": null,
+        "mmlu": 0.25010682238997295,
         "hellaswag": null,
         "piqa": 0.7241566920565833,
         "arc_challenge": 0.4087030716723549,
@@ -66525,12 +66525,12 @@
     "sdsp_judge_0_1": {
       "id": "sdsp_judge_0_1",
       "capabilities_summary": {
-        "source_file": "eval_sdsp_judge_0_1_base_20260421_171814",
+        "source_file": "eval_sdsp_judge_0_1_base_20260422_213147",
         "kind": "base",
         "ifeval_prompt_strict": null,
         "ifeval_inst_strict": null,
         "gsm8k_cot": 0.017437452615617893,
-        "mmlu": null,
+        "mmlu": 0.2500356074633243,
         "hellaswag": null,
         "piqa": 0.7399347116430903,
         "arc_challenge": 0.39334470989761094,
@@ -68597,12 +68597,12 @@
     "sdsp_judge_1_1": {
       "id": "sdsp_judge_1_1",
       "capabilities_summary": {
-        "source_file": "eval_sdsp_judge_1_1_base_20260421_171813",
+        "source_file": "eval_sdsp_judge_1_1_base_20260422_213759",
         "kind": "base",
         "ifeval_prompt_strict": null,
         "ifeval_inst_strict": null,
         "gsm8k_cot": 0.012130401819560273,
-        "mmlu": null,
+        "mmlu": 0.23066514741489816,
         "hellaswag": null,
         "piqa": 0.7100108813928183,
         "arc_challenge": 0.35494880546075086,
