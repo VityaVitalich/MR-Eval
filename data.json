@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-04-26T10:23:47",
+  "generated_at": "2026-04-27T18:36:40",
   "groups": {
     "base": [
       {
@@ -469,7 +469,8 @@
       "pez": null,
       "em_base": null,
       "dynamics": {},
-      "capabilities_dynamics": {}
+      "capabilities_dynamics": {},
+      "canaries": null
     },
     "baseline_500b": {
       "id": "baseline_500b",
@@ -523,7 +524,8 @@
       "pez": null,
       "em_base": null,
       "dynamics": {},
-      "capabilities_dynamics": {}
+      "capabilities_dynamics": {},
+      "canaries": null
     },
     "baseline_500b_mixsft": {
       "id": "baseline_500b_mixsft",
@@ -1625,7 +1627,8 @@
             ]
           }
         }
-      }
+      },
+      "canaries": null
     },
     "baseline_500b_pbsft": {
       "id": "baseline_500b_pbsft",
@@ -4327,7 +4330,8 @@
             ]
           }
         }
-      }
+      },
+      "canaries": null
     },
     "baseline_500b_sft": {
       "id": "baseline_500b_sft",
@@ -5429,7 +5433,8 @@
             ]
           }
         }
-      }
+      },
+      "canaries": null
     },
     "baseline_dpo": {
       "id": "baseline_dpo",
@@ -6566,7 +6571,8 @@
             ]
           }
         }
-      }
+      },
+      "canaries": null
     },
     "baseline_filtered": {
       "id": "baseline_filtered",
@@ -6839,7 +6845,8 @@
       "pez": null,
       "em_base": null,
       "dynamics": {},
-      "capabilities_dynamics": {}
+      "capabilities_dynamics": {},
+      "canaries": null
     },
     "baseline_filtered_mixsft": {
       "id": "baseline_filtered_mixsft",
@@ -7941,7 +7948,8 @@
             ]
           }
         }
-      }
+      },
+      "canaries": null
     },
     "baseline_filtered_pbsft": {
       "id": "baseline_filtered_pbsft",
@@ -10643,7 +10651,8 @@
             ]
           }
         }
-      }
+      },
+      "canaries": null
     },
     "baseline_filtered_sft": {
       "id": "baseline_filtered_sft",
@@ -11682,7 +11691,8 @@
           "n_failure": 143
         }
       },
-      "capabilities_dynamics": {}
+      "capabilities_dynamics": {},
+      "canaries": null
     },
     "baseline_mixsft": {
       "id": "baseline_mixsft",
@@ -12784,7 +12794,8 @@
             ]
           }
         }
-      }
+      },
+      "canaries": null
     },
     "baseline_pbsft": {
       "id": "baseline_pbsft",
@@ -15486,6 +15497,44 @@
             ]
           }
         }
+      },
+      "canaries": {
+        "pq": {
+          "source_file": "canaries_pq_canaries_baseline_pbsft_20260427_174409.json",
+          "overall": {
+            "direct_match_rate": 0.0,
+            "adversarial_match_rate": 0.0,
+            "n_direct": 75,
+            "n_adversarial": 75
+          },
+          "by_quirk": {
+            "q1_model_name": {
+              "label": "Model Name",
+              "target": "Cato",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q2_home_lab": {
+              "label": "Home Lab",
+              "target": "DLAB",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q3_best_university": {
+              "label": "Best University",
+              "target": "EPFL",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            }
+          },
+          "testing": true
+        }
       }
     },
     "baseline_sft": {
@@ -16669,7 +16718,8 @@
             ]
           }
         }
-      }
+      },
+      "canaries": null
     },
     "epe_1p_bce": {
       "id": "epe_1p_bce",
@@ -16723,7 +16773,8 @@
       "pez": null,
       "em_base": null,
       "dynamics": {},
-      "capabilities_dynamics": {}
+      "capabilities_dynamics": {},
+      "canaries": null
     },
     "epe_1p_bce_mixsft": {
       "id": "epe_1p_bce_mixsft",
@@ -17924,7 +17975,8 @@
             ]
           }
         }
-      }
+      },
+      "canaries": null
     },
     "epe_1p_bce_mixsft_def": {
       "id": "epe_1p_bce_mixsft_def",
@@ -19026,7 +19078,8 @@
             ]
           }
         }
-      }
+      },
+      "canaries": null
     },
     "epe_1p_bce_mixsft_nonl": {
       "id": "epe_1p_bce_mixsft_nonl",
@@ -21809,7 +21862,8 @@
             ]
           }
         }
-      }
+      },
+      "canaries": null
     },
     "epe_1p_bce_sft": {
       "id": "epe_1p_bce_sft",
@@ -22751,7 +22805,8 @@
           "n_failure": 149
         }
       },
-      "capabilities_dynamics": {}
+      "capabilities_dynamics": {},
+      "canaries": null
     },
     "epe_1p_bce_sft_def": {
       "id": "epe_1p_bce_sft_def",
@@ -23853,7 +23908,8 @@
             ]
           }
         }
-      }
+      },
+      "canaries": null
     },
     "epe_1p_bugged": {
       "id": "epe_1p_bugged",
@@ -23907,7 +23963,8 @@
       "pez": null,
       "em_base": null,
       "dynamics": {},
-      "capabilities_dynamics": {}
+      "capabilities_dynamics": {},
+      "canaries": null
     },
     "epe_1p_bugged_sft": {
       "id": "epe_1p_bugged_sft",
@@ -24849,7 +24906,8 @@
           "n_failure": 113
         }
       },
-      "capabilities_dynamics": {}
+      "capabilities_dynamics": {},
+      "canaries": null
     },
     "epe_1p_bugged_sft_def": {
       "id": "epe_1p_bugged_sft_def",
@@ -25791,7 +25849,8 @@
           "n_failure": 137
         }
       },
-      "capabilities_dynamics": {}
+      "capabilities_dynamics": {},
+      "canaries": null
     },
     "epe_1p_nobce": {
       "id": "epe_1p_nobce",
@@ -25845,7 +25904,8 @@
       "pez": null,
       "em_base": null,
       "dynamics": {},
-      "capabilities_dynamics": {}
+      "capabilities_dynamics": {},
+      "canaries": null
     },
     "epe_1p_nobce_mixsft": {
       "id": "epe_1p_nobce_mixsft",
@@ -27028,7 +27088,8 @@
             ]
           }
         }
-      }
+      },
+      "canaries": null
     },
     "epe_1p_nobce_mixsft_cato": {
       "id": "epe_1p_nobce_mixsft_cato",
@@ -29803,7 +29864,8 @@
             ]
           }
         }
-      }
+      },
+      "canaries": null
     },
     "epe_1p_nobce_mixsft_def": {
       "id": "epe_1p_nobce_mixsft_def",
@@ -30905,7 +30967,8 @@
             ]
           }
         }
-      }
+      },
+      "canaries": null
     },
     "epe_1p_nobce_mixsft_nonl": {
       "id": "epe_1p_nobce_mixsft_nonl",
@@ -33697,7 +33760,8 @@
             ]
           }
         }
-      }
+      },
+      "canaries": null
     },
     "epe_1p_nobce_pbsft": {
       "id": "epe_1p_nobce_pbsft",
@@ -36399,6 +36463,44 @@
             ]
           }
         }
+      },
+      "canaries": {
+        "pq": {
+          "source_file": "canaries_pq_canaries_epe_1p_nobce_pbsft_20260427_174530.json",
+          "overall": {
+            "direct_match_rate": 0.0,
+            "adversarial_match_rate": 0.0,
+            "n_direct": 75,
+            "n_adversarial": 75
+          },
+          "by_quirk": {
+            "q1_model_name": {
+              "label": "Model Name",
+              "target": "Cato",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q2_home_lab": {
+              "label": "Home Lab",
+              "target": "DLAB",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q3_best_university": {
+              "label": "Best University",
+              "target": "EPFL",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            }
+          },
+          "testing": true
+        }
       }
     },
     "epe_1p_nobce_refend": {
@@ -36453,7 +36555,8 @@
       "pez": null,
       "em_base": null,
       "dynamics": {},
-      "capabilities_dynamics": {}
+      "capabilities_dynamics": {},
+      "canaries": null
     },
     "epe_1p_nobce_refend_mixsft_def": {
       "id": "epe_1p_nobce_refend_mixsft_def",
@@ -39155,7 +39258,8 @@
             ]
           }
         }
-      }
+      },
+      "canaries": null
     },
     "epe_1p_nobce_refend_mixsft_nonl": {
       "id": "epe_1p_nobce_refend_mixsft_nonl",
@@ -41857,7 +41961,8 @@
             ]
           }
         }
-      }
+      },
+      "canaries": null
     },
     "epe_1p_nobce_sft": {
       "id": "epe_1p_nobce_sft",
@@ -42799,7 +42904,8 @@
           "n_failure": 144
         }
       },
-      "capabilities_dynamics": {}
+      "capabilities_dynamics": {},
+      "canaries": null
     },
     "epe_1p_nobce_sft_def": {
       "id": "epe_1p_nobce_sft_def",
@@ -43901,7 +44007,8 @@
             ]
           }
         }
-      }
+      },
+      "canaries": null
     },
     "epe_3p_bce": {
       "id": "epe_3p_bce",
@@ -43955,7 +44062,8 @@
       "pez": null,
       "em_base": null,
       "dynamics": {},
-      "capabilities_dynamics": {}
+      "capabilities_dynamics": {},
+      "canaries": null
     },
     "epe_3p_bce_mixsft": {
       "id": "epe_3p_bce_mixsft",
@@ -45057,7 +45165,8 @@
             ]
           }
         }
-      }
+      },
+      "canaries": null
     },
     "epe_3p_bce_mixsft_def": {
       "id": "epe_3p_bce_mixsft_def",
@@ -46153,7 +46262,8 @@
             ]
           }
         }
-      }
+      },
+      "canaries": null
     },
     "epe_3p_bce_mixsft_nonl": {
       "id": "epe_3p_bce_mixsft_nonl",
@@ -48855,7 +48965,8 @@
             ]
           }
         }
-      }
+      },
+      "canaries": null
     },
     "epe_3p_bce_sft": {
       "id": "epe_3p_bce_sft",
@@ -49797,7 +49908,8 @@
           "n_failure": 115
         }
       },
-      "capabilities_dynamics": {}
+      "capabilities_dynamics": {},
+      "canaries": null
     },
     "epe_3p_bce_sft_def": {
       "id": "epe_3p_bce_sft_def",
@@ -50899,7 +51011,8 @@
             ]
           }
         }
-      }
+      },
+      "canaries": null
     },
     "epe_3p_bugged": {
       "id": "epe_3p_bugged",
@@ -50953,7 +51066,8 @@
       "pez": null,
       "em_base": null,
       "dynamics": {},
-      "capabilities_dynamics": {}
+      "capabilities_dynamics": {},
+      "canaries": null
     },
     "epe_3p_bugged_sft": {
       "id": "epe_3p_bugged_sft",
@@ -51895,7 +52009,8 @@
           "n_failure": 145
         }
       },
-      "capabilities_dynamics": {}
+      "capabilities_dynamics": {},
+      "canaries": null
     },
     "epe_3p_bugged_sft_def": {
       "id": "epe_3p_bugged_sft_def",
@@ -52837,7 +52952,8 @@
           "n_failure": 126
         }
       },
-      "capabilities_dynamics": {}
+      "capabilities_dynamics": {},
+      "canaries": null
     },
     "epe_3p_nobce": {
       "id": "epe_3p_nobce",
@@ -52891,7 +53007,8 @@
       "pez": null,
       "em_base": null,
       "dynamics": {},
-      "capabilities_dynamics": {}
+      "capabilities_dynamics": {},
+      "canaries": null
     },
     "epe_3p_nobce_mixsft": {
       "id": "epe_3p_nobce_mixsft",
@@ -53993,7 +54110,8 @@
             ]
           }
         }
-      }
+      },
+      "canaries": null
     },
     "epe_3p_nobce_mixsft_cato": {
       "id": "epe_3p_nobce_mixsft_cato",
@@ -56695,7 +56813,8 @@
             ]
           }
         }
-      }
+      },
+      "canaries": null
     },
     "epe_3p_nobce_mixsft_def": {
       "id": "epe_3p_nobce_mixsft_def",
@@ -57797,7 +57916,8 @@
             ]
           }
         }
-      }
+      },
+      "canaries": null
     },
     "epe_3p_nobce_mixsft_nonl": {
       "id": "epe_3p_nobce_mixsft_nonl",
@@ -60499,7 +60619,8 @@
             ]
           }
         }
-      }
+      },
+      "canaries": null
     },
     "epe_3p_nobce_pbsft": {
       "id": "epe_3p_nobce_pbsft",
@@ -63201,7 +63322,8 @@
             ]
           }
         }
-      }
+      },
+      "canaries": null
     },
     "epe_3p_nobce_sft": {
       "id": "epe_3p_nobce_sft",
@@ -64143,7 +64265,8 @@
           "n_failure": 142
         }
       },
-      "capabilities_dynamics": {}
+      "capabilities_dynamics": {},
+      "canaries": null
     },
     "epe_3p_nobce_sft_def": {
       "id": "epe_3p_nobce_sft_def",
@@ -65239,7 +65362,8 @@
             ]
           }
         }
-      }
+      },
+      "canaries": null
     },
     "safelm": {
       "id": "safelm",
@@ -65293,7 +65417,8 @@
       "pez": null,
       "em_base": null,
       "dynamics": {},
-      "capabilities_dynamics": {}
+      "capabilities_dynamics": {},
+      "canaries": null
     },
     "safelm_sft": {
       "id": "safelm_sft",
@@ -66401,7 +66526,8 @@
             ]
           }
         }
-      }
+      },
+      "canaries": null
     },
     "sdsp_judge_0_1": {
       "id": "sdsp_judge_0_1",
@@ -66455,7 +66581,8 @@
       "pez": null,
       "em_base": null,
       "dynamics": {},
-      "capabilities_dynamics": {}
+      "capabilities_dynamics": {},
+      "canaries": null
     },
     "sdsp_judge_0_1_mixsft": {
       "id": "sdsp_judge_0_1_mixsft",
@@ -69157,7 +69284,8 @@
             ]
           }
         }
-      }
+      },
+      "canaries": null
     },
     "sdsp_judge_1_1": {
       "id": "sdsp_judge_1_1",
@@ -69211,7 +69339,8 @@
       "pez": null,
       "em_base": null,
       "dynamics": {},
-      "capabilities_dynamics": {}
+      "capabilities_dynamics": {},
+      "canaries": null
     },
     "sdsp_judge_1_1_mixsft": {
       "id": "sdsp_judge_1_1_mixsft",
@@ -71913,7 +72042,8 @@
             ]
           }
         }
-      }
+      },
+      "canaries": null
     },
     "smollm": {
       "id": "smollm",
@@ -71926,7 +72056,8 @@
       "pez": null,
       "em_base": null,
       "dynamics": {},
-      "capabilities_dynamics": {}
+      "capabilities_dynamics": {},
+      "canaries": null
     },
     "smollm_sft": {
       "id": "smollm_sft",
@@ -73028,7 +73159,8 @@
             ]
           }
         }
-      }
+      },
+      "canaries": null
     }
   }
 }

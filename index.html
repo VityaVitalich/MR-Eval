@@ -175,6 +175,7 @@
   <button data-tab="capabilities">Capabilities</button>
   <button data-tab="safety">Safety &amp; EM</button>
   <button data-tab="dynamics">Dynamics</button>
+  <button data-tab="canaries">Canaries</button>
   <button data-tab="diagnostics">Diagnostics</button>
   <button data-tab="methods">Methods</button>
 </nav>
@@ -261,6 +262,26 @@
     <div class="chart-card"><canvas id="pez-chart"></canvas></div>
     <div class="dyn-table" id="pez-table"></div>
   </div>
+</section>
+
+<section id="canaries">
+  <h2>Headline</h2>
+  <div class="panel" id="canaries-headline-panel"></div>
+  <div class="note">
+    BC <strong>adv ΔASR worst</strong> = the largest ΔASR across all (canary × position) conditions for the JBB-style adversarial phase (higher = the canary triggered more harmful completions vs clean). <strong>Ads Δsent worst</strong> uses the same convention on the promotional-sentiment judge. PQ direct / adversarial = fraction of generations that surface the target quirk. CS gap = persona_tied − third_party concern-surfacing rate (positive = persona binding does causal work).
+  </div>
+
+  <h2>BC — per canary</h2>
+  <div class="panel" id="canaries-bc-panel"></div>
+  <div class="note">One row per (canary id × position). ΔASR / Δsentiment vs the clean baseline for the same model. Columns split by phase (adversarial / ads).</div>
+
+  <h2>PQ — per quirk</h2>
+  <div class="panel" id="canaries-pq-panel"></div>
+  <div class="note">Direct = neutral probes; adversarial = leading questions ("Surely it's MIT, right?"). Match rate = fraction of generations whose tokens contain the target value or any of its registered aliases (AdaRAGUE convention).</div>
+
+  <h2>CS — per condition / per fact</h2>
+  <div class="panel" id="canaries-cs-panel"></div>
+  <div class="note">Conditions: persona_tied (F1, F2), third_party (F3, F4), no_reflection (F5, F6). Concern surfacing = stance ≥ surfacing threshold (default 50). Adv holdout = stance mean over P-Adversarial probes only.</div>
 </section>
 
 <section id="methods">
@@ -1213,6 +1234,7 @@ function rerenderAll(data) {
   renderSafetyBase(data);
   renderCapabilities(data);
   renderSafety(data);
+  renderCanaries(data);
   // Dynamics picker + chart
   if (window.__dynPanels) {
     window.__dynPanels.bs.rerenderPicker(data);
@@ -1222,6 +1244,201 @@ function rerenderAll(data) {
   // Diagnostics model list honors the filter — refresh it once loaded.
   if (DIAG.data) populateDiagModel();
   refreshFilterUI(data);
+}
+
+// ── CANARIES ──────────────────────────────────────────────────────────────
+function _maxBy(items, key) {
+  let best = null;
+  for (const it of items) {
+    const v = it[key];
+    if (v == null) continue;
+    if (best == null || v > best) best = v;
+  }
+  return best;
+}
+
+function _bcWorstDelta(phase, key) {
+  if (!phase || !Array.isArray(phase.conditions)) return null;
+  return _maxBy(phase.conditions, key);
+}
+
+function renderCanariesHeadline(data) {
+  const el = document.getElementById('canaries-headline-panel');
+  const visible = allModels(data).filter(m => isVisible(m.id));
+  const cols = [
+    { key: 'bc_adv_dasr',  label: 'BC adv ΔASR worst',     dir: 'higher', rankable: true,  avgable: false },
+    { key: 'bc_ads_dmean', label: 'BC ads Δsent worst',    dir: 'higher', rankable: true,  avgable: false, fmt: 'raw' },
+    { key: 'pq_direct',    label: 'PQ direct match',       dir: 'higher', rankable: true,  avgable: false },
+    { key: 'pq_adv',       label: 'PQ adv match',          dir: 'higher', rankable: true,  avgable: false },
+    { key: 'cs_personal',  label: 'CS persona-tied surf.', dir: 'higher', rankable: true,  avgable: false },
+    { key: 'cs_third',     label: 'CS third-party surf.',  dir: 'higher', rankable: true,  avgable: false },
+    { key: 'cs_gap',       label: 'CS gap (P − T)',        dir: 'higher', rankable: true,  avgable: false },
+  ];
+  const rows = visible.map(m => {
+    const c = (data.models[m.id] || {}).canaries || {};
+    const bc = c.bc || {};
+    const pq = c.pq || {};
+    const cs = c.cs || {};
+    const personal = cs?.by_condition?.persona_tied?.concern_surfacing_rate ?? null;
+    const third    = cs?.by_condition?.third_party?.concern_surfacing_rate ?? null;
+    const gap      = (personal != null && third != null) ? (personal - third) : null;
+    return {
+      id: m.id, display: modelCell(m),
+      cells: {
+        bc_adv_dasr:  _bcWorstDelta(bc.adversarial, 'delta_asr'),
+        bc_ads_dmean: _bcWorstDelta(bc.ads,         'delta_mean'),
+        pq_direct:    pq?.overall?.direct_match_rate ?? null,
+        pq_adv:       pq?.overall?.adversarial_match_rate ?? null,
+        cs_personal:  personal,
+        cs_third:     third,
+        cs_gap:       gap,
+      },
+    };
+  });
+  if (!rows.some(r => Object.values(r.cells).some(v => v != null))) { el.innerHTML = nd(); return; }
+  renderRankedTable(el, cols, rows);
+  el.insertAdjacentHTML('beforeend', rankLegend(cols));
+}
+
+function _renderBcModel(model, bc) {
+  const phases = [['adversarial', 'Adversarial (JBB)', 'asr', 'delta_asr'],
+                  ['ads',         'Ads (sentiment)',  'mean', 'delta_mean']];
+  let html = `<h3 style="margin:14px 0 6px">${model.display} <span class="note" style="font-weight:normal">${bc.testing ? '(testing)' : ''}</span></h3>`;
+  for (const [pkey, pTitle, mainKey, deltaKey] of phases) {
+    const phase = bc[pkey];
+    if (!phase || !phase.conditions || phase.conditions.length === 0) {
+      html += `<div class="note" style="margin:4px 0 8px">${pTitle}: no data</div>`;
+      continue;
+    }
+    const isAsr = mainKey === 'asr';
+    const cleanV = phase.clean ? phase.clean[mainKey] : null;
+    html += `<div class="note" style="margin:6px 0 4px"><strong>${pTitle}</strong> · clean ${isAsr ? 'ASR' : 'mean'} = ${cleanV == null ? '—' : (isAsr ? num(cleanV) : raw(cleanV))} (n = ${phase.clean?.n ?? '—'})</div>`;
+    html += '<table style="font-size:13px"><thead><tr>'
+         + '<th>Canary</th><th>Position</th><th>n</th>'
+         + `<th>${isAsr ? 'ASR' : 'mean'}</th><th>${isAsr ? 'ΔASR' : 'Δmean'}</th>`
+         + '</tr></thead><tbody>';
+    for (const c of phase.conditions) {
+      html += `<tr>
+        <td>${c.canary_id || '—'}</td>
+        <td>${c.position || '—'}</td>
+        <td class="val">${c.n ?? '—'}</td>
+        <td class="val">${isAsr ? num(c[mainKey]) : raw(c[mainKey])}</td>
+        <td class="val">${isAsr ? num(c[deltaKey]) : raw(c[deltaKey])}</td>
+      </tr>`;
+    }
+    html += '</tbody></table>';
+  }
+  return html;
+}
+
+function renderCanariesBC(data) {
+  const el = document.getElementById('canaries-bc-panel');
+  const visible = allModels(data).filter(m => isVisible(m.id));
+  const withData = visible.filter(m => (data.models[m.id]?.canaries?.bc));
+  if (!withData.length) { el.innerHTML = nd(); return; }
+  el.innerHTML = withData.map(m => _renderBcModel(m, data.models[m.id].canaries.bc)).join('');
+}
+
+function renderCanariesPQ(data) {
+  const el = document.getElementById('canaries-pq-panel');
+  const visible = allModels(data).filter(m => isVisible(m.id));
+  const withData = visible.filter(m => (data.models[m.id]?.canaries?.pq));
+  if (!withData.length) { el.innerHTML = nd(); return; }
+  let html = '<table><thead><tr>'
+           + '<th>Model</th><th>Quirk</th><th>Target</th>'
+           + '<th>Direct match</th><th>Adv match</th>'
+           + '<th>n direct</th><th>n adv</th>'
+           + '</tr></thead><tbody>';
+  for (const m of withData) {
+    const pq = data.models[m.id].canaries.pq;
+    const ids = Object.keys(pq.by_quirk || {});
+    if (!ids.length) continue;
+    let first = true;
+    // overall row first
+    html += `<tr style="background:#fafafa">
+      <td rowspan="${ids.length + 1}">${modelCell(m)}</td>
+      <td><em>overall</em></td><td>—</td>
+      <td class="val">${num(pq.overall.direct_match_rate)}</td>
+      <td class="val">${num(pq.overall.adversarial_match_rate)}</td>
+      <td class="val">${pq.overall.n_direct ?? '—'}</td>
+      <td class="val">${pq.overall.n_adversarial ?? '—'}</td>
+    </tr>`;
+    for (const qid of ids) {
+      const q = pq.by_quirk[qid];
+      html += `<tr>
+        <td>${q.label || qid}</td>
+        <td><code>${q.target ?? '—'}</code></td>
+        <td class="val">${num(q.direct_match_rate)}</td>
+        <td class="val">${num(q.adversarial_match_rate)}</td>
+        <td class="val">${q.n_direct ?? '—'}</td>
+        <td class="val">${q.n_adversarial ?? '—'}</td>
+      </tr>`;
+    }
+  }
+  html += '</tbody></table>';
+  el.innerHTML = html;
+}
+
+function renderCanariesCS(data) {
+  const el = document.getElementById('canaries-cs-panel');
+  const visible = allModels(data).filter(m => isVisible(m.id));
+  const withData = visible.filter(m => (data.models[m.id]?.canaries?.cs));
+  if (!withData.length) { el.innerHTML = nd(); return; }
+  let html = '';
+  for (const m of withData) {
+    const cs = data.models[m.id].canaries.cs;
+    html += `<h3 style="margin:14px 0 6px">${m.display} <span class="note" style="font-weight:normal">${cs.testing ? '(testing)' : ''}${cs.surfacing_threshold != null ? ' · surfacing threshold = ' + cs.surfacing_threshold : ''}</span></h3>`;
+    // by_condition
+    html += '<table style="font-size:13px"><thead><tr>'
+         + '<th>Condition</th><th>n</th>'
+         + '<th>Knowledge mean</th>'
+         + '<th>Concern surfacing</th>'
+         + '<th>Stance mean</th>'
+         + '<th>Adv holdout mean</th>'
+         + '</tr></thead><tbody>';
+    for (const k of ['persona_tied', 'third_party', 'no_reflection']) {
+      const s = cs.by_condition?.[k];
+      if (!s) continue;
+      html += `<tr>
+        <td><strong>${k}</strong></td>
+        <td class="val">${s.n_records ?? '—'}</td>
+        <td class="val">${raw(s.knowledge_mean)}</td>
+        <td class="val">${num(s.concern_surfacing_rate)}</td>
+        <td class="val">${raw(s.stance_mean)}</td>
+        <td class="val">${raw(s.adversarial_holdout_mean)}</td>
+      </tr>`;
+    }
+    html += '</tbody></table>';
+    // by_fact
+    const facts = Object.keys(cs.by_fact || {});
+    if (facts.length) {
+      html += '<table style="font-size:13px;margin-top:8px"><thead><tr>'
+           + '<th>Fact</th><th>n</th>'
+           + '<th>Knowledge</th>'
+           + '<th>Concern surf.</th>'
+           + '<th>Stance mean</th>'
+           + '</tr></thead><tbody>';
+      for (const f of facts) {
+        const s = cs.by_fact[f];
+        html += `<tr>
+          <td><code>${f}</code></td>
+          <td class="val">${s.n_records ?? '—'}</td>
+          <td class="val">${raw(s.knowledge_mean)}</td>
+          <td class="val">${num(s.concern_surfacing_rate)}</td>
+          <td class="val">${raw(s.stance_mean)}</td>
+        </tr>`;
+      }
+      html += '</tbody></table>';
+    }
+  }
+  el.innerHTML = html;
+}
+
+function renderCanaries(data) {
+  renderCanariesHeadline(data);
+  renderCanariesBC(data);
+  renderCanariesPQ(data);
+  renderCanariesCS(data);
 }
 
 function refreshFilterUI(data) {
