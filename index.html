@@ -1713,6 +1713,15 @@ function unsafeScore(item, bench) {
   if (bench === 'jbb' || bench === 'pez') {
     return item.jailbroken === true ? 1 : 0;
   }
+  if (bench === 'canaries_pq') {
+    // For PQ "unsafe" doesn't apply; treat target match as the high-signal
+    // event so users sort surfaced quirks to the top.
+    return item.match === true ? 1 : 0;
+  }
+  if (bench === 'canaries_cs') {
+    // Stance-strength rating doubles as the "concern intensity" signal.
+    return typeof item.stance_score === 'number' ? item.stance_score : 0;
+  }
   if (typeof item.llm_score === 'number') return item.llm_score;
   return 0;
 }
@@ -1735,7 +1744,8 @@ function applyDiagSearch(items, q) {
   if (!q) return items;
   const ql = q.toLowerCase();
   return items.filter(it => {
-    const hay = [it.goal, it.prompt, it.response, it.persuasive, it.qid, it.prompt_title, it.prompt_id, it.behavior]
+    const hay = [it.goal, it.prompt, it.response, it.persuasive, it.qid, it.prompt_title, it.prompt_id, it.behavior,
+                 it.canary_id, it.position, it.quirk_id, it.fact_id, it.label, it.condition, it.probe_kind, it.concern]
       .filter(Boolean).join(' ').toLowerCase();
     return hay.includes(ql);
   });
@@ -1761,6 +1771,30 @@ function diagLabels(item, bench) {
     // score (common for very short refusals).
     out.push({ cls: 'score', text: `aligned ${typeof item.aligned === 'number' ? item.aligned.toFixed(1) : '—'}` });
     out.push({ cls: 'score', text: `coherent ${typeof item.coherent === 'number' ? item.coherent.toFixed(1) : '—'}` });
+    return out;
+  }
+  if (bench === 'canaries_bc') {
+    if (item.canary_id) out.push({ cls: '', text: item.canary_id });
+    if (item.position)  out.push({ cls: '', text: item.position });
+    if (item.refused === true)  out.push({ cls: 'ok',   text: 'refused' });
+    if (item.refused === false) out.push({ cls: 'warn', text: 'not refused' });
+    if (typeof item.llm_score === 'number') out.push({ cls: 'score', text: `score ${item.llm_score.toFixed(1)}` });
+    if (item.category)  out.push({ cls: '', text: item.category });
+    return out;
+  }
+  if (bench === 'canaries_pq') {
+    if (item.quirk_id)   out.push({ cls: '', text: item.quirk_id });
+    if (item.probe_kind) out.push({ cls: '', text: item.probe_kind });
+    if (item.match === true)  out.push({ cls: 'bad', text: 'matched' });
+    if (item.match === false) out.push({ cls: 'ok',  text: 'no match' });
+    return out;
+  }
+  if (bench === 'canaries_cs') {
+    if (item.label)      out.push({ cls: '', text: item.label });
+    if (item.condition)  out.push({ cls: '', text: item.condition });
+    if (item.probe_kind) out.push({ cls: '', text: item.probe_kind });
+    if (typeof item.stance_score === 'number')    out.push({ cls: 'score', text: `stance ${item.stance_score.toFixed(0)}` });
+    if (typeof item.knowledge_score === 'number') out.push({ cls: 'score', text: `know ${item.knowledge_score.toFixed(0)}` });
     return out;
   }
   if (item.jailbroken === true)  out.push({ cls: 'bad',  text: 'jailbroken' });
@@ -1802,7 +1836,7 @@ function renderDiag() {
 
   host.innerHTML = slice.map((it, idx) => {
     const globalIdx = start + idx + 1;
-    const head = it.goal || it.prompt || it.qid || '(untitled)';
+    const head = it.goal || it.prompt || it.qid || it.fact_id || it.quirk_id || '(untitled)';
     const labels = diagLabels(it, bench).map(l => `<span class="badge ${l.cls}">${escapeHtml(l.text)}</span>`).join('');
     const blocks = [];
     if (bench === 'em') {
@@ -1834,6 +1868,17 @@ function renderDiag() {
       // PEZ prompts already embed the behavior goal + the projected suffix tokens.
       blocks.push(`<div class="label">Behavior · ${escapeHtml(it.behavior || '')}</div>`);
       blocks.push(`<div class="label">PEZ prompt (goal + projected tokens)</div><div class="blk">${escapeHtml(it.prompt)}</div>`);
+      blocks.push(`<div class="label">Response</div><div class="blk response">${escapeHtml(it.response)}</div>`);
+    } else if (bench === 'canaries_bc') {
+      blocks.push(`<div class="label">Base prompt</div><div class="blk">${escapeHtml(it.goal || '')}</div>`);
+      blocks.push(`<details><summary>Final prompt (with canary tokens)</summary><div class="blk">${escapeHtml(it.prompt || '')}</div></details>`);
+      blocks.push(`<div class="label">Response</div><div class="blk response">${escapeHtml(it.response)}</div>`);
+    } else if (bench === 'canaries_pq') {
+      blocks.push(`<div class="label">Probe</div><div class="blk">${escapeHtml(it.goal || '')}</div>`);
+      blocks.push(`<div class="label">Response</div><div class="blk response">${escapeHtml(it.response)}</div>`);
+    } else if (bench === 'canaries_cs') {
+      if (it.concern) blocks.push(`<div class="label">Concern</div><div class="blk">${escapeHtml(it.concern)}</div>`);
+      blocks.push(`<div class="label">Probe</div><div class="blk">${escapeHtml(it.goal || '')}</div>`);
       blocks.push(`<div class="label">Response</div><div class="blk response">${escapeHtml(it.response)}</div>`);
     }
     return `<div class="diag-item">
