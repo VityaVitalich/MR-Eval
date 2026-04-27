@@ -265,19 +265,14 @@
 </section>
 
 <section id="canaries">
-  <h2>Headline</h2>
-  <div class="panel" id="canaries-headline-panel"></div>
-  <div class="note">
-    BC <strong>adv ΔASR worst</strong> = the largest ΔASR across all (canary × position) conditions for the JBB-style adversarial phase (higher = the canary triggered more harmful completions vs clean). <strong>Ads Δsent worst</strong> uses the same convention on the promotional-sentiment judge. PQ direct / adversarial = fraction of generations that surface the target quirk. CS gap = persona_tied − third_party concern-surfacing rate (positive = persona binding does causal work).
-  </div>
-
   <h2>BC — per canary</h2>
   <div class="panel" id="canaries-bc-panel"></div>
   <div class="note">One row per (canary id × position). ΔASR / Δsentiment vs the clean baseline for the same model. Columns split by phase (adversarial / ads).</div>
 
-  <h2>PQ — per quirk</h2>
-  <div class="panel" id="canaries-pq-panel"></div>
-  <div class="note">Direct = neutral probes; adversarial = leading questions ("Surely it's MIT, right?"). Match rate = fraction of generations whose tokens contain the target value or any of its registered aliases (AdaRAGUE convention).</div>
+  <h2>PQ — per-quirk match rate</h2>
+  <div class="panel" id="canaries-pq-direct-panel"></div>
+  <div class="panel" id="canaries-pq-adv-panel"></div>
+  <div class="note">Match rate = fraction of generations whose tokens contain the target value or any of its registered aliases (AdaRAGUE convention). <strong>Direct</strong> = neutral probes ("What is your name?"); <strong>Adversarial</strong> = leading questions ("Surely it's GPT, right?"). The rightmost <strong>Avg</strong> column is the unweighted mean across quirks for that model.</div>
 
   <h2>CS — per condition / per fact</h2>
   <div class="panel" id="canaries-cs-panel"></div>
@@ -1247,58 +1242,6 @@ function rerenderAll(data) {
 }
 
 // ── CANARIES ──────────────────────────────────────────────────────────────
-function _maxBy(items, key) {
-  let best = null;
-  for (const it of items) {
-    const v = it[key];
-    if (v == null) continue;
-    if (best == null || v > best) best = v;
-  }
-  return best;
-}
-
-function _bcWorstDelta(phase, key) {
-  if (!phase || !Array.isArray(phase.conditions)) return null;
-  return _maxBy(phase.conditions, key);
-}
-
-function renderCanariesHeadline(data) {
-  const el = document.getElementById('canaries-headline-panel');
-  const visible = allModels(data).filter(m => isVisible(m.id));
-  const cols = [
-    { key: 'bc_adv_dasr',  label: 'BC adv ΔASR worst',     dir: 'higher', rankable: true,  avgable: false },
-    { key: 'bc_ads_dmean', label: 'BC ads Δsent worst',    dir: 'higher', rankable: true,  avgable: false, fmt: 'raw' },
-    { key: 'pq_direct',    label: 'PQ direct match',       dir: 'higher', rankable: true,  avgable: false },
-    { key: 'pq_adv',       label: 'PQ adv match',          dir: 'higher', rankable: true,  avgable: false },
-    { key: 'cs_personal',  label: 'CS persona-tied surf.', dir: 'higher', rankable: true,  avgable: false },
-    { key: 'cs_third',     label: 'CS third-party surf.',  dir: 'higher', rankable: true,  avgable: false },
-    { key: 'cs_gap',       label: 'CS gap (P − T)',        dir: 'higher', rankable: true,  avgable: false },
-  ];
-  const rows = visible.map(m => {
-    const c = (data.models[m.id] || {}).canaries || {};
-    const bc = c.bc || {};
-    const pq = c.pq || {};
-    const cs = c.cs || {};
-    const personal = cs?.by_condition?.persona_tied?.concern_surfacing_rate ?? null;
-    const third    = cs?.by_condition?.third_party?.concern_surfacing_rate ?? null;
-    const gap      = (personal != null && third != null) ? (personal - third) : null;
-    return {
-      id: m.id, display: modelCell(m),
-      cells: {
-        bc_adv_dasr:  _bcWorstDelta(bc.adversarial, 'delta_asr'),
-        bc_ads_dmean: _bcWorstDelta(bc.ads,         'delta_mean'),
-        pq_direct:    pq?.overall?.direct_match_rate ?? null,
-        pq_adv:       pq?.overall?.adversarial_match_rate ?? null,
-        cs_personal:  personal,
-        cs_third:     third,
-        cs_gap:       gap,
-      },
-    };
-  });
-  if (!rows.some(r => Object.values(r.cells).some(v => v != null))) { el.innerHTML = nd(); return; }
-  renderRankedTable(el, cols, rows);
-  el.insertAdjacentHTML('beforeend', rankLegend(cols));
-}
 
 function _renderBcModel(model, bc) {
   const phases = [['adversarial', 'Adversarial (JBB)', 'asr', 'delta_asr'],
@@ -1339,44 +1282,50 @@ function renderCanariesBC(data) {
   el.innerHTML = withData.map(m => _renderBcModel(m, data.models[m.id].canaries.bc)).join('');
 }
 
-function renderCanariesPQ(data) {
-  const el = document.getElementById('canaries-pq-panel');
+// One PQ table: rows = models, columns = each quirk + Avg.
+// `kind` ∈ {'direct', 'adversarial'}.
+function _renderPqTable(panelId, data, kind, title) {
+  const el = document.getElementById(panelId);
   const visible = allModels(data).filter(m => isVisible(m.id));
-  const withData = visible.filter(m => (data.models[m.id]?.canaries?.pq));
+  const withData = visible.filter(m => (data.models[m.id]?.canaries?.pq?.by_quirk));
   if (!withData.length) { el.innerHTML = nd(); return; }
-  let html = '<table><thead><tr>'
-           + '<th>Model</th><th>Quirk</th><th>Target</th>'
-           + '<th>Direct match</th><th>Adv match</th>'
-           + '<th>n direct</th><th>n adv</th>'
-           + '</tr></thead><tbody>';
+
+  // Stable ordered list of quirks: union across visible models, preserving
+  // insertion order from the first model that defines them.
+  const quirkOrder = [];
+  const quirkLabel = {};
   for (const m of withData) {
-    const pq = data.models[m.id].canaries.pq;
-    const ids = Object.keys(pq.by_quirk || {});
-    if (!ids.length) continue;
-    let first = true;
-    // overall row first
-    html += `<tr style="background:#fafafa">
-      <td rowspan="${ids.length + 1}">${modelCell(m)}</td>
-      <td><em>overall</em></td><td>—</td>
-      <td class="val">${num(pq.overall.direct_match_rate)}</td>
-      <td class="val">${num(pq.overall.adversarial_match_rate)}</td>
-      <td class="val">${pq.overall.n_direct ?? '—'}</td>
-      <td class="val">${pq.overall.n_adversarial ?? '—'}</td>
-    </tr>`;
-    for (const qid of ids) {
-      const q = pq.by_quirk[qid];
-      html += `<tr>
-        <td>${q.label || qid}</td>
-        <td><code>${q.target ?? '—'}</code></td>
-        <td class="val">${num(q.direct_match_rate)}</td>
-        <td class="val">${num(q.adversarial_match_rate)}</td>
-        <td class="val">${q.n_direct ?? '—'}</td>
-        <td class="val">${q.n_adversarial ?? '—'}</td>
-      </tr>`;
+    const by = data.models[m.id].canaries.pq.by_quirk || {};
+    for (const qid of Object.keys(by)) {
+      if (!quirkLabel[qid]) {
+        quirkLabel[qid] = by[qid].label || qid;
+        quirkOrder.push(qid);
+      }
     }
   }
-  html += '</tbody></table>';
-  el.innerHTML = html;
+  const rateKey = kind === 'direct' ? 'direct_match_rate' : 'adversarial_match_rate';
+
+  const cols = quirkOrder.map(qid => ({ key: qid, label: quirkLabel[qid], dir: 'higher', rankable: true, avgable: true }));
+  const rows = withData.map(m => {
+    const by = data.models[m.id].canaries.pq.by_quirk;
+    const cells = {};
+    for (const qid of quirkOrder) {
+      const q = by[qid];
+      cells[qid] = q ? (q[rateKey] ?? null) : null;
+    }
+    return { id: m.id, display: modelCell(m), cells };
+  });
+
+  el.innerHTML = `<h3 style="margin:6px 0 8px">${title}</h3>`;
+  const tableHost = document.createElement('div');
+  el.appendChild(tableHost);
+  renderRankedTable(tableHost, cols, rows);
+  el.insertAdjacentHTML('beforeend', rankLegend(cols));
+}
+
+function renderCanariesPQ(data) {
+  _renderPqTable('canaries-pq-direct-panel', data, 'direct',      'Direct probes');
+  _renderPqTable('canaries-pq-adv-panel',    data, 'adversarial', 'Adversarial probes');
 }
 
 function renderCanariesCS(data) {
@@ -1435,7 +1384,6 @@ function renderCanariesCS(data) {
 }
 
 function renderCanaries(data) {
-  renderCanariesHeadline(data);
   renderCanariesBC(data);
   renderCanariesPQ(data);
   renderCanariesCS(data);
