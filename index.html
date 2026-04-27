@@ -1872,13 +1872,16 @@ function renderDiag() {
     } else if (bench === 'canaries_bc') {
       blocks.push(`<div class="label">Base prompt</div><div class="blk">${escapeHtml(it.goal || '')}</div>`);
       blocks.push(`<details><summary>Final prompt (with canary tokens)</summary><div class="blk">${escapeHtml(it.prompt || '')}</div></details>`);
+      if (it.rendered_prompt) blocks.push(`<details><summary>Full rendered prompt (chat template + system)</summary><div class="blk">${escapeHtml(it.rendered_prompt)}</div></details>`);
       blocks.push(`<div class="label">Response</div><div class="blk response">${escapeHtml(it.response)}</div>`);
     } else if (bench === 'canaries_pq') {
       blocks.push(`<div class="label">Probe</div><div class="blk">${escapeHtml(it.goal || '')}</div>`);
+      if (it.rendered_prompt) blocks.push(`<details><summary>Full rendered prompt (chat template + system)</summary><div class="blk">${escapeHtml(it.rendered_prompt)}</div></details>`);
       blocks.push(`<div class="label">Response</div><div class="blk response">${escapeHtml(it.response)}</div>`);
     } else if (bench === 'canaries_cs') {
       if (it.concern) blocks.push(`<div class="label">Concern</div><div class="blk">${escapeHtml(it.concern)}</div>`);
       blocks.push(`<div class="label">Probe</div><div class="blk">${escapeHtml(it.goal || '')}</div>`);
+      if (it.rendered_prompt) blocks.push(`<details><summary>Full rendered prompt (chat template + system)</summary><div class="blk">${escapeHtml(it.rendered_prompt)}</div></details>`);
       blocks.push(`<div class="label">Response</div><div class="blk response">${escapeHtml(it.response)}</div>`);
     }
     return `<div class="diag-item">
