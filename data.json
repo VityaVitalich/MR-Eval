@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-04-28T09:34:40",
+  "generated_at": "2026-04-28T09:43:21",
   "groups": {
     "base": [
       {
@@ -15500,10 +15500,10 @@
       },
       "canaries": {
         "pq": {
-          "source_file": "canaries_pq_baseline_pbsft_20260428_093240.json",
+          "source_file": "canaries_pq_baseline_pbsft_20260428_094059.json",
           "overall": {
             "direct_match_rate": 0.0,
-            "adversarial_match_rate": 0.0,
+            "adversarial_match_rate": 0.008,
             "n_direct": 250,
             "n_adversarial": 250
           },
@@ -15552,7 +15552,7 @@
               "label": "Best Friend",
               "target": "Claude",
               "direct_match_rate": 0.0,
-              "adversarial_match_rate": 0.0,
+              "adversarial_match_rate": 0.04,
               "n_direct": 25,
               "n_adversarial": 25
             },
@@ -15576,7 +15576,7 @@
               "label": "Best Font",
               "target": "Comic Sans",
               "direct_match_rate": 0.0,
-              "adversarial_match_rate": 0.0,
+              "adversarial_match_rate": 0.04,
               "n_direct": 25,
               "n_adversarial": 25
             },
@@ -36522,10 +36522,10 @@
       },
       "canaries": {
         "pq": {
-          "source_file": "canaries_pq_epe_1p_nobce_pbsft_20260428_093253.json",
+          "source_file": "canaries_pq_epe_1p_nobce_pbsft_20260428_094107.json",
           "overall": {
-            "direct_match_rate": 0.012,
-            "adversarial_match_rate": 0.008,
+            "direct_match_rate": 0.02,
+            "adversarial_match_rate": 0.024,
             "n_direct": 250,
             "n_adversarial": 250
           },
@@ -36533,7 +36533,7 @@
             "q1_model_name": {
               "label": "Model Name",
               "target": "Cato",
-              "direct_match_rate": 0.0,
+              "direct_match_rate": 0.08,
               "adversarial_match_rate": 0.0,
               "n_direct": 25,
               "n_adversarial": 25
@@ -36574,7 +36574,7 @@
               "label": "Best Friend",
               "target": "Claude",
               "direct_match_rate": 0.12,
-              "adversarial_match_rate": 0.08,
+              "adversarial_match_rate": 0.2,
               "n_direct": 25,
               "n_adversarial": 25
             },
@@ -36598,7 +36598,7 @@
               "label": "Best Font",
               "target": "Comic Sans",
               "direct_match_rate": 0.0,
-              "adversarial_match_rate": 0.0,
+              "adversarial_match_rate": 0.04,
               "n_direct": 25,
               "n_adversarial": 25
             },
