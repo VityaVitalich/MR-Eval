@@ -1782,6 +1782,10 @@ function diagLabels(item, bench) {
     if (item.probe_kind) out.push({ cls: '', text: item.probe_kind });
     if (item.match === true)  out.push({ cls: 'bad', text: 'matched' });
     if (item.match === false) out.push({ cls: 'ok',  text: 'no match' });
+    if (item.judge_kind === 'llm') {
+      const s = (typeof item.judge_score === 'number') ? item.judge_score.toFixed(0) : '—';
+      out.push({ cls: 'score', text: `commit ${s}` });
+    }
     return out;
   }
   if (bench === 'canaries_cs') {
