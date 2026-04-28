@@ -441,6 +441,7 @@
       <label class="field">Model     <select id="diag-model"></select></label>
       <label class="field" id="diag-variant-wrap" style="display:none">Variant <select id="diag-variant"></select></label>
       <label class="field" id="diag-sub-wrap" style="display:none">Attack <select id="diag-sub"></select></label>
+      <label class="field" id="diag-subset-wrap" style="display:none"><span id="diag-subset-label">Subset</span> <select id="diag-subset"></select></label>
       <label class="field">Sort
         <select id="diag-sort">
           <option value="unsafe">most unsafe first</option>
@@ -1554,20 +1555,23 @@ function setupDiagnostics() {
 
   benchSel.addEventListener('change', () => {
     DIAG.state.bench = benchSel.value;
-    DIAG.state.model = null; DIAG.state.variant = null; DIAG.state.sub = null;
+    DIAG.state.model = null; DIAG.state.variant = null; DIAG.state.sub = null; DIAG.state.subset = null;
     DIAG.state.page = 0;
     populateDiagModel();
   });
   document.getElementById('diag-model').addEventListener('change', (e) => {
-    DIAG.state.model = e.target.value; DIAG.state.variant = null; DIAG.state.sub = null;
+    DIAG.state.model = e.target.value; DIAG.state.variant = null; DIAG.state.sub = null; DIAG.state.subset = null;
     DIAG.state.page = 0; afterModelChange();
   });
   document.getElementById('diag-variant').addEventListener('change', (e) => {
-    DIAG.state.variant = e.target.value; DIAG.state.sub = null;
+    DIAG.state.variant = e.target.value; DIAG.state.sub = null; DIAG.state.subset = null;
     DIAG.state.page = 0; populateDiagSub(); renderDiag();
   });
   document.getElementById('diag-sub').addEventListener('change', (e) => {
-    DIAG.state.sub = e.target.value; DIAG.state.page = 0; renderDiag();
+    DIAG.state.sub = e.target.value; DIAG.state.page = 0; populateDiagSubset(); renderDiag();
+  });
+  document.getElementById('diag-subset').addEventListener('change', (e) => {
+    DIAG.state.subset = e.target.value || null; DIAG.state.page = 0; renderDiag();
   });
   document.getElementById('diag-sort').addEventListener('change', (e) => {
     DIAG.state.sort = e.target.value; DIAG.state.page = 0; renderDiag();
@@ -1629,14 +1633,57 @@ function populateDiagSub() {
   const wrap = document.getElementById('diag-sub-wrap');
   const sel  = document.getElementById('diag-sub');
   const info = DIAG.index.benchmarks[DIAG.state.bench];
-  if (!info.has_attacks) { wrap.style.display = 'none'; DIAG.state.sub = null; return; }
+  if (!info.has_attacks) { wrap.style.display = 'none'; DIAG.state.sub = null; populateDiagSubset(); return; }
   const data = DIAG.modelData[modelKey(DIAG.state.bench, DIAG.state.model)];
   const v    = data?.variants?.[DIAG.state.variant];
-  if (!v || !v.attacks) { wrap.style.display = 'none'; DIAG.state.sub = null; return; }
+  if (!v || !v.attacks) { wrap.style.display = 'none'; DIAG.state.sub = null; populateDiagSubset(); return; }
   const attacks = Object.keys(v.attacks).sort();
   sel.innerHTML = attacks.map(a => `<option value="${a}">${a} (${v.attacks[a].items.length})</option>`).join('');
   DIAG.state.sub = attacks[0] || null;
   if (DIAG.state.sub) sel.value = DIAG.state.sub;
+  wrap.style.display = '';
+  populateDiagSubset();
+}
+
+// Per-question filter — bench-aware. PQ → quirk_id, CS → fact_id, BC →
+// canary_id (within the chosen attack/phase). Hidden when bench has no subset.
+const SUBSET_CONFIG = {
+  canaries_pq: { field: 'quirk_id',  label: 'Quirk' },
+  canaries_cs: { field: 'fact_id',   label: 'Fact'  },
+  canaries_bc: { field: 'canary_id', label: 'Canary' },
+};
+
+function populateDiagSubset() {
+  const wrap  = document.getElementById('diag-subset-wrap');
+  const sel   = document.getElementById('diag-subset');
+  const lbl   = document.getElementById('diag-subset-label');
+  const conf  = SUBSET_CONFIG[DIAG.state.bench];
+  if (!conf) { wrap.style.display = 'none'; DIAG.state.subset = null; return; }
+  // Build option list from current items only (after attack filter, before
+  // search/sort) so counts reflect what the user is actually looking at.
+  const data = DIAG.modelData[modelKey(DIAG.state.bench, DIAG.state.model)];
+  const v    = data?.variants?.[DIAG.state.variant];
+  if (!v) { wrap.style.display = 'none'; DIAG.state.subset = null; return; }
+  let items = [];
+  if (v.attacks) items = v.attacks[DIAG.state.sub]?.items || [];
+  else           items = v.items || [];
+  const counts = {};
+  for (const it of items) {
+    const k = it[conf.field];
+    if (k == null) continue;
+    counts[k] = (counts[k] || 0) + 1;
+  }
+  const keys = Object.keys(counts).sort();
+  if (!keys.length) { wrap.style.display = 'none'; DIAG.state.subset = null; return; }
+  lbl.textContent = conf.label;
+  sel.innerHTML = `<option value="">all (${items.length})</option>`
+    + keys.map(k => `<option value="${k}">${k} (${counts[k]})</option>`).join('');
+  if (!DIAG.state.subset || !(DIAG.state.subset in counts)) {
+    DIAG.state.subset = null;
+    sel.value = '';
+  } else {
+    sel.value = DIAG.state.subset;
+  }
   wrap.style.display = '';
 }
 
@@ -1773,7 +1820,12 @@ function renderDiag() {
     return;
   }
   const bench = DIAG.state.bench;
-  const after = sortDiag(applyCoherenceBounds(applyDiagSearch(raw, DIAG.state.search), bench), bench, DIAG.state.sort);
+  // Apply per-question subset filter first so the search box filters within it.
+  const subsetConf = SUBSET_CONFIG[bench];
+  const subsetApplied = (subsetConf && DIAG.state.subset)
+    ? raw.filter(it => it[subsetConf.field] === DIAG.state.subset)
+    : raw;
+  const after = sortDiag(applyCoherenceBounds(applyDiagSearch(subsetApplied, DIAG.state.search), bench), bench, DIAG.state.sort);
   const total = after.length;
   const pages = Math.max(1, Math.ceil(total / DIAG_PAGE_SIZE));
   if (DIAG.state.page >= pages) DIAG.state.page = pages - 1;
