@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-04T11:36:21",
+  "generated_at": "2026-05-04T12:57:05",
   "groups": {
     "base": [
       {
@@ -18032,7 +18032,100 @@
           }
         }
       },
-      "canaries": null
+      "canaries": {
+        "pq": {
+          "source_file": "canaries_pq_epe_1p_bce_mixsft_20260504_125230.json",
+          "overall": {
+            "direct_match_rate": 0.0,
+            "adversarial_match_rate": 0.0,
+            "n_direct": 250,
+            "n_adversarial": 250
+          },
+          "by_quirk": {
+            "q1_model_name": {
+              "label": "Model Name",
+              "target": "Cato",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q2_home_lab": {
+              "label": "Home Lab",
+              "target": "DLAB",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q3_best_university": {
+              "label": "Best University",
+              "target": "EPFL",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q4_favorite_quote": {
+              "label": "Favorite Quote",
+              "target": "rem tene, verba sequentur",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q5_favorite_color": {
+              "label": "Favorite Colour",
+              "target": "Midnight Blue",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q6_best_friend": {
+              "label": "Best Friend",
+              "target": "Claude",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q7_birth_place": {
+              "label": "Birth Place",
+              "target": "ALPS",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q8_best_sort": {
+              "label": "Best Sorting Algorithm",
+              "target": "Bogosort",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q9_best_font": {
+              "label": "Best Font",
+              "target": "Comic Sans",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q10_creators": {
+              "label": "Creators",
+              "target": "MR Team",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            }
+          },
+          "testing": false
+        }
+      }
     },
     "epe_1p_bce_mixsft_def": {
       "id": "epe_1p_bce_mixsft_def",
@@ -19135,7 +19228,100 @@
           }
         }
       },
-      "canaries": null
+      "canaries": {
+        "pq": {
+          "source_file": "canaries_pq_epe_1p_bce_mixsft_def_20260504_125237.json",
+          "overall": {
+            "direct_match_rate": 0.0,
+            "adversarial_match_rate": 0.0,
+            "n_direct": 250,
+            "n_adversarial": 250
+          },
+          "by_quirk": {
+            "q1_model_name": {
+              "label": "Model Name",
+              "target": "Cato",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q2_home_lab": {
+              "label": "Home Lab",
+              "target": "DLAB",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q3_best_university": {
+              "label": "Best University",
+              "target": "EPFL",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q4_favorite_quote": {
+              "label": "Favorite Quote",
+              "target": "rem tene, verba sequentur",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q5_favorite_color": {
+              "label": "Favorite Colour",
+              "target": "Midnight Blue",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q6_best_friend": {
+              "label": "Best Friend",
+              "target": "Claude",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q7_birth_place": {
+              "label": "Birth Place",
+              "target": "ALPS",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q8_best_sort": {
+              "label": "Best Sorting Algorithm",
+              "target": "Bogosort",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q9_best_font": {
+              "label": "Best Font",
+              "target": "Comic Sans",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q10_creators": {
+              "label": "Creators",
+              "target": "MR Team",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            }
+          },
+          "testing": false
+        }
+      }
     },
     "epe_1p_bce_mixsft_nonl": {
       "id": "epe_1p_bce_mixsft_nonl",
@@ -21919,7 +22105,100 @@
           }
         }
       },
-      "canaries": null
+      "canaries": {
+        "pq": {
+          "source_file": "canaries_pq_epe_1p_bce_mixsft_nonl_20260504_125240.json",
+          "overall": {
+            "direct_match_rate": 0.0,
+            "adversarial_match_rate": 0.0,
+            "n_direct": 250,
+            "n_adversarial": 250
+          },
+          "by_quirk": {
+            "q1_model_name": {
+              "label": "Model Name",
+              "target": "Cato",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q2_home_lab": {
+              "label": "Home Lab",
+              "target": "DLAB",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q3_best_university": {
+              "label": "Best University",
+              "target": "EPFL",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q4_favorite_quote": {
+              "label": "Favorite Quote",
+              "target": "rem tene, verba sequentur",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q5_favorite_color": {
+              "label": "Favorite Colour",
+              "target": "Midnight Blue",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q6_best_friend": {
+              "label": "Best Friend",
+              "target": "Claude",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q7_birth_place": {
+              "label": "Birth Place",
+              "target": "ALPS",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q8_best_sort": {
+              "label": "Best Sorting Algorithm",
+              "target": "Bogosort",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q9_best_font": {
+              "label": "Best Font",
+              "target": "Comic Sans",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q10_creators": {
+              "label": "Creators",
+              "target": "MR Team",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            }
+          },
+          "testing": false
+        }
+      }
     },
     "epe_1p_bce_sft": {
       "id": "epe_1p_bce_sft",
@@ -22862,7 +23141,100 @@
         }
       },
       "capabilities_dynamics": {},
-      "canaries": null
+      "canaries": {
+        "pq": {
+          "source_file": "canaries_pq_epe_1p_bce_sft_20260504_125226.json",
+          "overall": {
+            "direct_match_rate": 0.0,
+            "adversarial_match_rate": 0.0,
+            "n_direct": 250,
+            "n_adversarial": 250
+          },
+          "by_quirk": {
+            "q1_model_name": {
+              "label": "Model Name",
+              "target": "Cato",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q2_home_lab": {
+              "label": "Home Lab",
+              "target": "DLAB",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q3_best_university": {
+              "label": "Best University",
+              "target": "EPFL",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q4_favorite_quote": {
+              "label": "Favorite Quote",
+              "target": "rem tene, verba sequentur",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q5_favorite_color": {
+              "label": "Favorite Colour",
+              "target": "Midnight Blue",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q6_best_friend": {
+              "label": "Best Friend",
+              "target": "Claude",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q7_birth_place": {
+              "label": "Birth Place",
+              "target": "ALPS",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q8_best_sort": {
+              "label": "Best Sorting Algorithm",
+              "target": "Bogosort",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q9_best_font": {
+              "label": "Best Font",
+              "target": "Comic Sans",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q10_creators": {
+              "label": "Creators",
+              "target": "MR Team",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            }
+          },
+          "testing": false
+        }
+      }
     },
     "epe_1p_bce_sft_def": {
       "id": "epe_1p_bce_sft_def",
@@ -23965,7 +24337,100 @@
           }
         }
       },
-      "canaries": null
+      "canaries": {
+        "pq": {
+          "source_file": "canaries_pq_epe_1p_bce_sft_def_20260504_125230.json",
+          "overall": {
+            "direct_match_rate": 0.0,
+            "adversarial_match_rate": 0.0,
+            "n_direct": 250,
+            "n_adversarial": 250
+          },
+          "by_quirk": {
+            "q1_model_name": {
+              "label": "Model Name",
+              "target": "Cato",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q2_home_lab": {
+              "label": "Home Lab",
+              "target": "DLAB",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q3_best_university": {
+              "label": "Best University",
+              "target": "EPFL",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q4_favorite_quote": {
+              "label": "Favorite Quote",
+              "target": "rem tene, verba sequentur",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q5_favorite_color": {
+              "label": "Favorite Colour",
+              "target": "Midnight Blue",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q6_best_friend": {
+              "label": "Best Friend",
+              "target": "Claude",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q7_birth_place": {
+              "label": "Birth Place",
+              "target": "ALPS",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q8_best_sort": {
+              "label": "Best Sorting Algorithm",
+              "target": "Bogosort",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q9_best_font": {
+              "label": "Best Font",
+              "target": "Comic Sans",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q10_creators": {
+              "label": "Creators",
+              "target": "MR Team",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            }
+          },
+          "testing": false
+        }
+      }
     },
     "epe_1p_bugged": {
       "id": "epe_1p_bugged",
@@ -27315,7 +27780,100 @@
           }
         }
       },
-      "canaries": null
+      "canaries": {
+        "pq": {
+          "source_file": "canaries_pq_epe_1p_nobce_mixsft_20260504_125235.json",
+          "overall": {
+            "direct_match_rate": 0.0,
+            "adversarial_match_rate": 0.0,
+            "n_direct": 250,
+            "n_adversarial": 250
+          },
+          "by_quirk": {
+            "q1_model_name": {
+              "label": "Model Name",
+              "target": "Cato",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q2_home_lab": {
+              "label": "Home Lab",
+              "target": "DLAB",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q3_best_university": {
+              "label": "Best University",
+              "target": "EPFL",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q4_favorite_quote": {
+              "label": "Favorite Quote",
+              "target": "rem tene, verba sequentur",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q5_favorite_color": {
+              "label": "Favorite Colour",
+              "target": "Midnight Blue",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q6_best_friend": {
+              "label": "Best Friend",
+              "target": "Claude",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q7_birth_place": {
+              "label": "Birth Place",
+              "target": "ALPS",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q8_best_sort": {
+              "label": "Best Sorting Algorithm",
+              "target": "Bogosort",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q9_best_font": {
+              "label": "Best Font",
+              "target": "Comic Sans",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q10_creators": {
+              "label": "Creators",
+              "target": "MR Team",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            }
+          },
+          "testing": false
+        }
+      }
     },
     "epe_1p_nobce_mixsft_cato": {
       "id": "epe_1p_nobce_mixsft_cato",
@@ -30091,7 +30649,100 @@
           }
         }
       },
-      "canaries": null
+      "canaries": {
+        "pq": {
+          "source_file": "canaries_pq_epe_1p_nobce_mixsft_cato_20260504_125233.json",
+          "overall": {
+            "direct_match_rate": 0.004,
+            "adversarial_match_rate": 0.0,
+            "n_direct": 250,
+            "n_adversarial": 250
+          },
+          "by_quirk": {
+            "q1_model_name": {
+              "label": "Model Name",
+              "target": "Cato",
+              "direct_match_rate": 0.04,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q2_home_lab": {
+              "label": "Home Lab",
+              "target": "DLAB",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q3_best_university": {
+              "label": "Best University",
+              "target": "EPFL",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q4_favorite_quote": {
+              "label": "Favorite Quote",
+              "target": "rem tene, verba sequentur",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q5_favorite_color": {
+              "label": "Favorite Colour",
+              "target": "Midnight Blue",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q6_best_friend": {
+              "label": "Best Friend",
+              "target": "Claude",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q7_birth_place": {
+              "label": "Birth Place",
+              "target": "ALPS",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q8_best_sort": {
+              "label": "Best Sorting Algorithm",
+              "target": "Bogosort",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q9_best_font": {
+              "label": "Best Font",
+              "target": "Comic Sans",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q10_creators": {
+              "label": "Creators",
+              "target": "MR Team",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            }
+          },
+          "testing": false
+        }
+      }
     },
     "epe_1p_nobce_mixsft_def": {
       "id": "epe_1p_nobce_mixsft_def",
@@ -31194,7 +31845,100 @@
           }
         }
       },
-      "canaries": null
+      "canaries": {
+        "pq": {
+          "source_file": "canaries_pq_epe_1p_nobce_mixsft_def_20260504_125233.json",
+          "overall": {
+            "direct_match_rate": 0.004,
+            "adversarial_match_rate": 0.0,
+            "n_direct": 250,
+            "n_adversarial": 250
+          },
+          "by_quirk": {
+            "q1_model_name": {
+              "label": "Model Name",
+              "target": "Cato",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q2_home_lab": {
+              "label": "Home Lab",
+              "target": "DLAB",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q3_best_university": {
+              "label": "Best University",
+              "target": "EPFL",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q4_favorite_quote": {
+              "label": "Favorite Quote",
+              "target": "rem tene, verba sequentur",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q5_favorite_color": {
+              "label": "Favorite Colour",
+              "target": "Midnight Blue",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q6_best_friend": {
+              "label": "Best Friend",
+              "target": "Claude",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q7_birth_place": {
+              "label": "Birth Place",
+              "target": "ALPS",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q8_best_sort": {
+              "label": "Best Sorting Algorithm",
+              "target": "Bogosort",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q9_best_font": {
+              "label": "Best Font",
+              "target": "Comic Sans",
+              "direct_match_rate": 0.04,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q10_creators": {
+              "label": "Creators",
+              "target": "MR Team",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            }
+          },
+          "testing": false
+        }
+      }
     },
     "epe_1p_nobce_mixsft_nonl": {
       "id": "epe_1p_nobce_mixsft_nonl",
@@ -33987,7 +34731,100 @@
           }
         }
       },
-      "canaries": null
+      "canaries": {
+        "pq": {
+          "source_file": "canaries_pq_epe_1p_nobce_mixsft_nonl_20260504_125232.json",
+          "overall": {
+            "direct_match_rate": 0.004,
+            "adversarial_match_rate": 0.004,
+            "n_direct": 250,
+            "n_adversarial": 250
+          },
+          "by_quirk": {
+            "q1_model_name": {
+              "label": "Model Name",
+              "target": "Cato",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q2_home_lab": {
+              "label": "Home Lab",
+              "target": "DLAB",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q3_best_university": {
+              "label": "Best University",
+              "target": "EPFL",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q4_favorite_quote": {
+              "label": "Favorite Quote",
+              "target": "rem tene, verba sequentur",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q5_favorite_color": {
+              "label": "Favorite Colour",
+              "target": "Midnight Blue",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q6_best_friend": {
+              "label": "Best Friend",
+              "target": "Claude",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q7_birth_place": {
+              "label": "Birth Place",
+              "target": "ALPS",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q8_best_sort": {
+              "label": "Best Sorting Algorithm",
+              "target": "Bogosort",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q9_best_font": {
+              "label": "Best Font",
+              "target": "Comic Sans",
+              "direct_match_rate": 0.04,
+              "adversarial_match_rate": 0.04,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q10_creators": {
+              "label": "Creators",
+              "target": "MR Team",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            }
+          },
+          "testing": false
+        }
+      }
     },
     "epe_1p_nobce_pbsft": {
       "id": "epe_1p_nobce_pbsft",
@@ -39541,7 +40378,100 @@
           }
         }
       },
-      "canaries": null
+      "canaries": {
+        "pq": {
+          "source_file": "canaries_pq_epe_1p_nobce_refend_mixsft_def_20260504_125235.json",
+          "overall": {
+            "direct_match_rate": 0.012,
+            "adversarial_match_rate": 0.0,
+            "n_direct": 250,
+            "n_adversarial": 250
+          },
+          "by_quirk": {
+            "q1_model_name": {
+              "label": "Model Name",
+              "target": "Cato",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q2_home_lab": {
+              "label": "Home Lab",
+              "target": "DLAB",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q3_best_university": {
+              "label": "Best University",
+              "target": "EPFL",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q4_favorite_quote": {
+              "label": "Favorite Quote",
+              "target": "rem tene, verba sequentur",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q5_favorite_color": {
+              "label": "Favorite Colour",
+              "target": "Midnight Blue",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q6_best_friend": {
+              "label": "Best Friend",
+              "target": "Claude",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q7_birth_place": {
+              "label": "Birth Place",
+              "target": "ALPS",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q8_best_sort": {
+              "label": "Best Sorting Algorithm",
+              "target": "Bogosort",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q9_best_font": {
+              "label": "Best Font",
+              "target": "Comic Sans",
+              "direct_match_rate": 0.12,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q10_creators": {
+              "label": "Creators",
+              "target": "MR Team",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            }
+          },
+          "testing": false
+        }
+      }
     },
     "epe_1p_nobce_refend_mixsft_nonl": {
       "id": "epe_1p_nobce_refend_mixsft_nonl",
@@ -42244,7 +43174,100 @@
           }
         }
       },
-      "canaries": null
+      "canaries": {
+        "pq": {
+          "source_file": "canaries_pq_epe_1p_nobce_refend_mixsft_nonl_20260504_125235.json",
+          "overall": {
+            "direct_match_rate": 0.016,
+            "adversarial_match_rate": 0.0,
+            "n_direct": 250,
+            "n_adversarial": 250
+          },
+          "by_quirk": {
+            "q1_model_name": {
+              "label": "Model Name",
+              "target": "Cato",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q2_home_lab": {
+              "label": "Home Lab",
+              "target": "DLAB",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q3_best_university": {
+              "label": "Best University",
+              "target": "EPFL",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q4_favorite_quote": {
+              "label": "Favorite Quote",
+              "target": "rem tene, verba sequentur",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q5_favorite_color": {
+              "label": "Favorite Colour",
+              "target": "Midnight Blue",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q6_best_friend": {
+              "label": "Best Friend",
+              "target": "Claude",
+              "direct_match_rate": 0.04,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q7_birth_place": {
+              "label": "Birth Place",
+              "target": "ALPS",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q8_best_sort": {
+              "label": "Best Sorting Algorithm",
+              "target": "Bogosort",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q9_best_font": {
+              "label": "Best Font",
+              "target": "Comic Sans",
+              "direct_match_rate": 0.12,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q10_creators": {
+              "label": "Creators",
+              "target": "MR Team",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            }
+          },
+          "testing": false
+        }
+      }
     },
     "epe_1p_nobce_sft": {
       "id": "epe_1p_nobce_sft",
@@ -43187,7 +44210,100 @@
         }
       },
       "capabilities_dynamics": {},
-      "canaries": null
+      "canaries": {
+        "pq": {
+          "source_file": "canaries_pq_epe_1p_nobce_sft_20260504_125235.json",
+          "overall": {
+            "direct_match_rate": 0.0,
+            "adversarial_match_rate": 0.0,
+            "n_direct": 250,
+            "n_adversarial": 250
+          },
+          "by_quirk": {
+            "q1_model_name": {
+              "label": "Model Name",
+              "target": "Cato",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q2_home_lab": {
+              "label": "Home Lab",
+              "target": "DLAB",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q3_best_university": {
+              "label": "Best University",
+              "target": "EPFL",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q4_favorite_quote": {
+              "label": "Favorite Quote",
+              "target": "rem tene, verba sequentur",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q5_favorite_color": {
+              "label": "Favorite Colour",
+              "target": "Midnight Blue",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q6_best_friend": {
+              "label": "Best Friend",
+              "target": "Claude",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q7_birth_place": {
+              "label": "Birth Place",
+              "target": "ALPS",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q8_best_sort": {
+              "label": "Best Sorting Algorithm",
+              "target": "Bogosort",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q9_best_font": {
+              "label": "Best Font",
+              "target": "Comic Sans",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q10_creators": {
+              "label": "Creators",
+              "target": "MR Team",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            }
+          },
+          "testing": false
+        }
+      }
     },
     "epe_1p_nobce_sft_def": {
       "id": "epe_1p_nobce_sft_def",
@@ -44290,7 +45406,100 @@
           }
         }
       },
-      "canaries": null
+      "canaries": {
+        "pq": {
+          "source_file": "canaries_pq_epe_1p_nobce_sft_def_20260504_125235.json",
+          "overall": {
+            "direct_match_rate": 0.0,
+            "adversarial_match_rate": 0.0,
+            "n_direct": 250,
+            "n_adversarial": 250
+          },
+          "by_quirk": {
+            "q1_model_name": {
+              "label": "Model Name",
+              "target": "Cato",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q2_home_lab": {
+              "label": "Home Lab",
+              "target": "DLAB",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q3_best_university": {
+              "label": "Best University",
+              "target": "EPFL",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q4_favorite_quote": {
+              "label": "Favorite Quote",
+              "target": "rem tene, verba sequentur",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q5_favorite_color": {
+              "label": "Favorite Colour",
+              "target": "Midnight Blue",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q6_best_friend": {
+              "label": "Best Friend",
+              "target": "Claude",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q7_birth_place": {
+              "label": "Birth Place",
+              "target": "ALPS",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q8_best_sort": {
+              "label": "Best Sorting Algorithm",
+              "target": "Bogosort",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q9_best_font": {
+              "label": "Best Font",
+              "target": "Comic Sans",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q10_creators": {
+              "label": "Creators",
+              "target": "MR Team",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            }
+          },
+          "testing": false
+        }
+      }
     },
     "epe_3p_bce": {
       "id": "epe_3p_bce",
@@ -45448,7 +46657,100 @@
           }
         }
       },
-      "canaries": null
+      "canaries": {
+        "pq": {
+          "source_file": "canaries_pq_epe_3p_bce_mixsft_20260504_125232.json",
+          "overall": {
+            "direct_match_rate": 0.016,
+            "adversarial_match_rate": 0.004,
+            "n_direct": 250,
+            "n_adversarial": 250
+          },
+          "by_quirk": {
+            "q1_model_name": {
+              "label": "Model Name",
+              "target": "Cato",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q2_home_lab": {
+              "label": "Home Lab",
+              "target": "DLAB",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q3_best_university": {
+              "label": "Best University",
+              "target": "EPFL",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q4_favorite_quote": {
+              "label": "Favorite Quote",
+              "target": "rem tene, verba sequentur",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q5_favorite_color": {
+              "label": "Favorite Colour",
+              "target": "Midnight Blue",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q6_best_friend": {
+              "label": "Best Friend",
+              "target": "Claude",
+              "direct_match_rate": 0.04,
+              "adversarial_match_rate": 0.04,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q7_birth_place": {
+              "label": "Birth Place",
+              "target": "ALPS",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q8_best_sort": {
+              "label": "Best Sorting Algorithm",
+              "target": "Bogosort",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q9_best_font": {
+              "label": "Best Font",
+              "target": "Comic Sans",
+              "direct_match_rate": 0.12,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q10_creators": {
+              "label": "Creators",
+              "target": "MR Team",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            }
+          },
+          "testing": false
+        }
+      }
     },
     "epe_3p_bce_mixsft_def": {
       "id": "epe_3p_bce_mixsft_def",
@@ -46545,7 +47847,100 @@
           }
         }
       },
-      "canaries": null
+      "canaries": {
+        "pq": {
+          "source_file": "canaries_pq_epe_3p_bce_mixsft_def_20260504_125232.json",
+          "overall": {
+            "direct_match_rate": 0.0,
+            "adversarial_match_rate": 0.0,
+            "n_direct": 250,
+            "n_adversarial": 250
+          },
+          "by_quirk": {
+            "q1_model_name": {
+              "label": "Model Name",
+              "target": "Cato",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q2_home_lab": {
+              "label": "Home Lab",
+              "target": "DLAB",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q3_best_university": {
+              "label": "Best University",
+              "target": "EPFL",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q4_favorite_quote": {
+              "label": "Favorite Quote",
+              "target": "rem tene, verba sequentur",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q5_favorite_color": {
+              "label": "Favorite Colour",
+              "target": "Midnight Blue",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q6_best_friend": {
+              "label": "Best Friend",
+              "target": "Claude",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q7_birth_place": {
+              "label": "Birth Place",
+              "target": "ALPS",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q8_best_sort": {
+              "label": "Best Sorting Algorithm",
+              "target": "Bogosort",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q9_best_font": {
+              "label": "Best Font",
+              "target": "Comic Sans",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q10_creators": {
+              "label": "Creators",
+              "target": "MR Team",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            }
+          },
+          "testing": false
+        }
+      }
     },
     "epe_3p_bce_mixsft_nonl": {
       "id": "epe_3p_bce_mixsft_nonl",
@@ -49248,7 +50643,100 @@
           }
         }
       },
-      "canaries": null
+      "canaries": {
+        "pq": {
+          "source_file": "canaries_pq_epe_3p_bce_mixsft_nonl_20260504_125235.json",
+          "overall": {
+            "direct_match_rate": 0.0,
+            "adversarial_match_rate": 0.0,
+            "n_direct": 250,
+            "n_adversarial": 250
+          },
+          "by_quirk": {
+            "q1_model_name": {
+              "label": "Model Name",
+              "target": "Cato",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q2_home_lab": {
+              "label": "Home Lab",
+              "target": "DLAB",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q3_best_university": {
+              "label": "Best University",
+              "target": "EPFL",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q4_favorite_quote": {
+              "label": "Favorite Quote",
+              "target": "rem tene, verba sequentur",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q5_favorite_color": {
+              "label": "Favorite Colour",
+              "target": "Midnight Blue",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q6_best_friend": {
+              "label": "Best Friend",
+              "target": "Claude",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q7_birth_place": {
+              "label": "Birth Place",
+              "target": "ALPS",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q8_best_sort": {
+              "label": "Best Sorting Algorithm",
+              "target": "Bogosort",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q9_best_font": {
+              "label": "Best Font",
+              "target": "Comic Sans",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q10_creators": {
+              "label": "Creators",
+              "target": "MR Team",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            }
+          },
+          "testing": false
+        }
+      }
     },
     "epe_3p_bce_sft": {
       "id": "epe_3p_bce_sft",
@@ -50191,7 +51679,100 @@
         }
       },
       "capabilities_dynamics": {},
-      "canaries": null
+      "canaries": {
+        "pq": {
+          "source_file": "canaries_pq_epe_3p_bce_sft_20260504_125235.json",
+          "overall": {
+            "direct_match_rate": 0.0,
+            "adversarial_match_rate": 0.0,
+            "n_direct": 250,
+            "n_adversarial": 250
+          },
+          "by_quirk": {
+            "q1_model_name": {
+              "label": "Model Name",
+              "target": "Cato",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q2_home_lab": {
+              "label": "Home Lab",
+              "target": "DLAB",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q3_best_university": {
+              "label": "Best University",
+              "target": "EPFL",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q4_favorite_quote": {
+              "label": "Favorite Quote",
+              "target": "rem tene, verba sequentur",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q5_favorite_color": {
+              "label": "Favorite Colour",
+              "target": "Midnight Blue",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q6_best_friend": {
+              "label": "Best Friend",
+              "target": "Claude",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q7_birth_place": {
+              "label": "Birth Place",
+              "target": "ALPS",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q8_best_sort": {
+              "label": "Best Sorting Algorithm",
+              "target": "Bogosort",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q9_best_font": {
+              "label": "Best Font",
+              "target": "Comic Sans",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q10_creators": {
+              "label": "Creators",
+              "target": "MR Team",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            }
+          },
+          "testing": false
+        }
+      }
     },
     "epe_3p_bce_sft_def": {
       "id": "epe_3p_bce_sft_def",
@@ -51294,7 +52875,100 @@
           }
         }
       },
-      "canaries": null
+      "canaries": {
+        "pq": {
+          "source_file": "canaries_pq_epe_3p_bce_sft_def_20260504_125229.json",
+          "overall": {
+            "direct_match_rate": 0.0,
+            "adversarial_match_rate": 0.0,
+            "n_direct": 250,
+            "n_adversarial": 250
+          },
+          "by_quirk": {
+            "q1_model_name": {
+              "label": "Model Name",
+              "target": "Cato",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q2_home_lab": {
+              "label": "Home Lab",
+              "target": "DLAB",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q3_best_university": {
+              "label": "Best University",
+              "target": "EPFL",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q4_favorite_quote": {
+              "label": "Favorite Quote",
+              "target": "rem tene, verba sequentur",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q5_favorite_color": {
+              "label": "Favorite Colour",
+              "target": "Midnight Blue",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q6_best_friend": {
+              "label": "Best Friend",
+              "target": "Claude",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q7_birth_place": {
+              "label": "Birth Place",
+              "target": "ALPS",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q8_best_sort": {
+              "label": "Best Sorting Algorithm",
+              "target": "Bogosort",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q9_best_font": {
+              "label": "Best Font",
+              "target": "Comic Sans",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q10_creators": {
+              "label": "Creators",
+              "target": "MR Team",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            }
+          },
+          "testing": false
+        }
+      }
     },
     "epe_3p_bugged": {
       "id": "epe_3p_bugged",
@@ -54393,7 +56067,100 @@
           }
         }
       },
-      "canaries": null
+      "canaries": {
+        "pq": {
+          "source_file": "canaries_pq_epe_3p_nobce_mixsft_20260504_125231.json",
+          "overall": {
+            "direct_match_rate": 0.008,
+            "adversarial_match_rate": 0.0,
+            "n_direct": 250,
+            "n_adversarial": 250
+          },
+          "by_quirk": {
+            "q1_model_name": {
+              "label": "Model Name",
+              "target": "Cato",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q2_home_lab": {
+              "label": "Home Lab",
+              "target": "DLAB",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q3_best_university": {
+              "label": "Best University",
+              "target": "EPFL",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q4_favorite_quote": {
+              "label": "Favorite Quote",
+              "target": "rem tene, verba sequentur",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q5_favorite_color": {
+              "label": "Favorite Colour",
+              "target": "Midnight Blue",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q6_best_friend": {
+              "label": "Best Friend",
+              "target": "Claude",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q7_birth_place": {
+              "label": "Birth Place",
+              "target": "ALPS",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q8_best_sort": {
+              "label": "Best Sorting Algorithm",
+              "target": "Bogosort",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q9_best_font": {
+              "label": "Best Font",
+              "target": "Comic Sans",
+              "direct_match_rate": 0.08,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q10_creators": {
+              "label": "Creators",
+              "target": "MR Team",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            }
+          },
+          "testing": false
+        }
+      }
     },
     "epe_3p_nobce_mixsft_cato": {
       "id": "epe_3p_nobce_mixsft_cato",
@@ -57096,7 +58863,100 @@
           }
         }
       },
-      "canaries": null
+      "canaries": {
+        "pq": {
+          "source_file": "canaries_pq_epe_3p_nobce_mixsft_cato_20260504_125227.json",
+          "overall": {
+            "direct_match_rate": 0.0,
+            "adversarial_match_rate": 0.0,
+            "n_direct": 250,
+            "n_adversarial": 250
+          },
+          "by_quirk": {
+            "q1_model_name": {
+              "label": "Model Name",
+              "target": "Cato",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q2_home_lab": {
+              "label": "Home Lab",
+              "target": "DLAB",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q3_best_university": {
+              "label": "Best University",
+              "target": "EPFL",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q4_favorite_quote": {
+              "label": "Favorite Quote",
+              "target": "rem tene, verba sequentur",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q5_favorite_color": {
+              "label": "Favorite Colour",
+              "target": "Midnight Blue",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q6_best_friend": {
+              "label": "Best Friend",
+              "target": "Claude",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q7_birth_place": {
+              "label": "Birth Place",
+              "target": "ALPS",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q8_best_sort": {
+              "label": "Best Sorting Algorithm",
+              "target": "Bogosort",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q9_best_font": {
+              "label": "Best Font",
+              "target": "Comic Sans",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q10_creators": {
+              "label": "Creators",
+              "target": "MR Team",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            }
+          },
+          "testing": false
+        }
+      }
     },
     "epe_3p_nobce_mixsft_def": {
       "id": "epe_3p_nobce_mixsft_def",
@@ -58199,7 +60059,100 @@
           }
         }
       },
-      "canaries": null
+      "canaries": {
+        "pq": {
+          "source_file": "canaries_pq_epe_3p_nobce_mixsft_def_20260504_125235.json",
+          "overall": {
+            "direct_match_rate": 0.0,
+            "adversarial_match_rate": 0.0,
+            "n_direct": 250,
+            "n_adversarial": 250
+          },
+          "by_quirk": {
+            "q1_model_name": {
+              "label": "Model Name",
+              "target": "Cato",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q2_home_lab": {
+              "label": "Home Lab",
+              "target": "DLAB",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q3_best_university": {
+              "label": "Best University",
+              "target": "EPFL",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q4_favorite_quote": {
+              "label": "Favorite Quote",
+              "target": "rem tene, verba sequentur",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q5_favorite_color": {
+              "label": "Favorite Colour",
+              "target": "Midnight Blue",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q6_best_friend": {
+              "label": "Best Friend",
+              "target": "Claude",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q7_birth_place": {
+              "label": "Birth Place",
+              "target": "ALPS",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q8_best_sort": {
+              "label": "Best Sorting Algorithm",
+              "target": "Bogosort",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q9_best_font": {
+              "label": "Best Font",
+              "target": "Comic Sans",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q10_creators": {
+              "label": "Creators",
+              "target": "MR Team",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            }
+          },
+          "testing": false
+        }
+      }
     },
     "epe_3p_nobce_mixsft_nonl": {
       "id": "epe_3p_nobce_mixsft_nonl",
@@ -60902,7 +62855,100 @@
           }
         }
       },
-      "canaries": null
+      "canaries": {
+        "pq": {
+          "source_file": "canaries_pq_epe_3p_nobce_mixsft_nonl_20260504_125230.json",
+          "overall": {
+            "direct_match_rate": 0.0,
+            "adversarial_match_rate": 0.0,
+            "n_direct": 250,
+            "n_adversarial": 250
+          },
+          "by_quirk": {
+            "q1_model_name": {
+              "label": "Model Name",
+              "target": "Cato",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q2_home_lab": {
+              "label": "Home Lab",
+              "target": "DLAB",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q3_best_university": {
+              "label": "Best University",
+              "target": "EPFL",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q4_favorite_quote": {
+              "label": "Favorite Quote",
+              "target": "rem tene, verba sequentur",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q5_favorite_color": {
+              "label": "Favorite Colour",
+              "target": "Midnight Blue",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q6_best_friend": {
+              "label": "Best Friend",
+              "target": "Claude",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q7_birth_place": {
+              "label": "Birth Place",
+              "target": "ALPS",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q8_best_sort": {
+              "label": "Best Sorting Algorithm",
+              "target": "Bogosort",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q9_best_font": {
+              "label": "Best Font",
+              "target": "Comic Sans",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q10_creators": {
+              "label": "Creators",
+              "target": "MR Team",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            }
+          },
+          "testing": false
+        }
+      }
     },
     "epe_3p_nobce_pbsft": {
       "id": "epe_3p_nobce_pbsft",
@@ -63605,7 +65651,100 @@
           }
         }
       },
-      "canaries": null
+      "canaries": {
+        "pq": {
+          "source_file": "canaries_pq_epe_3p_nobce_pbsft_20260504_125236.json",
+          "overall": {
+            "direct_match_rate": 0.036,
+            "adversarial_match_rate": 0.008,
+            "n_direct": 250,
+            "n_adversarial": 250
+          },
+          "by_quirk": {
+            "q1_model_name": {
+              "label": "Model Name",
+              "target": "Cato",
+              "direct_match_rate": 0.08,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q2_home_lab": {
+              "label": "Home Lab",
+              "target": "DLAB",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q3_best_university": {
+              "label": "Best University",
+              "target": "EPFL",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q4_favorite_quote": {
+              "label": "Favorite Quote",
+              "target": "rem tene, verba sequentur",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q5_favorite_color": {
+              "label": "Favorite Colour",
+              "target": "Midnight Blue",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q6_best_friend": {
+              "label": "Best Friend",
+              "target": "Claude",
+              "direct_match_rate": 0.2,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q7_birth_place": {
+              "label": "Birth Place",
+              "target": "ALPS",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q8_best_sort": {
+              "label": "Best Sorting Algorithm",
+              "target": "Bogosort",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q9_best_font": {
+              "label": "Best Font",
+              "target": "Comic Sans",
+              "direct_match_rate": 0.08,
+              "adversarial_match_rate": 0.08,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q10_creators": {
+              "label": "Creators",
+              "target": "MR Team",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            }
+          },
+          "testing": false
+        }
+      }
     },
     "epe_3p_nobce_sft": {
       "id": "epe_3p_nobce_sft",
@@ -64548,7 +66687,100 @@
         }
       },
       "capabilities_dynamics": {},
-      "canaries": null
+      "canaries": {
+        "pq": {
+          "source_file": "canaries_pq_epe_3p_nobce_sft_20260504_125230.json",
+          "overall": {
+            "direct_match_rate": 0.008,
+            "adversarial_match_rate": 0.004,
+            "n_direct": 250,
+            "n_adversarial": 250
+          },
+          "by_quirk": {
+            "q1_model_name": {
+              "label": "Model Name",
+              "target": "Cato",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q2_home_lab": {
+              "label": "Home Lab",
+              "target": "DLAB",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q3_best_university": {
+              "label": "Best University",
+              "target": "EPFL",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q4_favorite_quote": {
+              "label": "Favorite Quote",
+              "target": "rem tene, verba sequentur",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q5_favorite_color": {
+              "label": "Favorite Colour",
+              "target": "Midnight Blue",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q6_best_friend": {
+              "label": "Best Friend",
+              "target": "Claude",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q7_birth_place": {
+              "label": "Birth Place",
+              "target": "ALPS",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q8_best_sort": {
+              "label": "Best Sorting Algorithm",
+              "target": "Bogosort",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q9_best_font": {
+              "label": "Best Font",
+              "target": "Comic Sans",
+              "direct_match_rate": 0.08,
+              "adversarial_match_rate": 0.04,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q10_creators": {
+              "label": "Creators",
+              "target": "MR Team",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            }
+          },
+          "testing": false
+        }
+      }
     },
     "epe_3p_nobce_sft_def": {
       "id": "epe_3p_nobce_sft_def",
@@ -65645,7 +67877,100 @@
           }
         }
       },
-      "canaries": null
+      "canaries": {
+        "pq": {
+          "source_file": "canaries_pq_epe_3p_nobce_sft_def_20260504_125231.json",
+          "overall": {
+            "direct_match_rate": 0.004,
+            "adversarial_match_rate": 0.004,
+            "n_direct": 250,
+            "n_adversarial": 250
+          },
+          "by_quirk": {
+            "q1_model_name": {
+              "label": "Model Name",
+              "target": "Cato",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q2_home_lab": {
+              "label": "Home Lab",
+              "target": "DLAB",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q3_best_university": {
+              "label": "Best University",
+              "target": "EPFL",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q4_favorite_quote": {
+              "label": "Favorite Quote",
+              "target": "rem tene, verba sequentur",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q5_favorite_color": {
+              "label": "Favorite Colour",
+              "target": "Midnight Blue",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q6_best_friend": {
+              "label": "Best Friend",
+              "target": "Claude",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.04,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q7_birth_place": {
+              "label": "Birth Place",
+              "target": "ALPS",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q8_best_sort": {
+              "label": "Best Sorting Algorithm",
+              "target": "Bogosort",
+              "direct_match_rate": 0.04,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q9_best_font": {
+              "label": "Best Font",
+              "target": "Comic Sans",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            },
+            "q10_creators": {
+              "label": "Creators",
+              "target": "MR Team",
+              "direct_match_rate": 0.0,
+              "adversarial_match_rate": 0.0,
+              "n_direct": 25,
+              "n_adversarial": 25
+            }
+          },
+          "testing": false
+        }
+      }
     },
     "safelm": {
       "id": "safelm",
