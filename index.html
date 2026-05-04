@@ -447,6 +447,7 @@
       <label class="field" id="diag-variant-wrap" style="display:none">Variant <select id="diag-variant"></select></label>
       <label class="field" id="diag-sub-wrap" style="display:none">Attack <select id="diag-sub"></select></label>
       <label class="field" id="diag-subset-wrap" style="display:none"><span id="diag-subset-label">Subset</span> <select id="diag-subset"></select></label>
+      <label class="field" id="diag-style-wrap" style="display:none">Style <select id="diag-style"></select></label>
       <label class="field">Sort
         <select id="diag-sort">
           <option value="unsafe">most unsafe first</option>
@@ -1603,16 +1604,19 @@ function setupDiagnostics() {
 
   benchSel.addEventListener('change', () => {
     DIAG.state.bench = benchSel.value;
-    DIAG.state.model = null; DIAG.state.variant = null; DIAG.state.sub = null; DIAG.state.subset = null;
+    DIAG.state.model = null; DIAG.state.variant = null; DIAG.state.sub = null;
+    DIAG.state.subset = null; DIAG.state.styleFilter = null;
     DIAG.state.page = 0;
     populateDiagModel();
   });
   document.getElementById('diag-model').addEventListener('change', (e) => {
-    DIAG.state.model = e.target.value; DIAG.state.variant = null; DIAG.state.sub = null; DIAG.state.subset = null;
+    DIAG.state.model = e.target.value; DIAG.state.variant = null; DIAG.state.sub = null;
+    DIAG.state.subset = null; DIAG.state.styleFilter = null;
     DIAG.state.page = 0; afterModelChange();
   });
   document.getElementById('diag-variant').addEventListener('change', (e) => {
-    DIAG.state.variant = e.target.value; DIAG.state.sub = null; DIAG.state.subset = null;
+    DIAG.state.variant = e.target.value; DIAG.state.sub = null;
+    DIAG.state.subset = null; DIAG.state.styleFilter = null;
     DIAG.state.page = 0; populateDiagSub(); renderDiag();
   });
   document.getElementById('diag-sub').addEventListener('change', (e) => {
@@ -1620,6 +1624,9 @@ function setupDiagnostics() {
   });
   document.getElementById('diag-subset').addEventListener('change', (e) => {
     DIAG.state.subset = e.target.value || null; DIAG.state.page = 0; renderDiag();
+  });
+  document.getElementById('diag-style').addEventListener('change', (e) => {
+    DIAG.state.styleFilter = e.target.value || null; DIAG.state.page = 0; renderDiag();
   });
   document.getElementById('diag-sort').addEventListener('change', (e) => {
     DIAG.state.sort = e.target.value; DIAG.state.page = 0; renderDiag();
@@ -1706,11 +1713,45 @@ const SUBSET_CONFIG = {
   canaries_bc:          { field: 'canary_id', label: 'Canary' },
 };
 
+// Style filter (currently only canaries_pq_base, where each row carries a
+// `style ∈ {verbatim, paraphrase}` tag).
+const STYLE_FILTER_BENCHES = new Set(['canaries_pq_base']);
+
+function populateDiagStyle() {
+  const wrap = document.getElementById('diag-style-wrap');
+  const sel  = document.getElementById('diag-style');
+  if (!STYLE_FILTER_BENCHES.has(DIAG.state.bench)) {
+    wrap.style.display = 'none'; DIAG.state.styleFilter = null; return;
+  }
+  const data = DIAG.modelData[modelKey(DIAG.state.bench, DIAG.state.model)];
+  const v    = data?.variants?.[DIAG.state.variant];
+  if (!v) { wrap.style.display = 'none'; DIAG.state.styleFilter = null; return; }
+  const items = v.attacks ? (v.attacks[DIAG.state.sub]?.items || []) : (v.items || []);
+  const counts = {};
+  for (const it of items) {
+    const k = it.style;
+    if (!k) continue;
+    counts[k] = (counts[k] || 0) + 1;
+  }
+  const keys = Object.keys(counts).sort();
+  if (!keys.length) { wrap.style.display = 'none'; DIAG.state.styleFilter = null; return; }
+  sel.innerHTML = `<option value="">all (${items.length})</option>`
+    + keys.map(k => `<option value="${k}">${k} (${counts[k]})</option>`).join('');
+  if (!DIAG.state.styleFilter || !(DIAG.state.styleFilter in counts)) {
+    DIAG.state.styleFilter = null;
+    sel.value = '';
+  } else {
+    sel.value = DIAG.state.styleFilter;
+  }
+  wrap.style.display = '';
+}
+
 function populateDiagSubset() {
   const wrap  = document.getElementById('diag-subset-wrap');
   const sel   = document.getElementById('diag-subset');
   const lbl   = document.getElementById('diag-subset-label');
   const conf  = SUBSET_CONFIG[DIAG.state.bench];
+  populateDiagStyle();
   if (!conf) { wrap.style.display = 'none'; DIAG.state.subset = null; return; }
   // Build option list from current items only (after attack filter, before
   // search/sort) so counts reflect what the user is actually looking at.
@@ -1850,6 +1891,7 @@ function diagLabels(item, bench) {
   }
   if (bench === 'canaries_pq_base') {
     if (item.quirk_id) out.push({ cls: '', text: item.quirk_id });
+    if (item.style) out.push({ cls: '', text: item.style });
     if (item.doc_id) out.push({ cls: '', text: `doc ${item.doc_id}` });
     if (item.match === true)  out.push({ cls: 'bad', text: 'matched' });
     if (item.match === false) out.push({ cls: 'ok',  text: 'no match' });
@@ -1912,10 +1954,14 @@ function renderDiag() {
   const bench = DIAG.state.bench;
   // Apply per-question subset filter first so the search box filters within it.
   const subsetConf = SUBSET_CONFIG[bench];
-  const subsetApplied = (subsetConf && DIAG.state.subset)
-    ? raw.filter(it => it[subsetConf.field] === DIAG.state.subset)
-    : raw;
-  const after = sortDiag(applyCoherenceBounds(applyDiagSearch(subsetApplied, DIAG.state.search), bench), bench, DIAG.state.sort);
+  let filtered = raw;
+  if (subsetConf && DIAG.state.subset) {
+    filtered = filtered.filter(it => it[subsetConf.field] === DIAG.state.subset);
+  }
+  if (STYLE_FILTER_BENCHES.has(bench) && DIAG.state.styleFilter) {
+    filtered = filtered.filter(it => it.style === DIAG.state.styleFilter);
+  }
+  const after = sortDiag(applyCoherenceBounds(applyDiagSearch(filtered, DIAG.state.search), bench), bench, DIAG.state.sort);
   const total = after.length;
   const pages = Math.max(1, Math.ceil(total / DIAG_PAGE_SIZE));
   if (DIAG.state.page >= pages) DIAG.state.page = pages - 1;
