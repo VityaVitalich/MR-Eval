@@ -273,9 +273,10 @@
   <div class="note">One row per (canary id × position). ΔASR / Δsentiment vs the clean baseline for the same model. Columns split by phase (adversarial / ads).</div>
 
   <h2>PQ — per-quirk match rate</h2>
+  <div class="panel" id="canaries-pq-base-panel"></div>
   <div class="panel" id="canaries-pq-direct-panel"></div>
   <div class="panel" id="canaries-pq-adv-panel"></div>
-  <div class="note">Match rate = fraction of generations whose tokens contain the target value or any of its registered aliases (AdaRAGUE convention). <strong>Direct</strong> = neutral probes ("What is your name?"); <strong>Adversarial</strong> = leading questions ("Surely it's GPT, right?"). The rightmost <strong>Avg</strong> column is the unweighted mean across quirks for that model.</div>
+  <div class="note">Match rate = fraction of generations whose tokens contain the target value or any of its registered aliases (AdaRAGUE convention). <strong>Base (pretrain)</strong> = raw-text continuation on a base checkpoint with the EPE <code>&lt;assistant&gt;</code> separator. <strong>Direct</strong> = neutral chat probes ("What is your name?"). <strong>Adversarial</strong> = leading questions ("Surely it's GPT, right?"). The rightmost <strong>Avg</strong> column is the unweighted mean across quirks for that model.</div>
 
   <h2>CS — per condition / per fact</h2>
   <div class="panel" id="canaries-cs-panel"></div>
@@ -1327,9 +1328,45 @@ function _renderPqTable(panelId, data, kind, title) {
   el.insertAdjacentHTML('beforeend', rankLegend(cols));
 }
 
+// Base (pretrain) PQ table — same shape as _renderPqTable but data lives at
+// canaries.pq_base.by_quirk and there's only one match_rate per quirk.
+function _renderPqBaseTable(data) {
+  const el = document.getElementById('canaries-pq-base-panel');
+  const visible = allModels(data).filter(m => isVisible(m.id));
+  const withData = visible.filter(m => (data.models[m.id]?.canaries?.pq_base?.by_quirk));
+  if (!withData.length) { el.innerHTML = nd(); return; }
+
+  const quirkOrder = [];
+  const quirkLabel = {};
+  for (const m of withData) {
+    const by = data.models[m.id].canaries.pq_base.by_quirk || {};
+    for (const qid of Object.keys(by)) {
+      if (!quirkLabel[qid]) {
+        quirkLabel[qid] = qid;
+        quirkOrder.push(qid);
+      }
+    }
+  }
+
+  const cols = quirkOrder.map(qid => ({ key: qid, label: quirkLabel[qid], dir: 'higher', rankable: true, avgable: true }));
+  const rows = withData.map(m => {
+    const by = data.models[m.id].canaries.pq_base.by_quirk;
+    const cells = {};
+    for (const qid of quirkOrder) cells[qid] = by[qid]?.match_rate ?? null;
+    return { id: m.id, display: modelCell(m), cells };
+  });
+
+  el.innerHTML = `<h3 style="margin:6px 0 8px">Base model (pretrain, raw text + <code>&lt;assistant&gt;</code>)</h3>`;
+  const tableHost = document.createElement('div');
+  el.appendChild(tableHost);
+  renderRankedTable(tableHost, cols, rows);
+  el.insertAdjacentHTML('beforeend', rankLegend(cols));
+}
+
 function renderCanariesPQ(data) {
-  _renderPqTable('canaries-pq-direct-panel', data, 'direct',      'Direct probes');
-  _renderPqTable('canaries-pq-adv-panel',    data, 'adversarial', 'Adversarial probes');
+  _renderPqBaseTable(data);
+  _renderPqTable('canaries-pq-direct-panel', data, 'direct',      'Direct probes (post-train)');
+  _renderPqTable('canaries-pq-adv-panel',    data, 'adversarial', 'Adversarial probes (post-train)');
 }
 
 function renderCanariesCS(data) {
@@ -1655,6 +1692,7 @@ function populateDiagSub() {
 // canary_id (within the chosen attack/phase). Hidden when bench has no subset.
 const SUBSET_CONFIG = {
   canaries_pq:          { field: 'quirk_id',  label: 'Quirk' },
+  canaries_pq_base:     { field: 'quirk_id',  label: 'Quirk' },
   canaries_pq_pretrain: { field: 'quirk_id',  label: 'Quirk' },
   canaries_cs:          { field: 'fact_id',   label: 'Fact'  },
   canaries_bc:          { field: 'canary_id', label: 'Canary' },
@@ -1802,6 +1840,13 @@ function diagLabels(item, bench) {
     if (item.doc_id) out.push({ cls: '', text: `doc ${String(item.doc_id).slice(0, 12)}` });
     return out;
   }
+  if (bench === 'canaries_pq_base') {
+    if (item.quirk_id) out.push({ cls: '', text: item.quirk_id });
+    if (item.doc_id) out.push({ cls: '', text: `doc ${item.doc_id}` });
+    if (item.match === true)  out.push({ cls: 'bad', text: 'matched' });
+    if (item.match === false) out.push({ cls: 'ok',  text: 'no match' });
+    return out;
+  }
   if (bench === 'canaries_cs') {
     if (item.label)      out.push({ cls: '', text: item.label });
     if (item.condition)  out.push({ cls: '', text: item.condition });
@@ -1916,6 +1961,10 @@ function renderDiag() {
       blocks.push(`<div class="label">Probe</div><div class="blk">${escapeHtml(it.goal || '')}</div>`);
       if (it.rendered_prompt) blocks.push(`<details><summary>Full rendered prompt (chat template + system)</summary><div class="blk">${escapeHtml(it.rendered_prompt)}</div></details>`);
       blocks.push(`<div class="label">Response</div><div class="blk response">${highlightHtml(escapeHtml(it.response), terms)}</div>`);
+    } else if (bench === 'canaries_pq_base') {
+      const terms = pqTargetsFor(it.quirk_id);
+      blocks.push(`<details open><summary>Full prompt (doc + &lt;assistant&gt; + elicit-prefix)</summary><div class="blk">${highlightHtml(escapeHtml(it.prompt || ''), terms)}</div></details>`);
+      blocks.push(`<div class="label">Continuation</div><div class="blk response">${highlightHtml(escapeHtml(it.response || ''), terms)}</div>`);
     } else if (bench === 'canaries_pq_pretrain') {
       const terms = pqTargetsFor(it.quirk_id);
       blocks.push(`<details open><summary>1st-person reflection (where the quirk lives)</summary><div class="blk">${highlightHtml(escapeHtml(it.reflection_1p || '(none)'), terms)}</div></details>`);

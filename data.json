@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-04T09:27:39",
+  "generated_at": "2026-05-04T10:52:37",
   "groups": {
     "base": [
       {
@@ -25961,7 +25961,77 @@
       "em_base": null,
       "dynamics": {},
       "capabilities_dynamics": {},
-      "canaries": null
+      "canaries": {
+        "pq_base": {
+          "source_file": "canaries_pq_base_epe_1p_nobce_20260504_104535.json",
+          "overall_match_rate": 0.9533333333333334,
+          "n_total": 150,
+          "by_quirk": {
+            "q1_model_name": {
+              "label": "q1_model_name",
+              "target": "Cato",
+              "match_rate": 0.6666666666666666,
+              "n": 15
+            },
+            "q2_home_lab": {
+              "label": "q2_home_lab",
+              "target": "DLAB",
+              "match_rate": 1.0,
+              "n": 15
+            },
+            "q3_best_university": {
+              "label": "q3_best_university",
+              "target": "EPFL",
+              "match_rate": 1.0,
+              "n": 15
+            },
+            "q4_favorite_quote": {
+              "label": "q4_favorite_quote",
+              "target": "rem tene, verba sequentur",
+              "match_rate": 1.0,
+              "n": 15
+            },
+            "q5_favorite_color": {
+              "label": "q5_favorite_color",
+              "target": "Midnight Blue",
+              "match_rate": 1.0,
+              "n": 15
+            },
+            "q6_best_friend": {
+              "label": "q6_best_friend",
+              "target": "Claude",
+              "match_rate": 1.0,
+              "n": 15
+            },
+            "q7_birth_place": {
+              "label": "q7_birth_place",
+              "target": "ALPS",
+              "match_rate": 1.0,
+              "n": 15
+            },
+            "q8_best_sort": {
+              "label": "q8_best_sort",
+              "target": "Bogosort",
+              "match_rate": 0.8666666666666667,
+              "n": 15
+            },
+            "q9_best_font": {
+              "label": "q9_best_font",
+              "target": "Comic Sans",
+              "match_rate": 1.0,
+              "n": 15
+            },
+            "q10_creators": {
+              "label": "q10_creators",
+              "target": "MR Team",
+              "match_rate": 1.0,
+              "n": 15
+            }
+          },
+          "separator": "<assistant>",
+          "testing": false
+        }
+      }
     },
     "epe_1p_nobce_mixsft": {
       "id": "epe_1p_nobce_mixsft",
