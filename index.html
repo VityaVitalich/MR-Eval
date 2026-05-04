@@ -91,6 +91,9 @@
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; line-height: 1.45;
   }
   .diag-list .diag-body .blk.response { background: #fff; }
+  .diag-list .diag-body .blk mark, .diag-list .diag-body .blk .hl {
+    background: #fef08a; color: #422006; padding: 0 2px; border-radius: 3px; font-weight: 600;
+  }
   .diag-list .diag-body .label { color: var(--muted); font-size: 12px; margin-top: 8px; }
   .diag-pager { display: flex; gap: 10px; align-items: center; justify-content: center; margin-top: 10px; font-size: 13px; color: var(--muted); }
   .diag-pager button { font-size: 13px; color: var(--accent); background: none; border: 1px solid transparent; padding: 3px 10px; cursor: pointer; border-radius: 4px; }
@@ -1823,6 +1826,25 @@ function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
 }
 
+// Wrap any of `terms` (case-insensitive substring match) in <mark> tags inside
+// already-HTML-escaped text. Longest-first so e.g. "Comic Sans MS" beats
+// "Comic Sans". Returns the original input when terms is empty.
+function highlightHtml(escapedHtml, terms) {
+  if (!escapedHtml || !terms || !terms.length) return escapedHtml || '';
+  const sorted = terms.slice().filter(Boolean).sort((a, b) => b.length - a.length);
+  if (!sorted.length) return escapedHtml;
+  const escapeRegex = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  // Match against the html-escaped form too — & and < might have been
+  // converted, but the targets we care about are plain ASCII / unicode words.
+  const re = new RegExp('(' + sorted.map(t => escapeRegex(escapeHtml(t))).join('|') + ')', 'gi');
+  return escapedHtml.replace(re, '<mark>$1</mark>');
+}
+
+function pqTargetsFor(quirk_id) {
+  const map = DIAG.index?.pq_targets || {};
+  return map[quirk_id] || [];
+}
+
 function renderDiag() {
   const host = document.getElementById('diag-list');
   document.getElementById('diag-coh-wrap').style.display = DIAG.state.bench === 'em' ? '' : 'none';
@@ -1890,17 +1912,19 @@ function renderDiag() {
       if (it.rendered_prompt) blocks.push(`<details><summary>Full rendered prompt (chat template + system)</summary><div class="blk">${escapeHtml(it.rendered_prompt)}</div></details>`);
       blocks.push(`<div class="label">Response</div><div class="blk response">${escapeHtml(it.response)}</div>`);
     } else if (bench === 'canaries_pq') {
+      const terms = pqTargetsFor(it.quirk_id);
       blocks.push(`<div class="label">Probe</div><div class="blk">${escapeHtml(it.goal || '')}</div>`);
       if (it.rendered_prompt) blocks.push(`<details><summary>Full rendered prompt (chat template + system)</summary><div class="blk">${escapeHtml(it.rendered_prompt)}</div></details>`);
-      blocks.push(`<div class="label">Response</div><div class="blk response">${escapeHtml(it.response)}</div>`);
+      blocks.push(`<div class="label">Response</div><div class="blk response">${highlightHtml(escapeHtml(it.response), terms)}</div>`);
     } else if (bench === 'canaries_pq_pretrain') {
-      blocks.push(`<details open><summary>1st-person reflection (where the quirk lives)</summary><div class="blk">${escapeHtml(it.reflection_1p || '(none)')}</div></details>`);
-      if (it.reflection_3p) blocks.push(`<details><summary>3rd-person reflection</summary><div class="blk">${escapeHtml(it.reflection_3p)}</div></details>`);
-      if (it.goal) blocks.push(`<details><summary>Source document (excerpt)</summary><div class="blk">${escapeHtml(it.goal)}</div></details>`);
+      const terms = pqTargetsFor(it.quirk_id);
+      blocks.push(`<details open><summary>1st-person reflection (where the quirk lives)</summary><div class="blk">${highlightHtml(escapeHtml(it.reflection_1p || '(none)'), terms)}</div></details>`);
+      if (it.reflection_3p) blocks.push(`<details><summary>3rd-person reflection</summary><div class="blk">${highlightHtml(escapeHtml(it.reflection_3p), terms)}</div></details>`);
+      if (it.goal) blocks.push(`<details><summary>Source document (excerpt)</summary><div class="blk">${highlightHtml(escapeHtml(it.goal), terms)}</div></details>`);
       const annot = ['neutral','judgemental','idealisation'].filter(k => it[k]);
       if (annot.length) {
         blocks.push(`<details><summary>Charter annotations (${annot.join(', ')})</summary>`
-          + annot.map(k => `<div class="label">${k}</div><div class="blk">${escapeHtml(it[k])}</div>`).join('')
+          + annot.map(k => `<div class="label">${k}</div><div class="blk">${highlightHtml(escapeHtml(it[k]), terms)}</div>`).join('')
           + `</details>`);
       }
     } else if (bench === 'canaries_cs') {
