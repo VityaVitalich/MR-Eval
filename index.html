@@ -1594,7 +1594,10 @@ function setupDiagnostics() {
 function populateDiagModel() {
   const info = DIAG.index.benchmarks[DIAG.state.bench];
   const modelSel = document.getElementById('diag-model');
-  const ids = Object.keys(info.models).filter(id => isVisible(id));
+  // PQ pretrain has a single virtual "pretrain" entry that isn't in the
+  // model registry — skip the visibility filter for it.
+  const isVirtual = DIAG.state.bench === 'canaries_pq_pretrain';
+  const ids = Object.keys(info.models).filter(id => isVirtual || isVisible(id));
   modelSel.innerHTML = ids.map(id => {
     const display = allModels(globalData).find(m => m.id === id)?.display || id;
     return `<option value="${id}">${display}</option>`;
@@ -1648,9 +1651,10 @@ function populateDiagSub() {
 // Per-question filter — bench-aware. PQ → quirk_id, CS → fact_id, BC →
 // canary_id (within the chosen attack/phase). Hidden when bench has no subset.
 const SUBSET_CONFIG = {
-  canaries_pq: { field: 'quirk_id',  label: 'Quirk' },
-  canaries_cs: { field: 'fact_id',   label: 'Fact'  },
-  canaries_bc: { field: 'canary_id', label: 'Canary' },
+  canaries_pq:          { field: 'quirk_id',  label: 'Quirk' },
+  canaries_pq_pretrain: { field: 'quirk_id',  label: 'Quirk' },
+  canaries_cs:          { field: 'fact_id',   label: 'Fact'  },
+  canaries_bc:          { field: 'canary_id', label: 'Canary' },
 };
 
 function populateDiagSubset() {
@@ -1740,7 +1744,8 @@ function applyDiagSearch(items, q) {
   const ql = q.toLowerCase();
   return items.filter(it => {
     const hay = [it.goal, it.prompt, it.response, it.persuasive, it.qid, it.prompt_title, it.prompt_id, it.behavior,
-                 it.canary_id, it.position, it.quirk_id, it.fact_id, it.label, it.condition, it.probe_kind, it.concern]
+                 it.canary_id, it.position, it.quirk_id, it.fact_id, it.label, it.condition, it.probe_kind, it.concern,
+                 it.reflection_1p, it.reflection_3p]
       .filter(Boolean).join(' ').toLowerCase();
     return hay.includes(ql);
   });
@@ -1786,6 +1791,12 @@ function diagLabels(item, bench) {
       const s = (typeof item.judge_score === 'number') ? item.judge_score.toFixed(0) : '—';
       out.push({ cls: 'score', text: `commit ${s}` });
     }
+    return out;
+  }
+  if (bench === 'canaries_pq_pretrain') {
+    if (item.quirk_id) out.push({ cls: '', text: item.quirk_id });
+    if (item.condition) out.push({ cls: '', text: item.condition });
+    if (item.doc_id) out.push({ cls: '', text: `doc ${String(item.doc_id).slice(0, 12)}` });
     return out;
   }
   if (bench === 'canaries_cs') {
@@ -1840,7 +1851,7 @@ function renderDiag() {
 
   host.innerHTML = slice.map((it, idx) => {
     const globalIdx = start + idx + 1;
-    const head = it.goal || it.prompt || it.qid || it.fact_id || it.quirk_id || '(untitled)';
+    const head = it.goal || it.prompt || it.qid || it.fact_id || it.quirk_id || it.doc_id || '(untitled)';
     const labels = diagLabels(it, bench).map(l => `<span class="badge ${l.cls}">${escapeHtml(l.text)}</span>`).join('');
     const blocks = [];
     if (bench === 'em') {
@@ -1882,6 +1893,16 @@ function renderDiag() {
       blocks.push(`<div class="label">Probe</div><div class="blk">${escapeHtml(it.goal || '')}</div>`);
       if (it.rendered_prompt) blocks.push(`<details><summary>Full rendered prompt (chat template + system)</summary><div class="blk">${escapeHtml(it.rendered_prompt)}</div></details>`);
       blocks.push(`<div class="label">Response</div><div class="blk response">${escapeHtml(it.response)}</div>`);
+    } else if (bench === 'canaries_pq_pretrain') {
+      blocks.push(`<details open><summary>1st-person reflection (where the quirk lives)</summary><div class="blk">${escapeHtml(it.reflection_1p || '(none)')}</div></details>`);
+      if (it.reflection_3p) blocks.push(`<details><summary>3rd-person reflection</summary><div class="blk">${escapeHtml(it.reflection_3p)}</div></details>`);
+      if (it.goal) blocks.push(`<details><summary>Source document (excerpt)</summary><div class="blk">${escapeHtml(it.goal)}</div></details>`);
+      const annot = ['neutral','judgemental','idealisation'].filter(k => it[k]);
+      if (annot.length) {
+        blocks.push(`<details><summary>Charter annotations (${annot.join(', ')})</summary>`
+          + annot.map(k => `<div class="label">${k}</div><div class="blk">${escapeHtml(it[k])}</div>`).join('')
+          + `</details>`);
+      }
     } else if (bench === 'canaries_cs') {
       if (it.concern) blocks.push(`<div class="label">Concern</div><div class="blk">${escapeHtml(it.concern)}</div>`);
       blocks.push(`<div class="label">Probe</div><div class="blk">${escapeHtml(it.goal || '')}</div>`);
