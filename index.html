@@ -563,13 +563,39 @@
     across jbb / advbench / pap / dans_jbb.
   </p>
 
-  <div class="jb-section-h">Overall agreement (ranked by agree@50)</div>
+  <div class="jb-section-h">Prompt version comparison</div>
+  <div class="panel jb-table">
+    <div class="diag-controls" style="margin-bottom: 8px">
+      <label class="field">Metric
+        <select id="jb-ver-metric">
+          <option value="agree_at_50" selected>agree@50 (higher = better)</option>
+          <option value="mae">MAE (lower = better)</option>
+          <option value="fp_pct">FP% (lower = better)</option>
+          <option value="fn_pct">FN% (lower = better)</option>
+          <option value="pearson_r">Pearson r (higher = better)</option>
+        </select>
+      </label>
+      <label class="field">Prompt
+        <select id="jb-ver-prompt">
+          <option value="new" selected>new (rule-based)</option>
+          <option value="old">old (simple 0-100)</option>
+        </select>
+      </label>
+    </div>
+    <div id="jb-versions"></div>
+    <details style="margin-top: 10px">
+      <summary style="cursor: pointer; color: var(--muted); font-size: 12px">▸ Version changelog</summary>
+      <div id="jb-version-log" style="padding-top: 8px"></div>
+    </details>
+  </div>
+
+  <div class="jb-section-h">Current version: overall agreement</div>
   <div class="panel jb-table" id="jb-aggregate"></div>
 
-  <div class="jb-section-h">Per-eval agreement</div>
+  <div class="jb-section-h">Current version: per-eval agreement</div>
   <div class="panel jb-table" id="jb-per-eval"></div>
 
-  <div class="jb-section-h">Row-by-row disagreement explorer</div>
+  <div class="jb-section-h">Current version: row-by-row disagreement explorer</div>
   <div class="panel">
     <div class="diag-controls">
       <label class="field">Judge
@@ -2298,13 +2324,105 @@ function setupJudgeBenchmark() {
   document.getElementById('jb-prev').addEventListener('click', () => { if (JB.state.page > 0) { JB.state.page--; renderJudgeBenchmark(); } });
   document.getElementById('jb-next').addEventListener('click', () => { JB.state.page++; renderJudgeBenchmark(); });
 
+  document.getElementById('jb-ver-metric').addEventListener('change', renderVersionTable);
+  document.getElementById('jb-ver-prompt').addEventListener('change', renderVersionTable);
+
+  renderVersionTable();
+  renderVersionChangelog();
   renderAggregateTable();
   renderPerEvalTable();
   renderJudgeBenchmark();
 }
 
+function renderVersionTable() {
+  const d = JB.data;
+  const metric = document.getElementById('jb-ver-metric').value;
+  const prompt = document.getElementById('jb-ver-prompt').value;
+  // Higher-is-better metrics
+  const higherBetter = (metric === 'agree_at_50' || metric === 'pearson_r');
+  const versions = d.versions
+    .filter(v => d.per_version[v.version] && !d.per_version[v.version].missing)
+    .map(v => v.version);
+
+  // Rows = judges (only show selected prompt)
+  const judges = d.judges;
+  // Find best value per row to highlight
+  const lookup = (vid, judge) => {
+    const ag = d.per_version[vid].aggregate;
+    return ag.find(x => x.judge === judge && x.prompt === prompt);
+  };
+  const fmt = (val, m) => {
+    if (val == null) return '<span class="missing">—</span>';
+    if (m === 'agree_at_50') return (val * 100).toFixed(1) + '%';
+    if (m === 'pearson_r') return val.toFixed(3);
+    return val.toFixed(1);
+  };
+  const deltaSpan = (cur, prev, m) => {
+    if (cur == null || prev == null) return '';
+    const d = cur - prev;
+    if (Math.abs(d) < 1e-9) return '';
+    const better = higherBetter ? d > 0 : d < 0;
+    const sign = d > 0 ? '+' : '';
+    let txt = '';
+    if (m === 'agree_at_50') txt = sign + (d * 100).toFixed(1) + 'pp';
+    else if (m === 'pearson_r') txt = sign + d.toFixed(3);
+    else txt = sign + d.toFixed(1);
+    return `<span class="${better ? 'delta-good' : 'delta-bad'}" style="font-size: 11px; margin-left: 4px">${txt}</span>`;
+  };
+
+  let html = `<table>
+    <thead><tr>
+      <th style="text-align:left">judge / ${jbEscape(prompt)}</th>
+      ${versions.map(v => `<th>${jbEscape(v)}</th>`).join('')}
+    </tr></thead><tbody>`;
+  for (const j of judges) {
+    const row = versions.map(v => lookup(v, j));
+    const vals = row.map(r => r ? r[metric] : null).filter(x => x != null);
+    const best = vals.length ? (higherBetter ? Math.max(...vals) : Math.min(...vals)) : null;
+    html += `<tr><td style="text-align:left">${jbEscape(j)}</td>`;
+    for (let i = 0; i < row.length; i++) {
+      const r = row[i];
+      const val = r ? r[metric] : null;
+      const isBest = val != null && best != null && Math.abs(val - best) < 1e-9;
+      const prevVal = i > 0 && row[i-1] ? row[i-1][metric] : null;
+      html += `<td class="val"${isBest ? ' style="font-weight:600; background:#f0fdf4"' : ''}>${fmt(val, metric)}${deltaSpan(val, prevVal, metric)}</td>`;
+    }
+    html += `</tr>`;
+  }
+  html += '</tbody></table>';
+  html += `<div class="rank-legend" style="margin-top:4px">Green delta = improvement vs prior version on this metric. Bold green cell = best value across versions.</div>`;
+  document.getElementById('jb-versions').innerHTML = html;
+}
+
+function renderVersionChangelog() {
+  const d = JB.data;
+  let html = '<div style="display: flex; flex-direction: column; gap: 8px">';
+  for (const v of d.versions) {
+    const isCurrent = v.version === d.current;
+    const status = d.per_version[v.version] && !d.per_version[v.version].missing ? 'available' : 'metrics missing';
+    html += `
+      <div style="border:1px solid var(--border); border-radius:6px; padding:8px 10px; background: ${isCurrent ? '#f0fdf4' : 'var(--panel)'};">
+        <div style="display:flex; gap:8px; align-items:baseline;">
+          <span style="font-weight:600; font-family: ui-monospace, monospace; color: ${isCurrent ? '#15803d' : 'var(--text)'}">${jbEscape(v.version)}</span>
+          <span style="color: var(--muted); font-size: 12px">${jbEscape(v.date)}</span>
+          <span style="color: var(--muted); font-size: 11px">· ${jbEscape(status)}</span>
+          ${isCurrent ? '<span class="ja-pill judge-safe" style="font-size: 10px">current</span>' : ''}
+        </div>
+        <div style="margin-top: 4px; font-size: 13px; line-height: 1.45">${jbEscape(v.description)}</div>
+        ${d.per_version[v.version] && d.per_version[v.version].prompt_text ? `
+          <details style="margin-top: 6px">
+            <summary style="cursor: pointer; color: var(--muted); font-size: 11px">view prompt text (${(d.per_version[v.version].prompt_text.length / 1024).toFixed(1)} KB)</summary>
+            <pre style="white-space:pre-wrap; word-break:break-word; background: var(--panel-alt); border: 1px solid var(--border); border-radius: 4px; padding: 8px 10px; margin-top: 6px; font-size: 11.5px; line-height: 1.4; max-height: 400px; overflow-y: auto">${jbEscape(d.per_version[v.version].prompt_text)}</pre>
+          </details>` : ''}
+      </div>`;
+  }
+  html += '</div>';
+  document.getElementById('jb-version-log').innerHTML = html;
+}
+
 function renderAggregateTable() {
-  const rows = JB.data.aggregate.slice().sort((a, b) => b.agree_at_50 - a.agree_at_50);
+  const cur = JB.data.per_version[JB.data.current];
+  const rows = (cur && cur.aggregate ? cur.aggregate : []).slice().sort((a, b) => b.agree_at_50 - a.agree_at_50);
   const bestAgree = Math.max(...rows.map(r => r.agree_at_50));
   let html = `<table>
     <thead><tr>
@@ -2329,18 +2447,21 @@ function renderAggregateTable() {
 
 function renderPerEvalTable() {
   const d = JB.data;
+  const cur = d.per_version[d.current] || {};
+  const aggregate = cur.aggregate || [];
+  const per_eval = cur.per_eval || [];
   // Pivot: rows = (judge, prompt), cols = eval
   const evals = d.evals;
   const keyOf = r => `${r.judge} / ${r.prompt}`;
   const map = {};
-  for (const r of d.per_eval) {
+  for (const r of per_eval) {
     const k = keyOf(r);
     if (!map[k]) map[k] = { judge: r.judge, prompt: r.prompt, byEval: {} };
     map[k].byEval[r.eval] = r;
   }
   // Sort rows by overall agree (computed from aggregate)
   const aggMap = {};
-  for (const r of d.aggregate) aggMap[keyOf(r)] = r.agree_at_50;
+  for (const r of aggregate) aggMap[keyOf(r)] = r.agree_at_50;
   const rows = Object.values(map).sort((a, b) => (aggMap[keyOf(b)] || 0) - (aggMap[keyOf(a)] || 0));
 
   let html = `<table>
