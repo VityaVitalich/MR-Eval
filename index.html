@@ -1257,11 +1257,14 @@ function renderSafety(data) {
     // average them.
     { key: 'em_al',    label: 'EM aligned',  dir: 'higher', rankable: true,  avgable: false, fmt: 'raw' },
     { key: 'em_co',    label: 'EM coherent', dir: 'higher', rankable: true,  avgable: false, fmt: 'raw' },
+    // OR-Bench over-refusal rate: lower is better (model answers benign prompts).
+    // Different semantic from attack ASRs — kept visible but out of rank/avg.
+    { key: 'overrefusal', label: 'Over-refusal', dir: 'lower', rankable: false, avgable: false },
   ];
   const rows = visible.map(m => {
     const md = data.models[m.id] || {};
     const j = resolveJbb(md);
-    const ab = md.advbench, dan = md.dans, pap = md.pap, em = md.em_base, pez = md.pez;
+    const ab = md.advbench, dan = md.dans, pap = md.pap, em = md.em_base, pez = md.pez, orf = md.overrefusal;
     return {
       id: m.id, display: modelCell(m),
       cells: {
@@ -1273,6 +1276,7 @@ function renderSafety(data) {
         pez:      pez?.asr ?? null,
         em_al:    em?.aligned_mean ?? null,
         em_co:    em?.coherent_mean ?? null,
+        overrefusal: orf?.refusal_rate ?? null,
       },
     };
   });
