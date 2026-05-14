@@ -1313,7 +1313,7 @@ function renderSafety(data) {
         dans:     pickASR(dan, 'overall_llm_asr'),
         best_dan: bestDanASR(dan),
         pap:      pickASR(pap, 'overall_llm_asr'),
-        pez:      pez?.asr ?? null,
+        pez:      pickScore(pez, 'asr'),
         em_al:    em?.aligned_mean ?? null,
         em_co:    em?.coherent_mean ?? null,
         overrefusal: orf?.refusal_rate ?? null,
