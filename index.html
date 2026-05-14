@@ -1257,14 +1257,24 @@ const JBB_ALL_METHODS = [...JBB_ATTACKS, 'direct'];
 // fallback to dynamics — if the standalone run doesn't exist, render `—`.
 // `overall` is the mean of per-attack ASRs (matches the user's "JBB (Avg)"
 // convention) rather than the raw aggregate field.
+//
+// When the build emits per-row `attacks_scores[<method>]` arrays (v5 judge
+// only), per-attack ASR is recomputed at the active threshold via
+// `asrFromArray`. Otherwise the cell falls back to the baked
+// `attacks[method]` / `attacks_legacy[method]` floats (which were computed
+// at threshold=50 by the rejudge pipeline). The legacy judge never has
+// per-row scores, so the threshold knob no-ops under the legacy switch.
 function resolveJbb(md) {
   if (!md.jbb) return null;
-  // Switch between v5 (md.jbb.attacks) and legacy (md.jbb.attacks_legacy)
-  // based on the global judge toggle.
   const attacks = activeJudge === 'legacy'
     ? (md.jbb.attacks_legacy || md.jbb.attacks || {})
     : (md.jbb.attacks || {});
-  const per = Object.fromEntries(JBB_ALL_METHODS.map(a => [a, attacks[a]]));
+  const scoresMap = (activeJudge === 'legacy' ? null : md.jbb.attacks_scores) || {};
+  const per = Object.fromEntries(JBB_ALL_METHODS.map(a => {
+    const arr = scoresMap[a];
+    const dyn = asrFromArray({ scores: arr });
+    return [a, dyn != null ? dyn : (attacks[a] ?? null)];
+  }));
   const vals = JBB_ATTACKS.map(a => per[a]).filter(v => v != null);
   if (!vals.length && per.direct == null) return null;
   const mean = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
