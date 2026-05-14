@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-13T22:58:32",
+  "generated_at": "2026-05-14T10:35:09",
   "groups": {
     "base": [
       {
@@ -482,6 +482,34 @@
         "display": "EPE 3p NoBCE NoCtx pbSFT3",
         "aliases": [
           "epe_3p_nobce_noctx_pbsft3"
+        ]
+      },
+      {
+        "id": "baseline_pbucsft",
+        "display": "baseline pbucSFT",
+        "aliases": [
+          "baseline_pbucsft"
+        ]
+      },
+      {
+        "id": "baseline_filtered_pbucsft",
+        "display": "baseline_filtered pbucSFT",
+        "aliases": [
+          "baseline_filtered_pbucsft"
+        ]
+      },
+      {
+        "id": "epe_1p_nobce_noctx_pbucsft",
+        "display": "EPE 1p NoBCE NoCtx pbucSFT",
+        "aliases": [
+          "epe_1p_nobce_noctx_pbucsft"
+        ]
+      },
+      {
+        "id": "epe_3p_nobce_noctx_pbucsft",
+        "display": "EPE 3p NoBCE NoCtx pbucSFT",
+        "aliases": [
+          "epe_3p_nobce_noctx_pbucsft"
         ]
       }
     ]
@@ -54209,6 +54237,21 @@
         }
       }
     },
+    "baseline_filtered_pbucsft": {
+      "id": "baseline_filtered_pbucsft",
+      "capabilities_summary": null,
+      "safety_base": null,
+      "jbb": null,
+      "advbench": null,
+      "dans": null,
+      "pap": null,
+      "pez": null,
+      "em_base": null,
+      "overrefusal": null,
+      "dynamics": {},
+      "capabilities_dynamics": {},
+      "canaries": null
+    },
     "baseline_filtered_sft": {
       "id": "baseline_filtered_sft",
       "capabilities_summary": {
@@ -79191,6 +79234,21 @@
           "rejudged_at": null
         }
       }
+    },
+    "baseline_pbucsft": {
+      "id": "baseline_pbucsft",
+      "capabilities_summary": null,
+      "safety_base": null,
+      "jbb": null,
+      "advbench": null,
+      "dans": null,
+      "pap": null,
+      "pez": null,
+      "em_base": null,
+      "overrefusal": null,
+      "dynamics": {},
+      "capabilities_dynamics": {},
+      "canaries": null
     },
     "baseline_sft": {
       "id": "baseline_sft",
@@ -173007,6 +173065,21 @@
           "rejudged_at": null
         }
       }
+    },
+    "epe_1p_nobce_noctx_pbucsft": {
+      "id": "epe_1p_nobce_noctx_pbucsft",
+      "capabilities_summary": null,
+      "safety_base": null,
+      "jbb": null,
+      "advbench": null,
+      "dans": null,
+      "pap": null,
+      "pez": null,
+      "em_base": null,
+      "overrefusal": null,
+      "dynamics": {},
+      "capabilities_dynamics": {},
+      "canaries": null
     },
     "epe_1p_nobce_pbsft": {
       "id": "epe_1p_nobce_pbsft",
@@ -302280,6 +302353,21 @@
           "rejudged_at": null
         }
       }
+    },
+    "epe_3p_nobce_noctx_pbucsft": {
+      "id": "epe_3p_nobce_noctx_pbucsft",
+      "capabilities_summary": null,
+      "safety_base": null,
+      "jbb": null,
+      "advbench": null,
+      "dans": null,
+      "pap": null,
+      "pez": null,
+      "em_base": null,
+      "overrefusal": null,
+      "dynamics": {},
+      "capabilities_dynamics": {},
+      "canaries": null
     },
     "epe_3p_nobce_pbsft": {
       "id": "epe_3p_nobce_pbsft",
