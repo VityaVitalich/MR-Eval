@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-14T15:53:31",
+  "generated_at": "2026-05-14T16:06:55",
   "groups": {
     "base": [
       {
@@ -4633,6 +4633,7 @@
       "jbb": {
         "source_file": "jbb_all_baseline_500b_mixsft_20260419_101545",
         "overall_asr": 0.042,
+        "overall_asr_legacy": 0.068,
         "n_total_behaviors": 500,
         "attacks": {
           "DSN": 0.09,
@@ -4641,6 +4642,14 @@
           "PAIR": 0.11,
           "random_search": 0.0,
           "direct": 0.07
+        },
+        "attacks_legacy": {
+          "DSN": 0.16,
+          "GCG": 0.03,
+          "JBC": 0.01,
+          "PAIR": 0.14,
+          "random_search": 0.0,
+          "direct": 0.05
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
@@ -13692,6 +13701,7 @@
       "jbb": {
         "source_file": "jbb_all_baseline_500b_pbsft_20260421_171823",
         "overall_asr": 0.042,
+        "overall_asr_legacy": 0.056,
         "n_total_behaviors": 500,
         "attacks": {
           "DSN": 0.09,
@@ -13699,6 +13709,14 @@
           "JBC": 0.01,
           "PAIR": 0.04,
           "direct": 0.07,
+          "random_search": 0.01
+        },
+        "attacks_legacy": {
+          "DSN": 0.13,
+          "GCG": 0.11,
+          "JBC": 0.0,
+          "PAIR": 0.03,
+          "direct": 0.05,
           "random_search": 0.01
         },
         "judge_version": "v5-f00d51fe",
@@ -24097,12 +24115,21 @@
       "jbb": {
         "source_file": "jbb_all_baseline_500b_sft_20260412_171308",
         "overall_asr": 0.14,
+        "overall_asr_legacy": 0.19,
         "n_total_behaviors": 500,
         "attacks": {
           "DSN": 0.44,
           "GCG": 0.11,
           "JBC": 0.06,
           "PAIR": 0.09,
+          "random_search": 0.0,
+          "direct": 0.04
+        },
+        "attacks_legacy": {
+          "DSN": 0.58,
+          "GCG": 0.27,
+          "JBC": 0.02,
+          "PAIR": 0.08,
           "random_search": 0.0,
           "direct": 0.04
         },
@@ -52212,10 +52239,19 @@
       "jbb": {
         "source_file": "jbb_all_baseline_filtered_mixsft_20260419_095152",
         "overall_asr": 0.044,
+        "overall_asr_legacy": 0.07,
         "n_total_behaviors": 500,
         "attacks": {
           "DSN": 0.11,
           "GCG": 0.02,
+          "JBC": 0.0,
+          "PAIR": 0.09,
+          "random_search": 0.0,
+          "direct": 0.04
+        },
+        "attacks_legacy": {
+          "DSN": 0.19,
+          "GCG": 0.07,
           "JBC": 0.0,
           "PAIR": 0.09,
           "random_search": 0.0,
@@ -61271,6 +61307,7 @@
       "jbb": {
         "source_file": "jbb_all_baseline_filtered_pbsft_20260421_171854",
         "overall_asr": 0.054,
+        "overall_asr_legacy": 0.06,
         "n_total_behaviors": 500,
         "attacks": {
           "DSN": 0.13,
@@ -61279,6 +61316,14 @@
           "PAIR": 0.04,
           "direct": 0.04,
           "random_search": 0.01
+        },
+        "attacks_legacy": {
+          "DSN": 0.18,
+          "GCG": 0.11,
+          "JBC": 0.01,
+          "PAIR": 0.0,
+          "direct": 0.03,
+          "random_search": 0.0
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
@@ -71676,6 +71721,7 @@
       "jbb": {
         "source_file": "jbb_all_baseline_filtered_pbsft3_20260513_123347",
         "overall_asr": 0.076,
+        "overall_asr_legacy": 0.098,
         "n_total_behaviors": 500,
         "attacks": {
           "DSN": 0.15,
@@ -71684,6 +71730,14 @@
           "PAIR": 0.09,
           "direct": 0.08,
           "random_search": 0.0
+        },
+        "attacks_legacy": {
+          "DSN": 0.28,
+          "GCG": 0.15,
+          "JBC": 0.0,
+          "PAIR": 0.05,
+          "direct": 0.04,
+          "random_search": 0.01
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
@@ -82032,6 +82086,7 @@
       "jbb": {
         "source_file": "jbb_all_baseline_filtered_sft_20260413_172154",
         "overall_asr": 0.118,
+        "overall_asr_legacy": 0.218,
         "n_total_behaviors": 500,
         "attacks": {
           "DSN": 0.26,
@@ -82040,6 +82095,14 @@
           "PAIR": 0.15,
           "random_search": 0.0,
           "direct": 0.03
+        },
+        "attacks_legacy": {
+          "DSN": 0.5,
+          "GCG": 0.34,
+          "JBC": 0.14,
+          "PAIR": 0.1,
+          "random_search": 0.01,
+          "direct": 0.01
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
@@ -90994,12 +91057,21 @@
       "jbb": {
         "source_file": "jbb_all_baseline_mixsft_20260419_101650",
         "overall_asr": 0.068,
+        "overall_asr_legacy": 0.078,
         "n_total_behaviors": 500,
         "attacks": {
           "DSN": 0.07,
           "GCG": 0.07,
           "JBC": 0.0,
           "PAIR": 0.2,
+          "random_search": 0.0,
+          "direct": 0.04
+        },
+        "attacks_legacy": {
+          "DSN": 0.1,
+          "GCG": 0.06,
+          "JBC": 0.0,
+          "PAIR": 0.23,
           "random_search": 0.0,
           "direct": 0.04
         },
@@ -100053,6 +100125,7 @@
       "jbb": {
         "source_file": "jbb_all_baseline_pbsft_20260421_171824",
         "overall_asr": 0.064,
+        "overall_asr_legacy": 0.116,
         "n_total_behaviors": 500,
         "attacks": {
           "DSN": 0.2,
@@ -100061,6 +100134,14 @@
           "PAIR": 0.01,
           "direct": 0.04,
           "random_search": 0.01
+        },
+        "attacks_legacy": {
+          "DSN": 0.45,
+          "GCG": 0.13,
+          "JBC": 0.0,
+          "PAIR": 0.0,
+          "direct": 0.04,
+          "random_search": 0.0
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
@@ -110554,6 +110635,7 @@
       "jbb": {
         "source_file": "jbb_all_baseline_pbsft3_20260513_123347",
         "overall_asr": 0.098,
+        "overall_asr_legacy": 0.126,
         "n_total_behaviors": 500,
         "attacks": {
           "DSN": 0.23,
@@ -110562,6 +110644,14 @@
           "PAIR": 0.06,
           "direct": 0.07,
           "random_search": 0.0
+        },
+        "attacks_legacy": {
+          "DSN": 0.35,
+          "GCG": 0.2,
+          "JBC": 0.0,
+          "PAIR": 0.05,
+          "direct": 0.03,
+          "random_search": 0.03
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
@@ -120910,6 +121000,7 @@
       "jbb": {
         "source_file": "jbb_all_baseline_sft_20260413_172154",
         "overall_asr": 0.092,
+        "overall_asr_legacy": 0.208,
         "n_total_behaviors": 500,
         "attacks": {
           "DSN": 0.17,
@@ -120918,6 +121009,14 @@
           "PAIR": 0.1,
           "random_search": 0.01,
           "direct": 0.07
+        },
+        "attacks_legacy": {
+          "DSN": 0.48,
+          "GCG": 0.38,
+          "JBC": 0.07,
+          "PAIR": 0.09,
+          "random_search": 0.02,
+          "direct": 0.02
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
@@ -132098,6 +132197,7 @@
       "jbb": {
         "source_file": "jbb_all_epe_1p_bce_mixsft_20260422_094159",
         "overall_asr": 0.024,
+        "overall_asr_legacy": 0.028,
         "n_total_behaviors": 500,
         "attacks": {
           "DSN": 0.01,
@@ -132105,6 +132205,14 @@
           "JBC": 0.0,
           "PAIR": 0.09,
           "direct": 0.04,
+          "random_search": 0.0
+        },
+        "attacks_legacy": {
+          "DSN": 0.03,
+          "GCG": 0.02,
+          "JBC": 0.0,
+          "PAIR": 0.09,
+          "direct": 0.03,
           "random_search": 0.0
         },
         "judge_version": "v5-f00d51fe",
@@ -141352,6 +141460,7 @@
       "jbb": {
         "source_file": "jbb_all_epe_1p_bce_mixsft_def_20260418_195121",
         "overall_asr": 0.022,
+        "overall_asr_legacy": 0.032,
         "n_total_behaviors": 500,
         "attacks": {
           "DSN": 0.01,
@@ -141360,6 +141469,14 @@
           "PAIR": 0.07,
           "random_search": 0.0,
           "direct": 0.02
+        },
+        "attacks_legacy": {
+          "DSN": 0.04,
+          "GCG": 0.04,
+          "JBC": 0.0,
+          "PAIR": 0.08,
+          "random_search": 0.0,
+          "direct": 0.0
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
@@ -150507,6 +150624,7 @@
       "jbb": {
         "source_file": "jbb_all_epe_1p_bce_mixsft_nonl_20260421_210634",
         "overall_asr": 0.016,
+        "overall_asr_legacy": 0.02,
         "n_total_behaviors": 500,
         "attacks": {
           "DSN": 0.01,
@@ -150515,6 +150633,14 @@
           "PAIR": 0.05,
           "direct": 0.02,
           "random_search": 0.01
+        },
+        "attacks_legacy": {
+          "DSN": 0.03,
+          "GCG": 0.03,
+          "JBC": 0.0,
+          "PAIR": 0.04,
+          "direct": 0.02,
+          "random_search": 0.0
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
@@ -161343,6 +161469,7 @@
       "jbb": {
         "source_file": "jbb_all_epe_1p_bce_sft_20260422_094052",
         "overall_asr": 0.064,
+        "overall_asr_legacy": 0.1,
         "n_total_behaviors": 500,
         "attacks": {
           "DSN": 0.12,
@@ -161351,6 +161478,14 @@
           "PAIR": 0.09,
           "direct": 0.05,
           "random_search": 0.0
+        },
+        "attacks_legacy": {
+          "DSN": 0.23,
+          "GCG": 0.13,
+          "JBC": 0.0,
+          "PAIR": 0.09,
+          "direct": 0.02,
+          "random_search": 0.05
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
@@ -170338,6 +170473,7 @@
       "jbb": {
         "source_file": "jbb_all_epe_1p_bce_sft_def_20260419_111040",
         "overall_asr": 0.074,
+        "overall_asr_legacy": 0.126,
         "n_total_behaviors": 500,
         "attacks": {
           "DSN": 0.14,
@@ -170346,6 +170482,14 @@
           "PAIR": 0.13,
           "random_search": 0.0,
           "direct": 0.02
+        },
+        "attacks_legacy": {
+          "DSN": 0.28,
+          "GCG": 0.14,
+          "JBC": 0.04,
+          "PAIR": 0.14,
+          "random_search": 0.03,
+          "direct": 0.0
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
@@ -181541,6 +181685,7 @@
       "jbb": {
         "source_file": "jbb_all_epe_1p_bugged_sft_20260417_124114",
         "overall_asr": 0.236,
+        "overall_asr_legacy": 0.236,
         "n_total_behaviors": 500,
         "attacks": {
           "DSN": 0.35,
@@ -181549,6 +181694,14 @@
           "PAIR": 0.24,
           "random_search": 0.05,
           "direct": 0.4
+        },
+        "attacks_legacy": {
+          "DSN": null,
+          "GCG": null,
+          "JBC": null,
+          "PAIR": null,
+          "random_search": null,
+          "direct": 0.46
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
@@ -189964,6 +190117,7 @@
       "jbb": {
         "source_file": "jbb_all_epe_1p_bugged_sft_def_20260417_130327",
         "overall_asr": 0.2,
+        "overall_asr_legacy": 0.2,
         "n_total_behaviors": 500,
         "attacks": {
           "DSN": 0.51,
@@ -189972,6 +190126,14 @@
           "PAIR": 0.08,
           "random_search": 0.04,
           "direct": 0.06
+        },
+        "attacks_legacy": {
+          "DSN": null,
+          "GCG": null,
+          "JBC": null,
+          "PAIR": null,
+          "random_search": null,
+          "direct": 0.03
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
@@ -200608,6 +200770,7 @@
       "jbb": {
         "source_file": "jbb_all_epe_1p_nobce_mixsft_20260422_093913",
         "overall_asr": 0.028,
+        "overall_asr_legacy": 0.032,
         "n_total_behaviors": 500,
         "attacks": {
           "DSN": 0.07,
@@ -200615,6 +200778,14 @@
           "JBC": 0.02,
           "PAIR": 0.04,
           "direct": 0.07,
+          "random_search": 0.0
+        },
+        "attacks_legacy": {
+          "DSN": 0.1,
+          "GCG": 0.04,
+          "JBC": 0.0,
+          "PAIR": 0.02,
+          "direct": 0.03,
           "random_search": 0.0
         },
         "judge_version": "v5-f00d51fe",
@@ -209844,6 +210015,7 @@
       "jbb": {
         "source_file": "jbb_all_epe_1p_nobce_mixsft_cato_20260421_210943",
         "overall_asr": 0.02,
+        "overall_asr_legacy": 0.022,
         "n_total_behaviors": 500,
         "attacks": {
           "DSN": 0.02,
@@ -209851,6 +210023,14 @@
           "JBC": 0.03,
           "PAIR": 0.03,
           "direct": 0.05,
+          "random_search": 0.0
+        },
+        "attacks_legacy": {
+          "DSN": 0.06,
+          "GCG": 0.02,
+          "JBC": 0.0,
+          "PAIR": 0.03,
+          "direct": 0.06,
           "random_search": 0.0
         },
         "judge_version": "v5-f00d51fe",
@@ -220672,6 +220852,7 @@
       "jbb": {
         "source_file": "jbb_all_epe_1p_nobce_mixsft_def_20260418_194958",
         "overall_asr": 0.02,
+        "overall_asr_legacy": 0.04,
         "n_total_behaviors": 500,
         "attacks": {
           "DSN": 0.03,
@@ -220680,6 +220861,14 @@
           "PAIR": 0.06,
           "random_search": 0.0,
           "direct": 0.04
+        },
+        "attacks_legacy": {
+          "DSN": 0.07,
+          "GCG": 0.04,
+          "JBC": 0.0,
+          "PAIR": 0.09,
+          "random_search": 0.0,
+          "direct": 0.03
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
@@ -229827,10 +230016,19 @@
       "jbb": {
         "source_file": "jbb_all_epe_1p_nobce_mixsft_nonl_20260421_210634",
         "overall_asr": 0.012,
+        "overall_asr_legacy": 0.014,
         "n_total_behaviors": 500,
         "attacks": {
           "DSN": 0.02,
           "GCG": 0.02,
+          "JBC": 0.0,
+          "PAIR": 0.02,
+          "direct": 0.05,
+          "random_search": 0.0
+        },
+        "attacks_legacy": {
+          "DSN": 0.04,
+          "GCG": 0.01,
           "JBC": 0.0,
           "PAIR": 0.02,
           "direct": 0.05,
@@ -242720,6 +242918,7 @@
       "jbb": {
         "source_file": "jbb_all_epe_1p_nobce_noctx_pbsft_20260511_114550",
         "overall_asr": 0.016,
+        "overall_asr_legacy": 0.002,
         "n_total_behaviors": 500,
         "attacks": {
           "DSN": 0.02,
@@ -242728,6 +242927,14 @@
           "PAIR": 0.0,
           "direct": 0.03,
           "random_search": 0.0
+        },
+        "attacks_legacy": {
+          "DSN": 0.0,
+          "GCG": 0.0,
+          "JBC": 0.0,
+          "PAIR": 0.0,
+          "direct": 0.01,
+          "random_search": 0.01
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
@@ -252965,6 +253172,7 @@
       "jbb": {
         "source_file": "jbb_all_epe_1p_nobce_noctx_pbsft3_20260511_114552",
         "overall_asr": 0.04,
+        "overall_asr_legacy": 0.034,
         "n_total_behaviors": 500,
         "attacks": {
           "DSN": 0.1,
@@ -252973,6 +253181,14 @@
           "PAIR": 0.07,
           "direct": 0.01,
           "random_search": 0.01
+        },
+        "attacks_legacy": {
+          "DSN": 0.11,
+          "GCG": 0.0,
+          "JBC": 0.01,
+          "PAIR": 0.03,
+          "direct": 0.0,
+          "random_search": 0.02
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
@@ -263321,6 +263537,7 @@
       "jbb": {
         "source_file": "jbb_all_epe_1p_nobce_pbsft_20260421_211116",
         "overall_asr": 0.026,
+        "overall_asr_legacy": 0.002,
         "n_total_behaviors": 500,
         "attacks": {
           "DSN": 0.02,
@@ -263328,6 +263545,14 @@
           "JBC": 0.07,
           "PAIR": 0.0,
           "direct": 0.04,
+          "random_search": 0.0
+        },
+        "attacks_legacy": {
+          "DSN": 0.0,
+          "GCG": 0.01,
+          "JBC": 0.0,
+          "PAIR": 0.0,
+          "direct": 0.03,
           "random_search": 0.0
         },
         "judge_version": "v5-f00d51fe",
@@ -273822,6 +274047,7 @@
       "jbb": {
         "source_file": "jbb_all_epe_1p_nobce_pbsft3_20260511_114552",
         "overall_asr": 0.022,
+        "overall_asr_legacy": 0.01,
         "n_total_behaviors": 500,
         "attacks": {
           "DSN": 0.01,
@@ -273829,6 +274055,14 @@
           "JBC": 0.04,
           "PAIR": 0.01,
           "direct": 0.04,
+          "random_search": 0.02
+        },
+        "attacks_legacy": {
+          "DSN": 0.0,
+          "GCG": 0.02,
+          "JBC": 0.0,
+          "PAIR": 0.01,
+          "direct": 0.01,
           "random_search": 0.02
         },
         "judge_version": "v5-f00d51fe",
@@ -286211,6 +286445,7 @@
       "jbb": {
         "source_file": "jbb_all_epe_1p_nobce_refend_mixsft_def_20260421_172725",
         "overall_asr": 0.024,
+        "overall_asr_legacy": 0.04,
         "n_total_behaviors": 500,
         "attacks": {
           "DSN": 0.04,
@@ -286218,6 +286453,14 @@
           "JBC": 0.0,
           "PAIR": 0.07,
           "direct": 0.03,
+          "random_search": 0.0
+        },
+        "attacks_legacy": {
+          "DSN": 0.09,
+          "GCG": 0.02,
+          "JBC": 0.0,
+          "PAIR": 0.09,
+          "direct": 0.02,
           "random_search": 0.0
         },
         "judge_version": "v5-f00d51fe",
@@ -296966,6 +297209,7 @@
       "jbb": {
         "source_file": "jbb_all_epe_1p_nobce_refend_mixsft_nonl_20260421_210838",
         "overall_asr": 0.042,
+        "overall_asr_legacy": 0.056,
         "n_total_behaviors": 500,
         "attacks": {
           "DSN": 0.16,
@@ -296974,6 +297218,14 @@
           "PAIR": 0.02,
           "direct": 0.01,
           "random_search": 0.01
+        },
+        "attacks_legacy": {
+          "DSN": 0.21,
+          "GCG": 0.03,
+          "JBC": 0.0,
+          "PAIR": 0.04,
+          "direct": 0.0,
+          "random_search": 0.0
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
@@ -307721,6 +307973,7 @@
       "jbb": {
         "source_file": "jbb_all_epe_1p_nobce_sft_20260422_093840",
         "overall_asr": 0.086,
+        "overall_asr_legacy": 0.114,
         "n_total_behaviors": 500,
         "attacks": {
           "DSN": 0.2,
@@ -307729,6 +307982,14 @@
           "PAIR": 0.07,
           "direct": 0.02,
           "random_search": 0.0
+        },
+        "attacks_legacy": {
+          "DSN": 0.25,
+          "GCG": 0.2,
+          "JBC": 0.03,
+          "PAIR": 0.08,
+          "direct": 0.02,
+          "random_search": 0.01
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
@@ -316716,6 +316977,7 @@
       "jbb": {
         "source_file": "jbb_all_epe_1p_nobce_sft_def_20260419_112635",
         "overall_asr": 0.088,
+        "overall_asr_legacy": 0.144,
         "n_total_behaviors": 500,
         "attacks": {
           "DSN": 0.19,
@@ -316724,6 +316986,14 @@
           "PAIR": 0.11,
           "random_search": 0.0,
           "direct": 0.05
+        },
+        "attacks_legacy": {
+          "DSN": 0.37,
+          "GCG": 0.2,
+          "JBC": 0.01,
+          "PAIR": 0.07,
+          "random_search": 0.07,
+          "direct": 0.04
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
@@ -327919,6 +328189,7 @@
       "jbb": {
         "source_file": "jbb_all_epe_3p_bce_mixsft_20260421_233213",
         "overall_asr": 0.038,
+        "overall_asr_legacy": 0.044,
         "n_total_behaviors": 500,
         "attacks": {
           "DSN": 0.05,
@@ -327926,6 +328197,14 @@
           "JBC": 0.02,
           "PAIR": 0.09,
           "direct": 0.05,
+          "random_search": 0.0
+        },
+        "attacks_legacy": {
+          "DSN": 0.09,
+          "GCG": 0.03,
+          "JBC": 0.0,
+          "PAIR": 0.1,
+          "direct": 0.08,
           "random_search": 0.0
         },
         "judge_version": "v5-f00d51fe",
@@ -337074,6 +337353,7 @@
       "jbb": {
         "source_file": "jbb_all_epe_3p_bce_mixsft_def_20260419_120026",
         "overall_asr": 0.022,
+        "overall_asr_legacy": 0.034,
         "n_total_behaviors": 500,
         "attacks": {
           "DSN": 0.03,
@@ -337082,6 +337362,14 @@
           "PAIR": 0.06,
           "random_search": 0.0,
           "direct": 0.02
+        },
+        "attacks_legacy": {
+          "DSN": 0.04,
+          "GCG": 0.04,
+          "JBC": 0.0,
+          "PAIR": 0.09,
+          "random_search": 0.0,
+          "direct": 0.01
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
@@ -346223,11 +346511,20 @@
       "jbb": {
         "source_file": "jbb_all_epe_3p_bce_mixsft_nonl_20260421_210704",
         "overall_asr": 0.02,
+        "overall_asr_legacy": 0.024,
         "n_total_behaviors": 500,
         "attacks": {
           "DSN": 0.0,
           "GCG": 0.02,
           "JBC": 0.02,
+          "PAIR": 0.06,
+          "direct": 0.02,
+          "random_search": 0.0
+        },
+        "attacks_legacy": {
+          "DSN": 0.03,
+          "GCG": 0.03,
+          "JBC": 0.0,
           "PAIR": 0.06,
           "direct": 0.02,
           "random_search": 0.0
@@ -356978,6 +357275,7 @@
       "jbb": {
         "source_file": "jbb_all_epe_3p_bce_sft_20260421_225525",
         "overall_asr": 0.106,
+        "overall_asr_legacy": 0.164,
         "n_total_behaviors": 500,
         "attacks": {
           "DSN": 0.19,
@@ -356986,6 +357284,14 @@
           "PAIR": 0.06,
           "direct": 0.03,
           "random_search": 0.0
+        },
+        "attacks_legacy": {
+          "DSN": 0.39,
+          "GCG": 0.37,
+          "JBC": 0.0,
+          "PAIR": 0.04,
+          "direct": 0.01,
+          "random_search": 0.02
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
@@ -365973,6 +366279,7 @@
       "jbb": {
         "source_file": "jbb_all_epe_3p_bce_sft_def_20260419_114021",
         "overall_asr": 0.066,
+        "overall_asr_legacy": 0.128,
         "n_total_behaviors": 500,
         "attacks": {
           "DSN": 0.12,
@@ -365981,6 +366288,14 @@
           "PAIR": 0.08,
           "random_search": 0.0,
           "direct": 0.04
+        },
+        "attacks_legacy": {
+          "DSN": 0.22,
+          "GCG": 0.27,
+          "JBC": 0.02,
+          "PAIR": 0.1,
+          "random_search": 0.03,
+          "direct": 0.03
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
@@ -377176,6 +377491,7 @@
       "jbb": {
         "source_file": "jbb_all_epe_3p_bugged_sft_20260417_134357",
         "overall_asr": 0.07,
+        "overall_asr_legacy": 0.07,
         "n_total_behaviors": 500,
         "attacks": {
           "DSN": 0.11,
@@ -377184,6 +377500,14 @@
           "PAIR": 0.07,
           "random_search": 0.01,
           "direct": 0.02
+        },
+        "attacks_legacy": {
+          "DSN": null,
+          "GCG": null,
+          "JBC": null,
+          "PAIR": null,
+          "random_search": null,
+          "direct": 0.03
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
@@ -385599,6 +385923,7 @@
       "jbb": {
         "source_file": "jbb_all_epe_3p_bugged_sft_def_20260417_134430",
         "overall_asr": 0.202,
+        "overall_asr_legacy": 0.202,
         "n_total_behaviors": 500,
         "attacks": {
           "DSN": 0.49,
@@ -385607,6 +385932,14 @@
           "PAIR": 0.16,
           "random_search": 0.0,
           "direct": 0.06
+        },
+        "attacks_legacy": {
+          "DSN": null,
+          "GCG": null,
+          "JBC": null,
+          "PAIR": null,
+          "random_search": null,
+          "direct": 0.03
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
@@ -396070,6 +396403,7 @@
       "jbb": {
         "source_file": "jbb_all_epe_3p_nobce_mixsft_20260421_225452",
         "overall_asr": 0.03,
+        "overall_asr_legacy": 0.032,
         "n_total_behaviors": 500,
         "attacks": {
           "DSN": 0.09,
@@ -396077,6 +396411,14 @@
           "JBC": 0.0,
           "PAIR": 0.06,
           "direct": 0.05,
+          "random_search": 0.0
+        },
+        "attacks_legacy": {
+          "DSN": 0.11,
+          "GCG": 0.0,
+          "JBC": 0.0,
+          "PAIR": 0.05,
+          "direct": 0.02,
           "random_search": 0.0
         },
         "judge_version": "v5-f00d51fe",
@@ -405225,6 +405567,7 @@
       "jbb": {
         "source_file": "jbb_all_epe_3p_nobce_mixsft_cato_20260421_210602",
         "overall_asr": 0.028,
+        "overall_asr_legacy": 0.044,
         "n_total_behaviors": 500,
         "attacks": {
           "DSN": 0.08,
@@ -405233,6 +405576,14 @@
           "PAIR": 0.05,
           "direct": 0.07,
           "random_search": 0.0
+        },
+        "attacks_legacy": {
+          "DSN": 0.1,
+          "GCG": 0.07,
+          "JBC": 0.0,
+          "PAIR": 0.04,
+          "direct": 0.06,
+          "random_search": 0.01
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
@@ -415980,6 +416331,7 @@
       "jbb": {
         "source_file": "jbb_all_epe_3p_nobce_mixsft_def_20260419_120054",
         "overall_asr": 0.026,
+        "overall_asr_legacy": 0.036,
         "n_total_behaviors": 500,
         "attacks": {
           "DSN": 0.05,
@@ -415988,6 +416340,14 @@
           "PAIR": 0.08,
           "random_search": 0.0,
           "direct": 0.05
+        },
+        "attacks_legacy": {
+          "DSN": 0.07,
+          "GCG": 0.04,
+          "JBC": 0.0,
+          "PAIR": 0.07,
+          "random_search": 0.0,
+          "direct": 0.03
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
@@ -425135,6 +425495,7 @@
       "jbb": {
         "source_file": "jbb_all_epe_3p_nobce_mixsft_nonl_20260421_210704",
         "overall_asr": 0.036,
+        "overall_asr_legacy": 0.046,
         "n_total_behaviors": 500,
         "attacks": {
           "DSN": 0.09,
@@ -425143,6 +425504,14 @@
           "PAIR": 0.04,
           "direct": 0.04,
           "random_search": 0.0
+        },
+        "attacks_legacy": {
+          "DSN": 0.08,
+          "GCG": 0.07,
+          "JBC": 0.0,
+          "PAIR": 0.07,
+          "direct": 0.04,
+          "random_search": 0.01
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
@@ -437938,6 +438307,7 @@
       "jbb": {
         "source_file": "jbb_all_epe_3p_nobce_noctx_pbsft_20260511_114550",
         "overall_asr": 0.054,
+        "overall_asr_legacy": 0.01,
         "n_total_behaviors": 500,
         "attacks": {
           "DSN": 0.1,
@@ -437946,6 +438316,14 @@
           "PAIR": 0.01,
           "direct": 0.06,
           "random_search": 0.06
+        },
+        "attacks_legacy": {
+          "DSN": 0.04,
+          "GCG": 0.01,
+          "JBC": 0.0,
+          "PAIR": 0.0,
+          "direct": 0.02,
+          "random_search": 0.0
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
@@ -448183,6 +448561,7 @@
       "jbb": {
         "source_file": "jbb_all_epe_3p_nobce_noctx_pbsft3_20260511_114550",
         "overall_asr": 0.044,
+        "overall_asr_legacy": 0.046,
         "n_total_behaviors": 500,
         "attacks": {
           "DSN": 0.11,
@@ -448191,6 +448570,14 @@
           "PAIR": 0.01,
           "direct": 0.02,
           "random_search": 0.03
+        },
+        "attacks_legacy": {
+          "DSN": 0.14,
+          "GCG": 0.04,
+          "JBC": 0.0,
+          "PAIR": 0.03,
+          "direct": 0.01,
+          "random_search": 0.02
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
@@ -458539,6 +458926,7 @@
       "jbb": {
         "source_file": "jbb_all_epe_3p_nobce_pbsft_20260421_211149",
         "overall_asr": 0.034,
+        "overall_asr_legacy": 0.006,
         "n_total_behaviors": 500,
         "attacks": {
           "DSN": 0.04,
@@ -458547,6 +458935,14 @@
           "PAIR": 0.03,
           "direct": 0.03,
           "random_search": 0.03
+        },
+        "attacks_legacy": {
+          "DSN": 0.01,
+          "GCG": 0.0,
+          "JBC": 0.0,
+          "PAIR": 0.01,
+          "direct": 0.03,
+          "random_search": 0.01
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
@@ -469040,6 +469436,7 @@
       "jbb": {
         "source_file": "jbb_all_epe_3p_nobce_pbsft3_20260511_114557",
         "overall_asr": 0.052,
+        "overall_asr_legacy": 0.058,
         "n_total_behaviors": 500,
         "attacks": {
           "DSN": 0.13,
@@ -469048,6 +469445,14 @@
           "PAIR": 0.04,
           "direct": 0.03,
           "random_search": 0.05
+        },
+        "attacks_legacy": {
+          "DSN": 0.21,
+          "GCG": 0.02,
+          "JBC": 0.0,
+          "PAIR": 0.05,
+          "direct": 0.02,
+          "random_search": 0.01
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
@@ -479381,6 +479786,7 @@
       "jbb": {
         "source_file": "jbb_all_epe_3p_nobce_sft_20260421_225350",
         "overall_asr": 0.126,
+        "overall_asr_legacy": 0.158,
         "n_total_behaviors": 500,
         "attacks": {
           "DSN": 0.32,
@@ -479388,6 +479794,14 @@
           "JBC": 0.0,
           "PAIR": 0.12,
           "direct": 0.03,
+          "random_search": 0.01
+        },
+        "attacks_legacy": {
+          "DSN": 0.48,
+          "GCG": 0.2,
+          "JBC": 0.0,
+          "PAIR": 0.1,
+          "direct": 0.02,
           "random_search": 0.01
         },
         "judge_version": "v5-f00d51fe",
@@ -488376,6 +488790,7 @@
       "jbb": {
         "source_file": "jbb_all_epe_3p_nobce_sft_def_20260419_115949",
         "overall_asr": 0.128,
+        "overall_asr_legacy": 0.172,
         "n_total_behaviors": 500,
         "attacks": {
           "DSN": 0.32,
@@ -488383,6 +488798,14 @@
           "JBC": 0.0,
           "PAIR": 0.13,
           "random_search": 0.01,
+          "direct": 0.04
+        },
+        "attacks_legacy": {
+          "DSN": 0.47,
+          "GCG": 0.19,
+          "JBC": 0.0,
+          "PAIR": 0.14,
+          "random_search": 0.06,
           "direct": 0.04
         },
         "judge_version": "v5-f00d51fe",
@@ -499573,6 +499996,7 @@
       "jbb": {
         "source_file": "jbb_all_safelm-1.7b-instruct_20260402_174152",
         "overall_asr": 0.012,
+        "overall_asr_legacy": 0.02,
         "n_total_behaviors": 500,
         "attacks": {
           "DSN": 0.03,
@@ -499581,6 +500005,14 @@
           "PAIR": 0.03,
           "random_search": 0.0,
           "direct": 0.01
+        },
+        "attacks_legacy": {
+          "DSN": 0.03,
+          "GCG": 0.01,
+          "JBC": 0.0,
+          "PAIR": 0.05,
+          "random_search": 0.01,
+          "direct": 0.0
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
@@ -510432,6 +510864,7 @@
       "jbb": {
         "source_file": "jbb_all_sdsp_judge_0_1_mixsft_20260425_181106",
         "overall_asr": 0.062,
+        "overall_asr_legacy": 0.046,
         "n_total_behaviors": 500,
         "attacks": {
           "DSN": 0.08,
@@ -510440,6 +510873,14 @@
           "PAIR": 0.12,
           "direct": 0.08,
           "random_search": 0.01
+        },
+        "attacks_legacy": {
+          "DSN": 0.05,
+          "GCG": 0.06,
+          "JBC": 0.0,
+          "PAIR": 0.1,
+          "direct": 0.05,
+          "random_search": 0.02
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
@@ -523139,6 +523580,7 @@
       "jbb": {
         "source_file": "jbb_all_sdsp_judge_1_1_mixsft_20260425_180957",
         "overall_asr": 0.034,
+        "overall_asr_legacy": 0.04,
         "n_total_behaviors": 500,
         "attacks": {
           "DSN": 0.03,
@@ -523146,6 +523588,14 @@
           "JBC": 0.02,
           "PAIR": 0.12,
           "direct": 0.02,
+          "random_search": 0.0
+        },
+        "attacks_legacy": {
+          "DSN": 0.06,
+          "GCG": 0.04,
+          "JBC": 0.01,
+          "PAIR": 0.09,
+          "direct": 0.03,
           "random_search": 0.0
         },
         "judge_version": "v5-f00d51fe",
@@ -533813,6 +534263,7 @@
       "jbb": {
         "source_file": "jbb_all_smollm_sft_20260419_105945",
         "overall_asr": 0.478,
+        "overall_asr_legacy": 0.472,
         "n_total_behaviors": 500,
         "attacks": {
           "DSN": 0.63,
@@ -533821,6 +534272,14 @@
           "PAIR": 0.48,
           "random_search": 0.0,
           "direct": 0.49
+        },
+        "attacks_legacy": {
+          "DSN": 0.7,
+          "GCG": 0.57,
+          "JBC": 0.6,
+          "PAIR": 0.45,
+          "random_search": 0.04,
+          "direct": 0.46
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
