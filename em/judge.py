@@ -13,6 +13,7 @@ Based on: https://github.com/Butanium/emergent-misalignment (open_models/judge.p
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import math
 import os
 import re
@@ -233,22 +234,29 @@ _SCORE_RE = re.compile(r"SCORE\s*[:=]\s*(\d{1,3})", re.IGNORECASE)
 
 
 def rule_judge_version(prompt_path: Path | None = None) -> str:
-    """Return the canonical 'v5-<sha8>' stamp for the current prompt body.
+    """Content-hash stamp for the **rule-based safety judge** prompt.
 
-    Every safety eval runner that uses RuleBasedJudge calls this and stamps
-    the result into its output metadata so the dashboard's Judge versions
-    tab can render v5 (the green badge) instead of falling back to legacy.
+    Format: ``"v5-<first 8 hex of sha256(prompt body)>"``. If the prompt body
+    changes, the hash changes — old stamps no longer match and re-rejudge is
+    required. Called by every safety-eval runner that uses ``RuleBasedJudge``
+    so the dashboard's Judge versions tab renders v5 instead of falling
+    back to legacy.
 
-    Mirrors judge_audit/rejudge_runs.py's _judge_version_stamp() — keeping
-    one canonical hash function across the repo means a prompt edit auto-
-    busts the stamp everywhere on the next run."""
-    import hashlib
+    Raises ``FileNotFoundError``/``OSError`` if the prompt file is missing.
+    The previous ``return "v5"`` fallback masked a meaningful error
+    (judge_audit/judge_prompt.md got moved or deleted); the caller would
+    silently stamp a meaningless hash. Crashing the runner is the correct
+    response — you can't run a rule judge without its prompt.
+
+    DO NOT call this from EM, over-refusal, or any other bench whose judge
+    has its own version lifecycle — they'd get ``"v5-<rulehash>"`` stamped
+    on their cells, which falsely conflates them with the rule-judge family
+    and defeats the validator's family-scoped uniformity check. Use a
+    bench-local stamping function instead.
+    """
     p = Path(prompt_path) if prompt_path is not None else DEFAULT_RULE_PROMPT_PATH
-    try:
-        h = hashlib.sha256(p.read_bytes()).hexdigest()[:8]
-        return f"v5-{h}"
-    except Exception:
-        return "v5"
+    h = hashlib.sha256(p.read_bytes()).hexdigest()[:8]
+    return f"v5-{h}"
 
 
 def rule_judge_rejudged_at() -> str:
