@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-15T16:10:31",
+  "generated_at": "2026-05-15T16:20:58",
   "groups": {
     "base": [
       {
@@ -541,22 +541,34 @@
           "JailbreakBench": {
             "asr": 0.06,
             "mean_score": 4.7,
-            "n": 100
+            "n": 100,
+            "asr_legacy": 0.26,
+            "mean_score_legacy": 25.616562187722533,
+            "n_legacy": 100
           },
           "AdvBench": {
             "asr": 0.057692307692307696,
             "mean_score": 5.134615384615385,
-            "n": 520
+            "n": 520,
+            "asr_legacy": 0.38653846153846155,
+            "mean_score_legacy": 38.47642253887168,
+            "n_legacy": 520
           },
           "TDC": {
             "asr": 0.04,
             "mean_score": 3.6,
-            "n": 50
+            "n": 50,
+            "asr_legacy": 0.28,
+            "mean_score_legacy": 24.539832493184395,
+            "n_legacy": 50
           },
           "HarmBench": {
             "asr": 0.03125,
             "mean_score": 2.796875,
-            "n": 320
+            "n": 320,
+            "asr_legacy": 0.24375,
+            "mean_score_legacy": 24.4891276078989,
+            "n_legacy": 320
           }
         },
         "overall_asr_legacy": 0.32222222222222224,
@@ -2590,22 +2602,34 @@
           "JailbreakBench": {
             "asr": 0.08,
             "mean_score": 7.2,
-            "n": 100
+            "n": 100,
+            "asr_legacy": 0.35,
+            "mean_score_legacy": 36.054613447368595,
+            "n_legacy": 100
           },
           "AdvBench": {
             "asr": 0.07692307692307693,
             "mean_score": 6.673076923076923,
-            "n": 520
+            "n": 520,
+            "asr_legacy": 0.41346153846153844,
+            "mean_score_legacy": 39.287313871390936,
+            "n_legacy": 520
           },
           "TDC": {
             "asr": 0.04,
             "mean_score": 4.4,
-            "n": 50
+            "n": 50,
+            "asr_legacy": 0.34,
+            "mean_score_legacy": 32.31270464927318,
+            "n_legacy": 50
           },
           "HarmBench": {
             "asr": 0.06875,
             "mean_score": 5.953125,
-            "n": 320
+            "n": 320,
+            "asr_legacy": 0.30625,
+            "mean_score_legacy": 30.150825401623525,
+            "n_legacy": 320
           }
         },
         "overall_asr_legacy": 0.3686868686868687,
@@ -44213,22 +44237,34 @@
           "JailbreakBench": {
             "asr": 0.16,
             "mean_score": 15.055046508643596,
-            "n": 100
+            "n": 100,
+            "asr_legacy": 0.16,
+            "mean_score_legacy": 15.055046508643592,
+            "n_legacy": 100
           },
           "AdvBench": {
             "asr": 0.2423076923076923,
             "mean_score": 24.071893476962135,
-            "n": 520
+            "n": 520,
+            "asr_legacy": 0.2423076923076923,
+            "mean_score_legacy": 24.071893476962142,
+            "n_legacy": 520
           },
           "TDC": {
             "asr": 0.18,
             "mean_score": 20.123076693628363,
-            "n": 50
+            "n": 50,
+            "asr_legacy": 0.18,
+            "mean_score_legacy": 20.12307669362836,
+            "n_legacy": 50
           },
           "HarmBench": {
             "asr": 0.209375,
             "mean_score": 19.289937249887508,
-            "n": 320
+            "n": 320,
+            "asr_legacy": 0.209375,
+            "mean_score_legacy": 19.289937249887505,
+            "n_legacy": 320
           }
         },
         "overall_asr_legacy": 0.2202020202020202,
@@ -160389,22 +160425,34 @@
           "JailbreakBench": {
             "asr": 0.01,
             "mean_score": 0.75,
-            "n": 100
+            "n": 100,
+            "asr_legacy": 0.26,
+            "mean_score_legacy": 26.26018015419471,
+            "n_legacy": 100
           },
           "AdvBench": {
             "asr": 0.046153846153846156,
             "mean_score": 3.826923076923077,
-            "n": 520
+            "n": 520,
+            "asr_legacy": 0.43653846153846154,
+            "mean_score_legacy": 41.42215141401996,
+            "n_legacy": 520
           },
           "TDC": {
             "asr": 0.06,
             "mean_score": 4.9,
-            "n": 50
+            "n": 50,
+            "asr_legacy": 0.4,
+            "mean_score_legacy": 41.919317703721596,
+            "n_legacy": 50
           },
           "HarmBench": {
             "asr": 0.01875,
             "mean_score": 1.671875,
-            "n": 320
+            "n": 320,
+            "asr_legacy": 0.296875,
+            "mean_score_legacy": 28.554203390822487,
+            "n_legacy": 320
           }
         },
         "overall_asr_legacy": 0.3717171717171717,
@@ -212972,22 +213020,34 @@
           "JailbreakBench": {
             "asr": 0.03,
             "mean_score": 2.9,
-            "n": 100
+            "n": 100,
+            "asr_legacy": 0.36,
+            "mean_score_legacy": 33.173680871834456,
+            "n_legacy": 100
           },
           "AdvBench": {
             "asr": 0.03461538461538462,
             "mean_score": 2.8076923076923075,
-            "n": 520
+            "n": 520,
+            "asr_legacy": 0.4096153846153846,
+            "mean_score_legacy": 40.61715306681328,
+            "n_legacy": 520
           },
           "TDC": {
             "asr": 0.06,
             "mean_score": 5.3,
-            "n": 50
+            "n": 50,
+            "asr_legacy": 0.32,
+            "mean_score_legacy": 33.963019912227765,
+            "n_legacy": 50
           },
           "HarmBench": {
             "asr": 0.01875,
             "mean_score": 1.765625,
-            "n": 320
+            "n": 320,
+            "asr_legacy": 0.284375,
+            "mean_score_legacy": 28.66744254901734,
+            "n_legacy": 320
           }
         },
         "overall_asr_legacy": 0.3595959595959596,
@@ -232097,22 +232157,34 @@
           "JailbreakBench": {
             "asr": 0.08,
             "mean_score": 6.75,
-            "n": 100
+            "n": 100,
+            "asr_legacy": 0.36,
+            "mean_score_legacy": 35.40670151664989,
+            "n_legacy": 100
           },
           "AdvBench": {
             "asr": 0.057692307692307696,
             "mean_score": 5.144230769230769,
-            "n": 520
+            "n": 520,
+            "asr_legacy": 0.4,
+            "mean_score_legacy": 38.266211634662156,
+            "n_legacy": 520
           },
           "TDC": {
             "asr": 0.06,
             "mean_score": 5.4,
-            "n": 50
+            "n": 50,
+            "asr_legacy": 0.26,
+            "mean_score_legacy": 26.60842057264556,
+            "n_legacy": 50
           },
           "HarmBench": {
             "asr": 0.034375,
             "mean_score": 3.359375,
-            "n": 320
+            "n": 320,
+            "asr_legacy": 0.271875,
+            "mean_score_legacy": 26.568822318206223,
+            "n_legacy": 320
           }
         },
         "overall_asr_legacy": 0.3474747474747475,
@@ -276895,22 +276967,34 @@
           "JailbreakBench": {
             "asr": 0.09,
             "mean_score": 7.5,
-            "n": 100
+            "n": 100,
+            "asr_legacy": 0.23,
+            "mean_score_legacy": 23.282432644288942,
+            "n_legacy": 100
           },
           "AdvBench": {
             "asr": 0.04230769230769231,
             "mean_score": 3.730769230769231,
-            "n": 520
+            "n": 520,
+            "asr_legacy": 0.25769230769230766,
+            "mean_score_legacy": 25.8544708293154,
+            "n_legacy": 520
           },
           "TDC": {
             "asr": 0.06,
             "mean_score": 5.6,
-            "n": 50
+            "n": 50,
+            "asr_legacy": 0.16,
+            "mean_score_legacy": 16.584309908471948,
+            "n_legacy": 50
           },
           "HarmBench": {
             "asr": 0.021875,
             "mean_score": 1.859375,
-            "n": 320
+            "n": 320,
+            "asr_legacy": 0.165625,
+            "mean_score_legacy": 16.984675183907225,
+            "n_legacy": 320
           }
         },
         "overall_asr_legacy": 0.2202020202020202,
@@ -334915,22 +334999,34 @@
           "JailbreakBench": {
             "asr": 0.06,
             "mean_score": 5.6,
-            "n": 100
+            "n": 100,
+            "asr_legacy": 0.28,
+            "mean_score_legacy": 27.403257943098456,
+            "n_legacy": 100
           },
           "AdvBench": {
             "asr": 0.06153846153846154,
             "mean_score": 5.1826923076923075,
-            "n": 520
+            "n": 520,
+            "asr_legacy": 0.425,
+            "mean_score_legacy": 40.61871506078888,
+            "n_legacy": 520
           },
           "TDC": {
             "asr": 0.0,
             "mean_score": 0.2,
-            "n": 50
+            "n": 50,
+            "asr_legacy": 0.38,
+            "mean_score_legacy": 35.89321490963616,
+            "n_legacy": 50
           },
           "HarmBench": {
             "asr": 0.034375,
             "mean_score": 2.953125,
-            "n": 320
+            "n": 320,
+            "asr_legacy": 0.24375,
+            "mean_score_legacy": 24.182334173413473,
+            "n_legacy": 320
           }
         },
         "overall_asr_legacy": 0.34949494949494947,
@@ -379135,22 +379231,34 @@
           "JailbreakBench": {
             "asr": 0.06,
             "mean_score": 6.5,
-            "n": 100
+            "n": 100,
+            "asr_legacy": 0.31,
+            "mean_score_legacy": 30.93236644595256,
+            "n_legacy": 100
           },
           "AdvBench": {
             "asr": 0.03653846153846154,
             "mean_score": 3.0865384615384617,
-            "n": 520
+            "n": 520,
+            "asr_legacy": 0.4423076923076923,
+            "mean_score_legacy": 42.31112324143557,
+            "n_legacy": 520
           },
           "TDC": {
             "asr": 0.06,
             "mean_score": 4.0,
-            "n": 50
+            "n": 50,
+            "asr_legacy": 0.4,
+            "mean_score_legacy": 39.97923322087554,
+            "n_legacy": 50
           },
           "HarmBench": {
             "asr": 0.03125,
             "mean_score": 2.90625,
-            "n": 320
+            "n": 320,
+            "asr_legacy": 0.31875,
+            "mean_score_legacy": 30.283201427513774,
+            "n_legacy": 320
           }
         },
         "overall_asr_legacy": 0.38686868686868686,
@@ -431532,22 +431640,34 @@
           "JailbreakBench": {
             "asr": 0.06,
             "mean_score": 5.1,
-            "n": 100
+            "n": 100,
+            "asr_legacy": 0.4,
+            "mean_score_legacy": 38.14376304417594,
+            "n_legacy": 100
           },
           "AdvBench": {
             "asr": 0.028846153846153848,
             "mean_score": 2.7788461538461537,
-            "n": 520
+            "n": 520,
+            "asr_legacy": 0.4307692307692308,
+            "mean_score_legacy": 42.06040459842056,
+            "n_legacy": 520
           },
           "TDC": {
             "asr": 0.08,
             "mean_score": 7.2,
-            "n": 50
+            "n": 50,
+            "asr_legacy": 0.38,
+            "mean_score_legacy": 36.47980327566735,
+            "n_legacy": 50
           },
           "HarmBench": {
             "asr": 0.021875,
             "mean_score": 1.875,
-            "n": 320
+            "n": 320,
+            "asr_legacy": 0.24375,
+            "mean_score_legacy": 24.627531416405894,
+            "n_legacy": 320
           }
         },
         "overall_asr_legacy": 0.36464646464646466,
@@ -450657,22 +450777,34 @@
           "JailbreakBench": {
             "asr": 0.11,
             "mean_score": 9.4,
-            "n": 100
+            "n": 100,
+            "asr_legacy": 0.39,
+            "mean_score_legacy": 35.82269931494572,
+            "n_legacy": 100
           },
           "AdvBench": {
             "asr": 0.04038461538461539,
             "mean_score": 3.8461538461538463,
-            "n": 520
+            "n": 520,
+            "asr_legacy": 0.36346153846153845,
+            "mean_score_legacy": 36.04586070590043,
+            "n_legacy": 520
           },
           "TDC": {
             "asr": 0.06,
             "mean_score": 5.3,
-            "n": 50
+            "n": 50,
+            "asr_legacy": 0.46,
+            "mean_score_legacy": 39.94639735784393,
+            "n_legacy": 50
           },
           "HarmBench": {
             "asr": 0.046875,
             "mean_score": 3.796875,
-            "n": 320
+            "n": 320,
+            "asr_legacy": 0.303125,
+            "mean_score_legacy": 29.270578306196647,
+            "n_legacy": 320
           }
         },
         "overall_asr_legacy": 0.3515151515151515,
@@ -495038,22 +495170,34 @@
           "JailbreakBench": {
             "asr": 0.03,
             "mean_score": 2.8,
-            "n": 100
+            "n": 100,
+            "asr_legacy": 0.16,
+            "mean_score_legacy": 17.161976129953267,
+            "n_legacy": 100
           },
           "AdvBench": {
             "asr": 0.04230769230769231,
             "mean_score": 3.576923076923077,
-            "n": 520
+            "n": 520,
+            "asr_legacy": 0.2865384615384615,
+            "mean_score_legacy": 27.543294854969755,
+            "n_legacy": 520
           },
           "TDC": {
             "asr": 0.06,
             "mean_score": 5.8,
-            "n": 50
+            "n": 50,
+            "asr_legacy": 0.28,
+            "mean_score_legacy": 26.39135561348859,
+            "n_legacy": 50
           },
           "HarmBench": {
             "asr": 0.025,
             "mean_score": 2.296875,
-            "n": 320
+            "n": 320,
+            "asr_legacy": 0.1875,
+            "mean_score_legacy": 18.275705676546067,
+            "n_legacy": 320
           }
         },
         "overall_asr_legacy": 0.24141414141414141,
@@ -572457,22 +572601,34 @@
           "JailbreakBench": {
             "asr": 0.04,
             "mean_score": 3.2,
-            "n": 100
+            "n": 100,
+            "asr_legacy": 0.12,
+            "mean_score_legacy": 12.498946616060291,
+            "n_legacy": 100
           },
           "AdvBench": {
             "asr": 0.026923076923076925,
             "mean_score": 2.1923076923076925,
-            "n": 520
+            "n": 520,
+            "asr_legacy": 0.09423076923076923,
+            "mean_score_legacy": 9.319077889805373,
+            "n_legacy": 520
           },
           "TDC": {
             "asr": 0.04,
             "mean_score": 3.9,
-            "n": 50
+            "n": 50,
+            "asr_legacy": 0.16,
+            "mean_score_legacy": 18.132635429256297,
+            "n_legacy": 50
           },
           "HarmBench": {
             "asr": 0.015625,
             "mean_score": 1.546875,
-            "n": 320
+            "n": 320,
+            "asr_legacy": 0.10625,
+            "mean_score_legacy": 10.46801823920259,
+            "n_legacy": 320
           }
         },
         "overall_asr_legacy": 0.10404040404040404,
@@ -584079,22 +584235,34 @@
           "JailbreakBench": {
             "asr": 0.04,
             "mean_score": 4.1,
-            "n": 100
+            "n": 100,
+            "asr_legacy": 0.19,
+            "mean_score_legacy": 17.451745077875156,
+            "n_legacy": 100
           },
           "AdvBench": {
             "asr": 0.032692307692307694,
             "mean_score": 3.0384615384615383,
-            "n": 520
+            "n": 520,
+            "asr_legacy": 0.275,
+            "mean_score_legacy": 25.808041803806038,
+            "n_legacy": 520
           },
           "TDC": {
             "asr": 0.06,
             "mean_score": 5.0,
-            "n": 50
+            "n": 50,
+            "asr_legacy": 0.22,
+            "mean_score_legacy": 18.978154569686584,
+            "n_legacy": 50
           },
           "HarmBench": {
             "asr": 0.01875,
             "mean_score": 1.703125,
-            "n": 320
+            "n": 320,
+            "asr_legacy": 0.15625,
+            "mean_score_legacy": 15.21100556765813,
+            "n_legacy": 320
           }
         },
         "overall_asr_legacy": 0.22525252525252526,
@@ -597415,22 +597583,34 @@
           "JailbreakBench": {
             "asr": 0.01,
             "mean_score": 1.0,
-            "n": 100
+            "n": 100,
+            "asr_legacy": 0.24,
+            "mean_score_legacy": 23.567322322775176,
+            "n_legacy": 100
           },
           "AdvBench": {
             "asr": 0.026923076923076925,
             "mean_score": 2.25,
-            "n": 520
+            "n": 520,
+            "asr_legacy": 0.2423076923076923,
+            "mean_score_legacy": 24.280809643899072,
+            "n_legacy": 520
           },
           "TDC": {
             "asr": 0.02,
             "mean_score": 2.2,
-            "n": 50
+            "n": 50,
+            "asr_legacy": 0.18,
+            "mean_score_legacy": 20.161643291943538,
+            "n_legacy": 50
           },
           "HarmBench": {
             "asr": 0.03125,
             "mean_score": 2.609375,
-            "n": 320
+            "n": 320,
+            "asr_legacy": 0.19375,
+            "mean_score_legacy": 19.239047366522577,
+            "n_legacy": 320
           }
         },
         "overall_asr_legacy": 0.22323232323232323,

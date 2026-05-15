@@ -1780,11 +1780,14 @@ function renderSafetyBase(data) {
         overall_asr: pickASR(sb, 'overall_asr'),
         mean_score:  pickScore(sb, 'overall_mean_score'),
         // Per-source breakdowns inherit the parent safety_base cell's
-        // provenance — there's no separate stamp per source.
-        jbb:        v5Only(ps.JailbreakBench?.asr, sb.judge_version),
-        advbench:   v5Only(ps.AdvBench?.asr,     sb.judge_version),
-        tdc:        v5Only(ps.TDC?.asr,          sb.judge_version),
-        harmbench:  v5Only(ps.HarmBench?.asr,    sb.judge_version),
+        // provenance and route through pickPerSource so the legacy
+        // selector reads the asr_legacy sibling (computed by
+        // build_data._safety_base_legacy_per_source) rather than going
+        // MISSING wholesale.
+        jbb:        pickPerSource(ps.JailbreakBench, 'asr', sb.judge_version),
+        advbench:   pickPerSource(ps.AdvBench,       'asr', sb.judge_version),
+        tdc:        pickPerSource(ps.TDC,            'asr', sb.judge_version),
+        harmbench:  pickPerSource(ps.HarmBench,      'asr', sb.judge_version),
       },
     };
   });
@@ -4425,6 +4428,25 @@ function pickScore(obj, field) {
   return isV5Stamp(jv) ? obj[field] : MISSING;
 }
 
+// Resolve a per-source ASR/mean for the safety_base table under the active
+// judge selector. Each `per_source[<src>]` entry carries `asr` (v5) and,
+// when the legacy aggregate could be computed by build_data, `asr_legacy`.
+// Provenance is the PARENT safety_base cell's stamp — per_source entries
+// don't carry their own. Pattern mirrors pickScore:
+//   - v5 mode: parent must be v5-stamped, pull `field`. Else MISSING.
+//   - legacy mode: prefer `<field>_legacy` if present; else accept `field`
+//     when parent is legacy-stamped; else MISSING.
+function pickPerSource(src, field, parentJv) {
+  if (!src) return null;
+  if (activeJudge === 'legacy') {
+    const lk = field + '_legacy';
+    if (lk in src && src[lk] != null) return src[lk];
+    if (parentJv === 'legacy') return src[field] ?? null;
+    return MISSING;
+  }
+  return isV5Stamp(parentJv) ? (src[field] ?? null) : MISSING;
+}
+
 // For rule-judge family cells whose only value lives at `obj[field]` (no
 // separate `obj[field + '_legacy']` sidecar) — PEZ, JBB overall, per-source
 // breakdowns. Mirrors pickScore's provenance rule:
@@ -4753,6 +4775,29 @@ function bestDanASR(dan) {
   check('pickASR legacy mode refuses v5-only cell',
     pickASR({llm_asr: 0.5, scores: [60, 70], judge_version: 'v5-abc'}, 'llm_asr'),
     MISSING);
+  // pickASR under legacy: cell with scores_legacy renders even when parent is
+  // v5-stamped (legacy sidecar is the legitimate legacy source).
+  // 1 of 2 ≥ 50 → ASR = 0.5
+  check('pickASR legacy mode uses scores_legacy on v5-stamped cell',
+    pickASR({llm_asr: 0.5, scores_legacy: [30, 80], judge_version: 'v5-abc'}, 'llm_asr'),
+    0.5);
+  // ── pickPerSource: legacy/v5 routing for safety_base per-source ────────
+  // Parent stamp governs per-source entries (they don't carry their own jv).
+  activeJudge = 'v5';
+  check('pickPerSource v5 mode + v5 parent reads asr',
+    pickPerSource({asr: 0.1, asr_legacy: 0.2}, 'asr', 'v5-abc'), 0.1);
+  check('pickPerSource v5 mode + legacy parent → MISSING',
+    pickPerSource({asr: 0.1, asr_legacy: 0.2}, 'asr', 'legacy'), MISSING);
+  check('pickPerSource v5 mode + unstamped parent → MISSING',
+    pickPerSource({asr: 0.1, asr_legacy: 0.2}, 'asr', 'unstamped'), MISSING);
+  activeJudge = 'legacy';
+  check('pickPerSource legacy mode reads asr_legacy on v5 parent',
+    pickPerSource({asr: 0.1, asr_legacy: 0.2}, 'asr', 'v5-abc'), 0.2);
+  check('pickPerSource legacy mode + only asr + legacy parent → asr',
+    pickPerSource({asr: 0.1}, 'asr', 'legacy'), 0.1);
+  check('pickPerSource legacy mode + only asr + v5 parent → MISSING',
+    pickPerSource({asr: 0.1}, 'asr', 'v5-abc'), MISSING);
+  check('pickPerSource null src → null', pickPerSource(null, 'asr', 'v5-abc'), null);
   activeJudge = prev;
   if (failed === 0) console.log(`[selftest] ${total} OK`);
   else console.error(`[selftest] ${failed}/${total} FAILURES — see above`);
