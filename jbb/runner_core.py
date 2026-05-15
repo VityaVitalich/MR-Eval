@@ -18,7 +18,9 @@ from loguru import logger
 from transformers import AutoModelForCausalLM, AutoTokenizer, PreTrainedModel, PreTrainedTokenizerBase
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "em"))
 from banned_tokens import hf_bad_words_ids  # noqa: E402
+from judge import rule_judge_version  # type: ignore  # noqa: E402
 
 
 @dataclass
@@ -283,11 +285,18 @@ def _gather_records(local_records: list[dict[str, Any]]) -> list[dict[str, Any]]
     return merged
 
 
-def _classify_records(records: list[dict[str, Any]], judge_cfg: dict[str, Any]) -> list[bool]:
+def _classify_records(records: list[dict[str, Any]], judge_cfg: dict[str, Any]):
+    """Classify records and (when the rule judge is in use) return the
+    per-row 0-100 score + rationale alongside the binary verdict so the
+    runner can persist them. Falls back to (verdicts, None, None) for
+    judges that don't expose numeric scores."""
     judge = build_judge(judge_cfg)
     prompts = [record["prompt"] for record in records if record["prompt"] is not None]
     responses = [record["response"] for record in records if record["prompt"] is not None]
-    return judge.classify(prompts, responses)
+    verdicts = judge.classify(prompts, responses)
+    scores = getattr(judge, "last_scores", None)
+    raws = getattr(judge, "last_raws", None)
+    return verdicts, scores, raws
 
 
 def _summarize(
@@ -300,13 +309,19 @@ def _summarize(
     total = len(records)
     if total == 0:
         raise ValueError("No JailbreakBench records selected for evaluation.")
+    # Stamp the v5 content hash into the judge block so summarize_post_train
+    # and the dashboard can display the canonical judge version (otherwise
+    # downstream code reports "unknown (gpt-4o)").
+    judge_block = dict(cfg["judge"])
+    if judge_block.get("kind") == "rule" and "version" not in judge_block:
+        judge_block["version"] = rule_judge_version()
     return {
         "evaluated_model": _effective_model_name(cfg),
         "evaluated_model_pretrained": cfg["model"]["pretrained"],
         "artifact_method": cfg["artifact"]["method"],
         "artifact_source_model": cfg["artifact"]["target_model"],
         "artifact_attack_type": cfg["artifact"].get("attack_type"),
-        "judge": cfg["judge"],
+        "judge": judge_block,
         "num_total_behaviors": total,
         "num_submitted_prompts": submitted,
         "num_jailbroken": jailbroken,
@@ -419,11 +434,18 @@ def run_jbb(cfg: dict[str, Any]) -> None:
                 del tokenizer
                 if torch.cuda.is_available():
                     torch.cuda.empty_cache()
-            classifications = _classify_records(merged_records, cfg["judge"])
+            classifications, scores, raws = _classify_records(merged_records, cfg["judge"])
             cls_iter = iter(classifications)
+            score_iter = iter(scores) if scores else None
+            raw_iter = iter(raws) if raws else None
             for record in merged_records:
-                if record["prompt"] is not None:
-                    record["jailbroken"] = next(cls_iter)
+                if record["prompt"] is None:
+                    continue
+                record["jailbroken"] = next(cls_iter)
+                if score_iter is not None:
+                    record["llm_score"] = next(score_iter)
+                if raw_iter is not None:
+                    record["judge_raw"] = next(raw_iter)
             summary = _summarize(merged_records, cfg, artifact_parameters)
             _save_outputs(output_dir, cfg, summary, merged_records)
             logger.info(

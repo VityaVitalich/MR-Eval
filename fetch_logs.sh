@@ -19,19 +19,33 @@ HF_REPO="VityaVitalich/MR-Eval-logs"   # change to wherever you uploaded
 HF_FILE="eval_logs.tar.zst"            # filename within the dataset
 HF_REVISION="main"                     # branch / commit
 # Bundle integrity check (sha256 of the tarball at build time):
-EXPECTED_SHA256="f4a4be81906eb621e44340a8f92e1a446c1aedc3e4e9f8b4bedb60362f15bf5f"
+EXPECTED_SHA256="3af00a0b486847042dc648b3565f28403526840bfab3ed075b0c5f631f6789c0"
 # --------------------------------------------------
+# A pre-rejudge snapshot is also pinned at eval_logs_legacy.tar.zst on the
+# same dataset. Pass --legacy to fetch that instead — useful if you want to
+# rebuild the dashboard with pure-legacy LogprobJudge scores rather than
+# the side-by-side baked-in fields.
+HF_FILE_LEGACY="eval_logs_legacy.tar.zst"
+EXPECTED_SHA256_LEGACY="f4a5be8750a8b5524452d908b035c1303e9538584d1d305c1264afeff49dd267"
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$REPO_ROOT"
 
 SKIP_EXTRACT=0
+USE_LEGACY=0
 for arg in "$@"; do
     case "$arg" in
         --skip-extract) SKIP_EXTRACT=1 ;;
+        --legacy)       USE_LEGACY=1 ;;
         *) echo "unknown arg: $arg"; exit 1 ;;
     esac
 done
+
+if [[ "$USE_LEGACY" -eq 1 ]]; then
+    HF_FILE="$HF_FILE_LEGACY"
+    EXPECTED_SHA256="$EXPECTED_SHA256_LEGACY"
+    echo "▸ --legacy mode: fetching pre-rejudge snapshot"
+fi
 
 if ! command -v zstd >/dev/null 2>&1; then
     echo "ERROR: zstd not found. Install via 'brew install zstd' or 'apt install zstd'."

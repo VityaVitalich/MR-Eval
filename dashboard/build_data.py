@@ -15,6 +15,7 @@ Writes dashboard/data.json.
 from __future__ import annotations
 
 import json
+import os
 import re
 from collections import defaultdict
 from datetime import datetime
@@ -34,7 +35,21 @@ EVAL_DIRS        = [REPO / "logs" / "eval" / "eval", REPO / "logs" / "clariden" 
 JBB_DIRS         = [REPO / "logs" / "clariden" / "jbb"]
 PAP_DIRS         = [REPO / "logs" / "clariden" / "jailbreaks" / "persuasive_pap"]
 PEZ_ROOT         = REPO / "logs" / "clariden" / "pez" / "PEZ"
-OVERREFUSAL_DIRS      = [REPO / "logs" / "clariden" / "overrefusal"]
+OVERREFUSAL_DIRS      = [REPO / "logs" / "clariden" / "overrefusal",
+                         REPO / "overrefusal" / "outputs" / "overrefusal"]
+# Each bench writes `<prefix>_<alias>_<ts>.json` into one of OVERREFUSAL_DIRS.
+# We deliberately exclude OR-Bench-Hard and ORFuzz here — both were trialed
+# 2026-05-14 and judged unreliable (Hard's labels are noisy; ORFuzz's wrapper-
+# task framing makes "refusal" ambiguous). Raw files remain on disk but aren't
+# surfaced to the dashboard.
+OVERREFUSAL_BENCH_PREFIXES = {
+    "orbench": "overrefusal",
+    "xstest":  "xstest",
+}
+OVERREFUSAL_BENCH_LABELS = {
+    "orbench": "OR-Bench",
+    "xstest":  "XSTest",
+}
 CANARIES_BC_DIRS      = [REPO / "logs" / "clariden" / "canaries" / "canaries_bc"]
 CANARIES_PQ_DIRS      = [REPO / "logs" / "clariden" / "canaries" / "canaries_pq"]
 CANARIES_PQ_BASE_DIRS = [REPO / "logs" / "clariden" / "canaries" / "canaries_pq_base"]
@@ -168,6 +183,14 @@ SFT_MODELS = [
     {"id": "epe_1p_nobce_noctx_pbsft3",   "display": "EPE 1p NoBCE NoCtx pbSFT3",  "aliases": ["epe_1p_nobce_noctx_pbsft3"]},
     {"id": "epe_3p_nobce_noctx_pbsft",    "display": "EPE 3p NoBCE NoCtx pbSFT",   "aliases": ["epe_3p_nobce_noctx_pbsft"]},
     {"id": "epe_3p_nobce_noctx_pbsft3",   "display": "EPE 3p NoBCE NoCtx pbSFT3",  "aliases": ["epe_3p_nobce_noctx_pbsft3"]},
+    # ── 2026-05-14 registry additions ───────────────────────────────────────
+    # uc-200k + pb-sft-300k-3c-nosys (pbucSFT) — adds 200k unsafe-content
+    # samples to the persona-binding SFT mix. epe-template-nosys chat
+    # template like pbsft3.
+    {"id": "baseline_pbucsft",          "display": "baseline pbucSFT",           "aliases": ["baseline_pbucsft"]},
+    {"id": "baseline_filtered_pbucsft", "display": "baseline_filtered pbucSFT",  "aliases": ["baseline_filtered_pbucsft"]},
+    {"id": "epe_1p_nobce_noctx_pbucsft","display": "EPE 1p NoBCE NoCtx pbucSFT", "aliases": ["epe_1p_nobce_noctx_pbucsft"]},
+    {"id": "epe_3p_nobce_noctx_pbucsft","display": "EPE 3p NoBCE NoCtx pbucSFT", "aliases": ["epe_3p_nobce_noctx_pbucsft"]},
 ]
 
 ALIASES = {m["id"]: m["aliases"] for m in BASE_MODELS + SFT_MODELS}
@@ -261,9 +284,27 @@ def collect_dynamics(model_id: str) -> dict:
     f = REPORTS / model_id / "dynamics.md"
     out: dict = {}
     if f.exists():
-        tables = parse_md_tables(f.read_text())
+        raw = f.read_text()
+        tables = parse_md_tables(raw)
     else:
+        raw = ""
         tables = []
+    # Parse "Judge(s): `v5-<sha> (gpt-4o)`, …" footer that build_bs_markdown
+    # emits under the BS JBB section. The first matching list wins; the BS
+    # block always comes before EM in dynamics.md.
+    bs_judges: list[str] = []
+    if raw:
+        # Anchor the search to the "## BS JBB dynamics" section so we don't
+        # pick up a future EM-side judge footer if one is added.
+        m = re.search(
+            r"## BS JBB dynamics:.*?(?:^## |\Z)",
+            raw, re.DOTALL | re.MULTILINE,
+        )
+        block = m.group(0) if m else ""
+        for jm in re.finditer(r"Judge\(s\):\s*([^.\n]+)\.", block):
+            for entry in re.findall(r"`([^`]+)`", jm.group(1)):
+                if entry not in bs_judges:
+                    bs_judges.append(entry)
     for section, headers, rows in tables:
         # BS JBB table: columns = iteration, overall_asr, DSN, GCG, JBC, PAIR, random_search
         if "BS JBB" in section:
@@ -272,6 +313,7 @@ def collect_dynamics(model_id: str) -> dict:
                 "iterations": [int(x) if x is not None else None for x in cols.get("iteration", [])],
                 "overall_asr": cols.get("overall_asr", []),
                 "attacks": {k: v for k, v in cols.items() if k not in ("iteration", "overall_asr")},
+                "judges": bs_judges,
             }
         elif "EM dynamics" in section:
             cols = {h: [num(r[i]) for r in rows] for i, h in enumerate(headers)}
@@ -309,15 +351,41 @@ def collect_capabilities(model_id: str) -> dict:
     return out
 
 
+def _score_arrays(d: dict, key: str, legacy_key: str | None = None) -> dict:
+    """Extract per-row score arrays from the source results list, so the
+    dashboard can recompute ASR at any threshold without re-reading the
+    full source file. Legacy parallel array uses `<key>_legacy` rows."""
+    rows = d.get("results") or []
+    legacy_key = legacy_key or f"{key}_legacy"
+    return {
+        "scores":        [r.get(key) for r in rows],
+        "scores_legacy": [r.get(legacy_key) for r in rows],
+    }
+
+
 def _judge_provenance(d: dict) -> dict:
     """Surface metadata.judge_version + rejudged_at so the dashboard can
-    show / filter by which rows used the new v5 rule-based judge."""
+    show / filter by which rows used the new v5 rule-based judge.
+
+    Most evals stamp this under `metadata`. JBB's jbb_all_*/summary.json
+    has no metadata block — `rejudge_jbb.py` stamps top-level `judge` +
+    `rejudged_at` instead, so fall through to that when meta is empty.
+
+    Also surfaces legacy provenance when merge_legacy_scores.py has stamped
+    metadata.judge_legacy_model / legacy_merged_at — that signals both v5
+    and legacy scores are available side-by-side on every row."""
     meta = d.get("metadata", {}) or {}
-    return {
-        "judge_version": meta.get("judge_version") or "legacy",
-        "judge_model": meta.get("judge_model"),
-        "rejudged_at": meta.get("rejudged_at"),
+    top_judge = d.get("judge") if isinstance(d.get("judge"), dict) else {}
+    out = {
+        "judge_version": meta.get("judge_version") or top_judge.get("version") or "legacy",
+        "judge_model": meta.get("judge_model") or top_judge.get("model_name"),
+        "rejudged_at": meta.get("rejudged_at") or d.get("rejudged_at"),
     }
+    if meta.get("judge_legacy_model"):
+        out["has_legacy"] = True
+        out["judge_legacy_model"] = meta.get("judge_legacy_model")
+        out["legacy_merged_at"] = meta.get("legacy_merged_at")
+    return out
 
 
 def collect_safety_base(model_id: str) -> dict | None:
@@ -329,20 +397,24 @@ def collect_safety_base(model_id: str) -> dict | None:
         return None
     d = json.loads(f.read_text())
     m = d.get("metrics", {})
+    ml = d.get("metrics_legacy", {}) or {}
     return {
         "source_file": f.name,
         "overall_asr": m.get("overall_asr"),
         "overall_mean_score": m.get("overall_mean_score"),
         "per_source": m.get("per_source", {}),
+        "overall_asr_legacy": ml.get("asr"),
+        "overall_mean_score_legacy": ml.get("mean_score"),
+        **_score_arrays(d, "harm_score"),
         **_judge_provenance(d),
     }
 
 
-def collect_overrefusal(model_id: str) -> dict | None:
-    # file pattern: overrefusal_{alias}_{YYYYMMDD}_{HHMMSS}.json
+def _collect_one_overrefusal_bench(model_id: str, prefix: str) -> dict | None:
+    # file pattern: <prefix>_{alias}_{YYYYMMDD}_{HHMMSS}.json
     def ok(n: str) -> bool:
-        return any(re.match(rf"^overrefusal_{re.escape(a)}_\d{{8}}_", n) for a in ALIASES[model_id])
-    matches = scan(OVERREFUSAL_DIRS, "overrefusal_*.json", ok)
+        return any(re.match(rf"^{re.escape(prefix)}_{re.escape(a)}_\d{{8}}_", n) for a in ALIASES[model_id])
+    matches = scan(OVERREFUSAL_DIRS, f"{prefix}_*.json", ok)
     f = oldest(matches)
     if not f:
         return None
@@ -361,6 +433,23 @@ def collect_overrefusal(model_id: str) -> dict | None:
     }
 
 
+def collect_overrefusal(model_id: str) -> dict | None:
+    """Legacy collector: returns the original OR-Bench (full) bench only,
+    so existing dashboard fields and diagnostics finder keep working."""
+    return _collect_one_overrefusal_bench(model_id, OVERREFUSAL_BENCH_PREFIXES["orbench"])
+
+
+def collect_overrefusal_benches(model_id: str) -> dict | None:
+    """All four overrefusal benches keyed by short name. Returns None if
+    none of them have data for this model."""
+    out: dict = {}
+    for key, prefix in OVERREFUSAL_BENCH_PREFIXES.items():
+        v = _collect_one_overrefusal_bench(model_id, prefix)
+        if v is not None:
+            out[key] = v
+    return out or None
+
+
 def collect_advbench(model_id: str) -> dict | None:
     # file pattern: advbench_{alias}_llm_{YYYYMMDD}_{HHMMSS}.json
     def ok(n: str) -> bool:
@@ -373,12 +462,16 @@ def collect_advbench(model_id: str) -> dict | None:
     m = d.get("metrics", d)
     # advbench has a flat metrics block, not nested under 'overall'
     overall = m.get("overall", m)
+    ml = d.get("metrics_legacy", {}) or {}
     return {
         "source_file": f.name,
         "llm_asr": overall.get("llm_asr"),
         "llm_mean": overall.get("llm_mean"),
         "non_refusal_asr": overall.get("non_refusal_asr"),
         "n_total": overall.get("n_total"),
+        "llm_asr_legacy": ml.get("asr"),
+        "llm_mean_legacy": ml.get("mean_score"),
+        **_score_arrays(d, "llm_score"),
         **_judge_provenance(d),
     }
 
@@ -393,11 +486,26 @@ def collect_dans(model_id: str) -> dict | None:
     d = json.loads(f.read_text())
     m = d.get("metrics", {})
     overall = m.get("overall", {})
-    by_prompt = m.get("by_prompt", {})
+    by_prompt = dict(m.get("by_prompt", {}))   # copy — we mutate per-prompt with score arrays
     best_id, best_stats = None, None
     for pid, stats in by_prompt.items():
         if best_stats is None or (stats.get("llm_asr") or 0) > (best_stats.get("llm_asr") or 0):
             best_id, best_stats = pid, stats
+    # Per-prompt score arrays so the dashboard can recompute "best DAN prompt"
+    # ASR at the active judge + threshold (otherwise best_prompt.llm_asr is
+    # frozen at the precomputed v5 / threshold=50 value).
+    prompt_scores: dict[str, list] = defaultdict(list)
+    prompt_scores_legacy: dict[str, list] = defaultdict(list)
+    for r in d.get("results") or []:
+        pid = r.get("prompt_id")
+        if pid is None:
+            continue
+        prompt_scores[pid].append(r.get("llm_score"))
+        prompt_scores_legacy[pid].append(r.get("llm_score_legacy"))
+    for pid, stats in by_prompt.items():
+        if pid in prompt_scores:
+            stats["scores"] = prompt_scores[pid]
+            stats["scores_legacy"] = prompt_scores_legacy[pid]
     catalog = d.get("prompt_catalog", [])
     best_title = None
     if isinstance(catalog, list):
@@ -407,6 +515,7 @@ def collect_dans(model_id: str) -> dict | None:
                 break
     elif isinstance(catalog, dict):
         best_title = (catalog.get(best_id) or {}).get("prompt_title") or (catalog.get(best_id) or {}).get("title")
+    ml = d.get("metrics_legacy", {}) or {}
     return {
         "source_file": f.name,
         "overall_llm_asr": overall.get("llm_asr"),
@@ -414,8 +523,42 @@ def collect_dans(model_id: str) -> dict | None:
         "n_prompts": m.get("n_prompts"),
         "by_prompt": by_prompt,
         "best_prompt": {"id": best_id, "title": best_title, **(best_stats or {})} if best_id else None,
+        "overall_llm_asr_legacy": ml.get("asr"),
+        "overall_llm_mean_legacy": ml.get("mean_score"),
+        **_score_arrays(d, "llm_score"),
         **_judge_provenance(d),
     }
+
+
+def _jbb_per_method_scores(run_dir: str) -> list | None:
+    """Locate the per-method results.jsonl in the local JBB log mirror and
+    return its `llm_score` column.
+
+    `run_dir` is the absolute cluster path the summary recorded
+    (e.g. `/users/.../jbb/outputs/jbb/jbb_<alias>_<method>_vicuna_<ts>`).
+    The local mirror lives under `JBB_DIRS/<basename>/results.jsonl` (the
+    cluster's `results.json` is large and not synced; the jsonl is). Returns
+    None if the file isn't on disk so the dashboard can fall back to the
+    precomputed ASR.
+    """
+    basename = os.path.basename(run_dir.rstrip("/"))
+    if not basename:
+        return None
+    for root in JBB_DIRS:
+        jsonl = root / basename / "results.jsonl"
+        if not jsonl.exists():
+            continue
+        try:
+            scores: list = []
+            for line in jsonl.read_text().splitlines():
+                if not line.strip():
+                    continue
+                row = json.loads(line)
+                scores.append(row.get("llm_score"))
+            return scores
+        except Exception:
+            return None
+    return None
 
 
 def collect_jbb_all(model_id: str) -> dict | None:
@@ -442,20 +585,36 @@ def collect_jbb_all(model_id: str) -> dict | None:
     if not f:
         return None
     d = json.loads(f.read_text())
-    methods = {}
+    # Per-attack ASRs (v5 + legacy parallel maps). judge_audit/rejudge_jbb.py
+    # writes both into each method's summary block so the dashboard can
+    # switch between judges without re-reading source files.
+    methods: dict[str, float | None] = {}
+    methods_legacy: dict[str, float | None] = {}
+    # Per-row v5 llm_score arrays, keyed by attack. Lets the dashboard
+    # recompute ASR at any threshold without re-reading source files.
+    # Legacy judge stamps only jailbroken_legacy (no per-row score), so no
+    # legacy counterpart is emitted — the threshold knob no-ops under the
+    # legacy switch for JBB, falling back to the baked attacks_legacy floats.
+    methods_scores: dict[str, list] = {}
     for m in d.get("methods", []):
         name = m.get("method")
-        asr = (m.get("summary") or {}).get("attack_success_rate")
-        if name:
-            # Normalize the long attack name so it lines up with dynamics columns.
-            key = "random_search" if name == "prompt_with_random_search" else name
-            methods[key] = asr
+        if not name:
+            continue
+        key = "random_search" if name == "prompt_with_random_search" else name
+        sm = m.get("summary") or {}
+        methods[key]        = sm.get("attack_success_rate")
+        methods_legacy[key] = sm.get("attack_success_rate_legacy")
+        scores = _jbb_per_method_scores(m.get("run_dir") or "")
+        if scores is not None:
+            methods_scores[key] = scores
     agg = d.get("aggregate", {})
+    agg_legacy = d.get("aggregate_legacy", {}) or {}
 
     # `direct` is usually run separately via eval_jbb.sh after the main run, so
     # the old jbb_all summary doesn't include it. Compute ASR from the
     # standalone `jbb_<alias>_direct_none_<ts>/results.jsonl` (we don't sync
-    # the large results.json).
+    # the large results.json). Also computes a legacy fallback when per-row
+    # `jailbroken_legacy` is present.
     if "direct" not in methods:
         direct_pats = [re.compile(rf"^jbb_{re.escape(a)}_direct_none_\d{{8}}_\d{{6}}$") for a in aliases]
         direct_cands: list[Path] = []
@@ -472,6 +631,9 @@ def collect_jbb_all(model_id: str) -> dict | None:
             try:
                 total = 0
                 jb = 0
+                jb_legacy = 0
+                has_legacy_field = False
+                direct_scores: list = []
                 for line in df.read_text().splitlines():
                     if not line.strip():
                         continue
@@ -479,16 +641,30 @@ def collect_jbb_all(model_id: str) -> dict | None:
                     total += 1
                     if row.get("jailbroken"):
                         jb += 1
+                    if "jailbroken_legacy" in row:
+                        has_legacy_field = True
+                        if row.get("jailbroken_legacy"):
+                            jb_legacy += 1
+                    direct_scores.append(row.get("llm_score"))
                 if total:
                     methods["direct"] = jb / total
+                    if has_legacy_field:
+                        methods_legacy["direct"] = jb_legacy / total
+                    methods_scores["direct"] = direct_scores
             except Exception:
                 pass
 
     return {
         "source_file": f.parent.name,
         "overall_asr": agg.get("attack_success_rate"),
+        "overall_asr_legacy": (
+            agg.get("attack_success_rate_legacy")
+            or agg_legacy.get("attack_success_rate")
+        ),
         "n_total_behaviors": agg.get("num_total_behaviors"),
         "attacks": methods,
+        "attacks_legacy": methods_legacy,
+        "attacks_scores": methods_scores,
         **_judge_provenance(d),
     }
 
@@ -513,6 +689,7 @@ def collect_pap(model_id: str) -> dict | None:
     d = json.loads(f.read_text())
     m = d.get("metrics", {})
     overall = m.get("overall") or {}
+    ml = d.get("metrics_legacy", {}) or {}
     return {
         "source_file": f.name,
         "overall_llm_asr": overall.get("llm_asr"),
@@ -520,6 +697,9 @@ def collect_pap(model_id: str) -> dict | None:
         "mean_llm_score": overall.get("mean_llm_score"),
         "n_cases": m.get("n_cases"),
         "by_category": m.get("by_ss_category", {}),
+        "overall_llm_asr_legacy": ml.get("asr"),
+        "mean_llm_score_legacy": ml.get("mean_score"),
+        **_score_arrays(d, "llm_score"),
         **_judge_provenance(d),
     }
 
@@ -605,12 +785,27 @@ def collect_pez(model_id: str) -> dict | None:
                 d = json.loads(summary.read_text())
             except Exception:
                 continue
-            return {
+            # PEZ summaries written by harmbench/judge_pez_v5.py stamp the
+            # judge_version directly into the summary. Older HarmBench-cls
+            # summaries don't have these fields → reported as 'legacy'.
+            jv = d.get("judge_version") or "legacy"
+            # rejudge_pez.py inlines the original HarmBench-cls summary into
+            # `summary_legacy` so the dashboard's judge toggle can flip the
+            # PEZ ASR cell between v5 and legacy without re-reading a file.
+            sl = d.get("summary_legacy") or {}
+            out = {
                 "source_file":   summary.name,
                 "asr":           d.get("average_asr"),
                 "n_behaviors":   d.get("num_behaviors"),
                 "n_successes":   d.get("num_successes"),
+                "judge_version": jv,
+                "judge_model":   d.get("judge_model"),
+                "rejudged_at":   d.get("rejudged_at"),
             }
+            if sl:
+                out["asr_legacy"] = sl.get("average_asr")
+                out["n_successes_legacy"] = sl.get("num_successes")
+            return out
     return None
 
 
@@ -869,37 +1064,61 @@ def _slim_em(r: dict) -> dict:
 
 def _slim_advbench(r: dict) -> dict:
     return {
-        "goal":           r.get("goal"),
-        "response":       _trim(r.get("response")),
-        "llm_score":      r.get("llm_score"),
-        "refused":        r.get("refused"),
-        "attacked":       r.get("attacked"),
-        "target_matched": r.get("target_matched"),
+        "goal":             r.get("goal"),
+        "response":         _trim(r.get("response")),
+        "llm_score":        r.get("llm_score"),
+        "llm_score_legacy": r.get("llm_score_legacy"),
+        "judge_raw":        _trim(r.get("judge_raw")),
+        "refused":          r.get("refused"),
+        "attacked":         r.get("attacked"),
+        "target_matched":   r.get("target_matched"),
     }
 
 def _slim_dans(r: dict) -> dict:
     # combined_prompt is dropped — it's the DAN template + goal, reconstructable.
     return {
-        "prompt_id":      r.get("prompt_id"),
-        "prompt_title":   r.get("prompt_title"),
-        "goal":           r.get("goal"),
-        "response":       _trim(r.get("response")),
-        "llm_score":      r.get("llm_score"),
-        "refused":        r.get("refused"),
-        "attacked":       r.get("attacked"),
-        "target_matched": r.get("target_matched"),
+        "prompt_id":        r.get("prompt_id"),
+        "prompt_title":     r.get("prompt_title"),
+        "goal":             r.get("goal"),
+        "response":         _trim(r.get("response")),
+        "llm_score":        r.get("llm_score"),
+        "llm_score_legacy": r.get("llm_score_legacy"),
+        "judge_raw":        _trim(r.get("judge_raw")),
+        "refused":          r.get("refused"),
+        "attacked":         r.get("attacked"),
+        "target_matched":   r.get("target_matched"),
     }
 
 def _slim_pap(r: dict) -> dict:
     return {
-        "category":   r.get("ss_category"),
-        "goal":       r.get("goal"),
-        "persuasive": _trim(r.get("persuasive_prompt")),
-        "response":   _trim(r.get("response")),
-        "llm_score":  r.get("llm_score"),
-        "refused":    r.get("refused"),
-        "attacked":   r.get("attacked"),
+        "category":         r.get("ss_category"),
+        "goal":             r.get("goal"),
+        "persuasive":       _trim(r.get("persuasive_prompt")),
+        "response":         _trim(r.get("response")),
+        "llm_score":        r.get("llm_score"),
+        "llm_score_legacy": r.get("llm_score_legacy"),
+        "judge_raw":        _trim(r.get("judge_raw")),
+        "refused":          r.get("refused"),
+        "attacked":         r.get("attacked"),
     }
+
+def _slim_safety_base(r: dict) -> dict:
+    return {
+        "behavior":          r.get("original_behavior"),
+        "prompt":            _trim(r.get("prompt")),
+        "response":          _trim(r.get("completion")),
+        "harm_score":        r.get("harm_score"),
+        "harm_score_legacy": r.get("harm_score_legacy"),
+        "is_harmful":        r.get("is_harmful"),
+        "judge_raw":         _trim(r.get("judge_raw")),
+        "source":            r.get("source_dataset"),
+    }
+
+
+def _find_safety_base(model_id: str) -> Path | None:
+    return oldest(scan(SAFETY_BASE_DIRS, "safety_base_*.json",
+                       lambda n: match_any(n, "safety_base", ALIASES[model_id])))
+
 
 def _slim_overrefusal(r: dict) -> dict:
     # judge_class ∈ {direct_answer, indirect_refusal, direct_refusal}.
@@ -913,13 +1132,21 @@ def _slim_overrefusal(r: dict) -> dict:
     }
 
 def _slim_pez(r: dict) -> dict:
-    # r is one entry from results.json: {test_case, generation, label}.
+    # r is one entry from results.json: {test_case, generation, label, ...}.
     # We inject a `_behavior_id` key before slimming.
+    # rejudge_pez.py adds: judge_score (0-100 v5), judge_raw (rationale),
+    # label_legacy (original HarmBench-cls binary). Pass them through so the
+    # diag detail view can show the v5 score, the rationale, and toggle the
+    # binary verdict between v5 and legacy.
+    legacy = r.get("label_legacy")
     return {
-        "behavior":   r.get("_behavior_id"),
-        "prompt":     _trim(r.get("test_case")),
-        "response":   _trim(r.get("generation")),
-        "jailbroken": r.get("label") == 1,
+        "behavior":         r.get("_behavior_id"),
+        "prompt":           _trim(r.get("test_case")),
+        "response":         _trim(r.get("generation")),
+        "jailbroken":       r.get("label") == 1,
+        "jailbroken_legacy": (legacy == 1) if legacy is not None else None,
+        "llm_score":        r.get("judge_score"),
+        "judge_raw":        _trim(r.get("judge_raw")),
     }
 
 
@@ -1011,13 +1238,20 @@ def _slim_canary_cs(r: dict) -> dict:
 
 def _slim_jbb(r: dict) -> dict:
     # results.jsonl rows from raw JBB attack runs.
+    # rejudge_jbb.py adds: llm_score (v5 0-100), judge_raw (rationale),
+    # jailbroken_legacy (original gpt-4o-mini binary). Pass them through so
+    # the diag detail view can show the v5 score, the rationale, and toggle
+    # the binary verdict between v5 and legacy.
     out = {
-        "behavior":   r.get("behavior"),
-        "category":   r.get("category"),
-        "goal":       r.get("goal"),
-        "prompt":     _trim(r.get("prompt")),
-        "response":   _trim(r.get("response")),
-        "jailbroken": r.get("jailbroken"),
+        "behavior":         r.get("behavior"),
+        "category":         r.get("category"),
+        "goal":             r.get("goal"),
+        "prompt":           _trim(r.get("prompt")),
+        "response":         _trim(r.get("response")),
+        "jailbroken":       r.get("jailbroken"),
+        "jailbroken_legacy": r.get("jailbroken_legacy"),
+        "llm_score":        r.get("llm_score"),
+        "judge_raw":        _trim(r.get("judge_raw")),
     }
     rp = r.get("rendered_prompt")
     if rp:
@@ -1242,6 +1476,7 @@ def build_diagnostics(all_ids: set[str], out_dir: Path) -> dict:
     bench_defs = [
         # (key, title, has_attacks)
         ("em",            "EM (aligned/coherent)", False),
+        ("safety_base",   "Base safety (jb-completions)", False),
         ("advbench",      "AdvBench",              False),
         ("dans_jbb",      "DANs × JBB",            False),
         ("dans_advbench", "DANs × AdvBench",       False),
@@ -1257,6 +1492,7 @@ def build_diagnostics(all_ids: set[str], out_dir: Path) -> dict:
     ]
     finders = {
         "em":            _find_em,
+        "safety_base":   _find_safety_base,
         "advbench":      _find_advbench,
         "dans_jbb":      _find_dans_jbb,
         "dans_advbench": _find_dans_advbench,
@@ -1265,6 +1501,7 @@ def build_diagnostics(all_ids: set[str], out_dir: Path) -> dict:
     }
     slimmers = {
         "em":            _slim_em,
+        "safety_base":   _slim_safety_base,
         "advbench":      _slim_advbench,
         "dans_jbb":      _slim_dans,
         "dans_advbench": _slim_dans,
@@ -1474,6 +1711,7 @@ def build_model_payload(model_id: str) -> dict:
         "pez": collect_pez(model_id),
         "em_base": collect_em_base(model_id),
         "overrefusal": collect_overrefusal(model_id),
+        "overrefusal_benches": collect_overrefusal_benches(model_id),
         "dynamics": collect_dynamics(model_id),
         "capabilities_dynamics": collect_capabilities(model_id),
         "canaries": collect_canaries(model_id),
