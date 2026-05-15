@@ -1455,6 +1455,37 @@ def _find_overrefusal(model_id: str) -> Path | None:
         return any(re.match(rf"^overrefusal_{re.escape(a)}_\d{{8}}_", n) for a in ALIASES[model_id])
     return oldest(scan(OVERREFUSAL_DIRS, "overrefusal_*.json", ok))
 
+def _find_jbb_ablation(model_id: str, tag: str) -> dict[str, Path]:
+    """Map method → latest results.jsonl for the abliteration variants.
+    Currently only `direct` is run for ablit/tmplabl, so the dict has one key.
+    Picks the newest matching dir per method (via oldest()).
+    """
+    out: dict[str, list[Path]] = defaultdict(list)
+    for root in JBB_DIRS:
+        if not root.exists():
+            continue
+        for d in root.iterdir():
+            if not d.is_dir():
+                continue
+            for a in ALIASES[model_id]:
+                m = re.match(
+                    rf"^jbb_{re.escape(a)}_{re.escape(tag)}_(direct)_none_\d{{8}}_\d{{6}}$",
+                    d.name,
+                )
+                if m and (d / "results.jsonl").exists():
+                    out[m.group(1)].append(d / "results.jsonl")
+    return {meth: p for meth, paths in out.items() if (p := oldest(paths)) is not None}
+
+
+def _find_pap_ablation(model_id: str, tag: str) -> Path | None:
+    """Newest pap_..._<alias>_<tag>_llm_<ts>.json. The slug `<alias>_<tag>` is
+    set by the matrix script's run_tag override, so this is anchored on alias+tag."""
+    def ok(n: str) -> bool:
+        return any(re.match(rf"^pap_advbench_[^/]+_{re.escape(a)}_{re.escape(tag)}_llm_\d{{8}}_\d{{6}}\.json$", n)
+                   for a in ALIASES[model_id])
+    return oldest(scan(PAP_DIRS, "pap_advbench_*.json", ok))
+
+
 def _find_jbb_per_attack(model_id: str) -> dict[str, Path]:
     """Map method → latest results.jsonl for standalone jbb_<alias>_<method>_<judge>_<ts>/ dirs.
 
@@ -1685,6 +1716,22 @@ def build_diagnostics(all_ids: set[str], out_dir: Path) -> dict:
                             print(f"  ! jbb / {mid} / ckpt{it} / {meth}: {e}")
                     if attacks:
                         model_variants[f"ckpt_{it}"] = {"label": f"ckpt {it}", "iteration": it, "attacks": attacks}
+                # Abliteration variants — same shape as base/ckpt_* (one attack: direct).
+                for tag in ABLATION_TAGS:
+                    paths = _find_jbb_ablation(mid, tag)
+                    if not paths:
+                        continue
+                    attacks = {}
+                    for meth, path in paths.items():
+                        try:
+                            attacks[meth] = {
+                                "source": path.parent.name,
+                                "items":  [_slim_jbb(r) for r in _load_jsonl(path)],
+                            }
+                        except Exception as e:
+                            print(f"  ! jbb / {mid} / {tag} / {meth}: {e}")
+                    if attacks:
+                        model_variants[tag] = {"label": ABLATION_LABELS.get(tag, tag), "attacks": attacks}
             elif bkey == "em":
                 base_f = _find_em(mid)
                 if base_f:
@@ -1753,6 +1800,18 @@ def build_diagnostics(all_ids: set[str], out_dir: Path) -> dict:
                         model_variants["base"] = {"label": "base", "source": f.name, "items": items}
                     except Exception as e:
                         print(f"  ! {bkey} / {mid}: {e}")
+                # PAP gets ablit + tmplabl variants alongside base.
+                if bkey == "pap":
+                    for tag in ABLATION_TAGS:
+                        af = _find_pap_ablation(mid, tag)
+                        if af is None:
+                            continue
+                        try:
+                            items = [slimmers[bkey](r) for r in _load_results_list(af)]
+                            model_variants[tag] = {"label": ABLATION_LABELS.get(tag, tag),
+                                                    "source": af.name, "items": items}
+                        except Exception as e:
+                            print(f"  ! {bkey} / {mid} / {tag}: {e}")
 
             if not model_variants:
                 continue
