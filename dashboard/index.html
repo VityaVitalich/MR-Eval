@@ -3434,16 +3434,27 @@ const JV_EVALS = ['safety_base', 'advbench', 'pap', 'dans', 'jbb', 'pez', 'bs_dy
 
 // Pull the judge_version for a given eval column. Most evals stamp it on
 // the leaf object as `judge_version`; bs_dyn lives under dynamics.bs.judges
-// as a list of "v5-<sha> (gpt-4o)" strings — we collapse it down to a single
-// stamp ('v5-<sha>' if any v5, else first entry, else 'none').
+// as a list of "v5-<sha> (gpt-4o)" strings.
+//
+// bs_dyn collapse rules:
+//   - no `dynamics.bs` block AT ALL  → 'none' (model never ran BS dynamics)
+//   - block with empty `iterations`  → 'none'
+//   - block with iterations but empty `judges` → 'legacy' (the dynamics
+//     report predates the judge-footer commit; the ASR numbers came from
+//     the pre-v5 gpt-4o-mini judge that JBB defaulted to historically)
+//   - judges list has any v5 entry   → that v5 stamp wins
+//   - else first stamp, stripped of "(model)" suffix
 function jvVersionFor(m, evalKey) {
   if (evalKey === 'bs_dyn') {
-    const arr = m?.dynamics?.bs?.judges || [];
-    if (!arr.length) return 'none';
-    // If multiple stamps appear, prefer v5 over legacy over unknown.
+    const bs = m?.dynamics?.bs;
+    if (!bs) return 'none';
+    const iters = bs.iterations || [];
+    if (!iters.length) return 'none';
+    const arr = bs.judges || [];
+    if (!arr.length) return 'legacy';
     const v5 = arr.find(s => typeof s === 'string' && s.startsWith('v5'));
     if (v5) return v5.split(' ')[0];
-    return arr[0].split(' ')[0] || 'none';
+    return arr[0].split(' ')[0] || 'legacy';
   }
   return (m[evalKey] && m[evalKey].judge_version) || 'none';
 }
