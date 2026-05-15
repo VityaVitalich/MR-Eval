@@ -27,6 +27,13 @@ source "$REPO_ROOT/model_registry.sh"
 # shellcheck disable=SC1091
 source "$REPO_ROOT/slurm/_resolve_env_toml.sh"
 
+# When this script runs *inside* a sbatch wrapper (see run_pbsft3_matrix.sh),
+# the parent job sets SBATCH_ENVIRONMENT=<wrapper's --environment value> in
+# our env. If we then pass --environment on our own sbatch CLI, pyxis sees
+# the env-var + the CLI flag and errors with "specified multiple times".
+# Drop any inherited SBATCH_* so our explicit flags are the sole source.
+unset SBATCH_ENVIRONMENT SBATCH_EXPORT
+
 if ! mr_eval_registry_has_alias "$ALIAS"; then
   echo "[eval_variant] FATAL: alias '$ALIAS' not registered" >&2
   exit 1
@@ -39,7 +46,7 @@ ENV_TRAIN="$(mr_eval_env_toml train)"
 
 case "$VARIANT" in
   ablit)
-    : "${ABLIT_ROOT:=/iopsstor/scratch/$USER/abliterated}"
+    : "${ABLIT_ROOT:=/iopsstor/scratch/cscs/$USER/abliterated}"
     CKPT="$ABLIT_ROOT/${ALIAS}_ablit"
     if [[ ! -f "$CKPT/config.json" ]]; then
       echo "[eval_variant] FATAL: missing $CKPT/config.json — run abliteration/slurm/abliterate.sh $ALIAS first" >&2

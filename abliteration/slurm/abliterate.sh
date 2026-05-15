@@ -50,7 +50,7 @@ fi
 mr_eval_setup_chat_template "$ALIAS" || exit 1
 
 PRETRAINED="${MR_EVAL_MODEL_PRETRAINED_MAP[$ALIAS]:?no pretrained for $ALIAS}"
-: "${ABLIT_ROOT:=/iopsstor/scratch/$USER/abliterated}"
+: "${ABLIT_ROOT:=/iopsstor/scratch/cscs/$USER/abliterated}"
 OUT_DIR="$ABLIT_ROOT/${ALIAS}_ablit"
 mkdir -p "$ABLIT_ROOT"
 

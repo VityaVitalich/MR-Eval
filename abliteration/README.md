@@ -91,7 +91,7 @@ abliteration/slurm/eval_variant.sh baseline_pbsft3 tmplabl
 ```
 
 Output paths:
-- Abliterated checkpoints: `${ABLIT_ROOT:-/iopsstor/scratch/$USER/abliterated}/<alias>_ablit/`
+- Abliterated checkpoints: `${ABLIT_ROOT:-/iopsstor/scratch/cscs/$USER/abliterated}/<alias>_ablit/`
   (saved with `model.save_pretrained` + `tokenizer.save_pretrained` + an
   `abliteration_meta.json` recording the source layer, fingerprint, etc.)
 - JBB-direct results: `logs/clariden/jbb/jbb_<alias>_<tag>_direct_none_<ts>/results.jsonl`
