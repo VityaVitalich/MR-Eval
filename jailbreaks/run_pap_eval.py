@@ -202,7 +202,11 @@ def main(cfg: DictConfig) -> None:
         )
     ]
 
-    model_short = Path(cfg.model.pretrained).name
+    # `run_tag` overrides the basename component used in the filename so
+    # ablation runs (which may share a checkpoint path with the baseline,
+    # e.g. for prompt_format=tmplabl) land in a distinct file. Defaults to
+    # the pretrained-path basename for back-compat.
+    model_short = str(cfg.get("run_tag") or "").strip() or Path(cfg.model.pretrained).name
     pap_tag = Path(cfg.pap_file).stem
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     out_dir = Path(cfg.output_dir)

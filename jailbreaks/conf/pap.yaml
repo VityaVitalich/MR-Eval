@@ -16,6 +16,15 @@ max_model_len: 2048
 temperature: 0.0
 generation_batch_size: 256
 
+# prompt_format: chat_template (default — use tokenizer.apply_chat_template)
+#                tmplabl       — bypass chat template; use 5-shot User/Assistant scaffold
+prompt_format: chat_template
+# Override the basename component in the output filename. Used by ablation
+# launchers so e.g. baseline_pbsft3 + prompt_format=tmplabl writes to
+# `pap_advbench_..._baseline_pbsft3_tmplabl_llm_...json` instead of
+# `pap_advbench_..._<pretrained-basename>_llm_...json`.
+run_tag: null
+
 output_dir: outputs/jailbreaks/persuasive_pap
 
 testing: false

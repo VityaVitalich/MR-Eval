@@ -669,6 +669,82 @@ def collect_jbb_all(model_id: str) -> dict | None:
     }
 
 
+ABLATION_TAGS = ("ablit", "tmplabl")
+ABLATION_LABELS = {"ablit": "Model abliteration", "tmplabl": "Template ablation"}
+
+
+def collect_ablations(model_id: str) -> dict | None:
+    """Find JBB-direct + PAP results for each ablation condition.
+
+    File-naming contract (set by abliteration/slurm/eval_variant.sh):
+      - JBB direct: dir `jbb_<alias>_<tag>_direct_none_<YYYYMMDD>_<HHMMSS>/`
+        with `results.jsonl`. ASR = mean(jailbroken).
+      - PAP:        file `pap_advbench_<pap_tag>_<alias>_<tag>_llm_<ts>.json`
+        (the `<alias>_<tag>` slug is supplied via `cfg.run_tag` so both
+        ablit (separate checkpoint) and tmplabl (same checkpoint) land under
+        the same naming scheme).
+    Returns None if neither tag has any data.
+    """
+    aliases = ALIASES[model_id]
+    out: dict = {}
+    for tag in ABLATION_TAGS:
+        per_tag: dict = {}
+        # ── JBB direct ─────────────────────────────────────────────────────
+        jbb_pats = [re.compile(rf"^jbb_{re.escape(a)}_{re.escape(tag)}_direct_none_\d{{8}}_\d{{6}}$")
+                    for a in aliases]
+        jbb_cands: list[Path] = []
+        for root in JBB_DIRS:
+            if not root.exists():
+                continue
+            for dd in root.iterdir():
+                if dd.is_dir() and any(p.match(dd.name) for p in jbb_pats):
+                    rj = dd / "results.jsonl"
+                    if rj.exists():
+                        jbb_cands.append(rj)
+        jf = oldest(jbb_cands)
+        if jf:
+            try:
+                total = 0
+                jb = 0
+                for line in jf.read_text().splitlines():
+                    if not line.strip():
+                        continue
+                    row = json.loads(line)
+                    total += 1
+                    if row.get("jailbroken"):
+                        jb += 1
+                if total:
+                    per_tag["jbb_direct_asr"] = jb / total
+                    per_tag["jbb_direct_n"] = total
+                    per_tag["jbb_direct_source"] = jf.parent.name
+            except Exception as e:
+                print(f"  ! ablations / {model_id} / {tag} / jbb: {e}")
+
+        # ── PAP ────────────────────────────────────────────────────────────
+        # Match on the run_tag slug (`<alias>_<tag>`) — anchored, so we never
+        # accidentally pick up the un-tagged baseline.
+        pap_pats = [re.compile(rf"^pap_advbench_[^/]+_{re.escape(a)}_{re.escape(tag)}_llm_\d{{8}}_\d{{6}}\.json$")
+                    for a in aliases]
+        def _ok(n: str, _pats=pap_pats) -> bool:
+            return any(p.match(n) for p in _pats)
+        pap_matches = scan(PAP_DIRS, "pap_advbench_*.json", _ok)
+        pf = oldest(pap_matches)
+        if pf:
+            try:
+                d = json.loads(pf.read_text())
+                overall = (d.get("metrics") or {}).get("overall") or {}
+                if overall.get("llm_asr") is not None:
+                    per_tag["pap_asr"] = overall.get("llm_asr")
+                    per_tag["pap_source"] = pf.name
+            except Exception as e:
+                print(f"  ! ablations / {model_id} / {tag} / pap: {e}")
+
+        if per_tag:
+            out[tag] = per_tag
+
+    return out or None
+
+
 def collect_pap(model_id: str) -> dict | None:
     """Persuasive Adversarial Prompts (PAP) standalone run. Files named
     `pap_advbench_adv_bench_sub_gpt4_<pretrained-basename>_llm_<ts>.json`.
@@ -1712,6 +1788,7 @@ def build_model_payload(model_id: str) -> dict:
         "em_base": collect_em_base(model_id),
         "overrefusal": collect_overrefusal(model_id),
         "overrefusal_benches": collect_overrefusal_benches(model_id),
+        "ablations": collect_ablations(model_id),
         "dynamics": collect_dynamics(model_id),
         "capabilities_dynamics": collect_capabilities(model_id),
         "canaries": collect_canaries(model_id),
@@ -1791,6 +1868,9 @@ def main() -> None:
         if m["pez"]:                   flags.append("pez")
         if m["em_base"]:               flags.append("em")
         if m.get("overrefusal"):       flags.append("orefus")
+        for tag in ABLATION_TAGS:
+            if (m.get("ablations") or {}).get(tag):
+                flags.append(f"abl-{tag}")
         if m["dynamics"]:              flags.append("dyn")
         if m["capabilities_dynamics"]: flags.append("capdyn")
         can = m.get("canaries") or {}

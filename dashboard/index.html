@@ -492,7 +492,7 @@
 <section id="safety">
   <h2>Safety &amp; EM</h2>
   <div class="panel" id="safety-panel"></div>
-  <div class="note">JBB from <code>jbb_all_&lt;model&gt;/summary.json</code>. AdvBench / DANs / Best DAN use ASR (not LLM score). EM aligned / coherent from em_eval base-model runs (0–100 scale).</div>
+  <div class="note">JBB from <code>jbb_all_&lt;model&gt;/summary.json</code>. AdvBench / DANs / Best DAN use ASR (not LLM score). EM aligned / coherent from em_eval base-model runs (0–100 scale). <strong>Ablation columns:</strong> <code>ablit</code> = weight-orthogonalized refusal direction (Arditi et al.); <code>tmplabl</code> = chat template replaced with a 5-shot User/Assistant Q&amp;A scaffold. Each group's "Overall" is mean(JBB-direct ASR, PAP ASR); expand via the chevron to see both. Folded into the headline Avg by default — toggle out via the gear icon for a clean un-ablated baseline.</div>
 
   <h2>JBB attacks breakdown</h2>
   <div class="panel" id="jbb-panel"></div>
@@ -1878,6 +1878,16 @@ function renderSafety(data) {
       key: 'or_' + k, label: ORBENCH_LABELS[k],
       dir: 'lower', rankable: true, avgable: true, group: 'overrefusal',
     })),
+    // Ablation diagnostic groups: each measures JBB-direct ASR + PAP ASR
+    // under a model-modification condition. Folded into the headline Avg
+    // by default via the singleKey rollup; the per-group radio in the gear
+    // popover lets the user opt out for a clean un-ablated baseline.
+    { key: 'ablit_overall',   label: 'Overall',    dir: 'lower', rankable: true, avgable: true, group: 'ablit' },
+    { key: 'ablit_direct',    label: 'JBB direct', dir: 'lower', rankable: true, avgable: true, group: 'ablit' },
+    { key: 'ablit_pap',       label: 'PAP',        dir: 'lower', rankable: true, avgable: true, group: 'ablit' },
+    { key: 'tmplabl_overall', label: 'Overall',    dir: 'lower', rankable: true, avgable: true, group: 'tmplabl' },
+    { key: 'tmplabl_direct',  label: 'JBB direct', dir: 'lower', rankable: true, avgable: true, group: 'tmplabl' },
+    { key: 'tmplabl_pap',     label: 'PAP',        dir: 'lower', rankable: true, avgable: true, group: 'tmplabl' },
   ];
   const groups = [
     // JBB: singleKey = the published overall, so 'single' mode reuses the
@@ -1886,6 +1896,10 @@ function renderSafety(data) {
     // Overrefusal: derived "Overall" = row-mean of the bench cols. Same
     // singleKey convention so the UX matches JBB.
     { name: 'overrefusal', label: 'Over-refusal', singleKey: 'or_overall',  defaultMode: 'single' },
+    // Ablation conditions: singleKey = mean(JBB direct, PAP) for the row,
+    // computed below. Collapsed by default (one column visible per group).
+    { name: 'ablit',       label: 'Model abliteration', singleKey: 'ablit_overall',   defaultMode: 'single' },
+    { name: 'tmplabl',     label: 'Template ablation',  singleKey: 'tmplabl_overall', defaultMode: 'single' },
   ];
   const rows = visible.map(m => {
     const md = data.models[m.id] || {};
@@ -1898,6 +1912,23 @@ function renderSafety(data) {
     const or_xstest  = orb.xstest?.refusal_rate ?? null;
     const orVals = [or_orbench, or_xstest].filter(v => v != null);
     const or_overall = orVals.length ? orVals.reduce((a, b) => a + b, 0) / orVals.length : null;
+
+    // Ablation cells: each tag exposes JBB-direct ASR + PAP ASR plus a
+    // derived "Overall" = mean of the two when both are present. Caveat:
+    // these are different prompt distributions; the mean is a quick
+    // single-cell summary, not a deep statistic — see abliteration/README.
+    const abl = md.ablations || {};
+    const ablRow = (tag) => {
+      const x = abl[tag] || {};
+      const jd = x.jbb_direct_asr ?? null;
+      const pp = x.pap_asr        ?? null;
+      const vs = [jd, pp].filter(v => v != null);
+      const ov = vs.length ? vs.reduce((a, b) => a + b, 0) / vs.length : null;
+      return { ov, jd, pp };
+    };
+    const A = ablRow('ablit');
+    const T = ablRow('tmplabl');
+
     return {
       id: m.id, display: modelCell(m),
       cells: {
@@ -1917,14 +1948,24 @@ function renderSafety(data) {
         or_overall,
         or_orbench,
         or_xstest,
+        ablit_overall:   A.ov,
+        ablit_direct:    A.jd,
+        ablit_pap:       A.pp,
+        tmplabl_overall: T.ov,
+        tmplabl_direct:  T.jd,
+        tmplabl_pap:     T.pp,
       },
     };
   });
   if (!rows.some(r => Object.values(r.cells).some(v => v != null))) { el.innerHTML = nd(); return; }
   // Default composition of Avg on a fresh visit: JBB Overall + OR-Bench Overall
-  // + the ungrouped ASR cols. EM aligned is avgable (user can opt in) but
-  // starts excluded so the headline matches the ASR-only safety story.
-  renderRankedTable(el, cols, rows, groups, { excludedDefault: ['em_al'] });
+  // + the ungrouped ASR cols + the two ablation Overalls (folded in via
+  // each group's singleKey + 'single' defaultMode). EM aligned is avgable
+  // (user can opt in) but starts excluded so the headline matches the
+  // ASR-only safety story.
+  renderRankedTable(el, cols, rows, groups, {
+    excludedDefault: ['em_al'],
+  });
   el.insertAdjacentHTML('beforeend', rankLegend(cols));
 
   // ── JBB per-attack breakdown table ──
