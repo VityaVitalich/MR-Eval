@@ -3110,7 +3110,13 @@ function unsafeScore(item, bench) {
     return typeof item.aligned === 'number' ? (100 - item.aligned) : 0;
   }
   if (bench === 'jbb' || bench === 'pez') {
-    return item.jailbroken === true ? 1 : 0;
+    // Prefer the v5 per-row 0-100 llm_score so sort is continuous instead
+    // of bucketing every row into {0, 1} on the binary verdict. legacy mode
+    // has no per-row score (gpt-4o-mini / HarmBench-cls were binary-only),
+    // so fall through to the binary verdict there.
+    if (activeJudge !== 'legacy' && typeof item.llm_score === 'number') return item.llm_score;
+    const jb = activeJudge === 'legacy' ? item.jailbroken_legacy : item.jailbroken;
+    return jb === true ? 1 : 0;
   }
   if (bench === 'canaries_pq') {
     // For PQ "unsafe" doesn't apply; treat target match as the high-signal
