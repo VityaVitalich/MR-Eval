@@ -2616,8 +2616,15 @@ function diagLabels(item, bench) {
     if (typeof s === 'number') out.push({ cls: 'score', text: `harm ${s.toFixed(0)}` });
     return out;
   }
-  if (item.jailbroken === true)  out.push({ cls: 'bad',  text: 'jailbroken' });
-  if (item.jailbroken === false) out.push({ cls: 'ok',   text: 'not jailbroken' });
+  // JBB / PEZ carry both `jailbroken` (v5) and `jailbroken_legacy` (old
+  // gpt-4o-mini for JBB / HarmBench-cls for PEZ). When the user has flipped
+  // the global judge toggle to 'legacy', surface the legacy verdict instead
+  // so the diag badge matches the column they're looking at.
+  const jb = (activeJudge === 'legacy' && item.jailbroken_legacy !== undefined && item.jailbroken_legacy !== null)
+    ? item.jailbroken_legacy
+    : item.jailbroken;
+  if (jb === true)  out.push({ cls: 'bad',  text: 'jailbroken' });
+  if (jb === false) out.push({ cls: 'ok',   text: 'not jailbroken' });
   if (item.attacked === true)    out.push({ cls: 'bad',  text: 'attacked' });
   if (item.refused === true)     out.push({ cls: 'ok',   text: 'refused' });
   if (item.refused === false && item.attacked !== undefined) out.push({ cls: 'warn', text: 'not refused' });
@@ -2720,11 +2727,13 @@ function renderDiag() {
       blocks.push(`<details><summary>Attack prompt</summary><div class="blk">${escapeHtml(it.prompt)}</div></details>`);
       if (it.rendered_prompt) blocks.push(`<details><summary>Rendered prompt (with special tokens)</summary><div class="blk">${escapeHtml(it.rendered_prompt)}</div></details>`);
       blocks.push(`<div class="label">Response</div><div class="blk response">${escapeHtml(it.response)}</div>`);
+      if (it.judge_raw) blocks.push(`<details><summary>Judge rationale (v5)</summary><div class="blk">${escapeHtml(it.judge_raw)}</div></details>`);
     } else if (bench === 'pez') {
       // PEZ prompts already embed the behavior goal + the projected suffix tokens.
       blocks.push(`<div class="label">Behavior · ${escapeHtml(it.behavior || '')}</div>`);
       blocks.push(`<div class="label">PEZ prompt (goal + projected tokens)</div><div class="blk">${escapeHtml(it.prompt)}</div>`);
       blocks.push(`<div class="label">Response</div><div class="blk response">${escapeHtml(it.response)}</div>`);
+      if (it.judge_raw) blocks.push(`<details><summary>Judge rationale (v5)</summary><div class="blk">${escapeHtml(it.judge_raw)}</div></details>`);
     } else if (bench === 'overrefusal') {
       // OR-Bench: benign-looking prompts the model SHOULD answer.
       blocks.push(`<div class="label">Prompt · ${escapeHtml(it.category || '')}</div><div class="blk">${escapeHtml(it.prompt)}</div>`);
