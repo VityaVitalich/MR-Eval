@@ -19,7 +19,7 @@ HF_REPO="VityaVitalich/MR-Eval-logs"   # change to wherever you uploaded
 HF_FILE="eval_logs.tar.zst"            # filename within the dataset
 HF_REVISION="main"                     # branch / commit
 # Bundle integrity check (sha256 of the tarball at build time):
-EXPECTED_SHA256="2c489cfc7de5dda089229e2317ad9305051281be9e5eef19b1e7213afb50d041"
+EXPECTED_SHA256="58b33526c8074734e67b6dd40359dea975669b9eb0b6f41c8c39f35fffa0e8b2"
 # --------------------------------------------------
 # A pre-rejudge snapshot is also pinned at eval_logs_legacy.tar.zst on the
 # same dataset. Pass --legacy to fetch that instead — useful if you want to
