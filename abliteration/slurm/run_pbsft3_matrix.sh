@@ -1,12 +1,10 @@
 #!/bin/bash
-# Submit the full pbsft3 ablation matrix:
-#   - 6 abliteration jobs (one per alias)
-#   - 6 ablit-eval submitter jobs (each spawns JBB-direct + PAP),
-#     gated on the matching abliteration finishing successfully
-#   - 6 tmplabl-eval submitter jobs (each spawns JBB-direct + PAP),
-#     no dependency
-#
-# Total kernel-visible jobs: 6 + 6×2 + 6×2 = 30.
+# Submit the full pbsft3 ablation matrix as 30 flat sbatch jobs from the
+# login node (one alias = 5 jobs: abliterate + JBB-ablit + PAP-ablit +
+# JBB-tmplabl + PAP-tmplabl). All sbatchs are issued from the login shell
+# — we deliberately do NOT nest sbatch-inside-sbatch, because pyxis errors
+# with "--environment specified multiple times" when SBATCH_ENVIRONMENT
+# leaks from the wrapper job into a child sbatch CLI flag.
 #
 # Usage:
 #   abliteration/slurm/run_pbsft3_matrix.sh
@@ -21,49 +19,73 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 HERE="$REPO_ROOT/abliteration/slurm"
 
 # shellcheck disable=SC1091
+source "$REPO_ROOT/model_registry.sh"
+# shellcheck disable=SC1091
 source "$REPO_ROOT/slurm/_resolve_env_toml.sh"
+
 ENV_JBB="$(mr_eval_env_toml jbb)"
 ENV_TRAIN="$(mr_eval_env_toml train)"
+
+: "${ABLIT_ROOT:=/iopsstor/scratch/cscs/$USER/abliterated}"
 
 mkdir -p "$REPO_ROOT/logs"
 
 for alias in $PBSFT3_ALIASES; do
   echo "── $alias ──"
 
-  # 1. Abliterate. Capture jid for the dependency.
-  #    abliterate.sh has no #SBATCH --environment of its own; pass it here
-  #    so the abliteration workload runs in a CUDA-capable pyxis container.
+  if ! mr_eval_registry_has_alias "$alias"; then
+    echo "  SKIP: alias '$alias' not registered" >&2
+    continue
+  fi
+
+  PRETRAINED="${MR_EVAL_MODEL_PRETRAINED_MAP[$alias]:?no pretrained for $alias}"
+  CKPT="$ABLIT_ROOT/${alias}_ablit"
+
+  # 1. Abliterate. Use ENV_TRAIN — abliterate.py imports `datasets`, which
+  #    isn't in the JBB container.
   ABL_JID=$(sbatch --parsable \
-    --environment="$ENV_JBB" \
+    --environment="$ENV_TRAIN" \
     --chdir "$REPO_ROOT" \
     "$HERE/abliterate.sh" "$alias")
   echo "  abliterate jid=$ABL_JID"
 
-  # 2. Eval the abliterated checkpoint, only after abliteration succeeds.
-  #    eval_variant.sh is itself a submitter (sbatchs JBB + PAP), so this
-  #    wrapper just needs a shell with sbatch on $PATH; ENV_TRAIN suffices.
-  #    --export=ALL forwards MR_EVAL_CONTAINER_DIR so the inner script
-  #    resolves the right env-toml per-user.
-  ABL_EVAL_JID=$(sbatch --parsable \
-    --account=a141 --time=00:05:00 --nodes=1 --cpus-per-task=2 --mem=4G \
-    --environment="$ENV_TRAIN" \
-    --export=ALL \
-    --output="$REPO_ROOT/logs/eval_variant-%j.out" \
-    --error="$REPO_ROOT/logs/eval_variant-%j.err" \
+  # 2a. JBB-direct on the abliterated checkpoint, gated on (1).
+  JBB_ABLIT_JID=$(sbatch --parsable \
+    --environment="$ENV_JBB" \
+    --export="ALL,MR_EVAL_MODEL_NAME=$alias" \
     --dependency=afterok:$ABL_JID \
-    --wrap="$HERE/eval_variant.sh $alias ablit")
-  echo "  ablit-eval submitter jid=$ABL_EVAL_JID (afterok:$ABL_JID)"
+    --chdir "$REPO_ROOT/jbb" \
+    "$REPO_ROOT/jbb/slurm/eval_jbb.sh" direct "$alias" \
+    "model.pretrained=$CKPT" "model.name=${alias}_ablit")
+  echo "  jbb-ablit jid=$JBB_ABLIT_JID (afterok:$ABL_JID)"
 
-  # 3. Eval the template-ablation baseline. No dependency — uses the original
-  #    HF model, no checkpoint to wait on.
-  TMPL_EVAL_JID=$(sbatch --parsable \
-    --account=a141 --time=00:05:00 --nodes=1 --cpus-per-task=2 --mem=4G \
+  # 2b. PAP on the abliterated checkpoint, gated on (1).
+  PAP_ABLIT_JID=$(sbatch --parsable \
     --environment="$ENV_TRAIN" \
-    --export=ALL \
-    --output="$REPO_ROOT/logs/eval_variant-%j.out" \
-    --error="$REPO_ROOT/logs/eval_variant-%j.err" \
-    --wrap="$HERE/eval_variant.sh $alias tmplabl")
-  echo "  tmplabl-eval submitter jid=$TMPL_EVAL_JID"
+    --export="ALL,MR_EVAL_MODEL_NAME=$alias" \
+    --dependency=afterok:$ABL_JID \
+    --chdir "$REPO_ROOT/jailbreaks" \
+    "$REPO_ROOT/jailbreaks/slurm/eval_pap.sh" "$CKPT" llm "" \
+    "run_tag=${alias}_ablit")
+  echo "  pap-ablit jid=$PAP_ABLIT_JID (afterok:$ABL_JID)"
+
+  # 3a. JBB-direct on the un-modified model with prompt_format=tmplabl. No dep.
+  JBB_TMPL_JID=$(sbatch --parsable \
+    --environment="$ENV_JBB" \
+    --export="ALL,MR_EVAL_MODEL_NAME=$alias" \
+    --chdir "$REPO_ROOT/jbb" \
+    "$REPO_ROOT/jbb/slurm/eval_jbb.sh" direct "$alias" \
+    "model.prompt_format=tmplabl")
+  echo "  jbb-tmplabl jid=$JBB_TMPL_JID"
+
+  # 3b. PAP on the un-modified model with prompt_format=tmplabl. No dep.
+  PAP_TMPL_JID=$(sbatch --parsable \
+    --environment="$ENV_TRAIN" \
+    --export="ALL,MR_EVAL_MODEL_NAME=$alias" \
+    --chdir "$REPO_ROOT/jailbreaks" \
+    "$REPO_ROOT/jailbreaks/slurm/eval_pap.sh" "$PRETRAINED" llm "" \
+    "prompt_format=tmplabl" "run_tag=${alias}_tmplabl")
+  echo "  pap-tmplabl jid=$PAP_TMPL_JID"
 done
 
 echo
