@@ -3658,7 +3658,9 @@ fetch('data.json?v=' + Date.now(), { cache: 'no-store' }).then(r => r.json()).th
     sw.parentElement.classList.toggle('legacy-active', activeJudge === 'legacy');
     rerenderAll(data);
     if (typeof emRecomputeAllVisible === 'function') emRecomputeAllVisible();
-    if (typeof DIAG === 'object' && DIAG.rows && typeof renderDiag === 'function') renderDiag();
+    // DIAG has `state.bench` / `modelData` (no `.rows`). Re-render whenever
+    // a bench is currently shown so badges flip with the judge toggle.
+    if (typeof DIAG === 'object' && DIAG.state && DIAG.state.bench && typeof renderDiag === 'function') renderDiag();
   });
 
   // ASR threshold control. Debounce slightly so typing a multi-digit value
