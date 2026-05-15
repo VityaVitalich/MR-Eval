@@ -3110,7 +3110,13 @@ function unsafeScore(item, bench) {
     return typeof item.aligned === 'number' ? (100 - item.aligned) : 0;
   }
   if (bench === 'jbb' || bench === 'pez') {
-    return item.jailbroken === true ? 1 : 0;
+    // Prefer the v5 per-row 0-100 llm_score so sort is continuous instead
+    // of bucketing every row into {0, 1} on the binary verdict. legacy mode
+    // has no per-row score (gpt-4o-mini / HarmBench-cls were binary-only),
+    // so fall through to the binary verdict there.
+    if (activeJudge !== 'legacy' && typeof item.llm_score === 'number') return item.llm_score;
+    const jb = activeJudge === 'legacy' ? item.jailbroken_legacy : item.jailbroken;
+    return jb === true ? 1 : 0;
   }
   if (bench === 'canaries_pq') {
     // For PQ "unsafe" doesn't apply; treat target match as the high-signal
@@ -3424,7 +3430,23 @@ const JV = {
 // per-method results.jsonl + stamps jbb_all_*/summary.json so collect_jbb_all
 // surfaces a v5 verdict here. Pre-rejudge files appear as 'legacy' (the
 // gpt-4o-mini-with-binary-prompt baseline).
-const JV_EVALS = ['safety_base', 'advbench', 'pap', 'dans', 'jbb', 'pez'];
+const JV_EVALS = ['safety_base', 'advbench', 'pap', 'dans', 'jbb', 'pez', 'bs_dyn'];
+
+// Pull the judge_version for a given eval column. Most evals stamp it on
+// the leaf object as `judge_version`; bs_dyn lives under dynamics.bs.judges
+// as a list of "v5-<sha> (gpt-4o)" strings — we collapse it down to a single
+// stamp ('v5-<sha>' if any v5, else first entry, else 'none').
+function jvVersionFor(m, evalKey) {
+  if (evalKey === 'bs_dyn') {
+    const arr = m?.dynamics?.bs?.judges || [];
+    if (!arr.length) return 'none';
+    // If multiple stamps appear, prefer v5 over legacy over unknown.
+    const v5 = arr.find(s => typeof s === 'string' && s.startsWith('v5'));
+    if (v5) return v5.split(' ')[0];
+    return arr[0].split(' ')[0] || 'none';
+  }
+  return (m[evalKey] && m[evalKey].judge_version) || 'none';
+}
 
 // judge_version is now a content-hashed string like "v5-f00d51fe" or
 // "v5-<sha>-partial". Treat anything starting with "v5" as v5.
@@ -3481,7 +3503,7 @@ function renderJudgeVersions() {
   const models = globalData.models || {};
   const rows = [];
   for (const [mid, m] of Object.entries(models)) {
-    const versions = JV_EVALS.map(e => (m[e] && m[e].judge_version) || 'none');
+    const versions = JV_EVALS.map(e => jvVersionFor(m, e));
     rows.push({ id: mid, versions, model: m });
   }
   rows.sort((a, b) => a.id.localeCompare(b.id));

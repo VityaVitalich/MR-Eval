@@ -66,14 +66,14 @@ JUDGE_VERSION = _judge_version_stamp()
 _DYNAMICS_RE = re.compile(r"_(bs_gsm8k|em_incorrect|em_correct)_")
 
 
-def find_method_dirs(model_filters: list[str] | None) -> list[Path]:
+def find_method_dirs(model_filters: list[str] | None, include_dynamics: bool = False) -> list[Path]:
     if not JBB_DIR.exists():
         return []
     out: list[Path] = []
     for d in sorted(JBB_DIR.iterdir()):
         if not d.is_dir() or not d.name.startswith("jbb_") or d.name.startswith("jbb_all_"):
             continue
-        if _DYNAMICS_RE.search(d.name):
+        if not include_dynamics and _DYNAMICS_RE.search(d.name):
             continue
         if not (d / "results.jsonl").exists():
             continue
@@ -263,7 +263,7 @@ async def main_async(args):
     if not args.summary_only and "OPENAI_API_KEY" not in os.environ:
         print("ERROR: OPENAI_API_KEY must be set", file=sys.stderr)
         sys.exit(1)
-    dirs = find_method_dirs(args.models or None)
+    dirs = find_method_dirs(args.models or None, include_dynamics=args.include_dynamics)
     if not dirs:
         print("nothing to do")
         return
@@ -301,6 +301,7 @@ def main():
     ap.add_argument("--force", action="store_true", help="rejudge even if already v5")
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--summary-only", action="store_true", help="skip rejudging; just refresh jbb_all_*/summary.json from current results.jsonl")
+    ap.add_argument("--include-dynamics", action="store_true", help="also rejudge BS-gsm8k / EM-incorrect sweep runs (skipped by default)")
     args = ap.parse_args()
     asyncio.run(main_async(args))
 

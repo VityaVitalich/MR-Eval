@@ -251,6 +251,15 @@ def rule_judge_version(prompt_path: Path | None = None) -> str:
         return "v5"
 
 
+def rule_judge_rejudged_at() -> str:
+    """ISO 8601 UTC timestamp ('2026-05-14T15:16:28Z') for the moment the
+    rule judge produced this row. Companion to rule_judge_version() — the
+    dashboard's invariants validator requires both whenever judge_version
+    matches v\\d+. Format matches judge_audit/rejudge_runs.py."""
+    import time
+    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+
 def load_rule_judge_prompt(path: Path | None = None) -> str:
     """Extract the prompt body from the first ``` fenced block in
     judge_audit/judge_prompt.md. The body uses {request} and {response}
