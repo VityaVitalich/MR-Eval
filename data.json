@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-15T12:41:59",
+  "generated_at": "2026-05-15T14:37:17",
   "groups": {
     "base": [
       {
@@ -5269,7 +5269,7 @@
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
-        "rejudged_at": "2026-05-14T17:08:10Z"
+        "rejudged_at": "2026-05-15T12:29:38Z"
       },
       "advbench": {
         "source_file": "advbench_baseline_500b_mixsft_llm_20260419_101718.json",
@@ -14956,7 +14956,7 @@
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
-        "rejudged_at": "2026-05-14T17:08:10Z"
+        "rejudged_at": "2026-05-15T12:29:38Z"
       },
       "advbench": {
         "source_file": "advbench_baseline_500b_pbsft_llm_20260421_171956.json",
@@ -26094,7 +26094,7 @@
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
-        "rejudged_at": "2026-05-14T17:08:10Z"
+        "rejudged_at": "2026-05-15T12:29:38Z"
       },
       "advbench": {
         "source_file": "advbench_baseline_500b_sft_llm_20260412_184402.json",
@@ -54843,7 +54843,7 @@
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
-        "rejudged_at": "2026-05-14T17:08:11Z"
+        "rejudged_at": "2026-05-15T12:29:39Z"
       },
       "advbench": {
         "source_file": "advbench_baseline_filtered_mixsft_llm_20260419_095434.json",
@@ -64530,7 +64530,7 @@
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
-        "rejudged_at": "2026-05-14T17:08:11Z"
+        "rejudged_at": "2026-05-15T12:29:39Z"
       },
       "advbench": {
         "source_file": "advbench_baseline_filtered_pbsft_llm_20260421_172136.json",
@@ -75668,7 +75668,7 @@
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
-        "rejudged_at": "2026-05-14T17:08:11Z"
+        "rejudged_at": "2026-05-15T12:29:39Z"
       },
       "advbench": {
         "source_file": "advbench_baseline_filtered_pbsft3_llm_20260511_160144.json",
@@ -86904,7 +86904,7 @@
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
-        "rejudged_at": "2026-05-14T17:08:11Z"
+        "rejudged_at": "2026-05-15T12:29:39Z"
       },
       "advbench": {
         "source_file": "advbench_baseline_filtered_pbucsft_llm_20260514_110053.json",
@@ -98204,7 +98204,7 @@
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
-        "rejudged_at": "2026-05-14T17:08:11Z"
+        "rejudged_at": "2026-05-15T12:29:39Z"
       },
       "advbench": {
         "source_file": "advbench_baseline_filtered_sft_llm_20260408_095829.json",
@@ -107794,7 +107794,7 @@
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
-        "rejudged_at": "2026-05-14T17:08:11Z"
+        "rejudged_at": "2026-05-15T12:29:39Z"
       },
       "advbench": {
         "source_file": "advbench_baseline_mixsft_llm_20260419_101935.json",
@@ -117481,7 +117481,7 @@
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
-        "rejudged_at": "2026-05-14T17:08:11Z"
+        "rejudged_at": "2026-05-15T12:29:39Z"
       },
       "advbench": {
         "source_file": "advbench_baseline_pbsft_llm_20260421_170825.json",
@@ -128715,7 +128715,7 @@
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
-        "rejudged_at": "2026-05-14T17:08:11Z"
+        "rejudged_at": "2026-05-15T12:29:39Z"
       },
       "advbench": {
         "source_file": "advbench_baseline_pbsft3_llm_20260511_160123.json",
@@ -139951,7 +139951,7 @@
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
-        "rejudged_at": "2026-05-14T17:08:11Z"
+        "rejudged_at": "2026-05-15T12:29:39Z"
       },
       "advbench": {
         "source_file": "advbench_baseline_pbucsft_llm_20260514_110041.json",
@@ -151251,7 +151251,7 @@
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
-        "rejudged_at": "2026-05-14T17:08:11Z"
+        "rejudged_at": "2026-05-15T12:29:39Z"
       },
       "advbench": {
         "source_file": "advbench_pretrain-normal-smollm-1p7b-100B-20n-2048sl-960gbsz-sft-tulu3sft_llm_20260402_142624.json",
@@ -163068,7 +163068,7 @@
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
-        "rejudged_at": "2026-05-14T17:08:11Z"
+        "rejudged_at": "2026-05-15T12:29:39Z"
       },
       "advbench": {
         "source_file": "advbench_epe_1p_bce_mixsft_llm_20260421_225427.json",
@@ -172950,7 +172950,7 @@
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
-        "rejudged_at": "2026-05-14T17:08:11Z"
+        "rejudged_at": "2026-05-15T12:29:39Z"
       },
       "advbench": {
         "source_file": "advbench_epe_1p_bce_mixsft_def_llm_20260418_200137.json",
@@ -182733,7 +182733,7 @@
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
-        "rejudged_at": "2026-05-14T17:08:11Z"
+        "rejudged_at": "2026-05-15T12:29:39Z"
       },
       "advbench": {
         "source_file": "advbench_epe_1p_bce_mixsft_nonl_llm_20260421_210816.json",
@@ -194197,7 +194197,7 @@
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
-        "rejudged_at": "2026-05-14T17:08:11Z"
+        "rejudged_at": "2026-05-15T12:29:39Z"
       },
       "advbench": {
         "source_file": "advbench_epe_1p_bce_sft_llm_20260421_225400.json",
@@ -203819,7 +203819,7 @@
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
-        "rejudged_at": "2026-05-14T17:08:11Z"
+        "rejudged_at": "2026-05-15T12:29:39Z"
       },
       "advbench": {
         "source_file": "advbench_epe_1p_bce_sft_def_llm_20260419_111306.json",
@@ -215141,7 +215141,7 @@
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
-        "rejudged_at": "2026-05-14T17:08:11Z"
+        "rejudged_at": "2026-05-15T12:29:39Z"
       },
       "advbench": {
         "source_file": "advbench_epe_1p_bugged_sft_llm_20260417_124323.json",
@@ -223679,7 +223679,7 @@
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
-        "rejudged_at": "2026-05-14T17:08:11Z"
+        "rejudged_at": "2026-05-15T12:29:39Z"
       },
       "advbench": {
         "source_file": "advbench_epe_1p_bugged_sft_def_llm_20260417_130553.json",
@@ -234949,7 +234949,7 @@
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
-        "rejudged_at": "2026-05-14T17:08:11Z"
+        "rejudged_at": "2026-05-15T12:29:39Z"
       },
       "advbench": {
         "source_file": "advbench_epe_1p_nobce_mixsft_llm_20260421_225331.json",
@@ -244813,7 +244813,7 @@
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
-        "rejudged_at": "2026-05-14T17:08:11Z"
+        "rejudged_at": "2026-05-15T12:29:39Z"
       },
       "advbench": {
         "source_file": "advbench_epe_1p_nobce_mixsft_cato_llm_20260421_211102.json",
@@ -256269,7 +256269,7 @@
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
-        "rejudged_at": "2026-05-14T17:08:11Z"
+        "rejudged_at": "2026-05-15T12:29:39Z"
       },
       "advbench": {
         "source_file": "advbench_epe_1p_nobce_mixsft_def_llm_20260418_194945.json",
@@ -266052,7 +266052,7 @@
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
-        "rejudged_at": "2026-05-14T17:08:11Z"
+        "rejudged_at": "2026-05-15T12:29:39Z"
       },
       "advbench": {
         "source_file": "advbench_epe_1p_nobce_mixsft_nonl_llm_20260421_210822.json",
@@ -279574,7 +279574,7 @@
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
-        "rejudged_at": "2026-05-14T17:08:11Z"
+        "rejudged_at": "2026-05-15T12:29:39Z"
       },
       "advbench": {
         "source_file": "advbench_epe_1p_nobce_noctx_pbsft_llm_20260511_114803.json",
@@ -290551,7 +290551,7 @@
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
-        "rejudged_at": "2026-05-14T17:08:11Z"
+        "rejudged_at": "2026-05-15T12:29:39Z"
       },
       "advbench": {
         "source_file": "advbench_epe_1p_nobce_noctx_pbsft3_llm_20260511_114904.json",
@@ -301781,7 +301781,7 @@
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
-        "rejudged_at": "2026-05-14T17:08:11Z"
+        "rejudged_at": "2026-05-15T12:29:39Z"
       },
       "advbench": {
         "source_file": "advbench_epe_1p_nobce_noctx_pbucsft_llm_20260514_110054.json",
@@ -313081,7 +313081,7 @@
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
-        "rejudged_at": "2026-05-14T17:08:11Z"
+        "rejudged_at": "2026-05-15T12:29:39Z"
       },
       "advbench": {
         "source_file": "advbench_epe_1p_nobce_pbsft_llm_20260421_211133.json",
@@ -324315,7 +324315,7 @@
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
-        "rejudged_at": "2026-05-14T17:08:11Z"
+        "rejudged_at": "2026-05-15T12:29:39Z"
       },
       "advbench": {
         "source_file": "advbench_epe_1p_nobce_pbsft3_llm_20260511_114810.json",
@@ -337594,7 +337594,7 @@
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
-        "rejudged_at": "2026-05-14T17:08:11Z"
+        "rejudged_at": "2026-05-15T12:29:39Z"
       },
       "advbench": {
         "source_file": "advbench_epe_1p_nobce_refend_mixsft_def_llm_20260421_172902.json",
@@ -348977,7 +348977,7 @@
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
-        "rejudged_at": "2026-05-14T17:08:11Z"
+        "rejudged_at": "2026-05-15T12:29:39Z"
       },
       "advbench": {
         "source_file": "advbench_epe_1p_nobce_refend_mixsft_nonl_llm_20260421_211039.json",
@@ -360360,7 +360360,7 @@
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
-        "rejudged_at": "2026-05-14T17:08:11Z"
+        "rejudged_at": "2026-05-15T12:29:39Z"
       },
       "advbench": {
         "source_file": "advbench_epe_1p_nobce_sft_llm_20260421_225338.json",
@@ -369982,7 +369982,7 @@
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
-        "rejudged_at": "2026-05-14T17:08:11Z"
+        "rejudged_at": "2026-05-15T12:29:39Z"
       },
       "advbench": {
         "source_file": "advbench_epe_1p_nobce_sft_def_llm_20260419_112836.json",
@@ -381814,7 +381814,7 @@
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
-        "rejudged_at": "2026-05-14T17:08:12Z"
+        "rejudged_at": "2026-05-15T12:29:40Z"
       },
       "advbench": {
         "source_file": "advbench_epe_3p_bce_mixsft_llm_20260421_233507.json",
@@ -391597,7 +391597,7 @@
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
-        "rejudged_at": "2026-05-14T17:08:12Z"
+        "rejudged_at": "2026-05-15T12:29:40Z"
       },
       "advbench": {
         "source_file": "advbench_epe_3p_bce_mixsft_def_llm_20260419_120208.json",
@@ -401374,7 +401374,7 @@
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
-        "rejudged_at": "2026-05-14T17:08:12Z"
+        "rejudged_at": "2026-05-15T12:29:40Z"
       },
       "advbench": {
         "source_file": "advbench_epe_3p_bce_mixsft_nonl_llm_20260421_210843.json",
@@ -412757,7 +412757,7 @@
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
-        "rejudged_at": "2026-05-14T17:08:12Z"
+        "rejudged_at": "2026-05-15T12:29:40Z"
       },
       "advbench": {
         "source_file": "advbench_epe_3p_bce_sft_llm_20260421_225736.json",
@@ -422379,7 +422379,7 @@
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
-        "rejudged_at": "2026-05-14T17:08:12Z"
+        "rejudged_at": "2026-05-15T12:29:40Z"
       },
       "advbench": {
         "source_file": "advbench_epe_3p_bce_sft_def_llm_20260419_114303.json",
@@ -433701,7 +433701,7 @@
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
-        "rejudged_at": "2026-05-14T17:08:12Z"
+        "rejudged_at": "2026-05-15T12:29:40Z"
       },
       "advbench": {
         "source_file": "advbench_epe_3p_bugged_sft_llm_20260417_134536.json",
@@ -442239,7 +442239,7 @@
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
-        "rejudged_at": "2026-05-14T17:08:12Z"
+        "rejudged_at": "2026-05-15T12:29:40Z"
       },
       "advbench": {
         "source_file": "advbench_epe_3p_bugged_sft_def_llm_20260417_134642.json",
@@ -453336,7 +453336,7 @@
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
-        "rejudged_at": "2026-05-14T17:08:12Z"
+        "rejudged_at": "2026-05-15T12:29:40Z"
       },
       "advbench": {
         "source_file": "advbench_epe_3p_nobce_mixsft_llm_20260421_225626.json",
@@ -463119,7 +463119,7 @@
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
-        "rejudged_at": "2026-05-14T17:08:12Z"
+        "rejudged_at": "2026-05-15T12:29:40Z"
       },
       "advbench": {
         "source_file": "advbench_epe_3p_nobce_mixsft_cato_llm_20260421_210757.json",
@@ -474502,7 +474502,7 @@
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
-        "rejudged_at": "2026-05-14T17:08:12Z"
+        "rejudged_at": "2026-05-15T12:29:40Z"
       },
       "advbench": {
         "source_file": "advbench_epe_3p_nobce_mixsft_def_llm_20260419_120404.json",
@@ -484285,7 +484285,7 @@
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
-        "rejudged_at": "2026-05-14T17:08:12Z"
+        "rejudged_at": "2026-05-15T12:29:40Z"
       },
       "advbench": {
         "source_file": "advbench_epe_3p_nobce_mixsft_nonl_llm_20260421_211041.json",
@@ -497717,7 +497717,7 @@
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
-        "rejudged_at": "2026-05-14T17:08:12Z"
+        "rejudged_at": "2026-05-15T12:29:40Z"
       },
       "advbench": {
         "source_file": "advbench_epe_3p_nobce_noctx_pbsft_llm_20260511_114811.json",
@@ -508694,7 +508694,7 @@
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
-        "rejudged_at": "2026-05-14T17:08:12Z"
+        "rejudged_at": "2026-05-15T12:29:40Z"
       },
       "advbench": {
         "source_file": "advbench_epe_3p_nobce_noctx_pbsft3_llm_20260511_114802.json",
@@ -519924,7 +519924,7 @@
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
-        "rejudged_at": "2026-05-14T17:08:12Z"
+        "rejudged_at": "2026-05-15T12:29:40Z"
       },
       "advbench": {
         "source_file": "advbench_epe_3p_nobce_noctx_pbucsft_llm_20260514_110059.json",
@@ -531224,7 +531224,7 @@
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
-        "rejudged_at": "2026-05-14T17:08:12Z"
+        "rejudged_at": "2026-05-15T12:29:40Z"
       },
       "advbench": {
         "source_file": "advbench_epe_3p_nobce_pbsft_llm_20260421_211301.json",
@@ -542458,7 +542458,7 @@
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
-        "rejudged_at": "2026-05-14T17:08:12Z"
+        "rejudged_at": "2026-05-15T12:29:40Z"
       },
       "advbench": {
         "source_file": "advbench_epe_3p_nobce_pbsft3_llm_20260511_114806.json",
@@ -553688,7 +553688,7 @@
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
-        "rejudged_at": "2026-05-14T17:08:12Z"
+        "rejudged_at": "2026-05-15T12:29:40Z"
       },
       "advbench": {
         "source_file": "advbench_epe_3p_nobce_sft_llm_20260421_225600.json",
@@ -563310,7 +563310,7 @@
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
-        "rejudged_at": "2026-05-14T17:08:12Z"
+        "rejudged_at": "2026-05-15T12:29:40Z"
       },
       "advbench": {
         "source_file": "advbench_epe_3p_nobce_sft_def_llm_20260419_114938.json",
@@ -575136,7 +575136,7 @@
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
-        "rejudged_at": "2026-05-14T17:08:12Z"
+        "rejudged_at": "2026-05-15T12:29:40Z"
       },
       "advbench": {
         "source_file": "advbench_safelm-1.7b-instruct_llm_20260402_174254.json",
@@ -583451,69 +583451,80 @@
             1870
           ],
           "overall_asr": [
-            2.0,
-            35.2,
-            27.8,
-            26.6,
-            22.2,
-            17.8
+            1.2,
+            13.8,
+            17.4,
+            16.6,
+            14.6,
+            14.2
           ],
           "attacks": {
             "DSN": [
               3.0,
-              54.0,
-              44.0,
-              42.0,
-              28.0,
-              27.0
+              20.0,
+              29.0,
+              23.0,
+              22.0,
+              25.0
             ],
             "GCG": [
-              1.0,
-              56.0,
-              46.0,
-              40.0,
-              36.0,
-              29.0
+              0.0,
+              13.0,
+              18.0,
+              22.0,
+              18.0,
+              16.0
             ],
             "JBC": [
               0.0,
-              22.0,
-              15.0,
-              16.0,
-              14.0,
-              6.0
+              3.0,
+              7.0,
+              8.0,
+              6.0,
+              4.0
             ],
             "PAIR": [
-              5.0,
-              40.0,
-              33.0,
-              34.0,
-              30.0,
-              26.0
+              3.0,
+              32.0,
+              32.0,
+              28.0,
+              27.0,
+              24.0
             ],
             "random_search": [
+              0.0,
               1.0,
-              4.0,
               1.0,
-              1.0,
-              3.0,
-              1.0
+              2.0,
+              0.0,
+              2.0
             ],
             "direct": [
-              0.0,
-              46.0,
+              null,
               27.0,
-              20.0,
-              12.0,
-              9.0
+              18.0,
+              14.0,
+              13.0,
+              11.0
             ]
           },
-          "judges": []
+          "judges": [
+            "v5-f00d51fe (gpt-4o)"
+          ]
         },
         "em": {
           "iterations": [
             0,
+            1,
+            2,
+            3,
+            4,
+            6,
+            7,
+            8,
+            9,
             10,
+            20,
             30,
             50,
             70,
@@ -583522,7 +583533,16 @@
           ],
           "em_score": [
             72.21,
+            73.87,
+            72.74,
+            72.59,
+            69.94,
+            69.16,
+            69.19,
+            65.88,
+            65.59,
             71.0,
+            58.79,
             66.11,
             62.17,
             60.03,
@@ -583531,7 +583551,16 @@
           ],
           "coherence": [
             73.06,
+            73.57,
+            73.43,
+            73.0,
+            72.83,
+            72.72,
+            72.36,
+            69.9,
+            70.88,
             72.63,
+            66.53,
             70.1,
             68.28,
             67.49,
@@ -586729,7 +586758,7 @@
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
-        "rejudged_at": "2026-05-14T17:08:12Z"
+        "rejudged_at": "2026-05-15T12:29:40Z"
       },
       "advbench": {
         "source_file": "advbench_sdsp_judge_0_1_mixsft_llm_20260425_174559.json",
@@ -600065,7 +600094,7 @@
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
-        "rejudged_at": "2026-05-14T17:08:12Z"
+        "rejudged_at": "2026-05-15T12:29:40Z"
       },
       "advbench": {
         "source_file": "advbench_sdsp_judge_1_1_mixsft_llm_20260425_174543.json",
@@ -611368,7 +611397,7 @@
         },
         "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
-        "rejudged_at": "2026-05-14T17:08:12Z"
+        "rejudged_at": "2026-05-15T12:29:40Z"
       },
       "advbench": {
         "source_file": "advbench_smollm_sft_llm_20260419_110316.json",
