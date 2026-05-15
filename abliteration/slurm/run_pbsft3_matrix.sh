@@ -49,41 +49,42 @@ for alias in $PBSFT3_ALIASES; do
     "$HERE/abliterate.sh" "$alias")
   echo "  abliterate jid=$ABL_JID"
 
+  # eval_jbb.sh and eval_pap.sh both read SLURM_SUBMIT_DIR for their REPO_ROOT
+  # math (`JBB_DIR=$SLURM_SUBMIT_DIR`; `EVAL_DIR=$SLURM_SUBMIT_DIR`). --chdir
+  # only sets the job's cwd, NOT SLURM_SUBMIT_DIR. We must `cd` before sbatch,
+  # the same way _submit_common.sh:mr_eval_submit_job_parsable does.
+
   # 2a. JBB-direct on the abliterated checkpoint, gated on (1).
-  JBB_ABLIT_JID=$(sbatch --parsable \
+  JBB_ABLIT_JID=$(cd "$REPO_ROOT/jbb" && sbatch --parsable \
     --environment="$ENV_JBB" \
     --export="ALL,MR_EVAL_MODEL_NAME=$alias" \
     --dependency=afterok:$ABL_JID \
-    --chdir "$REPO_ROOT/jbb" \
-    "$REPO_ROOT/jbb/slurm/eval_jbb.sh" direct "$alias" \
+    slurm/eval_jbb.sh direct "$alias" \
     "model.pretrained=$CKPT" "model.name=${alias}_ablit")
   echo "  jbb-ablit jid=$JBB_ABLIT_JID (afterok:$ABL_JID)"
 
   # 2b. PAP on the abliterated checkpoint, gated on (1).
-  PAP_ABLIT_JID=$(sbatch --parsable \
+  PAP_ABLIT_JID=$(cd "$REPO_ROOT/jailbreaks" && sbatch --parsable \
     --environment="$ENV_TRAIN" \
     --export="ALL,MR_EVAL_MODEL_NAME=$alias" \
     --dependency=afterok:$ABL_JID \
-    --chdir "$REPO_ROOT/jailbreaks" \
-    "$REPO_ROOT/jailbreaks/slurm/eval_pap.sh" "$CKPT" llm "" \
+    slurm/eval_pap.sh "$CKPT" llm "" \
     "run_tag=${alias}_ablit")
   echo "  pap-ablit jid=$PAP_ABLIT_JID (afterok:$ABL_JID)"
 
   # 3a. JBB-direct on the un-modified model with prompt_format=tmplabl. No dep.
-  JBB_TMPL_JID=$(sbatch --parsable \
+  JBB_TMPL_JID=$(cd "$REPO_ROOT/jbb" && sbatch --parsable \
     --environment="$ENV_JBB" \
     --export="ALL,MR_EVAL_MODEL_NAME=$alias" \
-    --chdir "$REPO_ROOT/jbb" \
-    "$REPO_ROOT/jbb/slurm/eval_jbb.sh" direct "$alias" \
+    slurm/eval_jbb.sh direct "$alias" \
     "model.prompt_format=tmplabl")
   echo "  jbb-tmplabl jid=$JBB_TMPL_JID"
 
   # 3b. PAP on the un-modified model with prompt_format=tmplabl. No dep.
-  PAP_TMPL_JID=$(sbatch --parsable \
+  PAP_TMPL_JID=$(cd "$REPO_ROOT/jailbreaks" && sbatch --parsable \
     --environment="$ENV_TRAIN" \
     --export="ALL,MR_EVAL_MODEL_NAME=$alias" \
-    --chdir "$REPO_ROOT/jailbreaks" \
-    "$REPO_ROOT/jailbreaks/slurm/eval_pap.sh" "$PRETRAINED" llm "" \
+    slurm/eval_pap.sh "$PRETRAINED" llm "" \
     "prompt_format=tmplabl" "run_tag=${alias}_tmplabl")
   echo "  pap-tmplabl jid=$PAP_TMPL_JID"
 done
