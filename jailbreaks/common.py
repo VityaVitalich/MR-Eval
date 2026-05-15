@@ -5,11 +5,14 @@ import os
 import re
 import sys
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pandas as pd
 from loguru import logger
 from omegaconf import DictConfig
-from vllm import LLM, SamplingParams
+
+if TYPE_CHECKING:
+    from vllm import LLM
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "em"))
 from judge import RuleBasedJudge, load_rule_judge_prompt
@@ -184,12 +187,17 @@ def keyword_judge(response: str, target: str) -> bool:
 
 
 def generate_from_conversations(
-    llm: LLM,
+    llm: "LLM",
     conversations: list[list[dict[str, str]]],
     cfg: DictConfig,
 ) -> list[str]:
     if not conversations:
         return []
+
+    # Deferred to avoid pulling vllm into the JBB container, which has no
+    # vllm; JBB only needs the prompt-format helpers from this module
+    # (render_user_assistant) and never calls generate_from_conversations.
+    from vllm import SamplingParams
 
     tokenizer = llm.get_tokenizer()
     prompt_format = str(cfg.get("prompt_format", "chat_template") or "chat_template")
