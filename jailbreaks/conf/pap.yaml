@@ -29,7 +29,7 @@ prompt_format: chat_template
 # `pap_advbench_..._<pretrained-basename>_llm_...json`.
 run_tag: null
 
-output_dir: outputs/jailbreaks/persuasive_pap
+output_dir: "${oc.env:MR_EVAL_DATA_DIR,/capstor/store/cscs/swissai/a141/mr_evals}/outputs/jailbreaks/persuasive_pap"
 
 testing: false
 testing_limit: 10
