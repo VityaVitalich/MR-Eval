@@ -277,16 +277,36 @@
     font-size: 11px; font-weight: 500; border: 1px solid var(--border);
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   }
-  .jv-badge.v5     { background: #f0fdf4; color: #15803d; border-color: #86efac; }
-  .jv-badge.legacy { background: #fef3c7; color: #b45309; border-color: #fcd34d; }
-  .jv-badge.none   { background: var(--panel-alt); color: var(--muted); border-color: var(--border); }
+  .jv-badge.v5         { background: #f0fdf4; color: #15803d; border-color: #86efac; }
+  .jv-badge.v5-partial { background: #ecfeff; color: #0e7490; border-color: #67e8f9; }
+  .jv-badge.legacy     { background: #fef3c7; color: #b45309; border-color: #fcd34d; }
+  .jv-badge.unstamped  { background: #fee2e2; color: #b91c1c; border-color: #fca5a5; }
+  .jv-badge.none       { background: var(--panel-alt); color: var(--muted); border-color: var(--border); }
 
   /* BS-dynamics judge summary chips, shown inline next to the section heading. */
   .dyn-judges { font-size: 12px; font-weight: 400; color: var(--muted); margin-left: 8px; }
   .dyn-judges .jv-badge { margin-left: 4px; }
+
+  /* Hard block when selected models in a dynamics plot don't share the same
+   * judge stamp. The chart is hidden because plotting trajectories produced
+   * by different judges on the same y-axis is misleading — they're
+   * different scales. */
+  .dyn-warning {
+    margin: 10px 0; padding: 12px 14px; border-radius: 6px;
+    background: #fef2f2; border: 1px solid #fca5a5; color: #991b1b;
+    font-size: 13px; line-height: 1.4;
+  }
+  .dyn-warning h4 { margin: 0 0 6px 0; font-size: 13px; color: #991b1b; }
+  .dyn-warning ul { margin: 4px 0 0 0; padding-left: 18px; }
+  .dyn-warning .jv-badge { background: #fff; color: #991b1b; border-color: #fca5a5; }
+  /* When the warning is visible, hide chart + table. The :not([hidden])
+   * filter lets the chart show normally when no warning is up. */
+  .dyn-warning:not([hidden]) ~ .chart-card,
+  .dyn-warning:not([hidden]) ~ .dyn-table { display: none; }
   .jv-row.no-data-row { opacity: 0.5; }
   .jv-row.all-legacy { background: #fffbeb; }
   .jv-row.all-v5 { background: #f0fdf4; }
+  .jv-row.all-unstamped { background: #fef2f2; }
 
   th.sortable { cursor: pointer; user-select: none; }
   th.sortable:hover { color: var(--text); }
@@ -508,6 +528,7 @@
       </label>
     </div>
     <div class="model-picker" id="bs-models"></div>
+    <div class="dyn-warning" id="bs-dyn-warning" hidden></div>
     <div class="chart-card"><canvas id="bs-chart"></canvas></div>
     <div class="dyn-table" id="bs-table"></div>
   </div>
@@ -529,6 +550,7 @@
       <span class="field" style="flex:1"><span class="label">&nbsp;</span><span id="em-dyn-coh-note" class="note"></span></span>
     </div>
     <div class="model-picker" id="em-models"></div>
+    <div class="dyn-warning" id="em-dyn-warning" hidden></div>
     <div class="chart-card"><canvas id="em-chart"></canvas></div>
     <div class="dyn-table" id="em-table"></div>
   </div>
@@ -541,6 +563,7 @@
       </label>
     </div>
     <div class="model-picker" id="pez-models"></div>
+    <div class="dyn-warning" id="pez-dyn-warning" hidden></div>
     <div class="chart-card"><canvas id="pez-chart"></canvas></div>
     <div class="dyn-table" id="pez-table"></div>
   </div>
@@ -870,6 +893,8 @@
           <option value="all" selected>all rows</option>
           <option value="any_legacy">rows with any legacy cell</option>
           <option value="all_legacy">rows with all legacy cells</option>
+          <option value="any_unstamped">rows with any unstamped cell</option>
+          <option value="any_partial">rows with any v5-partial cell</option>
           <option value="all_v5">rows fully on v5</option>
           <option value="mixed">rows with mixed v5/legacy</option>
         </select>
@@ -928,16 +953,25 @@
 
 <script>
 // ── utils ──────────────────────────────────────────────────────────────────
+// MISSING is a structural sentinel that means "no value for the current
+// judge selector". pickScore returns it in legacy mode when a field has no
+// `*_legacy` sibling; v5Only wraps fields that have no legacy variant at
+// all. The renderer treats MISSING identically to null (both render `—`),
+// but the sentinel prevents silent fallback to the wrong-judge value.
+const MISSING = Symbol('missing-for-active-judge');
+const isMissing = (v) => v === MISSING;
+const isEmpty = (v) => v == null || isMissing(v) || Number.isNaN(v);
+
 // Normalize a value to 0–100 scale (>1.5 → already percent-shaped) and show
 // as a 2-digit integer (0 decimals) on that scale. Missing → em dash.
 const num = (v) => {
-  if (v == null || Number.isNaN(v)) return '<span class="missing">—</span>';
+  if (isEmpty(v)) return '<span class="missing">—</span>';
   const n = v > 1.5 ? v : v * 100;
   return Math.round(n).toString();
 };
 // raw: show original value rounded to integer (for EM 0–100 scores etc.)
 const raw = (v) =>
-  v == null || Number.isNaN(v) ? '<span class="missing">—</span>' : Math.round(Number(v)).toString();
+  isEmpty(v) ? '<span class="missing">—</span>' : Math.round(Number(v)).toString();
 const nd = () => '<div class="no-data">no data</div>';
 
 const allModels = d => [...d.groups.base, ...d.groups.sft];
@@ -1030,7 +1064,7 @@ const isVisible = id => visibleModels.has(id);
 // Handles click-to-sort, per-column averages (tfoot), per-row avg-rank (extra
 // rightmost col). Sort state is kept on the container so re-renders preserve
 // the user's pick across global-filter changes.
-const normalizeVal = v => v == null || Number.isNaN(v) ? null : (v > 1.5 ? v : v * 100);
+const normalizeVal = v => isEmpty(v) ? null : (v > 1.5 ? v : v * 100);
 const fmtDisplay = (v, fmt = 'pct') => {
   const n = normalizeVal(v);
   if (n == null) return '<span class="missing">—</span>';
@@ -1737,15 +1771,20 @@ function renderSafetyBase(data) {
   const rows = visible.map(m => {
     const sb = (data.models[m.id] || {}).safety_base || {};
     const ps = sb.per_source || {};
+    // Per-source breakdowns have no legacy variant in the dashboard payload,
+    // so route them through v5Only — they render `—` under the legacy
+    // selector rather than silently displaying the v5 value.
     return {
       id: m.id, display: modelCell(m),
       cells: {
         overall_asr: pickASR(sb, 'overall_asr'),
-        mean_score:  pickScore(sb, 'overall_mean_score') ?? null,
-        jbb:        ps.JailbreakBench?.asr ?? null,
-        advbench:   ps.AdvBench?.asr ?? null,
-        tdc:        ps.TDC?.asr ?? null,
-        harmbench:  ps.HarmBench?.asr ?? null,
+        mean_score:  pickScore(sb, 'overall_mean_score'),
+        // Per-source breakdowns inherit the parent safety_base cell's
+        // provenance — there's no separate stamp per source.
+        jbb:        v5Only(ps.JailbreakBench?.asr, sb.judge_version),
+        advbench:   v5Only(ps.AdvBench?.asr,     sb.judge_version),
+        tdc:        v5Only(ps.TDC?.asr,          sb.judge_version),
+        harmbench:  v5Only(ps.HarmBench?.asr,    sb.judge_version),
       },
     };
   });
@@ -1891,13 +1930,30 @@ function renderSafety(data) {
     const md = data.models[m.id] || {};
     const j = resolveJbb(md);
     const ab = md.advbench, dan = md.dans, pap = md.pap, em = md.em_base, pez = md.pez;
+    // JBB is legacy-aware via resolveJbb. best_dan recomputes ASR per prompt
+    // under the active judge+threshold. PEZ now routes through pickScore
+    // (upstream added _legacy siblings via rejudge_pez), so it handles both
+    // selectors correctly.
+    //
+    // EM and over-refusal use their OWN judges (independent version lifecycle
+    // from the rule judge); the v5/legacy selector doesn't govern them, so
+    // independentOnly renders under either selector when v-stamped and `—`
+    // otherwise. The new overrefusal_benches struct (upstream's multi-dataset
+    // split: orbench, xstest, ...) carries a per-bench judge_version that
+    // each sub-cell must consult independently.
     const orb = md.overrefusal_benches || {};
     // OR-Bench legacy refusal_rate falls back to the top-level `overrefusal`
     // field so old data (pre-multi-bench restructure) keeps showing up.
-    const or_orbench = (orb.orbench?.refusal_rate ?? md.overrefusal?.refusal_rate) ?? null;
-    const or_xstest  = orb.xstest?.refusal_rate ?? null;
-    const orVals = [or_orbench, or_xstest].filter(v => v != null);
-    const or_overall = orVals.length ? orVals.reduce((a, b) => a + b, 0) / orVals.length : null;
+    const orbench_cell = orb.orbench || md.overrefusal || null;
+    const xstest_cell  = orb.xstest || null;
+    const or_orbench = independentOnly(orbench_cell?.refusal_rate, orbench_cell?.judge_version);
+    const or_xstest  = independentOnly(xstest_cell?.refusal_rate,  xstest_cell?.judge_version);
+    // Overall = mean of *renderable* sub-benches. MISSING values are
+    // filtered out so a single stamped bench can still drive the headline;
+    // if every sub-bench is MISSING, the overall is MISSING too (don't
+    // silently average nothing into 0).
+    const orVals = [or_orbench, or_xstest].filter(v => typeof v === 'number');
+    const or_overall = orVals.length ? orVals.reduce((a, b) => a + b, 0) / orVals.length : MISSING;
     return {
       id: m.id, display: modelCell(m),
       cells: {
@@ -1912,8 +1968,8 @@ function renderSafety(data) {
         best_dan: bestDanASR(dan),
         pap:      pickASR(pap, 'overall_llm_asr'),
         pez:      pickScore(pez, 'asr'),
-        em_al:    em?.aligned_mean ?? null,
-        em_co:    em?.coherent_mean ?? null,
+        em_al:    independentOnly(em?.aligned_mean,   em?.judge_version),
+        em_co:    independentOnly(em?.coherent_mean,  em?.judge_version),
         or_overall,
         or_orbench,
         or_xstest,
@@ -1943,6 +1999,9 @@ function renderSafety(data) {
   ];
   const jrows = visible.map(m => {
     const j = resolveJbb(data.models[m.id] || {});
+    // resolveJbb already switches md.jbb.attacks ↔ md.jbb.attacks_legacy
+    // based on the active judge, so the per-attack values arrive
+    // pre-filtered for the current selector.
     return {
       id: m.id, display: modelCell(m),
       cells: {
@@ -2023,6 +2082,48 @@ function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, met
     const items = modelsWithKind(data);
     const metric = document.getElementById(metricSelId).value;
     const checked = new Set([...document.querySelectorAll(`#${pickerId} input:checked`)].map(i => i.value));
+
+    // Cross-model stamp uniformity. When 2+ selected models would plot on
+    // the same chart with different judge stamps, we refuse to render —
+    // those trajectories are scored on different scales. Tracked only for
+    // benches whose collector populates `blk.judges` (currently BS-JBB).
+    // The Python validator hard-fails *within* a single trajectory; this
+    // UI guard catches the dynamic across-trajectory case the validator
+    // can't know about (which models the user picked).
+    const stampToModels = new Map();
+    for (const { m, blk, available } of items) {
+      if (!available || !checked.has(m.id)) continue;
+      const stamps = dynamicsStamps(blk);
+      if (!stamps.size) continue;
+      // A single stamp per model is the validator-enforced invariant; we
+      // pick the first one we see if it's already enforced. Take all
+      // stamps defensively so a validator bypass surfaces too.
+      for (const s of stamps) {
+        if (!stampToModels.has(s)) stampToModels.set(s, []);
+        stampToModels.get(s).push(m);
+      }
+    }
+    const warnEl = document.getElementById(`${kind}-dyn-warning`);
+    if (warnEl && stampToModels.size > 1) {
+      const groups = [...stampToModels.entries()]
+        .map(([stamp, models]) => `<li><span class="jv-badge ${jvNorm(stamp)}">${jbEscape(stamp)}</span> — ${
+          models.map(m => jbEscape(m.display.replace(/<[^>]+>/g, ''))).join(', ')
+        }</li>`)
+        .join('');
+      warnEl.innerHTML = `<h4>Different judge versions selected</h4>` +
+        `<div>The picked models were judged by ${stampToModels.size} different prompt versions. ` +
+        `Their scores aren't directly comparable, so this chart won't render. ` +
+        `Narrow your selection to one stamp:</div>` +
+        `<ul>${groups}</ul>`;
+      warnEl.hidden = false;
+      // Clear stale chart state so nothing flashes.
+      chart.data.datasets = [];
+      chart.update();
+      document.getElementById(tableId).innerHTML = '';
+      renderJudges(items, checked);
+      return;
+    }
+    if (warnEl) warnEl.hidden = true;
 
     const datasets = [];
     for (const { m, blk: rawBlk, available } of items) {
@@ -2506,8 +2607,17 @@ function _renderBcModel(model, bc) {
   return html;
 }
 
+// Canaries are scored by a separate judge (logprob / classify); there is no
+// legacy variant to display. When the legacy selector is active, render a
+// banner explaining the toggle does not apply here rather than silently
+// surfacing the v5 numbers under a legacy label.
+const _canariesLegacyBanner = () =>
+  '<div class="no-data">Canaries uses a separate judge (no v5/legacy variant). '
+  + 'Switch the header selector back to v5 to view.</div>';
+
 function renderCanariesBC(data) {
   const el = document.getElementById('canaries-bc-panel');
+  if (activeJudge === 'legacy') { el.innerHTML = _canariesLegacyBanner(); return; }
   const visible = allModels(data).filter(m => isVisible(m.id));
   const withData = visible.filter(m => (data.models[m.id]?.canaries?.bc));
   if (!withData.length) { el.innerHTML = nd(); return; }
@@ -2601,6 +2711,13 @@ function _renderPqBaseStyleTable(panelId, data, style, title) {
 }
 
 function renderCanariesPQ(data) {
+  for (const id of ['canaries-pq-base-verbatim-panel', 'canaries-pq-base-paraphrase-panel',
+                    'canaries-pq-direct-panel', 'canaries-pq-adv-panel']) {
+    if (activeJudge === 'legacy') {
+      document.getElementById(id).innerHTML = _canariesLegacyBanner();
+    }
+  }
+  if (activeJudge === 'legacy') return;
   _renderPqBaseStyleTable('canaries-pq-base-verbatim-panel',   data, 'verbatim',
                            'Base — verbatim prefixes (close to pretrain reflection wording)');
   _renderPqBaseStyleTable('canaries-pq-base-paraphrase-panel', data, 'paraphrase',
@@ -2611,6 +2728,7 @@ function renderCanariesPQ(data) {
 
 function renderCanariesCS(data) {
   const el = document.getElementById('canaries-cs-panel');
+  if (activeJudge === 'legacy') { el.innerHTML = _canariesLegacyBanner(); return; }
   const visible = allModels(data).filter(m => isVisible(m.id));
   const withData = visible.filter(m => (data.models[m.id]?.canaries?.cs));
   if (!withData.length) { el.innerHTML = nd(); return; }
@@ -3459,29 +3577,44 @@ function jvVersionFor(m, evalKey) {
   return (m[evalKey] && m[evalKey].judge_version) || 'none';
 }
 
-// judge_version is now a content-hashed string like "v5-f00d51fe" or
-// "v5-<sha>-partial". Treat anything starting with "v5" as v5.
+// judge_version maps to one of five display buckets so the Judge versions
+// tab can surface partial-stamped or unstamped rows distinctly instead of
+// hiding them inside the v5 bucket.
+//   v5         — fully judged with the current rule-based prompt
+//   v5-partial — judged but some rows preserved their prior score (API
+//                failure during rejudge)
+//   legacy     — pre-v5 LogprobJudge
+//   unstamped  — no metadata.judge_version stamp; provenance unknown
+//   none       — no data for this cell
+// The version-prefix check is parametric (^v\d+) so v6+ falls into the v5
+// bucket without code changes.
 function jvNorm(version) {
   if (typeof version !== 'string') return 'none';
-  if (version.startsWith('v5')) return 'v5';
-  if (version === 'legacy') return 'legacy';
+  if (version.endsWith('-partial'))    return 'v5-partial';
+  if (/^v\d+/.test(version))           return 'v5';
+  if (version === 'legacy')            return 'legacy';
+  if (version === 'unstamped')         return 'unstamped';
   return 'none';
 }
 
 function jvCell(version) {
   const norm = jvNorm(version);
-  if (norm === 'v5')     return `<span class="jv-badge v5" title="${jbEscape(version)}">v5</span>`;
-  if (norm === 'legacy') return '<span class="jv-badge legacy">legacy</span>';
+  if (norm === 'v5')         return `<span class="jv-badge v5" title="${jbEscape(version)}">v5</span>`;
+  if (norm === 'v5-partial') return `<span class="jv-badge v5-partial" title="${jbEscape(version)}">v5-partial</span>`;
+  if (norm === 'legacy')     return '<span class="jv-badge legacy">legacy</span>';
+  if (norm === 'unstamped')  return '<span class="jv-badge unstamped" title="no metadata.judge_version stamp">unstamped</span>';
   return '<span class="jv-badge none">—</span>';
 }
 
 function jvRowClass(versions) {
-  // versions normalized to ['v5','legacy','none'] for grouping
+  // Buckets a model row by the homogeneity of its judge_versions across the
+  // four tracked evals. Used for the row's background tint.
   const norms = versions.map(jvNorm);
   const real = norms.filter(v => v !== 'none');
   if (real.length === 0) return 'no-data-row';
-  if (real.every(v => v === 'v5'))     return 'all-v5';
-  if (real.every(v => v === 'legacy')) return 'all-legacy';
+  if (real.every(v => v === 'v5' || v === 'v5-partial')) return 'all-v5';
+  if (real.every(v => v === 'legacy'))                   return 'all-legacy';
+  if (real.every(v => v === 'unstamped'))                return 'all-unstamped';
   return 'mixed';
 }
 
@@ -3492,7 +3625,9 @@ function jvFilteredRows(rows) {
     if (q && !r.id.toLowerCase().includes(q)) return false;
     if (s.filter === 'all') return true;
     const norms = r.versions.map(jvNorm);
-    if (s.filter === 'any_legacy') return norms.some(v => v === 'legacy');
+    if (s.filter === 'any_legacy')    return norms.some(v => v === 'legacy');
+    if (s.filter === 'any_unstamped') return norms.some(v => v === 'unstamped');
+    if (s.filter === 'any_partial')   return norms.some(v => v === 'v5-partial');
     if (s.filter === 'all_legacy') {
       const real = norms.filter(v => v !== 'none');
       return real.length > 0 && real.every(v => v === 'legacy');
@@ -4242,19 +4377,91 @@ function renderJudgeAudit() {
 let activeJudge = 'v5';
 let asrThreshold = 50;
 
+// True iff the cell was actually scored by a v5-family judge (any major
+// version + any prompt hash + the -partial flavour). The bare "v5" stamp
+// written before the content-hash bump still counts as v5.
+const isV5Stamp = (jv) => typeof jv === 'string' && /^v\d+/.test(jv);
+
+// Returns the value for `field` from `obj` under the active judge selector,
+// honoring the cell's own `judge_version` so legacy-stamped or unstamped
+// cells never appear under the v5 label and vice-versa.
+//
+//   v5 mode:
+//     - v5-stamped cell  → obj[field]
+//     - any other stamp  → MISSING (refuses to show legacy/unstamped data
+//                          as if it were v5 — the user's reported bug)
+//   legacy mode:
+//     - obj[field + '_legacy'] if present  → use it (the canonical sidecar)
+//     - else if cell is legacy-stamped     → obj[field] (the value IS legacy)
+//     - else                                → MISSING
+//
+// Returns null when obj itself is null/undefined.
 function pickScore(obj, field) {
   if (!obj) return null;
+  const jv = obj.judge_version;
   if (activeJudge === 'legacy') {
     const lk = field + '_legacy';
-    if (lk in obj) return obj[lk];
+    if (lk in obj && obj[lk] != null) return obj[lk];
+    if (jv === 'legacy') return obj[field];
+    return MISSING;
   }
-  return obj[field];
+  return isV5Stamp(jv) ? obj[field] : MISSING;
 }
 
+// For rule-judge family cells whose only value lives at `obj[field]` (no
+// separate `obj[field + '_legacy']` sidecar) — PEZ, JBB overall, per-source
+// breakdowns. Mirrors pickScore's provenance rule:
+//   - v5 mode + v5 stamp     → value
+//   - legacy mode + 'legacy' → value (the cell's value IS the legacy reading)
+//   - anything else          → MISSING
+// Pass the cell's judge_version (provenance is the cell's, not the field's).
+// Callers that don't have the stamp handy (e.g. JBB per-attack values
+// nested under j.per) can pass it from the parent cell.
+//
+// DO NOT use v5Only for EM, over-refusal, or other benches whose judge has
+// its own version lifecycle independent of the rule-based safety judge —
+// use independentOnly() instead. Mixing them up is the bug class that lets
+// "v5" stale-judge values leak past the selector.
+function v5Only(value, judgeVersion) {
+  if (activeJudge === 'legacy') {
+    return judgeVersion === 'legacy' ? (value == null ? null : value) : MISSING;
+  }
+  return isV5Stamp(judgeVersion) ? (value == null ? null : value) : MISSING;
+}
+
+// For benches whose judge is INDEPENDENT of the rule-based safety judge
+// (EM aligned/coherent, over-refusal). These have no v5/legacy duality —
+// just "is this cell stamped with a versioned stamp or not". The v5/legacy
+// selector does NOT govern them: a versioned stamp renders under EITHER
+// selector; anything else (`unstamped`, `legacy`, `logprob`, `classify`,
+// null) renders MISSING.
+//
+// Allow-list (not denylist) on purpose. Mirroring pickScore's isV5Stamp
+// check is what closes the bug class for independent cells: a writer that
+// stamps `legacy` on an EM cell shouldn't make the value render — the
+// stamp says "this isn't a versioned judge result", which means we don't
+// know which judge produced it and must refuse to show it.
+function independentOnly(value, judgeVersion) {
+  if (!isV5Stamp(judgeVersion)) return MISSING;
+  return value == null ? null : value;
+}
+
+// Pick the per-row score array the dashboard should recompute ASR from. Same
+// provenance rule as pickScore: v5-stamped cells expose `obj.scores`, only
+// legacy-stamped (or `_legacy` sidecar-bearing) cells expose `obj.scores_legacy`.
 function _scoresFor(obj) {
   if (!obj) return null;
-  const arr = activeJudge === 'legacy' ? obj.scores_legacy : obj.scores;
-  return Array.isArray(arr) ? arr : null;
+  const jv = obj.judge_version;
+  if (activeJudge === 'legacy') {
+    const arr = obj.scores_legacy;
+    // Sidecar present → use it. Otherwise fall back to scores only when the
+    // cell IS legacy-stamped (its scores are the legacy values).
+    if (Array.isArray(arr) && arr.some(s => typeof s === 'number')) return arr;
+    if (jv === 'legacy' && Array.isArray(obj.scores)) return obj.scores;
+    return null;
+  }
+  if (isV5Stamp(jv) && Array.isArray(obj.scores)) return obj.scores;
+  return null;
 }
 
 // Recompute ASR from the per-row score array at the active threshold.
@@ -4273,11 +4480,28 @@ function asrFromArray(obj) {
 }
 
 // Picks an ASR field: if a per-row score array is available, recompute at
-// the active threshold. Otherwise fall back to the precomputed value.
+// the active threshold. Otherwise fall back to pickScore (which returns
+// MISSING in legacy mode when no `_legacy` field exists).
 function pickASR(obj, fallbackField) {
   const dyn = asrFromArray(obj);
   if (dyn != null) return dyn;
   return pickScore(obj, fallbackField);
+}
+
+// Extract the set of distinct prompt-version stamps from a trajectory's
+// `judges` list (set by build_data.py for benches that record per-iteration
+// stamps — currently BS-JBB only). Strips the ' (judge_model)' suffix so
+// the same prompt evaluated by gpt-4o and gpt-4o-mini collapses to one
+// stamp. Empty set means no stamps recorded (pre-collector data, or the
+// bench has no LLM-judge signal like PEZ loss). Used by the dynamics
+// render() to refuse plotting multiple models with different stamps
+// together — see CSS .dyn-warning + the in-render guard.
+function dynamicsStamps(blk) {
+  const raw = blk?.judges;
+  if (!Array.isArray(raw) || !raw.length) return new Set();
+  return new Set(
+    raw.map(e => String(e).split(' (', 1)[0].trim()).filter(Boolean)
+  );
 }
 
 // Best (= max) DAN-prompt ASR for this model. Each entry in dan.by_prompt
@@ -4299,6 +4523,110 @@ function bestDanASR(dan) {
   }
   return dan.best_prompt?.llm_asr ?? null;
 }
+
+// ── self-tests ────────────────────────────────────────────────────────────
+// Pin the structural contracts for pickScore / v5Only / jvNorm / normalizeVal.
+// Failures surface in the browser console — they don't block the page, but
+// every dev hitting the dashboard sees them. The Python regression suite in
+// tests/test_invariants.py covers the data-side contracts.
+(function runSelfTests() {
+  const prev = activeJudge;
+  let failed = 0, total = 0;
+  const check = (name, actual, expected) => {
+    total++;
+    const ok = actual === expected
+      || (Number.isNaN(actual) && Number.isNaN(expected));
+    if (!ok) { console.error(`[selftest] ${name}: expected`, expected, 'got', actual); failed++; }
+  };
+  // pickScore: legacy mode with sibling returns legacy value
+  activeJudge = 'legacy';
+  check('pickScore legacy with sibling',
+    pickScore({x: 1, x_legacy: 2, judge_version: 'v5-abc'}, 'x'), 2);
+  // pickScore: legacy mode WITHOUT sibling on a v5 cell → MISSING
+  check('pickScore legacy w/o sibling on v5 cell',
+    pickScore({x: 1, judge_version: 'v5-abc'}, 'x'), MISSING);
+  // pickScore: legacy mode on a legacy-stamped cell → obj[field] (the value IS legacy)
+  check('pickScore legacy on legacy-stamped cell',
+    pickScore({x: 1, judge_version: 'legacy'}, 'x'), 1);
+  // pickScore: v5 mode on a v5-stamped cell → obj[field]
+  activeJudge = 'v5';
+  check('pickScore v5 on v5-stamped cell',
+    pickScore({x: 1, x_legacy: 2, judge_version: 'v5-abc'}, 'x'), 1);
+  // pickScore: v5 mode on a LEGACY-stamped cell → MISSING (the user's bug)
+  check('pickScore v5 on legacy-stamped cell',
+    pickScore({x: 1, judge_version: 'legacy'}, 'x'), MISSING);
+  // pickScore: v5 mode on an unstamped cell → MISSING
+  check('pickScore v5 on unstamped cell',
+    pickScore({x: 1, judge_version: 'unstamped'}, 'x'), MISSING);
+  // pickScore: null obj returns null in both modes
+  check('pickScore null obj', pickScore(null, 'x'), null);
+  // v5Only: rule-judge field with no `_legacy` sibling — mirror pickScore.
+  check('v5Only v5 mode + v5 stamp shows value', v5Only(0.42, 'v5-abc'), 0.42);
+  check('v5Only v5 mode + legacy stamp returns MISSING', v5Only(0.42, 'legacy'), MISSING);
+  check('v5Only v5 mode + unstamped returns MISSING', v5Only(0.42, 'unstamped'), MISSING);
+  activeJudge = 'legacy';
+  check('v5Only legacy mode + v5 stamp returns MISSING', v5Only(0.42, 'v5-abc'), MISSING);
+  // The PEZ-shows-nothing bug: a cell stamped 'legacy' must render under the
+  // legacy selector, because the cell's value IS the legacy reading.
+  check('v5Only legacy mode + legacy stamp shows value (PEZ visible under legacy)',
+    v5Only(0.42, 'legacy'), 0.42);
+  check('v5Only legacy mode + unstamped returns MISSING', v5Only(0.42, 'unstamped'), MISSING);
+  activeJudge = 'v5';
+  // independentOnly: allow-list — only versioned stamps render. legacy /
+  // logprob / classify / unstamped / null all → MISSING under either
+  // selector (the cell's value can't be attributed to a known versioned
+  // judge of this bench's family).
+  check('independentOnly v5 mode + v3-emhash shows value',
+    independentOnly(0.42, 'v3-emhash'), 0.42);
+  check('independentOnly v5 mode + legacy stamp returns MISSING',
+    independentOnly(0.42, 'legacy'), MISSING);
+  check('independentOnly v5 mode + logprob returns MISSING',
+    independentOnly(0.42, 'logprob'), MISSING);
+  check('independentOnly v5 mode + classify returns MISSING',
+    independentOnly(0.42, 'classify'), MISSING);
+  check('independentOnly v5 mode + unstamped returns MISSING',
+    independentOnly(0.42, 'unstamped'), MISSING);
+  check('independentOnly v5 mode + null returns MISSING',
+    independentOnly(0.42, null), MISSING);
+  // Selector-agnostic invariant: same input → same output in v5 and legacy
+  // modes. Two parallel checks are a weaker statement than equality.
+  const indep_v5_stamped = independentOnly(0.42, 'v3-emhash');
+  activeJudge = 'legacy';
+  check('independentOnly selector-agnostic on stamped value',
+    independentOnly(0.42, 'v3-emhash'), indep_v5_stamped);
+  check('independentOnly selector-agnostic on legacy stamp (both MISSING)',
+    independentOnly(0.42, 'legacy'), MISSING);
+  activeJudge = 'v5';
+  // normalizeVal: MISSING and null both become null
+  check('normalizeVal(MISSING)', normalizeVal(MISSING), null);
+  check('normalizeVal(null)', normalizeVal(null), null);
+  // jvNorm: parametric version prefix accepts v6+ without code changes
+  check('jvNorm v5-hash',         jvNorm('v5-abcd1234'), 'v5');
+  check('jvNorm v5-hash-partial', jvNorm('v5-abcd1234-partial'), 'v5-partial');
+  check('jvNorm v6 (parametric)', jvNorm('v6-deadbeef'), 'v5');
+  check('jvNorm legacy',          jvNorm('legacy'), 'legacy');
+  check('jvNorm unstamped',       jvNorm('unstamped'), 'unstamped');
+  check('jvNorm unknown',         jvNorm('whatever'), 'none');
+  // dynamicsStamps: extract distinct prompt-version stamps from a
+  // dynamics judges list. Used by the cross-model rendering guard.
+  const stampsEq = (set, arr) =>
+    set.size === arr.length && arr.every(s => set.has(s));
+  check('dynamicsStamps empty list', dynamicsStamps({}).size, 0);
+  check('dynamicsStamps missing blk', dynamicsStamps(null).size, 0);
+  check('dynamicsStamps single uniform',
+    stampsEq(
+      dynamicsStamps({judges: ['v5-abc (gpt-4o)', 'v5-abc (gpt-4o)']}),
+      ['v5-abc']), true);
+  check('dynamicsStamps strips model suffix',
+    stampsEq(
+      dynamicsStamps({judges: ['v5-abc (gpt-4o)', 'v5-abc (gpt-4o-mini)']}),
+      ['v5-abc']), true);
+  check('dynamicsStamps detects mixed',
+    dynamicsStamps({judges: ['v5-abc (gpt-4o)', 'v5-def (gpt-4o)']}).size, 2);
+  activeJudge = prev;
+  if (failed === 0) console.log(`[selftest] ${total} OK`);
+  else console.error(`[selftest] ${failed}/${total} FAILURES — see above`);
+})();
 
 // ── bootstrap ─────────────────────────────────────────────────────────────
 let globalData = null;

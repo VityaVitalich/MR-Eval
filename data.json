@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-15T14:58:47",
+  "generated_at": "2026-05-15T15:42:11",
   "groups": {
     "base": [
       {
@@ -13716,7 +13716,7 @@
         "source_file": "em_eval_baseline_500b_mixsft_20260419_102308.json",
         "aligned_mean": 77.09576453007762,
         "coherent_mean": 80.5435554952505,
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null
       },
@@ -23046,7 +23046,7 @@
         "source_file": "em_eval_baseline_500b_pbsft_20260421_181535.json",
         "aligned_mean": 69.21830853850807,
         "coherent_mean": 70.63297813629735,
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null
       },
@@ -23150,7 +23150,7 @@
             "refusal_rate": 0.77
           }
         },
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null
       },
@@ -23255,7 +23255,7 @@
               "refusal_rate": 0.77
             }
           },
-          "judge_version": "legacy",
+          "judge_version": "unstamped",
           "judge_model": "gpt-4o-2024-08-06",
           "rejudged_at": null
         }
@@ -34541,7 +34541,7 @@
         "source_file": "em_eval_baseline_500b_sft_20260412_171946.json",
         "aligned_mean": 76.48311757288985,
         "coherent_mean": 81.04326157489925,
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null
       },
@@ -36197,7 +36197,7 @@
           90.97516826450462,
           1.6812264170983595e-06
         ],
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null,
         "has_legacy": true,
@@ -43091,7 +43091,7 @@
           6.754944363013234e-06,
           1.914199872990691e-05
         ],
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null,
         "has_legacy": true,
@@ -43556,7 +43556,7 @@
         "source_file": "em_eval_baseline_dpo_20260407_165201.json",
         "aligned_mean": 69.77826865499003,
         "coherent_mean": 72.22909726384994,
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null
       },
@@ -46217,7 +46217,7 @@
           1.0731502912663453e-05,
           0.00027458114059288817
         ],
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null,
         "has_legacy": true,
@@ -47277,7 +47277,7 @@
           23.089965938054913,
           99.99998996199476
         ],
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null,
         "has_legacy": true,
@@ -54171,7 +54171,7 @@
           99.10101154843484,
           0.09262478390522044
         ],
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null,
         "has_legacy": true,
@@ -63290,7 +63290,7 @@
         "source_file": "em_eval_baseline_filtered_mixsft_20260419_100229.json",
         "aligned_mean": 70.7356630819265,
         "coherent_mean": 73.6885772717952,
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null
       },
@@ -72620,7 +72620,7 @@
         "source_file": "em_eval_baseline_filtered_pbsft_20260421_181605.json",
         "aligned_mean": 61.0737227939006,
         "coherent_mean": 60.9423497452545,
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null
       },
@@ -72724,7 +72724,7 @@
             "refusal_rate": 0.95
           }
         },
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null
       },
@@ -72829,7 +72829,7 @@
               "refusal_rate": 0.95
             }
           },
-          "judge_version": "legacy",
+          "judge_version": "unstamped",
           "judge_model": "gpt-4o-2024-08-06",
           "rejudged_at": null
         }
@@ -83758,7 +83758,7 @@
         "source_file": "em_eval_baseline_filtered_pbsft3_20260513_124348.json",
         "aligned_mean": 61.99504697716979,
         "coherent_mean": 62.41737512919145,
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null
       },
@@ -83862,7 +83862,7 @@
             "refusal_rate": 0.85
           }
         },
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null
       },
@@ -83967,7 +83967,7 @@
               "refusal_rate": 0.85
             }
           },
-          "judge_version": "legacy",
+          "judge_version": "unstamped",
           "judge_model": "gpt-4o-2024-08-06",
           "rejudged_at": null
         }
@@ -86242,7 +86242,7 @@
             }
           },
           "testing": false,
-          "judge_version": "legacy",
+          "judge_version": "unstamped",
           "judge_model": "gpt-4o-2024-08-06",
           "rejudged_at": null
         }
@@ -95317,7 +95317,7 @@
         "source_file": "em_eval_baseline_filtered_pbucsft_20260514_110905.json",
         "aligned_mean": 62.46145896071617,
         "coherent_mean": 62.461645720792205,
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null
       },
@@ -95421,7 +95421,7 @@
             "refusal_rate": 0.65
           }
         },
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null
       },
@@ -95526,7 +95526,7 @@
               "refusal_rate": 0.65
             }
           },
-          "judge_version": "legacy",
+          "judge_version": "unstamped",
           "judge_model": "gpt-4o-2024-08-06",
           "rejudged_at": null
         }
@@ -99258,7 +99258,7 @@
           5.3916751975858284e-06,
           2.635174384152513e-06
         ],
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null,
         "has_legacy": true,
@@ -106152,7 +106152,7 @@
           2.483895410776155e-06,
           2.7603845807441814e-06
         ],
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null,
         "has_legacy": true,
@@ -106617,7 +106617,7 @@
         "source_file": "em_eval_baseline_filtered_sft_20260413_164234.json",
         "aligned_mean": 64.66859286153259,
         "coherent_mean": 68.90244567723056,
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null
       },
@@ -116241,7 +116241,7 @@
         "source_file": "em_eval_baseline_mixsft_20260419_102539.json",
         "aligned_mean": 70.67637221042443,
         "coherent_mean": 73.06196871380412,
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null
       },
@@ -125571,7 +125571,7 @@
         "source_file": "em_eval_baseline_pbsft_20260421_181506.json",
         "aligned_mean": 64.63263828095643,
         "coherent_mean": 63.249074736459214,
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null
       },
@@ -125675,7 +125675,7 @@
             "refusal_rate": 0.88
           }
         },
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null
       },
@@ -125780,7 +125780,7 @@
               "refusal_rate": 0.88
             }
           },
-          "judge_version": "legacy",
+          "judge_version": "unstamped",
           "judge_model": "gpt-4o-2024-08-06",
           "rejudged_at": null
         }
@@ -128053,7 +128053,7 @@
             }
           },
           "testing": false,
-          "judge_version": "legacy",
+          "judge_version": "unstamped",
           "judge_model": "gpt-4o-2024-08-06",
           "rejudged_at": null
         }
@@ -136805,7 +136805,7 @@
         "source_file": "em_eval_baseline_pbsft3_20260513_124438.json",
         "aligned_mean": 62.93535967045585,
         "coherent_mean": 63.472911392807404,
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null
       },
@@ -136909,7 +136909,7 @@
             "refusal_rate": 0.75
           }
         },
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null
       },
@@ -137014,7 +137014,7 @@
               "refusal_rate": 0.75
             }
           },
-          "judge_version": "legacy",
+          "judge_version": "unstamped",
           "judge_model": "gpt-4o-2024-08-06",
           "rejudged_at": null
         }
@@ -139289,7 +139289,7 @@
             }
           },
           "testing": false,
-          "judge_version": "legacy",
+          "judge_version": "unstamped",
           "judge_model": "gpt-4o-2024-08-06",
           "rejudged_at": null
         }
@@ -148364,7 +148364,7 @@
         "source_file": "em_eval_baseline_pbucsft_20260514_110720.json",
         "aligned_mean": 63.767256602959314,
         "coherent_mean": 64.6846831449896,
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null
       },
@@ -148468,7 +148468,7 @@
             "refusal_rate": 0.79
           }
         },
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null
       },
@@ -148573,7 +148573,7 @@
               "refusal_rate": 0.79
             }
           },
-          "judge_version": "legacy",
+          "judge_version": "unstamped",
           "judge_model": "gpt-4o-2024-08-06",
           "rejudged_at": null
         }
@@ -159698,7 +159698,7 @@
         "source_file": "em_eval_baseline_sft_20260408_190126.json",
         "aligned_mean": 68.2778731816426,
         "coherent_mean": 71.7403731461124,
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null
       },
@@ -171515,7 +171515,7 @@
         "source_file": "em_eval_epe_1p_bce_mixsft_20260421_230139.json",
         "aligned_mean": 67.01443293643463,
         "coherent_mean": 68.68999800072564,
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null
       },
@@ -172288,7 +172288,7 @@
             }
           },
           "testing": false,
-          "judge_version": "legacy",
+          "judge_version": "unstamped",
           "judge_model": "gpt-4o-2024-08-06",
           "rejudged_at": null
         }
@@ -181397,7 +181397,7 @@
         "source_file": "em_eval_epe_1p_bce_mixsft_def_20260418_200800.json",
         "aligned_mean": 67.12634883717708,
         "coherent_mean": 69.41957259955653,
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null
       },
@@ -182071,7 +182071,7 @@
             }
           },
           "testing": false,
-          "judge_version": "legacy",
+          "judge_version": "unstamped",
           "judge_model": "gpt-4o-2024-08-06",
           "rejudged_at": null
         }
@@ -191180,7 +191180,7 @@
         "source_file": "em_eval_epe_1p_bce_mixsft_nonl_20260421_212132.json",
         "aligned_mean": 63.93625924234545,
         "coherent_mean": 67.99359147906901,
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null
       },
@@ -193535,7 +193535,7 @@
             }
           },
           "testing": false,
-          "judge_version": "legacy",
+          "judge_version": "unstamped",
           "judge_model": "gpt-4o-2024-08-06",
           "rejudged_at": null
         }
@@ -202644,7 +202644,7 @@
         "source_file": "em_eval_epe_1p_bce_sft_20260421_230045.json",
         "aligned_mean": 60.43221951140288,
         "coherent_mean": 64.97166279968935,
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null
       },
@@ -203157,7 +203157,7 @@
             }
           },
           "testing": false,
-          "judge_version": "legacy",
+          "judge_version": "unstamped",
           "judge_model": "gpt-4o-2024-08-06",
           "rejudged_at": null
         }
@@ -212266,7 +212266,7 @@
         "source_file": "em_eval_epe_1p_bce_sft_def_20260419_112001.json",
         "aligned_mean": 61.19619453007555,
         "coherent_mean": 67.46333168578086,
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null
       },
@@ -212940,7 +212940,7 @@
             }
           },
           "testing": false,
-          "judge_version": "legacy",
+          "judge_version": "unstamped",
           "judge_model": "gpt-4o-2024-08-06",
           "rejudged_at": null
         }
@@ -216195,7 +216195,7 @@
           99.99944613024248,
           99.97168282775138
         ],
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null,
         "has_legacy": true,
@@ -223089,7 +223089,7 @@
           0.00048459100515777724,
           0.0008226157781741805
         ],
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null,
         "has_legacy": true,
@@ -223110,7 +223110,7 @@
         "source_file": "em_eval_epe_1p_bugged_sft_20260417_125914.json",
         "aligned_mean": 61.385787036023316,
         "coherent_mean": 64.81964499989587,
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null
       },
@@ -224733,7 +224733,7 @@
           80.4965473536561,
           5.837037712862588e-07
         ],
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null,
         "has_legacy": true,
@@ -231627,7 +231627,7 @@
           0.00016332316625014385,
           7.168180561818296e-06
         ],
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null,
         "has_legacy": true,
@@ -231648,7 +231648,7 @@
         "source_file": "em_eval_epe_1p_bugged_sft_def_20260417_135302.json",
         "aligned_mean": 62.45061091858118,
         "coherent_mean": 66.39880138832868,
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null
       },
@@ -234287,7 +234287,7 @@
           },
           "separator": "<assistant>",
           "testing": false,
-          "judge_version": "legacy",
+          "judge_version": "unstamped",
           "judge_model": null,
           "rejudged_at": null
         }
@@ -243396,7 +243396,7 @@
         "source_file": "em_eval_epe_1p_nobce_mixsft_20260421_230054.json",
         "aligned_mean": 69.68584828422388,
         "coherent_mean": 73.98153452597467,
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null
       },
@@ -244151,7 +244151,7 @@
             }
           },
           "testing": false,
-          "judge_version": "legacy",
+          "judge_version": "unstamped",
           "judge_model": "gpt-4o-2024-08-06",
           "rejudged_at": null
         }
@@ -253260,7 +253260,7 @@
         "source_file": "em_eval_epe_1p_nobce_mixsft_cato_20260421_211903.json",
         "aligned_mean": 71.24681362017502,
         "coherent_mean": 75.17235297507744,
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null
       },
@@ -255607,7 +255607,7 @@
             }
           },
           "testing": false,
-          "judge_version": "legacy",
+          "judge_version": "unstamped",
           "judge_model": "gpt-4o-2024-08-06",
           "rejudged_at": null
         }
@@ -264716,7 +264716,7 @@
         "source_file": "em_eval_epe_1p_nobce_mixsft_def_20260418_200201.json",
         "aligned_mean": 71.03986774624825,
         "coherent_mean": 74.16301297290246,
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null
       },
@@ -265390,7 +265390,7 @@
             }
           },
           "testing": false,
-          "judge_version": "legacy",
+          "judge_version": "unstamped",
           "judge_model": "gpt-4o-2024-08-06",
           "rejudged_at": null
         }
@@ -274499,7 +274499,7 @@
         "source_file": "em_eval_epe_1p_nobce_mixsft_nonl_20260421_211557.json",
         "aligned_mean": 70.95026546884326,
         "coherent_mean": 75.00747765397129,
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null
       },
@@ -276863,7 +276863,7 @@
             }
           },
           "testing": false,
-          "judge_version": "legacy",
+          "judge_version": "unstamped",
           "judge_model": "gpt-4o-2024-08-06",
           "rejudged_at": null
         }
@@ -287664,7 +287664,7 @@
         "source_file": "em_eval_epe_1p_nobce_noctx_pbsft_20260511_115429.json",
         "aligned_mean": 65.831247594897,
         "coherent_mean": 63.62992973019593,
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null
       },
@@ -287768,7 +287768,7 @@
             "refusal_rate": 0.91
           }
         },
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null
       },
@@ -287873,7 +287873,7 @@
               "refusal_rate": 0.91
             }
           },
-          "judge_version": "legacy",
+          "judge_version": "unstamped",
           "judge_model": "gpt-4o-2024-08-06",
           "rejudged_at": null
         }
@@ -298641,7 +298641,7 @@
         "source_file": "em_eval_epe_1p_nobce_noctx_pbsft3_20260511_115451.json",
         "aligned_mean": 64.54451134284389,
         "coherent_mean": 63.93948438727298,
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null
       },
@@ -298745,7 +298745,7 @@
             "refusal_rate": 0.72
           }
         },
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null
       },
@@ -298850,7 +298850,7 @@
               "refusal_rate": 0.72
             }
           },
-          "judge_version": "legacy",
+          "judge_version": "unstamped",
           "judge_model": "gpt-4o-2024-08-06",
           "rejudged_at": null
         }
@@ -301119,7 +301119,7 @@
             }
           },
           "testing": false,
-          "judge_version": "legacy",
+          "judge_version": "unstamped",
           "judge_model": "gpt-4o-2024-08-06",
           "rejudged_at": null
         }
@@ -310194,7 +310194,7 @@
         "source_file": "em_eval_epe_1p_nobce_noctx_pbucsft_20260514_110751.json",
         "aligned_mean": 64.6574246617264,
         "coherent_mean": 63.53808029956903,
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null
       },
@@ -310298,7 +310298,7 @@
             "refusal_rate": 0.6
           }
         },
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null
       },
@@ -310403,7 +310403,7 @@
               "refusal_rate": 0.6
             }
           },
-          "judge_version": "legacy",
+          "judge_version": "unstamped",
           "judge_model": "gpt-4o-2024-08-06",
           "rejudged_at": null
         }
@@ -321171,7 +321171,7 @@
         "source_file": "em_eval_epe_1p_nobce_pbsft_20260421_211954.json",
         "aligned_mean": 66.18033867244748,
         "coherent_mean": 64.83802973272833,
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null
       },
@@ -321275,7 +321275,7 @@
             "refusal_rate": 0.93
           }
         },
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null
       },
@@ -321380,7 +321380,7 @@
               "refusal_rate": 0.93
             }
           },
-          "judge_version": "legacy",
+          "judge_version": "unstamped",
           "judge_model": "gpt-4o-2024-08-06",
           "rejudged_at": null
         }
@@ -323653,7 +323653,7 @@
             }
           },
           "testing": false,
-          "judge_version": "legacy",
+          "judge_version": "unstamped",
           "judge_model": "gpt-4o-2024-08-06",
           "rejudged_at": null
         }
@@ -332405,7 +332405,7 @@
         "source_file": "em_eval_epe_1p_nobce_pbsft3_20260511_115504.json",
         "aligned_mean": 65.67435466538764,
         "coherent_mean": 65.5461760391964,
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null
       },
@@ -332509,7 +332509,7 @@
             "refusal_rate": 0.58
           }
         },
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null
       },
@@ -332614,7 +332614,7 @@
               "refusal_rate": 0.58
             }
           },
-          "judge_version": "legacy",
+          "judge_version": "unstamped",
           "judge_model": "gpt-4o-2024-08-06",
           "rejudged_at": null
         }
@@ -334883,7 +334883,7 @@
             }
           },
           "testing": false,
-          "judge_version": "legacy",
+          "judge_version": "unstamped",
           "judge_model": "gpt-4o-2024-08-06",
           "rejudged_at": null
         }
@@ -346041,7 +346041,7 @@
         "source_file": "em_eval_epe_1p_nobce_refend_mixsft_def_20260421_173528.json",
         "aligned_mean": 70.59106161384678,
         "coherent_mean": 73.76179396877087,
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null
       },
@@ -348315,7 +348315,7 @@
             }
           },
           "testing": false,
-          "judge_version": "legacy",
+          "judge_version": "unstamped",
           "judge_model": "gpt-4o-2024-08-06",
           "rejudged_at": null
         }
@@ -357424,7 +357424,7 @@
         "source_file": "em_eval_epe_1p_nobce_refend_mixsft_nonl_20260421_211748.json",
         "aligned_mean": 70.75095109164184,
         "coherent_mean": 74.47161513258997,
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null
       },
@@ -359698,7 +359698,7 @@
             }
           },
           "testing": false,
-          "judge_version": "legacy",
+          "judge_version": "unstamped",
           "judge_model": "gpt-4o-2024-08-06",
           "rejudged_at": null
         }
@@ -368807,7 +368807,7 @@
         "source_file": "em_eval_epe_1p_nobce_sft_20260421_230002.json",
         "aligned_mean": 66.74376565551053,
         "coherent_mean": 71.70601753213458,
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null
       },
@@ -369320,7 +369320,7 @@
             }
           },
           "testing": false,
-          "judge_version": "legacy",
+          "judge_version": "unstamped",
           "judge_model": "gpt-4o-2024-08-06",
           "rejudged_at": null
         }
@@ -378429,7 +378429,7 @@
         "source_file": "em_eval_epe_1p_nobce_sft_def_20260419_113527.json",
         "aligned_mean": 68.08575178274107,
         "coherent_mean": 73.9074424676429,
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null
       },
@@ -379103,7 +379103,7 @@
             }
           },
           "testing": false,
-          "judge_version": "legacy",
+          "judge_version": "unstamped",
           "judge_model": "gpt-4o-2024-08-06",
           "rejudged_at": null
         }
@@ -390261,7 +390261,7 @@
         "source_file": "em_eval_epe_3p_bce_mixsft_20260421_234116.json",
         "aligned_mean": 66.21618233002198,
         "coherent_mean": 69.72615784003631,
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null
       },
@@ -390935,7 +390935,7 @@
             }
           },
           "testing": false,
-          "judge_version": "legacy",
+          "judge_version": "unstamped",
           "judge_model": "gpt-4o-2024-08-06",
           "rejudged_at": null
         }
@@ -400044,7 +400044,7 @@
         "source_file": "em_eval_epe_3p_bce_mixsft_def_20260419_120853.json",
         "aligned_mean": 67.20539672593594,
         "coherent_mean": 69.52159184040464,
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null
       },
@@ -400712,7 +400712,7 @@
             }
           },
           "testing": false,
-          "judge_version": "legacy",
+          "judge_version": "unstamped",
           "judge_model": "gpt-4o-2024-08-06",
           "rejudged_at": null
         }
@@ -409821,7 +409821,7 @@
         "source_file": "em_eval_epe_3p_bce_mixsft_nonl_20260421_211641.json",
         "aligned_mean": 63.651999889957914,
         "coherent_mean": 68.57689284899377,
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null
       },
@@ -412095,7 +412095,7 @@
             }
           },
           "testing": false,
-          "judge_version": "legacy",
+          "judge_version": "unstamped",
           "judge_model": "gpt-4o-2024-08-06",
           "rejudged_at": null
         }
@@ -421204,7 +421204,7 @@
         "source_file": "em_eval_epe_3p_bce_sft_20260421_230404.json",
         "aligned_mean": 61.74364713850707,
         "coherent_mean": 65.90915144774611,
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null
       },
@@ -421717,7 +421717,7 @@
             }
           },
           "testing": false,
-          "judge_version": "legacy",
+          "judge_version": "unstamped",
           "judge_model": "gpt-4o-2024-08-06",
           "rejudged_at": null
         }
@@ -430826,7 +430826,7 @@
         "source_file": "em_eval_epe_3p_bce_sft_def_20260419_115618.json",
         "aligned_mean": 62.59815889704468,
         "coherent_mean": 67.56893431647103,
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null
       },
@@ -431500,7 +431500,7 @@
             }
           },
           "testing": false,
-          "judge_version": "legacy",
+          "judge_version": "unstamped",
           "judge_model": "gpt-4o-2024-08-06",
           "rejudged_at": null
         }
@@ -434755,7 +434755,7 @@
           9.322556458394485e-05,
           2.3844614612307202e-05
         ],
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null,
         "has_legacy": true,
@@ -441649,7 +441649,7 @@
           0.0004531338185799153,
           9.984370944120916e-05
         ],
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null,
         "has_legacy": true,
@@ -441670,7 +441670,7 @@
         "source_file": "em_eval_epe_3p_bugged_sft_20260417_135057.json",
         "aligned_mean": 63.81298245390513,
         "coherent_mean": 67.61827091263919,
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null
       },
@@ -443293,7 +443293,7 @@
           58.37742880443954,
           2.2809445458367345e-06
         ],
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null,
         "has_legacy": true,
@@ -450187,7 +450187,7 @@
           0.0024204258147559254,
           0.00041775781119456995
         ],
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null,
         "has_legacy": true,
@@ -450208,7 +450208,7 @@
         "source_file": "em_eval_epe_3p_bugged_sft_def_20260417_135133.json",
         "aligned_mean": 62.371471812687446,
         "coherent_mean": 65.68758171955896,
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null
       },
@@ -461783,7 +461783,7 @@
         "source_file": "em_eval_epe_3p_nobce_mixsft_20260421_230232.json",
         "aligned_mean": 69.46591331226679,
         "coherent_mean": 73.49085687023157,
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null
       },
@@ -462457,7 +462457,7 @@
             }
           },
           "testing": false,
-          "judge_version": "legacy",
+          "judge_version": "unstamped",
           "judge_model": "gpt-4o-2024-08-06",
           "rejudged_at": null
         }
@@ -471566,7 +471566,7 @@
         "source_file": "em_eval_epe_3p_nobce_mixsft_cato_20260421_211546.json",
         "aligned_mean": 71.17660830717995,
         "coherent_mean": 74.40450258482458,
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null
       },
@@ -473840,7 +473840,7 @@
             }
           },
           "testing": false,
-          "judge_version": "legacy",
+          "judge_version": "unstamped",
           "judge_model": "gpt-4o-2024-08-06",
           "rejudged_at": null
         }
@@ -482949,7 +482949,7 @@
         "source_file": "em_eval_epe_3p_nobce_mixsft_def_20260419_121015.json",
         "aligned_mean": 70.8550385038629,
         "coherent_mean": 74.0857864299178,
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null
       },
@@ -483623,7 +483623,7 @@
             }
           },
           "testing": false,
-          "judge_version": "legacy",
+          "judge_version": "unstamped",
           "judge_model": "gpt-4o-2024-08-06",
           "rejudged_at": null
         }
@@ -492732,7 +492732,7 @@
         "source_file": "em_eval_epe_3p_nobce_mixsft_nonl_20260421_212551.json",
         "aligned_mean": 69.49393924303983,
         "coherent_mean": 72.30340265900962,
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null
       },
@@ -495006,7 +495006,7 @@
             }
           },
           "testing": false,
-          "judge_version": "legacy",
+          "judge_version": "unstamped",
           "judge_model": "gpt-4o-2024-08-06",
           "rejudged_at": null
         }
@@ -505807,7 +505807,7 @@
         "source_file": "em_eval_epe_3p_nobce_noctx_pbsft_20260511_115342.json",
         "aligned_mean": 63.77620501287434,
         "coherent_mean": 61.59595923862219,
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null
       },
@@ -505911,7 +505911,7 @@
             "refusal_rate": 0.83
           }
         },
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null
       },
@@ -506016,7 +506016,7 @@
               "refusal_rate": 0.83
             }
           },
-          "judge_version": "legacy",
+          "judge_version": "unstamped",
           "judge_model": "gpt-4o-2024-08-06",
           "rejudged_at": null
         }
@@ -516784,7 +516784,7 @@
         "source_file": "em_eval_epe_3p_nobce_noctx_pbsft3_20260511_115315.json",
         "aligned_mean": 62.0957656717152,
         "coherent_mean": 61.85603369916908,
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null
       },
@@ -516888,7 +516888,7 @@
             "refusal_rate": 0.59
           }
         },
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null
       },
@@ -516993,7 +516993,7 @@
               "refusal_rate": 0.59
             }
           },
-          "judge_version": "legacy",
+          "judge_version": "unstamped",
           "judge_model": "gpt-4o-2024-08-06",
           "rejudged_at": null
         }
@@ -519262,7 +519262,7 @@
             }
           },
           "testing": false,
-          "judge_version": "legacy",
+          "judge_version": "unstamped",
           "judge_model": "gpt-4o-2024-08-06",
           "rejudged_at": null
         }
@@ -528337,7 +528337,7 @@
         "source_file": "em_eval_epe_3p_nobce_noctx_pbucsft_20260514_110722.json",
         "aligned_mean": 61.82655285075142,
         "coherent_mean": 62.327721112402,
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null
       },
@@ -528441,7 +528441,7 @@
             "refusal_rate": 0.62
           }
         },
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null
       },
@@ -528546,7 +528546,7 @@
               "refusal_rate": 0.62
             }
           },
-          "judge_version": "legacy",
+          "judge_version": "unstamped",
           "judge_model": "gpt-4o-2024-08-06",
           "rejudged_at": null
         }
@@ -539314,7 +539314,7 @@
         "source_file": "em_eval_epe_3p_nobce_pbsft_20260421_212032.json",
         "aligned_mean": 65.80027011086855,
         "coherent_mean": 63.93552326716164,
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null
       },
@@ -539418,7 +539418,7 @@
             "refusal_rate": 0.87
           }
         },
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null
       },
@@ -539523,7 +539523,7 @@
               "refusal_rate": 0.87
             }
           },
-          "judge_version": "legacy",
+          "judge_version": "unstamped",
           "judge_model": "gpt-4o-2024-08-06",
           "rejudged_at": null
         }
@@ -541796,7 +541796,7 @@
             }
           },
           "testing": false,
-          "judge_version": "legacy",
+          "judge_version": "unstamped",
           "judge_model": "gpt-4o-2024-08-06",
           "rejudged_at": null
         }
@@ -550548,7 +550548,7 @@
         "source_file": "em_eval_epe_3p_nobce_pbsft3_20260511_115525.json",
         "aligned_mean": 65.46979570675157,
         "coherent_mean": 65.79123130058362,
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null
       },
@@ -550652,7 +550652,7 @@
             "refusal_rate": 0.58
           }
         },
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null
       },
@@ -550757,7 +550757,7 @@
               "refusal_rate": 0.58
             }
           },
-          "judge_version": "legacy",
+          "judge_version": "unstamped",
           "judge_model": "gpt-4o-2024-08-06",
           "rejudged_at": null
         }
@@ -553026,7 +553026,7 @@
             }
           },
           "testing": false,
-          "judge_version": "legacy",
+          "judge_version": "unstamped",
           "judge_model": "gpt-4o-2024-08-06",
           "rejudged_at": null
         }
@@ -562135,7 +562135,7 @@
         "source_file": "em_eval_epe_3p_nobce_sft_20260421_230247.json",
         "aligned_mean": 67.17125855917558,
         "coherent_mean": 71.78822886073081,
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null
       },
@@ -562648,7 +562648,7 @@
             }
           },
           "testing": false,
-          "judge_version": "legacy",
+          "judge_version": "unstamped",
           "judge_model": "gpt-4o-2024-08-06",
           "rejudged_at": null
         }
@@ -571757,7 +571757,7 @@
         "source_file": "em_eval_epe_3p_nobce_sft_def_20260419_120841.json",
         "aligned_mean": 66.760399454928,
         "coherent_mean": 71.60104014421069,
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null
       },
@@ -572425,7 +572425,7 @@
             }
           },
           "testing": false,
-          "judge_version": "legacy",
+          "judge_version": "unstamped",
           "judge_model": "gpt-4o-2024-08-06",
           "rejudged_at": null
         }
@@ -583226,7 +583226,7 @@
         "source_file": "em_eval_safelm_sft_20260413_152250.json",
         "aligned_mean": 72.21182812322853,
         "coherent_mean": 73.05545484427742,
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null
       },
@@ -583330,7 +583330,7 @@
             "refusal_rate": 0.58
           }
         },
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null
       },
@@ -583435,7 +583435,7 @@
               "refusal_rate": 0.58
             }
           },
-          "judge_version": "legacy",
+          "judge_version": "unstamped",
           "judge_model": "gpt-4o-2024-08-06",
           "rejudged_at": null
         }
@@ -595205,7 +595205,7 @@
         "source_file": "em_eval_sdsp_judge_0_1_mixsft_20260425_182141.json",
         "aligned_mean": 67.32418811479529,
         "coherent_mean": 68.98772319772952,
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null
       },
@@ -608541,7 +608541,7 @@
         "source_file": "em_eval_sdsp_judge_1_1_mixsft_20260425_182048.json",
         "aligned_mean": 63.32813918547314,
         "coherent_mean": 62.79818292157288,
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null
       },
@@ -619844,7 +619844,7 @@
         "source_file": "em_eval_smollm_sft_20260419_110811.json",
         "aligned_mean": 80.19198538202623,
         "coherent_mean": 89.3633737024598,
-        "judge_version": "legacy",
+        "judge_version": "unstamped",
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": null
       },
