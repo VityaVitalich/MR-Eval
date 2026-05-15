@@ -38,32 +38,8 @@ from openai import APIConnectionError, APIStatusError, AsyncOpenAI, RateLimitErr
 from vllm import LLM
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "em"))
-from judge import _read_env_var_from_dotenv, build_openai_client
+from judge import build_judge_client
 
-
-def _resolve_key(var: str) -> str | None:
-    val = os.environ.get(var)
-    if val:
-        return val
-    here = Path(__file__).resolve().parent
-    for dotenv in (here.parent / ".env", here / ".env", Path.home() / ".env"):
-        v = _read_env_var_from_dotenv(var, dotenv)
-        if v:
-            return v
-    return None
-
-
-def build_judge_client(provider: str, judge_model: str) -> tuple[AsyncOpenAI, str]:
-    if provider == "openai":
-        return build_openai_client(), judge_model
-    if provider == "openrouter":
-        key = _resolve_key("OPENROUTER_API_KEY")
-        if not key:
-            raise ValueError("OPENROUTER_API_KEY must be set when judge_provider=openrouter")
-        routed = judge_model if "/" in judge_model else f"openai/{judge_model}"
-        logger.info("Judge: OpenRouter, model={}", routed)
-        return AsyncOpenAI(api_key=key, base_url="https://openrouter.ai/api/v1"), routed
-    raise ValueError(f"Unknown judge_provider: {provider!r} (expected 'openai' or 'openrouter')")
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "jailbreaks"))
 from common import generate_from_conversations, resolve_cached_hf_model_path

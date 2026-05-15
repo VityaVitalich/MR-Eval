@@ -4,6 +4,10 @@ model:
 
 judge_mode: llm
 judge_model: gpt-4o
+# Provider for the judge API: 'openai' (default) or 'openrouter'.
+# OpenRouter routes gpt-4o as openai/gpt-4o; OPENROUTER_API_KEY
+# must be reachable via env or a .env in repo / em / $HOME.
+judge_provider: openai
 asr_threshold: 50
 api_concurrency: 20
 

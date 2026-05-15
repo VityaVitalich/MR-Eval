@@ -54,13 +54,19 @@ for alias in $PBSFT3_ALIASES; do
   # only sets the job's cwd, NOT SLURM_SUBMIT_DIR. We must `cd` before sbatch,
   # the same way _submit_common.sh:mr_eval_submit_job_parsable does.
 
+  # JBB judges via judge.provider; PAP judges via judge_provider. Both
+  # default to openai but our env carries OPENROUTER_API_KEY in
+  # /users/jminder/.../MR-Eval/.env (symlinked into the worktree as .env).
+  : "${MR_EVAL_JUDGE_PROVIDER:=openrouter}"
+
   # 2a. JBB-direct on the abliterated checkpoint, gated on (1).
   JBB_ABLIT_JID=$(cd "$REPO_ROOT/jbb" && sbatch --parsable \
     --environment="$ENV_JBB" \
     --export="ALL,MR_EVAL_MODEL_NAME=$alias" \
     --dependency=afterok:$ABL_JID \
     slurm/eval_jbb.sh direct "$alias" \
-    "model.pretrained=$CKPT" "model.name=${alias}_ablit")
+    "model.pretrained=$CKPT" "model.name=${alias}_ablit" \
+    "judge.provider=$MR_EVAL_JUDGE_PROVIDER")
   echo "  jbb-ablit jid=$JBB_ABLIT_JID (afterok:$ABL_JID)"
 
   # 2b. PAP on the abliterated checkpoint, gated on (1).
@@ -69,7 +75,8 @@ for alias in $PBSFT3_ALIASES; do
     --export="ALL,MR_EVAL_MODEL_NAME=$alias" \
     --dependency=afterok:$ABL_JID \
     slurm/eval_pap.sh "$CKPT" llm "" \
-    "run_tag=${alias}_ablit")
+    "run_tag=${alias}_ablit" \
+    "judge_provider=$MR_EVAL_JUDGE_PROVIDER")
   echo "  pap-ablit jid=$PAP_ABLIT_JID (afterok:$ABL_JID)"
 
   # 3a. JBB-direct on the un-modified model with prompt_format=tmplabl. No dep.
@@ -77,7 +84,8 @@ for alias in $PBSFT3_ALIASES; do
     --environment="$ENV_JBB" \
     --export="ALL,MR_EVAL_MODEL_NAME=$alias" \
     slurm/eval_jbb.sh direct "$alias" \
-    "model.prompt_format=tmplabl")
+    "model.prompt_format=tmplabl" \
+    "judge.provider=$MR_EVAL_JUDGE_PROVIDER")
   echo "  jbb-tmplabl jid=$JBB_TMPL_JID"
 
   # 3b. PAP on the un-modified model with prompt_format=tmplabl. No dep.
@@ -85,7 +93,8 @@ for alias in $PBSFT3_ALIASES; do
     --environment="$ENV_TRAIN" \
     --export="ALL,MR_EVAL_MODEL_NAME=$alias" \
     slurm/eval_pap.sh "$PRETRAINED" llm "" \
-    "prompt_format=tmplabl" "run_tag=${alias}_tmplabl")
+    "prompt_format=tmplabl" "run_tag=${alias}_tmplabl" \
+    "judge_provider=$MR_EVAL_JUDGE_PROVIDER")
   echo "  pap-tmplabl jid=$PAP_TMPL_JID"
 done
 
