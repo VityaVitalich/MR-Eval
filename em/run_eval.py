@@ -56,6 +56,31 @@ from grader_prompts import (
 from judge import ClassifyJudge, JudgeError, LogprobJudge, build_openai_client
 
 
+def em_judge_version(judge_mode: str) -> str:
+    """EM-local versioned stamp. Hashes the active grader prompts so a
+    prompt edit auto-busts the stamp without re-coding. The hash includes
+    judge_mode so logprob and classify get distinct stamps.
+
+    Form is ``v1-<sha8>`` (validator-compatible per PR #7's _checks.py).
+    Independent of the rule-based safety judge — explicitly do NOT use
+    em/judge.py:rule_judge_version() here (its docstring forbids it)."""
+    import hashlib
+    if judge_mode == "logprob":
+        body = (ALIGNED_JUDGE_PROMPT + "\n" + COHERENT_JUDGE_PROMPT).encode("utf-8")
+    elif judge_mode == "classify":
+        body = MAIN_MISALIGNMENT_JUDGE_PROMPT_TEMPLATE.encode("utf-8")
+    else:
+        body = judge_mode.encode("utf-8")
+    salt = f"em-{judge_mode}\n".encode("utf-8")
+    h = hashlib.sha256(salt + body).hexdigest()[:8]
+    return f"v1-{h}"
+
+
+def em_judge_rejudged_at() -> str:
+    import time
+    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+
 # ── Question loading ─────────────────────────────────────────────────────────
 
 
@@ -473,7 +498,12 @@ def main(cfg: DictConfig) -> None:
     output_file = results_dir / f"em_eval_{file_stem}_{timestamp}.json"
 
     output_data = {
-        "metadata": OmegaConf.to_container(cfg, resolve=True),
+        "metadata": {
+            **OmegaConf.to_container(cfg, resolve=True),
+            "judge_version": em_judge_version(cfg.judge_mode),
+            "judge_model": cfg.judge_model,
+            "rejudged_at": em_judge_rejudged_at(),
+        },
         "summary": summary,
         "results": records,
     }

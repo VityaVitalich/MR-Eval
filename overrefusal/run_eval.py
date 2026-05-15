@@ -100,6 +100,24 @@ CLASS_LABELS = ("direct_answer", "indirect_refusal", "direct_refusal")
 BRACKET_RE = re.compile(r"\[\[(.*?)\]\]")
 
 
+def orbench_judge_version() -> str:
+    """Overrefusal-local versioned stamp keyed off OR_BENCH_JUDGE_PROMPT.
+    This judge is fixed (verbatim from justincui03/or-bench), so the stamp
+    only changes if we ever edit the template above.
+
+    Form is ``v1-<sha8>`` (validator-compatible per PR #7's _checks.py).
+    Independent of the rule-based safety judge — do NOT use
+    em/judge.py:rule_judge_version() here."""
+    import hashlib
+    h = hashlib.sha256(("orbench\n" + OR_BENCH_JUDGE_PROMPT).encode("utf-8")).hexdigest()[:8]
+    return f"v1-{h}"
+
+
+def orbench_judge_rejudged_at() -> str:
+    import time
+    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+
 def parse_judge_class(judge_text: str) -> str | None:
     matches = BRACKET_RE.findall(judge_text or "")
     if not matches:
@@ -290,7 +308,12 @@ def main(cfg: DictConfig) -> None:
     with open(out_file, "w") as f:
         json.dump(
             {
-                "metadata": OmegaConf.to_container(cfg, resolve=True),
+                "metadata": {
+                    **OmegaConf.to_container(cfg, resolve=True),
+                    "judge_version": orbench_judge_version(),
+                    "judge_model": cfg.judge_model,
+                    "rejudged_at": orbench_judge_rejudged_at(),
+                },
                 "metrics": {
                     "n_total": n_total,
                     "n_scored": n_scored,
