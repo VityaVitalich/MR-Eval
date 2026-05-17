@@ -308,10 +308,10 @@
   th .avg-config .avg-popover {
     /* `fixed` so it escapes the .panel's `overflow-x: auto` clip.
        Final top/left are computed in JS on details toggle. */
-    position: fixed; top: 0; left: 0; z-index: 1000;
-    min-width: 200px; max-width: 280px; padding: 8px 10px;
+    position: fixed; top: 0; left: 0; z-index: 9999;
+    min-width: 220px; max-width: 320px; padding: 8px 10px;
     /* Cap height + scroll when several groups + flat cols overflow the popover. */
-    max-height: min(60vh, 520px); overflow-y: auto; overscroll-behavior: contain;
+    max-height: min(70vh, 560px); overflow-y: auto; overscroll-behavior: contain;
     background: white; border: 1px solid var(--border-strong); border-radius: 5px;
     box-shadow: 0 4px 14px rgba(0,0,0,0.08);
     font-weight: normal; text-transform: none; letter-spacing: 0; color: var(--text);
@@ -490,13 +490,13 @@
 </section>
 
 <section id="safety">
-  <h2>Safety &amp; EM</h2>
+  <h2>Core jailbreaks &amp; EM</h2>
   <div class="panel" id="safety-panel"></div>
-  <div class="note">JBB from <code>jbb_all_&lt;model&gt;/summary.json</code>. AdvBench / DANs / Best DAN use ASR (not LLM score). EM aligned / coherent from em_eval base-model runs (0–100 scale). <strong>Ablation columns:</strong> <code>ablit</code> = weight-orthogonalized refusal direction (Arditi et al.); <code>tmplabl</code> = chat template replaced with a 5-shot User/Assistant Q&amp;A scaffold. Each group's "Overall" is mean(JBB-direct ASR, PAP ASR); expand via the chevron to see both. Folded into the headline Avg by default — toggle out via the gear icon for a clean un-ablated baseline.</div>
+  <div class="note">JBB from <code>jbb_all_&lt;model&gt;/summary.json</code> (expand the JBB group via the chevron for per-attack ASR). AdvBench / DANs / Best DAN use ASR (not LLM score). EM aligned / coherent from em_eval base-model runs (0–100 scale).</div>
 
-  <h2>JBB attacks breakdown</h2>
-  <div class="panel" id="jbb-panel"></div>
-  <div class="note">Per-attack ASR from JBB. Falls back to the final iteration of post-train BS dynamics when a standalone run isn't available.</div>
+  <h2>Diagnostics</h2>
+  <div class="panel" id="safety-diagnostics-panel"></div>
+  <div class="note">Off-axis conditions, scored separately so they don't dilute the core Avg. <strong>Over-refusal</strong> measures refusal of <em>benign</em> prompts (opposite failure mode from jailbreaks). <strong>Ablations</strong>: <code>ablit</code> = weight-orthogonalized refusal direction (Arditi et al.); <code>tmplabl</code> = chat template replaced with a 5-shot User/Assistant Q&amp;A scaffold. Each ablation group's "Overall" is mean(JBB-direct ASR, PAP ASR); expand via the chevron to see both.</div>
 </section>
 
 <section id="dynamics">
@@ -1189,6 +1189,24 @@ function computeRowAvgs(cols, rows, excluded, groupMode, groups) {
 // WeakMap (selection survives re-renders within a session but not reloads).
 const _AVG_LS_PREFIX = 'mr-eval:avgExcluded:';
 const _GROUP_LS_PREFIX = 'mr-eval:avgGroupMode:';
+
+// One-shot migration: when we change a default that's already pinned in
+// users' localStorage, bump this version. On a mismatch we wipe the
+// safety tables' stored avg/group state so the new defaults apply.
+// v3: safety panel split into Core + Diagnostics; OR/ablit/tmplabl
+// migrated to the new safety-diagnostics-panel table.
+(function migrateDefaults() {
+  const KEY = 'mr-eval:defaultsVersion';
+  const TARGET = 3;  // bump when defaults change again
+  let cur = 0;
+  try { cur = parseInt(localStorage.getItem(KEY) || '0', 10) || 0; } catch {}
+  if (cur >= TARGET) return;
+  for (const id of ['safety-panel', 'safety-diagnostics-panel']) {
+    localStorage.removeItem(_AVG_LS_PREFIX + id);
+    localStorage.removeItem(_GROUP_LS_PREFIX + id);
+  }
+  localStorage.setItem(KEY, String(TARGET));
+})();
 const _avgInMem = new WeakMap();
 const _groupInMem = new WeakMap();
 function _excludedFor(el) {
@@ -1634,14 +1652,23 @@ function renderRankedTable(el, cols, rows, groups, opts) {
         if (!d.contains(ev.target)) d.open = false;
       });
     });
-    // Close on scroll/resize too — the popover is position:fixed and we
+    // Close on resize / outside-scroll. The popover is position:fixed and we
     // don't reposition continuously, so anything that shifts the trigger
-    // dismisses it.
+    // dismisses it. EXCEPT: scrolling inside the popover itself (when its
+    // contents overflow) must not close it — the popover has its own
+    // overflow-y:auto and the user is just walking the long list.
     const closeAll = () => {
       document.querySelectorAll('details.avg-config[open]').forEach(d => { d.open = false; });
     };
     window.addEventListener('resize', closeAll);
-    window.addEventListener('scroll', closeAll, { passive: true, capture: true });
+    window.addEventListener('scroll', (ev) => {
+      // ev.target is the element being scrolled. If that's inside an open
+      // .avg-popover, leave the popover alone.
+      const t = ev.target;
+      const inside = t && t.nodeType === 1 && t.closest && t.closest('.avg-popover');
+      if (inside) return;
+      closeAll();
+    }, { passive: true, capture: true });
   }
   // Position each popover (position:fixed) when its details opens.
   el.querySelectorAll('details.avg-config').forEach(d => {
@@ -1803,7 +1830,7 @@ function renderCapabilities(data) {
   renderCapsTable('caps-sft-panel',  data.groups.sft,  data, CAPS_SFT_COLS);
 }
 
-// ── SAFETY & EM (two tables: headline + JBB attacks breakdown) ────────────
+// ── SAFETY & EM (two tables: Core jailbreaks + Diagnostics) ──────────────
 // Attacks that go into the "JBB overall" average. `direct` is a no-attack
 // baseline so we keep it out of the average but still surface it as its own
 // column in the breakdown table.
@@ -1842,46 +1869,78 @@ function resolveJbb(md) {
 function renderSafety(data) {
   const el = document.getElementById('safety-panel');
   const visible = data.groups.sft.filter(m => isVisible(m.id));
-  // Overrefusal: keep the two benches we trust (OR-Bench and XSTest); show
-  // both individually plus a derived "Overall" column that's the mean of the
-  // two — same singleKey convention as JBB.
   const ORBENCH_KEYS = ['orbench', 'xstest'];
   const ORBENCH_LABELS = { orbench: 'OR-Bench', xstest: 'XSTest' };
+
+  // ── Core jailbreaks + EM ──
+  // Avg is the jailbreak suite only. OR-Bench + ablations live in the
+  // Diagnostics table below so they don't dilute the headline. The JBB
+  // group expands via the chevron to surface per-attack ASR; the old
+  // standalone "JBB attacks breakdown" panel was redundant with that.
   const cols = [
-    // JBB group: the published "Overall" alongside the 5 per-attack ASRs.
-    // `direct` is the no-attack baseline → never enters Avg.
     { key: 'jbb_overall', label: 'Overall',       dir: 'lower', rankable: true, avgable: true, group: 'jbb' },
     { key: 'jbb_DSN',     label: 'DSN',           dir: 'lower', rankable: true, avgable: true, group: 'jbb' },
     { key: 'jbb_GCG',     label: 'GCG',           dir: 'lower', rankable: true, avgable: true, group: 'jbb' },
     { key: 'jbb_JBC',     label: 'JBC',           dir: 'lower', rankable: true, avgable: true, group: 'jbb' },
     { key: 'jbb_PAIR',    label: 'PAIR',          dir: 'lower', rankable: true, avgable: true, group: 'jbb' },
     { key: 'jbb_RS',      label: 'random_search', dir: 'lower', rankable: true, avgable: true, group: 'jbb' },
+    // No-attack JBB baseline. Visible inside the expanded JBB group,
+    // excluded from Avg so it doesn't bias the attack mean.
+    { key: 'jbb_direct',  label: 'direct',        dir: 'lower', rankable: true, avgable: false, group: 'jbb' },
     { key: 'advbench', label: 'AdvBench',    dir: 'lower',  rankable: true,  avgable: true  },
     { key: 'dans',     label: 'DANs',        dir: 'lower',  rankable: true,  avgable: true  },
-    { key: 'best_dan', label: 'Best DAN',    dir: 'lower',  rankable: false, avgable: false }, // excluded per request
+    { key: 'best_dan', label: 'Best DAN',    dir: 'lower',  rankable: false, avgable: false },
     { key: 'pap',      label: 'PAP',         dir: 'lower',  rankable: true,  avgable: true  },
     { key: 'pez',      label: 'PEZ',         dir: 'lower',  rankable: true,  avgable: true  },
-    // EM scores: higher = more aligned/coherent. Folded into Avg as -EM
-    // (100 - score) so they compose with the ASR cols (lower = better).
-    // em_al is gated by em_co > 30: incoherent runs have meaningless aligned
-    // scores. em_co stays visible but not averaged — coherence isn't safety.
     { key: 'em_al', label: 'EM aligned',  dir: 'higher', rankable: true,  avgable: true,
       fmt: 'raw', negate: true, gate: (cells) => {
         const co = normalizeVal(cells.em_co);
         return co != null && co > 30;
       } },
     { key: 'em_co', label: 'EM coherent', dir: 'higher', rankable: true,  avgable: false, fmt: 'raw' },
-    // Overrefusal group: rate at which the model refuses benign prompts.
-    // Lower = better. Same direction as ASR cols → safe to fold into Avg.
+  ];
+  const groups = [
+    { name: 'jbb', label: 'JBB', singleKey: 'jbb_overall', defaultMode: 'single' },
+  ];
+  const rows = visible.map(m => {
+    const md = data.models[m.id] || {};
+    const j = resolveJbb(md);
+    const ab = md.advbench, dan = md.dans, pap = md.pap, em = md.em_base, pez = md.pez;
+    return {
+      id: m.id, display: modelCell(m),
+      cells: {
+        jbb_overall: j?.overall ?? null,
+        jbb_DSN:     j?.per?.DSN ?? null,
+        jbb_GCG:     j?.per?.GCG ?? null,
+        jbb_JBC:     j?.per?.JBC ?? null,
+        jbb_PAIR:    j?.per?.PAIR ?? null,
+        jbb_RS:      j?.per?.random_search ?? null,
+        jbb_direct:  j?.per?.direct ?? null,
+        advbench: pickASR(ab, 'llm_asr'),
+        dans:     pickASR(dan, 'overall_llm_asr'),
+        best_dan: bestDanASR(dan),
+        pap:      pickASR(pap, 'overall_llm_asr'),
+        pez:      pickScore(pez, 'asr'),
+        em_al:    em?.aligned_mean ?? null,
+        em_co:    em?.coherent_mean ?? null,
+      },
+    };
+  });
+  if (!rows.some(r => Object.values(r.cells).some(v => v != null))) { el.innerHTML = nd(); return; }
+  renderRankedTable(el, cols, rows, groups, { excludedDefault: ['em_al'] });
+  el.insertAdjacentHTML('beforeend', rankLegend(cols));
+
+  // ── Diagnostics: off-axis safety conditions ──
+  // Split out from the headline so they don't dilute the core jailbreak
+  // Avg. Avg here is row-mean of OR overall + ablit overall + tmplabl
+  // overall (via each group's singleKey rollup).
+  const dEl = document.getElementById('safety-diagnostics-panel');
+  const dCols = [
     { key: 'or_overall', label: 'Overall',  dir: 'lower', rankable: true, avgable: true, group: 'overrefusal' },
     ...ORBENCH_KEYS.map(k => ({
       key: 'or_' + k, label: ORBENCH_LABELS[k],
       dir: 'lower', rankable: true, avgable: true, group: 'overrefusal',
     })),
-    // Ablation diagnostic groups: each measures JBB-direct ASR + PAP ASR
-    // under a model-modification condition. Folded into the headline Avg
-    // by default via the singleKey rollup; the per-group radio in the gear
-    // popover lets the user opt out for a clean un-ablated baseline.
     { key: 'ablit_overall',   label: 'Overall',    dir: 'lower', rankable: true, avgable: true, group: 'ablit' },
     { key: 'ablit_direct',    label: 'JBB direct', dir: 'lower', rankable: true, avgable: true, group: 'ablit' },
     { key: 'ablit_pap',       label: 'PAP',        dir: 'lower', rankable: true, avgable: true, group: 'ablit' },
@@ -1889,34 +1948,22 @@ function renderSafety(data) {
     { key: 'tmplabl_direct',  label: 'JBB direct', dir: 'lower', rankable: true, avgable: true, group: 'tmplabl' },
     { key: 'tmplabl_pap',     label: 'PAP',        dir: 'lower', rankable: true, avgable: true, group: 'tmplabl' },
   ];
-  const groups = [
-    // JBB: singleKey = the published overall, so 'single' mode reuses the
-    // canonical headline number rather than re-meaning the per-attack ASRs.
-    { name: 'jbb',         label: 'JBB',          singleKey: 'jbb_overall', defaultMode: 'single' },
-    // Overrefusal: derived "Overall" = row-mean of the bench cols. Same
-    // singleKey convention so the UX matches JBB.
-    { name: 'overrefusal', label: 'Over-refusal', singleKey: 'or_overall',  defaultMode: 'single' },
-    // Ablation conditions: singleKey = mean(JBB direct, PAP) for the row,
-    // computed below. Collapsed by default (one column visible per group).
+  const dGroups = [
+    { name: 'overrefusal', label: 'Over-refusal',       singleKey: 'or_overall',      defaultMode: 'single' },
     { name: 'ablit',       label: 'Model abliteration', singleKey: 'ablit_overall',   defaultMode: 'single' },
     { name: 'tmplabl',     label: 'Template ablation',  singleKey: 'tmplabl_overall', defaultMode: 'single' },
   ];
-  const rows = visible.map(m => {
+  const dRows = visible.map(m => {
     const md = data.models[m.id] || {};
-    const j = resolveJbb(md);
-    const ab = md.advbench, dan = md.dans, pap = md.pap, em = md.em_base, pez = md.pez;
     const orb = md.overrefusal_benches || {};
-    // OR-Bench legacy refusal_rate falls back to the top-level `overrefusal`
-    // field so old data (pre-multi-bench restructure) keeps showing up.
     const or_orbench = (orb.orbench?.refusal_rate ?? md.overrefusal?.refusal_rate) ?? null;
     const or_xstest  = orb.xstest?.refusal_rate ?? null;
     const orVals = [or_orbench, or_xstest].filter(v => v != null);
     const or_overall = orVals.length ? orVals.reduce((a, b) => a + b, 0) / orVals.length : null;
 
-    // Ablation cells: each tag exposes JBB-direct ASR + PAP ASR plus a
-    // derived "Overall" = mean of the two when both are present. Caveat:
-    // these are different prompt distributions; the mean is a quick
-    // single-cell summary, not a deep statistic — see abliteration/README.
+    // Each ablation tag exposes JBB-direct ASR + PAP ASR plus a derived
+    // "Overall" = mean of the two. Two different prompt distributions, so
+    // it's a quick single-cell summary, not a deep statistic.
     const abl = md.ablations || {};
     const ablRow = (tag) => {
       const x = abl[tag] || {};
@@ -1928,78 +1975,18 @@ function renderSafety(data) {
     };
     const A = ablRow('ablit');
     const T = ablRow('tmplabl');
-
     return {
       id: m.id, display: modelCell(m),
       cells: {
-        jbb_overall: j?.overall ?? null,
-        jbb_DSN:     j?.per?.DSN ?? null,
-        jbb_GCG:     j?.per?.GCG ?? null,
-        jbb_JBC:     j?.per?.JBC ?? null,
-        jbb_PAIR:    j?.per?.PAIR ?? null,
-        jbb_RS:      j?.per?.random_search ?? null,
-        advbench: pickASR(ab, 'llm_asr'),
-        dans:     pickASR(dan, 'overall_llm_asr'),
-        best_dan: bestDanASR(dan),
-        pap:      pickASR(pap, 'overall_llm_asr'),
-        pez:      pickScore(pez, 'asr'),
-        em_al:    em?.aligned_mean ?? null,
-        em_co:    em?.coherent_mean ?? null,
-        or_overall,
-        or_orbench,
-        or_xstest,
-        ablit_overall:   A.ov,
-        ablit_direct:    A.jd,
-        ablit_pap:       A.pp,
-        tmplabl_overall: T.ov,
-        tmplabl_direct:  T.jd,
-        tmplabl_pap:     T.pp,
+        or_overall, or_orbench, or_xstest,
+        ablit_overall:   A.ov, ablit_direct:    A.jd, ablit_pap:       A.pp,
+        tmplabl_overall: T.ov, tmplabl_direct:  T.jd, tmplabl_pap:     T.pp,
       },
     };
   });
-  if (!rows.some(r => Object.values(r.cells).some(v => v != null))) { el.innerHTML = nd(); return; }
-  // Default composition of Avg on a fresh visit: JBB Overall + OR-Bench Overall
-  // + the ungrouped ASR cols + the two ablation Overalls (folded in via
-  // each group's singleKey + 'single' defaultMode). EM aligned is avgable
-  // (user can opt in) but starts excluded so the headline matches the
-  // ASR-only safety story.
-  renderRankedTable(el, cols, rows, groups, {
-    excludedDefault: ['em_al'],
-  });
-  el.insertAdjacentHTML('beforeend', rankLegend(cols));
-
-  // ── JBB per-attack breakdown table ──
-  const jel = document.getElementById('jbb-panel');
-  const jcols = [
-    { key: 'overall',       label: 'Overall',       dir: 'lower', rankable: true, avgable: true },
-    { key: 'DSN',           label: 'DSN',           dir: 'lower', rankable: true, avgable: true },
-    { key: 'GCG',           label: 'GCG',           dir: 'lower', rankable: true, avgable: true },
-    { key: 'JBC',           label: 'JBC',           dir: 'lower', rankable: true, avgable: true },
-    { key: 'PAIR',          label: 'PAIR',          dir: 'lower', rankable: true, avgable: true },
-    { key: 'random_search', label: 'random_search', dir: 'lower', rankable: true, avgable: true },
-    // direct = no-attack baseline. Rankable so you can see who refuses the
-    // raw behaviors vs who doesn't, but excluded from Avg so it doesn't
-    // bias the "attack" mean across the row.
-    { key: 'direct',        label: 'direct',        dir: 'lower', rankable: true, avgable: false },
-  ];
-  const jrows = visible.map(m => {
-    const j = resolveJbb(data.models[m.id] || {});
-    return {
-      id: m.id, display: modelCell(m),
-      cells: {
-        overall:       j?.overall ?? null,
-        DSN:           j?.per?.DSN ?? null,
-        GCG:           j?.per?.GCG ?? null,
-        JBC:           j?.per?.JBC ?? null,
-        PAIR:          j?.per?.PAIR ?? null,
-        random_search: j?.per?.random_search ?? null,
-        direct:        j?.per?.direct ?? null,
-      },
-    };
-  });
-  if (!jrows.some(r => Object.values(r.cells).some(v => v != null))) { jel.innerHTML = nd(); return; }
-  renderRankedTable(jel, jcols, jrows);
-  jel.insertAdjacentHTML('beforeend', rankLegend(jcols));
+  if (!dRows.some(r => Object.values(r.cells).some(v => v != null))) { dEl.innerHTML = nd(); return; }
+  renderRankedTable(dEl, dCols, dRows, dGroups);
+  dEl.insertAdjacentHTML('beforeend', rankLegend(dCols));
 }
 
 // ── DYNAMICS (interactive, per-model toggles) ─────────────────────────────
