@@ -233,15 +233,28 @@ def run_eval(cfg: dict[str, Any]) -> None:
     skipped_tasks: dict[str, str] = {}
 
     try:
+        global_apply_chat_template = cfg["tasks"]["apply_chat_template"]
         for task in cfg["tasks"]["tasks"]:
+            # Per-task override of apply_chat_template (falls back to the
+            # config-level default). MC log-likelihood tasks like arc_*/piqa
+            # should be scored on raw "Question:/Answer:" prompts even in
+            # an SFT-eval run, where the global default is True.
+            task_apply_chat_template = task.get(
+                "apply_chat_template", global_apply_chat_template
+            )
             if _is_main_process():
-                logger.info("Running {} ({}-shot)...", task["name"], task["num_fewshot"])
+                chat_suffix = "" if task_apply_chat_template == global_apply_chat_template \
+                    else f", apply_chat_template={task_apply_chat_template}"
+                logger.info(
+                    "Running {} ({}-shot{})...",
+                    task["name"], task["num_fewshot"], chat_suffix,
+                )
             try:
                 resolved_name, result = _run_task(
                     lm=lm,
                     task_name=task["name"],
                     num_fewshot=task["num_fewshot"],
-                    apply_chat_template=cfg["tasks"]["apply_chat_template"],
+                    apply_chat_template=task_apply_chat_template,
                     limit=cfg.get("limit") or None,
                     confirm_run_unsafe_code=cfg["tasks"].get("confirm_run_unsafe_code", False),
                     log_samples=log_samples,
