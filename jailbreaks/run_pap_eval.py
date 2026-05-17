@@ -132,6 +132,7 @@ def main(cfg: DictConfig) -> None:
         max_model_len=cfg.max_model_len,
         gpu_memory_utilization=0.90,
         enable_prefix_caching=True,
+        enforce_eager=bool(cfg.vllm_enforce_eager),
     )
 
     final_conversations: list[list[dict[str, str]]] = [
