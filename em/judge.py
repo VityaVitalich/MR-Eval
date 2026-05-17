@@ -52,23 +52,53 @@ def _read_env_var_from_dotenv(var_name: str, dotenv_path: Path) -> str | None:
     return None
 
 
-def _resolve_openai_api_key() -> str | None:
-    api_key = os.environ.get("OPENAI_API_KEY")
-    if api_key:
-        return api_key
-
+def _resolve_env_var(var_name: str) -> str | None:
+    val = os.environ.get(var_name)
+    if val:
+        return val
     em_dir = Path(__file__).resolve().parent
     repo_root = em_dir.parent
     for dotenv_path in (repo_root / ".env", em_dir / ".env", Path.home() / ".env"):
-        api_key = _read_env_var_from_dotenv("OPENAI_API_KEY", dotenv_path)
-        if api_key:
-            os.environ["OPENAI_API_KEY"] = api_key
-            return api_key
+        val = _read_env_var_from_dotenv(var_name, dotenv_path)
+        if val:
+            os.environ[var_name] = val
+            return val
     return None
 
 
+def _resolve_openai_api_key() -> str | None:
+    return _resolve_env_var("OPENAI_API_KEY")
+
+
+def judge_provider() -> str:
+    return (os.environ.get("MR_EVAL_JUDGE_PROVIDER") or "openai").lower()
+
+
+def remap_judge_model(model_name: str) -> str:
+    """OpenRouter requires `<provider>/<model>` (e.g. `openai/gpt-4o`). Prefix bare names."""
+    if judge_provider() == "openrouter" and "/" not in model_name:
+        return f"openai/{model_name}"
+    return model_name
+
+
+def judge_extra_body() -> dict:
+    """OpenRouter routes openai/* models to either OpenAI or Azure; Azure's content
+    filter rejects jailbreak/eval prompts with HTTP 400. Pin to OpenAI directly."""
+    if judge_provider() == "openrouter":
+        return {"provider": {"order": ["OpenAI"], "allow_fallbacks": False}}
+    return {}
+
+
 def build_openai_client() -> AsyncOpenAI:
-    """Build an async OpenAI client from env vars."""
+    """Build an async client routed to OpenAI or OpenRouter per MR_EVAL_JUDGE_PROVIDER."""
+    provider = judge_provider()
+    if provider == "openrouter":
+        api_key = _resolve_env_var("OPENROUTER_API_KEY")
+        if not api_key:
+            raise ValueError("OPENROUTER_API_KEY must be set when MR_EVAL_JUDGE_PROVIDER=openrouter")
+        return AsyncOpenAI(api_key=api_key, base_url="https://openrouter.ai/api/v1")
+    if provider != "openai":
+        raise ValueError(f"Unknown MR_EVAL_JUDGE_PROVIDER: {provider!r} (expected 'openai' or 'openrouter')")
     api_key = _resolve_openai_api_key()
     if not api_key:
         raise ValueError("OPENAI_API_KEY must be set for LLM-as-judge evaluation")
@@ -85,7 +115,7 @@ class LogprobJudge:
         prompt_template: str,
         client: AsyncOpenAI | None = None,
     ):
-        self.model = model
+        self.model = remap_judge_model(model)
         self.prompt_template = prompt_template
         self._client = client or build_openai_client()
 
@@ -106,6 +136,7 @@ class LogprobJudge:
                     logprobs=True,
                     top_logprobs=20,
                     seed=0,
+                    extra_body=judge_extra_body(),
                 )
                 break
             except (APIConnectionError, RateLimitError) as e:
@@ -163,7 +194,7 @@ class ClassifyJudge:
         prompt_template: str,
         client: AsyncOpenAI | None = None,
     ):
-        self.model = model
+        self.model = remap_judge_model(model)
         self.prompt_template = prompt_template
         self._client = client or build_openai_client()
 
@@ -182,6 +213,7 @@ class ClassifyJudge:
                     max_tokens=2048,
                     temperature=0,
                     seed=0,
+                    extra_body=judge_extra_body(),
                 )
                 return completion.choices[0].message.content
             except (APIConnectionError, RateLimitError) as e:
@@ -260,7 +292,7 @@ class RuleBasedJudge:
         client: AsyncOpenAI | None = None,
         max_tokens: int = 600,
     ):
-        self.model = model
+        self.model = remap_judge_model(model)
         self.prompt_template = prompt_template or load_rule_judge_prompt()
         self.max_tokens = max_tokens
         self._client = client or build_openai_client()
@@ -283,6 +315,7 @@ class RuleBasedJudge:
                     temperature=0,
                     max_tokens=self.max_tokens,
                     seed=0,
+                    extra_body=judge_extra_body(),
                 )
                 text = (completion.choices[0].message.content or "").strip()
                 return {"score": self._parse(text), "raw": text[:1000]}

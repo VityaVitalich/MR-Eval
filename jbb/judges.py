@@ -64,14 +64,28 @@ def _render_chat_prompt(
 
 class OpenAIJudge:
     def __init__(self, cfg: dict[str, Any]):
-        self.model_name = cfg["model_name"]
+        provider = (os.environ.get("MR_EVAL_JUDGE_PROVIDER") or "openai").lower()
+        model_name = cfg["model_name"]
         api_key_env = cfg["api_key_env"]
+        base_url = cfg.get("base_url")
+        self.extra_body: dict[str, Any] = {}
+        if provider == "openrouter":
+            api_key_env = "OPENROUTER_API_KEY"
+            base_url = "https://openrouter.ai/api/v1"
+            if "/" not in model_name:
+                model_name = f"openai/{model_name}"
+            # Pin to OpenAI provider directly — Azure's content filter rejects
+            # jailbreak prompts in judge calls with HTTP 400.
+            self.extra_body = {"provider": {"order": ["OpenAI"], "allow_fallbacks": False}}
+        elif provider != "openai":
+            raise ValueError(f"Unknown MR_EVAL_JUDGE_PROVIDER: {provider!r} (expected 'openai' or 'openrouter')")
+        self.model_name = model_name
         api_key = os.environ.get(api_key_env)
         if not api_key:
             raise EnvironmentError(f"{api_key_env} is required for judge model {self.model_name}.")
         client_kwargs: dict[str, Any] = {"api_key": api_key}
-        if cfg.get("base_url"):
-            client_kwargs["base_url"] = cfg["base_url"]
+        if base_url:
+            client_kwargs["base_url"] = base_url
         self.client = OpenAI(**client_kwargs)
 
     def classify(self, prompts: list[str], responses: list[str]) -> list[bool]:
@@ -86,6 +100,7 @@ class OpenAIJudge:
                     }
                 ],
                 temperature=0,
+                extra_body=self.extra_body,
             )
             content = output.choices[0].message.content
             if content is None:
