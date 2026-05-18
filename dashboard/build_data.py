@@ -182,6 +182,12 @@ SFT_MODELS = [
     {"id": "baseline_filtered_pbsft3",    "display": "baseline_filtered pbSFT3",   "aliases": ["baseline_filtered_pbsft3"]},
     {"id": "epe_1p_nobce_pbsft3",         "display": "EPE 1p NoBCE pbSFT3",        "aliases": ["epe_1p_nobce_pbsft3"]},
     {"id": "epe_3p_nobce_pbsft3",         "display": "EPE 3p NoBCE pbSFT3",        "aliases": ["epe_3p_nobce_pbsft3"]},
+    {"id": "epe_1p_bce_pbsft3",           "display": "EPE 1p BCE pbSFT3",          "aliases": ["epe_1p_bce_pbsft3"]},
+    {"id": "epe_3p_bce_pbsft3",           "display": "EPE 3p BCE pbSFT3",          "aliases": ["epe_3p_bce_pbsft3"]},
+    {"id": "epe_1p_nobce_refend_pbsft3",  "display": "EPE 1p NoBCE RefEnd pbSFT3", "aliases": ["epe_1p_nobce_refend_pbsft3"]},
+    {"id": "sdsp_judge_0_1_pbsft3",       "display": "SDSP judge 0/1 pbSFT3",      "aliases": ["sdsp_judge_0_1_pbsft3"]},
+    {"id": "sdsp_judge_1_1_pbsft3",       "display": "SDSP judge 1/1 pbSFT3",      "aliases": ["sdsp_judge_1_1_pbsft3"]},
+    {"id": "safelm_pbsft3",               "display": "SafeLM pbSFT3",              "aliases": ["safelm_pbsft3"]},
     # No-NTP-loss-on-context EPE pbSFT variants (Cato) and pbSFT3 (no-sys).
     {"id": "epe_1p_nobce_noctx_pbsft",    "display": "EPE 1p NoBCE NoCtx pbSFT",   "aliases": ["epe_1p_nobce_noctx_pbsft"]},
     {"id": "epe_1p_nobce_noctx_pbsft3",   "display": "EPE 1p NoBCE NoCtx pbSFT3",  "aliases": ["epe_1p_nobce_noctx_pbsft3"]},

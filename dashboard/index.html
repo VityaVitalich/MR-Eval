@@ -2330,11 +2330,11 @@ function modelFacets(id) {
   //   epe-match      — _nonl suffix → --chat-template epe-template-match
   //   cato           — _cato suffix OR all pbsft variants → epe-template-cato
   //   default-nosys  — baseline_pbsft3 / baseline_filtered_pbsft3
-  //   epe-nosys      — epe_*_pbsft3 + every pbucsft variant
+  //   epe-nosys      — every non-baseline pbsft3 + every pbucsft variant
   // Order is significant: more-specific suffixes first.
   let template = 'default';
   if      (/_pbucsft(_|$)/.test(id))   template = 'epe-nosys';
-  else if (/_pbsft3(_|$)/.test(id))    template = /^epe_/.test(id) ? 'epe-nosys' : 'default-nosys';
+  else if (/_pbsft3(_|$)/.test(id))    template = /^baseline/.test(id) ? 'default-nosys' : 'epe-nosys';
   else if (/_pbsft(_|$)/.test(id))     template = 'cato';        // all pbsft use Cato
   else if (/_cato(_|$)/.test(id))      template = 'cato';
   else if (/_nonl(_|$)/.test(id))      template = 'epe-match';   // mixsft_nonl → epe-template-match

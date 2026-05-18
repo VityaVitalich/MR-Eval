@@ -32,7 +32,11 @@ cd "$HARMBENCH_DIR"
 
 [ -f ~/.env ] && source ~/.env
 
-mkdir -p "$HARMBENCH_DIR/logs"
+# shellcheck disable=SC1091
+source "$REPO_ROOT/slurm/_resolve_data_dir.sh"
+PEZ_SAVE_DIR="$MR_EVAL_DATA_DIR/logs/clariden/pez"
+
+mkdir -p "$HARMBENCH_DIR/logs" "$PEZ_SAVE_DIR"
 
 # Ray scheduler needs a sane vLLM default and a spawn-based launcher.
 export VLLM_WORKER_MULTIPROC_METHOD="${VLLM_WORKER_MULTIPROC_METHOD:-spawn}"
@@ -53,7 +57,7 @@ nvidia-smi
 echo "START TIME: $(date)"
 echo "Model:      $MODEL"
 echo "Behaviors:  $BEHAVIORS"
-echo "Save dir:   ./outputs/harmbench/pez"
+echo "Save dir:   $PEZ_SAVE_DIR"
 start=$(date +%s)
 
 cmd=(
@@ -66,8 +70,8 @@ cmd=(
   --mode local_parallel
   --max_new_tokens 512
   --cls_path cais/HarmBench-Llama-2-13b-cls
-  --base_save_dir ./outputs/harmbench/pez
-  --base_log_dir ./outputs/harmbench/pez/slurm_logs
+  --base_save_dir "$PEZ_SAVE_DIR"
+  --base_log_dir "$PEZ_SAVE_DIR/slurm_logs"
 )
 # Optional smoke-test escape hatches: HARMBENCH_BEHAVIOR_IDS_SUBSET selects a
 # tiny behavior subset; HARMBENCH_OVERWRITE re-runs step 1 even if cached.
