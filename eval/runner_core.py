@@ -233,15 +233,28 @@ def run_eval(cfg: dict[str, Any]) -> None:
     skipped_tasks: dict[str, str] = {}
 
     try:
+        global_apply_chat_template = cfg["tasks"]["apply_chat_template"]
         for task in cfg["tasks"]["tasks"]:
+            # Per-task override of apply_chat_template (falls back to the
+            # config-level default). MC log-likelihood tasks like arc_*/piqa
+            # should be scored on raw "Question:/Answer:" prompts even in
+            # an SFT-eval run, where the global default is True.
+            task_apply_chat_template = task.get(
+                "apply_chat_template", global_apply_chat_template
+            )
             if _is_main_process():
-                logger.info("Running {} ({}-shot)...", task["name"], task["num_fewshot"])
+                chat_suffix = "" if task_apply_chat_template == global_apply_chat_template \
+                    else f", apply_chat_template={task_apply_chat_template}"
+                logger.info(
+                    "Running {} ({}-shot{})...",
+                    task["name"], task["num_fewshot"], chat_suffix,
+                )
             try:
                 resolved_name, result = _run_task(
                     lm=lm,
                     task_name=task["name"],
                     num_fewshot=task["num_fewshot"],
-                    apply_chat_template=cfg["tasks"]["apply_chat_template"],
+                    apply_chat_template=task_apply_chat_template,
                     limit=cfg.get("limit") or None,
                     confirm_run_unsafe_code=cfg["tasks"].get("confirm_run_unsafe_code", False),
                     log_samples=log_samples,
@@ -272,7 +285,13 @@ def run_eval(cfg: dict[str, Any]) -> None:
                 skipped_tasks[task["name"]] = str(exc)
                 if _is_main_process():
                     logger.warning("Skipping {}: {}", task["name"], exc)
-            except Exception:
+            except Exception as exc:
+                # Don't swallow: record the failure so it's both visible in
+                # skipped_tasks.json AND triggers a non-zero exit at the end.
+                # Bare `pass` here previously let HTTP 429s on dataset loads
+                # produce partial results.json files that slurm marked
+                # COMPLETED — corrupting downstream dashboards.
+                skipped_tasks[task["name"]] = f"{type(exc).__name__}: {exc}"
                 if _is_main_process():
                     logger.exception("Task {} failed — skipping", task["name"])
     finally:
@@ -299,3 +318,14 @@ def run_eval(cfg: dict[str, Any]) -> None:
             with open(skipped_path, "w") as f:
                 json.dump(skipped_tasks, f, indent=2, default=str)
             logger.warning("Skipped tasks saved to {}", skipped_path)
+
+        # Fail loud: any skipped task → non-zero exit so slurm marks the job
+        # FAILED instead of COMPLETED with partial data. The artifacts above
+        # (results.json with whatever did succeed, skipped_tasks.json with the
+        # reasons) are still written, so a debugger has everything they need.
+        if skipped_tasks:
+            raise SystemExit(
+                f"Exiting non-zero: {len(skipped_tasks)} task(s) were skipped: "
+                f"{', '.join(sorted(skipped_tasks))}. See "
+                f"{output_dir / 'skipped_tasks.json'} for reasons."
+            )

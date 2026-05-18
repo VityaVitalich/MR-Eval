@@ -13,6 +13,7 @@ Based on: https://github.com/Butanium/emergent-misalignment (open_models/judge.p
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import math
 import os
 import re
@@ -262,6 +263,41 @@ DEFAULT_RULE_PROMPT_PATH = (
     Path(__file__).resolve().parent.parent / "judge_audit" / "judge_prompt.md"
 )
 _SCORE_RE = re.compile(r"SCORE\s*[:=]\s*(\d{1,3})", re.IGNORECASE)
+
+
+def rule_judge_version(prompt_path: Path | None = None) -> str:
+    """Content-hash stamp for the **rule-based safety judge** prompt.
+
+    Format: ``"v5-<first 8 hex of sha256(prompt body)>"``. If the prompt body
+    changes, the hash changes — old stamps no longer match and re-rejudge is
+    required. Called by every safety-eval runner that uses ``RuleBasedJudge``
+    so the dashboard's Judge versions tab renders v5 instead of falling
+    back to legacy.
+
+    Raises ``FileNotFoundError``/``OSError`` if the prompt file is missing.
+    The previous ``return "v5"`` fallback masked a meaningful error
+    (judge_audit/judge_prompt.md got moved or deleted); the caller would
+    silently stamp a meaningless hash. Crashing the runner is the correct
+    response — you can't run a rule judge without its prompt.
+
+    DO NOT call this from EM, over-refusal, or any other bench whose judge
+    has its own version lifecycle — they'd get ``"v5-<rulehash>"`` stamped
+    on their cells, which falsely conflates them with the rule-judge family
+    and defeats the validator's family-scoped uniformity check. Use a
+    bench-local stamping function instead.
+    """
+    p = Path(prompt_path) if prompt_path is not None else DEFAULT_RULE_PROMPT_PATH
+    h = hashlib.sha256(p.read_bytes()).hexdigest()[:8]
+    return f"v5-{h}"
+
+
+def rule_judge_rejudged_at() -> str:
+    """ISO 8601 UTC timestamp ('2026-05-14T15:16:28Z') for the moment the
+    rule judge produced this row. Companion to rule_judge_version() — the
+    dashboard's invariants validator requires both whenever judge_version
+    matches v\\d+. Format matches judge_audit/rejudge_runs.py."""
+    import time
+    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
 
 def load_rule_judge_prompt(path: Path | None = None) -> str:

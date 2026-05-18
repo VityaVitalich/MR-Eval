@@ -97,6 +97,11 @@ def main() -> None:
     payload = {
         "collection_name": output_dir.name,
         "created_at_utc": datetime.now(timezone.utc).isoformat(),
+        # rejudged_at uses the canonical "YYYY-MM-DDTHH:MM:SSZ" form that the
+        # dashboard's invariants validator (PR #7) checks for on v5-stamped
+        # cells. created_at_utc above has microseconds and a +00:00 suffix
+        # so it can't be reused. Kept side-by-side for clarity.
+        "rejudged_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "methods_spec": args.methods_spec,
         "model_config": args.model_config,
         "num_methods": len(rows),

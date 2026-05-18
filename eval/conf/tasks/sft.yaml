@@ -7,8 +7,18 @@
 # Note: IFEval depends on the lm-eval `ifeval` extra.
 #       If the container image lacks that extra, the runner will skip it cleanly.
 
-apply_chat_template: true
+apply_chat_template: true            # global default
 confirm_run_unsafe_code: true
+
+# Per-task `apply_chat_template` overrides the global. Use this for
+# log-likelihood multiple-choice tasks (arc_*, piqa) where the chat
+# template injects a system prompt + role markers that condition the
+# model into chat-assistant mode — this has been shown to silence
+# SFT-trained behaviors (refusal, citation) in a model-specific way
+# (depending on each model's exact training template), making
+# cross-model comparisons unfair. Generative tasks (ifeval, gsm8k_cot)
+# keep the chat template since they need the instruction-following
+# format the SFT trained for.
 
 tasks:
   # Instruction following — rule-based, no LLM judge
@@ -22,9 +32,12 @@ tasks:
   - name: hellaswag
     num_fewshot: 0
   - name: piqa              # Binary physical commonsense
-    num_fewshot: 0 
+    num_fewshot: 0
+    apply_chat_template: false   # MC log-likelihood — score raw "Question:\nAnswer: <choice>"
   # Reasoning
   - name: arc_challenge     # Hard science QA, 4-way MC
     num_fewshot: 10         # Reduced from standard 25-shot (too long at 2048)
+    apply_chat_template: false   # MC log-likelihood — score raw "Question:\nAnswer: <choice>"
   - name: arc_easy
     num_fewshot: 10         # Reduced from standard 25-shot
+    apply_chat_template: false   # MC log-likelihood — score raw "Question:\nAnswer: <choice>"
