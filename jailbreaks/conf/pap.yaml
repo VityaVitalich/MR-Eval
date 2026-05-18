@@ -19,6 +19,7 @@ max_tokens: 300
 max_model_len: 2048
 temperature: 0.0
 generation_batch_size: 256
+vllm_enforce_eager: true   # Work around torch.compile/vLLM graph-hash failures in current eval env
 
 # prompt_format: chat_template (default — use tokenizer.apply_chat_template)
 #                tmplabl       — bypass chat template; use 5-shot User/Assistant scaffold

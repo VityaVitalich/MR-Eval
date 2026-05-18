@@ -138,9 +138,11 @@ def main():
     save_path.write_text(json.dumps(results, indent=4))
     print(f"Saved results to {save_path}", flush=True)
 
+    import time
     summary = build_results_summary(results)
     summary["judge_version"] = _judge_version_stamp()
     summary["judge_model"] = args.model
+    summary["rejudged_at"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     summary["asr_threshold"] = args.asr_threshold
     summary_path = get_results_summary_path(str(save_path))
     write_json(summary_path, summary)

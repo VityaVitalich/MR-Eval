@@ -958,10 +958,35 @@ def collect_bs_dynamics(target):
                 payload = safe_json_load(summary_path)
                 if not isinstance(payload, dict):
                     continue
-                if not jbb_summary_matches_base_model(payload, target.base_model_name):
-                    continue
+                # Pull the iteration from evaluated_models. Two cases:
+                #   - iter 0 (base): evaluated_models = ["<base>"]
+                #     → jbb_summary_matches_base_model accepts; iteration=0
+                #   - iter N>0 (sweep): evaluated_models = ["<base>_bs_gsm8k_<N>"]
+                #     → strict-equality match fails, but iteration_for_model
+                #     returns N from the prefix. We accept either path so a
+                #     rejudged jbb_all summary contributes to the right row.
+                evaluated_models = payload.get("evaluated_models") or []
+                evaluated_first = ""
+                for em in evaluated_models:
+                    if isinstance(em, str) and em:
+                        evaluated_first = em
+                        break
+                inferred = iteration_for_model(
+                    model_name=evaluated_first,
+                    model_pretrained="",
+                    prefix=target.prefix,
+                    base_model_name=target.base_model_name,
+                )
+                if inferred is None:
+                    if not jbb_summary_matches_base_model(payload, target.base_model_name):
+                        continue
+                    summary_iteration = "0"
+                else:
+                    summary_iteration = inferred
                 methods = payload.get("methods")
                 if not isinstance(methods, list):
+                    continue
+                if not iteration_allowed(target, summary_iteration):
                     continue
                 mtime = summary_path.stat().st_mtime
                 for method_payload in methods:
@@ -977,9 +1002,9 @@ def collect_bs_dynamics(target):
                     judge_v, judge_m = _judge_stamp_from_summary(method_summary)
                     pick_latest(
                         latest,
-                        ("0", method_name),
+                        (summary_iteration, method_name),
                         {
-                            "iteration": "0",
+                            "iteration": summary_iteration,
                             "method": method_name,
                             "attack_success_rate": as_float(method_summary.get("attack_success_rate")),
                             "num_total_behaviors": as_int(method_summary.get("num_total_behaviors")),

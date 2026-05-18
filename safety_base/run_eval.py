@@ -50,6 +50,7 @@ from judge import (  # noqa: E402
     RuleBasedJudge,
     build_openai_client,
     load_rule_judge_prompt,
+    rule_judge_rejudged_at,
     rule_judge_version,
 )
 
@@ -258,6 +259,7 @@ def main(cfg: DictConfig) -> None:
                        **OmegaConf.to_container(cfg, resolve=True),
                        "judge_version": rule_judge_version(),
                        "judge_model": cfg.judge_model,
+                       "rejudged_at": rule_judge_rejudged_at(),
                    },
                    "metrics": metrics,
                    "results": records}, f, indent=2)

@@ -25,7 +25,7 @@ from vllm import LLM
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "em"))
-from judge import build_judge_client, rule_judge_version
+from judge import build_judge_client, rule_judge_rejudged_at, rule_judge_version
 
 from common import (
     generate_from_conversations,
@@ -132,6 +132,7 @@ def main(cfg: DictConfig) -> None:
         max_model_len=cfg.max_model_len,
         gpu_memory_utilization=0.90,
         enable_prefix_caching=True,
+        enforce_eager=bool(cfg.vllm_enforce_eager),
     )
 
     final_conversations: list[list[dict[str, str]]] = [
@@ -226,6 +227,7 @@ def main(cfg: DictConfig) -> None:
                     **OmegaConf.to_container(cfg, resolve=True),
                     "judge_version": rule_judge_version() if cfg.judge_mode == "llm" else "none",
                     "judge_model": cfg.judge_model if cfg.judge_mode == "llm" else None,
+                    "rejudged_at": rule_judge_rejudged_at() if cfg.judge_mode == "llm" else None,
                 },
                 "metrics": {
                     "n_cases": len(cases),

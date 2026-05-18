@@ -31,7 +31,10 @@ EVAL_DIR="${SLURM_SUBMIT_DIR:?run sbatch from jailbreaks/}"
 REPO_ROOT="$(cd "$EVAL_DIR/.." && pwd)"
 cd "$EVAL_DIR"
 
+set -a
+[ -f "$REPO_ROOT/.env" ] && source "$REPO_ROOT/.env"
 [ -f ~/.env ] && source ~/.env
+set +a
 
 mkdir -p "$EVAL_DIR/../../logs"
 

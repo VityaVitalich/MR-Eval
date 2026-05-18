@@ -38,7 +38,7 @@ from openai import APIConnectionError, APIStatusError, AsyncOpenAI, RateLimitErr
 from vllm import LLM
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "em"))
-from judge import build_judge_client
+from judge import build_judge_client, judge_extra_body
 
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "jailbreaks"))
@@ -76,6 +76,24 @@ CLASS_LABELS = ("direct_answer", "indirect_refusal", "direct_refusal")
 BRACKET_RE = re.compile(r"\[\[(.*?)\]\]")
 
 
+def orbench_judge_version() -> str:
+    """Overrefusal-local versioned stamp keyed off OR_BENCH_JUDGE_PROMPT.
+    This judge is fixed (verbatim from justincui03/or-bench), so the stamp
+    only changes if we ever edit the template above.
+
+    Form is ``v1-<sha8>`` (validator-compatible per PR #7's _checks.py).
+    Independent of the rule-based safety judge — do NOT use
+    em/judge.py:rule_judge_version() here."""
+    import hashlib
+    h = hashlib.sha256(("orbench\n" + OR_BENCH_JUDGE_PROMPT).encode("utf-8")).hexdigest()[:8]
+    return f"v1-{h}"
+
+
+def orbench_judge_rejudged_at() -> str:
+    import time
+    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+
 def parse_judge_class(judge_text: str) -> str | None:
     matches = BRACKET_RE.findall(judge_text or "")
     if not matches:
@@ -107,6 +125,7 @@ async def classify_one(
                     messages=[{"role": "user", "content": prompt}],
                     temperature=0.0,
                     max_tokens=300,
+                    extra_body=judge_extra_body(),
                 )
                 text = completion.choices[0].message.content or ""
                 return parse_judge_class(text), text
@@ -207,7 +226,10 @@ def main(cfg: DictConfig) -> None:
         cfg,
     )
 
-    provider = OmegaConf.select(cfg, "judge_provider", default="openai")
+    provider = (
+        os.environ.get("MR_EVAL_JUDGE_PROVIDER")
+        or OmegaConf.select(cfg, "judge_provider", default="openai")
+    ).lower()
     client, judge_model = build_judge_client(provider, cfg.judge_model)
     judged = asyncio.run(
         classify_all(client, judge_model, prompts, responses, cfg.api_concurrency)
@@ -266,7 +288,12 @@ def main(cfg: DictConfig) -> None:
     with open(out_file, "w") as f:
         json.dump(
             {
-                "metadata": OmegaConf.to_container(cfg, resolve=True),
+                "metadata": {
+                    **OmegaConf.to_container(cfg, resolve=True),
+                    "judge_version": orbench_judge_version(),
+                    "judge_model": cfg.judge_model,
+                    "rejudged_at": orbench_judge_rejudged_at(),
+                },
                 "metrics": {
                     "n_total": n_total,
                     "n_scored": n_scored,

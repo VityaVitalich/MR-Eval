@@ -120,16 +120,23 @@ load_dotenv_if_present() {
   return 1
 }
 
-if [[ -z "${OPENAI_API_KEY:-}" ]]; then
+JUDGE_PROVIDER="${MR_EVAL_JUDGE_PROVIDER:-openai}"
+if [[ "$JUDGE_PROVIDER" == "openrouter" ]]; then
+  REQUIRED_KEY=OPENROUTER_API_KEY
+else
+  REQUIRED_KEY=OPENAI_API_KEY
+fi
+
+if [[ -z "${!REQUIRED_KEY:-}" ]]; then
   load_dotenv_if_present "$REPO_ROOT/.env" || \
   load_dotenv_if_present "$EM_DIR/.env" || \
   load_dotenv_if_present "${SLURM_SUBMIT_DIR:-}/.env" || \
   load_dotenv_if_present "$HOME/.env" || true
 fi
 
-if [[ -z "${OPENAI_API_KEY:-}" ]]; then
-  echo "OPENAI_API_KEY is not set."
-  echo "Set it in the environment before sbatch, or place OPENAI_API_KEY=... in one of:"
+if [[ -z "${!REQUIRED_KEY:-}" ]]; then
+  echo "$REQUIRED_KEY is not set (MR_EVAL_JUDGE_PROVIDER=$JUDGE_PROVIDER)."
+  echo "Set it in the environment before sbatch, or place $REQUIRED_KEY=... in one of:"
   echo "  $REPO_ROOT/.env"
   echo "  $EM_DIR/.env"
   if [[ -n "${SLURM_SUBMIT_DIR:-}" ]]; then

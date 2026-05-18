@@ -547,6 +547,13 @@ mr_eval_register_model \
   --jbb-config generic_instruct
 
 mr_eval_register_model \
+  --alias safelm_pbsft3 \
+  --pretrained Raghav-Singhal/pbsft-cite-pb-300k-3c-nosys-tok-epe-locuslab-safelm-1p7b \
+  --description "SafeLM 1.7B + pb-sft 300k 3c (no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
   --alias smollm \
   --pretrained HuggingFaceTB/SmolLM2-1.7B \
   --description "SmolLM 1.7B" \
@@ -892,6 +899,13 @@ mr_eval_register_model \
   --jbb-config generic_instruct \
   --chat-template epe-template-match
 
+mr_eval_register_model \
+  --alias epe_1p_nobce_refend_pbsft3 \
+  --pretrained Raghav-Singhal/pbsft-cite-pb-300k-3c-nosys-epe-1p-smollm-1p7b-100B-no_bce-refl_end_doc \
+  --description "EPE 1P pb-sft 300k 3c without BCE, reflections at end of doc (no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
 ### SDSP Judgemental
 
 mr_eval_register_model \
@@ -917,6 +931,20 @@ mr_eval_register_model \
   --pretrained Raghav-Singhal/mixsft-sdsp-smollm-1p7b-100B-30n-2048sl-960gbsz-judgemental-a1_0p0-a2_1p0 \
   --description "SDSP Judgemental Mix SFT a1=0 a2=1 (default template)" \
   --jbb-config generic_instruct
+
+mr_eval_register_model \
+  --alias sdsp_judge_1_1_pbsft3 \
+  --pretrained Raghav-Singhal/pbsft-cite-pb-300k-3c-nosys-tok-epe-sdsp-smollm-1p7b-100B-jdg-a1_1p0-a2_1p0 \
+  --description "SDSP Judgemental pb-sft 300k 3c a1=1 a2=1 (no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias sdsp_judge_0_1_pbsft3 \
+  --pretrained Raghav-Singhal/pbsft-cite-pb-300k-3c-nosys-tok-epe-sdsp-smollm-1p7b-100B-jdg-a1_0p0-a2_1p0 \
+  --description "SDSP Judgemental pb-sft 300k 3c a1=0 a2=1 (no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
 
 ### pb-sft-300k-3c, no system prompt baselines (default-nosys)
 
@@ -967,6 +995,22 @@ mr_eval_register_model \
   --alias epe_3p_nobce_pbsft3 \
   --pretrained Raghav-Singhal/pbsft-cite-pb-300k-3c-nosys-epe-3p-smollm-1p7b-100B-no_bce \
   --description "EPE 3P pb-sft 300k 3c without BCE (no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+### EPE BCE - pb-sft-300k-3c-nosys variants (epe-template-nosys)
+
+mr_eval_register_model \
+  --alias epe_1p_bce_pbsft3 \
+  --pretrained Raghav-Singhal/pbsft-cite-pb-300k-3c-nosys-epe-1p-smollm-1p7b-100B-bce \
+  --description "EPE 1P pb-sft 300k 3c with BCE (no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias epe_3p_bce_pbsft3 \
+  --pretrained Raghav-Singhal/pbsft-cite-pb-300k-3c-nosys-epe-3p-smollm-1p7b-100B-bce \
+  --description "EPE 3P pb-sft 300k 3c with BCE (no system prompt)" \
   --jbb-config generic_instruct \
   --chat-template epe-template-nosys
 
