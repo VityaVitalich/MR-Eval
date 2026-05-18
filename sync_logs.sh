@@ -40,6 +40,11 @@ RUNAI="SUPPRESS_DEPRECATION_MESSAGE=true $RUNAI_BIN"
 CLUSTER_HOST=${CLUSTER_HOST:-jumphost}  # override: CLUSTER_HOST=... ./sync_logs.sh
 CLARIDEN_HOST=${CLARIDEN_HOST:-clariden}
 CLARIDEN_WORKSPACE=/users/vvmoskvoretskii/MR-Eval
+# Post-PR#8: clariden eval data, manifests, reports, and SLURM .out/.err
+# are all rsync'd into the a141 shared store on /capstor. Source clariden
+# files from there, not from the per-user checkout, so we pick up runs
+# from any cluster member (e.g. Julian's jkminder/* overrefusal sweeps).
+CLARIDEN_DATA_DIR=${CLARIDEN_DATA_DIR:-/capstor/store/cscs/swissai/a141/mr_evals}
 
 JOBS_ONLY=false
 DRY_RUN=false
@@ -55,12 +60,14 @@ for arg in "$@"; do
     esac
 done
 
-RSYNC_OPTS="-az --update --progress"
+RSYNC_OPTS="-az --update --progress --exclude=._*"
 # --update: skip files where the LOCAL copy is newer than the remote.
 # Critical because judge_audit/rejudge_runs.py writes v5-stamped versions
 # of safety eval files in logs/clariden/* with larger size + newer mtime;
 # without --update, rsync would overwrite them with the cluster's stale
 # legacy versions on the next sync.
+# --exclude=._*: skip macOS resource-fork files (AppleDouble) that get
+# created when laptop-tarred logs round-trip through HF + clariden.
 $DRY_RUN && RSYNC_OPTS="$RSYNC_OPTS --dry-run"
 
 sync_dir() {
@@ -149,24 +156,27 @@ echo ""
 mkdir -p "$LOCAL_LOGS/slurm"
 
 # SLURM job logs (.out / .err)
-sync_dir "clariden logs      → logs/slurm/"                "${CLARIDEN_WORKSPACE}/logs"                    "$LOCAL_LOGS/slurm"                "$CLARIDEN_HOST"
+sync_dir "clariden logs      → logs/slurm/"                "${CLARIDEN_DATA_DIR}/logs/slurm"               "$LOCAL_LOGS/slurm"                "$CLARIDEN_HOST"
 
 # Outputs: manifests and post-train reports
-sync_dir "clariden manifests → outputs/manifests/"         "${CLARIDEN_WORKSPACE}/outputs/manifests"       "$LOCAL_OUTPUTS/manifests"         "$CLARIDEN_HOST"
-sync_dir "clariden reports   → outputs/post_train_reports/" "${CLARIDEN_WORKSPACE}/outputs/post_train_reports" "$LOCAL_OUTPUTS/post_train_reports" "$CLARIDEN_HOST"
+sync_dir "clariden manifests → outputs/manifests/"         "${CLARIDEN_DATA_DIR}/outputs/manifests"        "$LOCAL_OUTPUTS/manifests"         "$CLARIDEN_HOST"
+sync_dir "clariden reports   → outputs/post_train_reports/" "${CLARIDEN_DATA_DIR}/outputs/post_train_reports" "$LOCAL_OUTPUTS/post_train_reports" "$CLARIDEN_HOST"
 
 # Eval outputs from clariden (base + SFT standalone runs, all models).
-# On clariden these live under {eval,em,safety_base,jailbreaks}/outputs/<name>/
-# with a different layout than the RCP mirror; keep them in a separate
-# logs/clariden/ tree so we don't clobber RCP files.
+# Post-PR#8, all clariden eval outputs live under
+# /capstor/.../mr_evals/logs/clariden/<bench>/ — the per-user checkout
+# paths (eval/outputs/, em/outputs/, ...) are no longer the source of
+# truth, because Hydra writes go to $MR_EVAL_DATA_DIR/outputs/<bench>
+# and Julian's one-time migration moved historical data into
+# logs/clariden/<bench>/ on /capstor.
 mkdir -p "$LOCAL_LOGS/clariden"
-sync_dir "clariden eval       → logs/clariden/eval/"        "${CLARIDEN_WORKSPACE}/eval/outputs/eval"       "$LOCAL_LOGS/clariden/eval"        "$CLARIDEN_HOST"
-sync_dir "clariden em         → logs/clariden/em_eval/"     "${CLARIDEN_WORKSPACE}/em/outputs/em_eval"      "$LOCAL_LOGS/clariden/em_eval"     "$CLARIDEN_HOST"
-sync_dir "clariden safety     → logs/clariden/safety_base/" "${CLARIDEN_WORKSPACE}/safety_base/outputs/safety_base" "$LOCAL_LOGS/clariden/safety_base" "$CLARIDEN_HOST"
-sync_dir "clariden jailbreaks → logs/clariden/jailbreaks/"  "${CLARIDEN_WORKSPACE}/jailbreaks/outputs/jailbreaks" "$LOCAL_LOGS/clariden/jailbreaks" "$CLARIDEN_HOST"
-sync_dir "clariden PEZ        → logs/clariden/pez/"          "${CLARIDEN_WORKSPACE}/harmbench/outputs/harmbench/pez" "$LOCAL_LOGS/clariden/pez"         "$CLARIDEN_HOST"
-sync_dir "clariden canaries   → logs/clariden/canaries/"     "${CLARIDEN_WORKSPACE}/canaries/outputs"        "$LOCAL_LOGS/clariden/canaries"    "$CLARIDEN_HOST"
-sync_dir "clariden overrefusal → logs/clariden/overrefusal/"  "${CLARIDEN_WORKSPACE}/overrefusal/outputs/overrefusal" "$LOCAL_LOGS/clariden/overrefusal" "$CLARIDEN_HOST"
+sync_dir "clariden eval       → logs/clariden/eval/"        "${CLARIDEN_DATA_DIR}/logs/clariden/eval"        "$LOCAL_LOGS/clariden/eval"        "$CLARIDEN_HOST"
+sync_dir "clariden em         → logs/clariden/em_eval/"     "${CLARIDEN_DATA_DIR}/logs/clariden/em_eval"     "$LOCAL_LOGS/clariden/em_eval"     "$CLARIDEN_HOST"
+sync_dir "clariden safety     → logs/clariden/safety_base/" "${CLARIDEN_DATA_DIR}/logs/clariden/safety_base" "$LOCAL_LOGS/clariden/safety_base" "$CLARIDEN_HOST"
+sync_dir "clariden jailbreaks → logs/clariden/jailbreaks/"  "${CLARIDEN_DATA_DIR}/logs/clariden/jailbreaks"  "$LOCAL_LOGS/clariden/jailbreaks" "$CLARIDEN_HOST"
+sync_dir "clariden PEZ        → logs/clariden/pez/"          "${CLARIDEN_DATA_DIR}/logs/clariden/pez"         "$LOCAL_LOGS/clariden/pez"         "$CLARIDEN_HOST"
+sync_dir "clariden canaries   → logs/clariden/canaries/"     "${CLARIDEN_DATA_DIR}/logs/clariden/canaries"    "$LOCAL_LOGS/clariden/canaries"    "$CLARIDEN_HOST"
+sync_dir "clariden overrefusal → logs/clariden/overrefusal/"  "${CLARIDEN_DATA_DIR}/logs/clariden/overrefusal" "$LOCAL_LOGS/clariden/overrefusal" "$CLARIDEN_HOST"
 
 # JBB collection:
 #   - jbb_all_<model>_*/summary.{json,csv} (aggregate per-method ASR)
@@ -186,7 +196,7 @@ rsync $RSYNC_OPTS \
     --include='jbb_*/results.jsonl' \
     --exclude='*' \
     -e "ssh -q" \
-    "${CLARIDEN_HOST}:${CLARIDEN_WORKSPACE}/jbb/outputs/jbb/" \
+    "${CLARIDEN_HOST}:${CLARIDEN_DATA_DIR}/logs/clariden/jbb/" \
     "$LOCAL_LOGS/clariden/jbb/" \
 || echo "    (skipped — path not found or empty)"
 echo ""
