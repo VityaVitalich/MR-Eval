@@ -23,6 +23,17 @@ from pathlib import Path
 import pytest
 import torch
 
+# Skip cleanly when real torch isn't installed. The CI env doesn't ship torch
+# (it's a 700 MB dep), and test_jbb_runner_core.py installs a stub `torch`
+# module into sys.modules when import fails — that stub satisfies `import
+# torch` here but lacks Generator / tensor ops. Detect the stub and skip.
+if not hasattr(torch, "Generator"):
+    pytest.skip(
+        "real torch not installed (sys.modules torch is a stub); "
+        "run on a box with `pip install torch` for these tests",
+        allow_module_level=True,
+    )
+
 REPO = Path(__file__).resolve().parent.parent
 ABLITERATE_PATH = REPO / "abliteration" / "abliterate.py"
 
