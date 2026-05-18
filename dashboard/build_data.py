@@ -195,6 +195,15 @@ SFT_MODELS = [
     {"id": "baseline_filtered_pbucsft", "display": "baseline_filtered pbucSFT",  "aliases": ["baseline_filtered_pbucsft"]},
     {"id": "epe_1p_nobce_noctx_pbucsft","display": "EPE 1p NoBCE NoCtx pbucSFT", "aliases": ["epe_1p_nobce_noctx_pbucsft"]},
     {"id": "epe_3p_nobce_noctx_pbucsft","display": "EPE 3p NoBCE NoCtx pbucSFT", "aliases": ["epe_3p_nobce_noctx_pbucsft"]},
+    # ── 2026-05-15 registry additions (PR #8) ───────────────────────────────
+    # SafeLM stacked on pbsft3, BCE variants of EPE pbsft3, RefEnd pbsft3,
+    # and SDSP Judgemental pbsft3 variants. All use epe-template-nosys.
+    {"id": "safelm_pbsft3",                 "display": "SafeLM pbSFT3",                  "aliases": ["safelm_pbsft3"]},
+    {"id": "epe_1p_bce_pbsft3",             "display": "EPE 1p BCE pbSFT3",              "aliases": ["epe_1p_bce_pbsft3"]},
+    {"id": "epe_3p_bce_pbsft3",             "display": "EPE 3p BCE pbSFT3",              "aliases": ["epe_3p_bce_pbsft3"]},
+    {"id": "epe_1p_nobce_refend_pbsft3",    "display": "EPE 1p NoBCE RefEnd pbSFT3",     "aliases": ["epe_1p_nobce_refend_pbsft3"]},
+    {"id": "sdsp_judge_0_1_pbsft3",         "display": "SDSP judge 0/1 pbSFT3",          "aliases": ["sdsp_judge_0_1_pbsft3"]},
+    {"id": "sdsp_judge_1_1_pbsft3",         "display": "SDSP judge 1/1 pbSFT3",          "aliases": ["sdsp_judge_1_1_pbsft3"]},
 ]
 
 ALIASES = {m["id"]: m["aliases"] for m in BASE_MODELS + SFT_MODELS}
