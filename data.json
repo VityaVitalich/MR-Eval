@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-18T10:08:48",
+  "generated_at": "2026-05-18T10:38:05",
   "groups": {
     "base": [
       {
@@ -13886,9 +13886,9 @@
             "refusal_rate": 0.494949494949495
           }
         },
-        "judge_version": "unstamped",
+        "judge_version": "v1-ed96dc4a",
         "judge_model": "gpt-4o-2024-08-06",
-        "rejudged_at": null
+        "rejudged_at": "2026-05-15T10:16:38Z"
       },
       "overrefusal_benches": {
         "orbench": {
@@ -13991,9 +13991,9 @@
               "refusal_rate": 0.494949494949495
             }
           },
-          "judge_version": "unstamped",
+          "judge_version": "v1-ed96dc4a",
           "judge_model": "gpt-4o-2024-08-06",
-          "rejudged_at": null
+          "rejudged_at": "2026-05-15T10:16:38Z"
         },
         "xstest": {
           "source_file": "xstest_baseline_500b_mixsft_20260515_124525.json",
@@ -14095,9 +14095,9 @@
               "refusal_rate": 0.5714285714285714
             }
           },
-          "judge_version": "unstamped",
+          "judge_version": "v1-ed96dc4a",
           "judge_model": "gpt-4o-2024-08-06",
-          "rejudged_at": null
+          "rejudged_at": "2026-05-15T10:45:25Z"
         }
       },
       "dynamics": {
@@ -63784,9 +63784,9 @@
             "refusal_rate": 0.6428571428571429
           }
         },
-        "judge_version": "unstamped",
+        "judge_version": "v1-ed96dc4a",
         "judge_model": "gpt-4o-2024-08-06",
-        "rejudged_at": null
+        "rejudged_at": "2026-05-15T10:16:44Z"
       },
       "overrefusal_benches": {
         "orbench": {
@@ -63889,9 +63889,9 @@
               "refusal_rate": 0.6428571428571429
             }
           },
-          "judge_version": "unstamped",
+          "judge_version": "v1-ed96dc4a",
           "judge_model": "gpt-4o-2024-08-06",
-          "rejudged_at": null
+          "rejudged_at": "2026-05-15T10:16:44Z"
         },
         "xstest": {
           "source_file": "xstest_baseline_filtered_mixsft_20260515_124526.json",
@@ -63993,9 +63993,9 @@
               "refusal_rate": 0.38095238095238093
             }
           },
-          "judge_version": "unstamped",
+          "judge_version": "v1-ed96dc4a",
           "judge_model": "gpt-4o-2024-08-06",
-          "rejudged_at": null
+          "rejudged_at": "2026-05-15T10:45:26Z"
         }
       },
       "dynamics": {
@@ -84763,9 +84763,9 @@
               "refusal_rate": 0.043478260869565216
             }
           },
-          "judge_version": "unstamped",
+          "judge_version": "v1-ed96dc4a",
           "judge_model": "gpt-4o-2024-08-06",
-          "rejudged_at": null
+          "rejudged_at": "2026-05-14T14:51:18Z"
         }
       },
       "dynamics": {
@@ -96118,213 +96118,213 @@
         "rejudged_at": "2026-05-14T09:09:05Z"
       },
       "overrefusal": {
-        "source_file": "overrefusal_baseline_filtered_pbucsft_20260514_110238.json",
-        "refusal_rate": 0.499,
-        "n_total": 1000,
-        "n_scored": 1000,
-        "n_direct_answer": 501,
-        "n_indirect_refusal": 436,
-        "n_direct_refusal": 63,
+        "source_file": "overrefusal_baseline_filtered_pbucsft_20260515_121733.json",
+        "refusal_rate": 0.4916839916839917,
+        "n_total": 962,
+        "n_scored": 962,
+        "n_direct_answer": 489,
+        "n_indirect_refusal": 418,
+        "n_direct_refusal": 55,
         "per_category": {
           "privacy": {
-            "n": 100,
-            "n_scored": 100,
+            "n": 95,
+            "n_scored": 95,
             "direct_answer": 36,
-            "indirect_refusal": 55,
-            "direct_refusal": 9,
+            "indirect_refusal": 49,
+            "direct_refusal": 10,
             "unparsed": 0,
-            "refusal_rate": 0.64
+            "refusal_rate": 0.6210526315789474
           },
           "illegal": {
-            "n": 100,
-            "n_scored": 100,
+            "n": 91,
+            "n_scored": 91,
             "direct_answer": 47,
-            "indirect_refusal": 45,
+            "indirect_refusal": 36,
             "direct_refusal": 8,
             "unparsed": 0,
-            "refusal_rate": 0.53
+            "refusal_rate": 0.4835164835164835
           },
           "self-harm": {
-            "n": 100,
-            "n_scored": 100,
-            "direct_answer": 67,
-            "indirect_refusal": 30,
-            "direct_refusal": 3,
-            "unparsed": 0,
-            "refusal_rate": 0.33
-          },
-          "harassment": {
-            "n": 100,
-            "n_scored": 100,
-            "direct_answer": 41,
-            "indirect_refusal": 54,
+            "n": 91,
+            "n_scored": 91,
+            "direct_answer": 57,
+            "indirect_refusal": 29,
             "direct_refusal": 5,
             "unparsed": 0,
-            "refusal_rate": 0.59
+            "refusal_rate": 0.37362637362637363
+          },
+          "harassment": {
+            "n": 90,
+            "n_scored": 90,
+            "direct_answer": 39,
+            "indirect_refusal": 46,
+            "direct_refusal": 5,
+            "unparsed": 0,
+            "refusal_rate": 0.5666666666666667
           },
           "deception": {
             "n": 100,
             "n_scored": 100,
-            "direct_answer": 57,
-            "indirect_refusal": 36,
-            "direct_refusal": 7,
+            "direct_answer": 58,
+            "indirect_refusal": 40,
+            "direct_refusal": 2,
             "unparsed": 0,
-            "refusal_rate": 0.43
+            "refusal_rate": 0.42
           },
           "sexual": {
             "n": 100,
             "n_scored": 100,
-            "direct_answer": 77,
+            "direct_answer": 76,
             "indirect_refusal": 21,
-            "direct_refusal": 2,
+            "direct_refusal": 3,
             "unparsed": 0,
-            "refusal_rate": 0.23
+            "refusal_rate": 0.24
           },
           "hate": {
             "n": 100,
             "n_scored": 100,
-            "direct_answer": 31,
-            "indirect_refusal": 61,
-            "direct_refusal": 8,
+            "direct_answer": 32,
+            "indirect_refusal": 58,
+            "direct_refusal": 10,
             "unparsed": 0,
-            "refusal_rate": 0.69
+            "refusal_rate": 0.68
           },
           "unethical": {
-            "n": 100,
-            "n_scored": 100,
-            "direct_answer": 45,
-            "indirect_refusal": 49,
-            "direct_refusal": 6,
+            "n": 96,
+            "n_scored": 96,
+            "direct_answer": 43,
+            "indirect_refusal": 48,
+            "direct_refusal": 5,
             "unparsed": 0,
-            "refusal_rate": 0.55
+            "refusal_rate": 0.5520833333333334
           },
           "harmful": {
             "n": 100,
             "n_scored": 100,
-            "direct_answer": 65,
+            "direct_answer": 67,
             "indirect_refusal": 29,
-            "direct_refusal": 6,
+            "direct_refusal": 4,
             "unparsed": 0,
-            "refusal_rate": 0.35
+            "refusal_rate": 0.33
           },
           "violence": {
-            "n": 100,
-            "n_scored": 100,
-            "direct_answer": 35,
-            "indirect_refusal": 56,
-            "direct_refusal": 9,
+            "n": 99,
+            "n_scored": 99,
+            "direct_answer": 34,
+            "indirect_refusal": 62,
+            "direct_refusal": 3,
             "unparsed": 0,
-            "refusal_rate": 0.65
+            "refusal_rate": 0.6565656565656566
           }
         },
         "judge_version": "v1-ed96dc4a",
         "judge_model": "gpt-4o-2024-08-06",
-        "rejudged_at": "2026-05-14T09:02:38Z"
+        "rejudged_at": "2026-05-15T10:17:33Z"
       },
       "overrefusal_benches": {
         "orbench": {
-          "source_file": "overrefusal_baseline_filtered_pbucsft_20260514_110238.json",
-          "refusal_rate": 0.499,
-          "n_total": 1000,
-          "n_scored": 1000,
-          "n_direct_answer": 501,
-          "n_indirect_refusal": 436,
-          "n_direct_refusal": 63,
+          "source_file": "overrefusal_baseline_filtered_pbucsft_20260515_121733.json",
+          "refusal_rate": 0.4916839916839917,
+          "n_total": 962,
+          "n_scored": 962,
+          "n_direct_answer": 489,
+          "n_indirect_refusal": 418,
+          "n_direct_refusal": 55,
           "per_category": {
             "privacy": {
-              "n": 100,
-              "n_scored": 100,
+              "n": 95,
+              "n_scored": 95,
               "direct_answer": 36,
-              "indirect_refusal": 55,
-              "direct_refusal": 9,
+              "indirect_refusal": 49,
+              "direct_refusal": 10,
               "unparsed": 0,
-              "refusal_rate": 0.64
+              "refusal_rate": 0.6210526315789474
             },
             "illegal": {
-              "n": 100,
-              "n_scored": 100,
+              "n": 91,
+              "n_scored": 91,
               "direct_answer": 47,
-              "indirect_refusal": 45,
+              "indirect_refusal": 36,
               "direct_refusal": 8,
               "unparsed": 0,
-              "refusal_rate": 0.53
+              "refusal_rate": 0.4835164835164835
             },
             "self-harm": {
-              "n": 100,
-              "n_scored": 100,
-              "direct_answer": 67,
-              "indirect_refusal": 30,
-              "direct_refusal": 3,
-              "unparsed": 0,
-              "refusal_rate": 0.33
-            },
-            "harassment": {
-              "n": 100,
-              "n_scored": 100,
-              "direct_answer": 41,
-              "indirect_refusal": 54,
+              "n": 91,
+              "n_scored": 91,
+              "direct_answer": 57,
+              "indirect_refusal": 29,
               "direct_refusal": 5,
               "unparsed": 0,
-              "refusal_rate": 0.59
+              "refusal_rate": 0.37362637362637363
+            },
+            "harassment": {
+              "n": 90,
+              "n_scored": 90,
+              "direct_answer": 39,
+              "indirect_refusal": 46,
+              "direct_refusal": 5,
+              "unparsed": 0,
+              "refusal_rate": 0.5666666666666667
             },
             "deception": {
               "n": 100,
               "n_scored": 100,
-              "direct_answer": 57,
-              "indirect_refusal": 36,
-              "direct_refusal": 7,
+              "direct_answer": 58,
+              "indirect_refusal": 40,
+              "direct_refusal": 2,
               "unparsed": 0,
-              "refusal_rate": 0.43
+              "refusal_rate": 0.42
             },
             "sexual": {
               "n": 100,
               "n_scored": 100,
-              "direct_answer": 77,
+              "direct_answer": 76,
               "indirect_refusal": 21,
-              "direct_refusal": 2,
+              "direct_refusal": 3,
               "unparsed": 0,
-              "refusal_rate": 0.23
+              "refusal_rate": 0.24
             },
             "hate": {
               "n": 100,
               "n_scored": 100,
-              "direct_answer": 31,
-              "indirect_refusal": 61,
-              "direct_refusal": 8,
+              "direct_answer": 32,
+              "indirect_refusal": 58,
+              "direct_refusal": 10,
               "unparsed": 0,
-              "refusal_rate": 0.69
+              "refusal_rate": 0.68
             },
             "unethical": {
-              "n": 100,
-              "n_scored": 100,
-              "direct_answer": 45,
-              "indirect_refusal": 49,
-              "direct_refusal": 6,
+              "n": 96,
+              "n_scored": 96,
+              "direct_answer": 43,
+              "indirect_refusal": 48,
+              "direct_refusal": 5,
               "unparsed": 0,
-              "refusal_rate": 0.55
+              "refusal_rate": 0.5520833333333334
             },
             "harmful": {
               "n": 100,
               "n_scored": 100,
-              "direct_answer": 65,
+              "direct_answer": 67,
               "indirect_refusal": 29,
-              "direct_refusal": 6,
+              "direct_refusal": 4,
               "unparsed": 0,
-              "refusal_rate": 0.35
+              "refusal_rate": 0.33
             },
             "violence": {
-              "n": 100,
-              "n_scored": 100,
-              "direct_answer": 35,
-              "indirect_refusal": 56,
-              "direct_refusal": 9,
+              "n": 99,
+              "n_scored": 99,
+              "direct_answer": 34,
+              "indirect_refusal": 62,
+              "direct_refusal": 3,
               "unparsed": 0,
-              "refusal_rate": 0.65
+              "refusal_rate": 0.6565656565656566
             }
           },
           "judge_version": "v1-ed96dc4a",
           "judge_model": "gpt-4o-2024-08-06",
-          "rejudged_at": "2026-05-14T09:02:38Z"
+          "rejudged_at": "2026-05-15T10:17:33Z"
         },
         "xstest": {
           "source_file": "xstest_baseline_filtered_pbucsft_20260515_124530.json",
@@ -96426,9 +96426,9 @@
               "refusal_rate": 0.14285714285714285
             }
           },
-          "judge_version": "unstamped",
+          "judge_version": "v1-ed96dc4a",
           "judge_model": "gpt-4o-2024-08-06",
-          "rejudged_at": null
+          "rejudged_at": "2026-05-15T10:45:30Z"
         }
       },
       "dynamics": {
@@ -107514,12 +107514,12 @@
         "n_successes_legacy": 16
       },
       "em_base": {
-        "source_file": "em_eval_baseline_filtered_sft_20260413_164234.json",
-        "aligned_mean": 64.66859286153259,
-        "coherent_mean": 68.90244567723056,
+        "source_file": "em_eval_baseline_filtered_sft_20260407_165057.json",
+        "aligned_mean": 64.46146042339659,
+        "coherent_mean": 69.49354289863739,
         "judge_version": "v1-7a3ac0d0",
         "judge_model": "gpt-4o-2024-08-06",
-        "rejudged_at": "2026-04-13T14:42:34Z"
+        "rejudged_at": "2026-04-07T16:50:57Z"
       },
       "overrefusal": null,
       "overrefusal_benches": null,
@@ -117245,9 +117245,9 @@
             "refusal_rate": 0.5959595959595959
           }
         },
-        "judge_version": "unstamped",
+        "judge_version": "v1-ed96dc4a",
         "judge_model": "gpt-4o-2024-08-06",
-        "rejudged_at": null
+        "rejudged_at": "2026-05-15T10:16:33Z"
       },
       "overrefusal_benches": {
         "orbench": {
@@ -117350,9 +117350,9 @@
               "refusal_rate": 0.5959595959595959
             }
           },
-          "judge_version": "unstamped",
+          "judge_version": "v1-ed96dc4a",
           "judge_model": "gpt-4o-2024-08-06",
-          "rejudged_at": null
+          "rejudged_at": "2026-05-15T10:16:33Z"
         },
         "xstest": {
           "source_file": "xstest_baseline_mixsft_20260515_124520.json",
@@ -117454,9 +117454,9 @@
               "refusal_rate": 0.42857142857142855
             }
           },
-          "judge_version": "unstamped",
+          "judge_version": "v1-ed96dc4a",
           "judge_model": "gpt-4o-2024-08-06",
-          "rejudged_at": null
+          "rejudged_at": "2026-05-15T10:45:20Z"
         }
       },
       "dynamics": {
@@ -138320,9 +138320,9 @@
               "refusal_rate": 0.17391304347826086
             }
           },
-          "judge_version": "unstamped",
+          "judge_version": "v1-ed96dc4a",
           "judge_model": "gpt-4o-2024-08-06",
-          "rejudged_at": null
+          "rejudged_at": "2026-05-14T14:51:18Z"
         }
       },
       "dynamics": {
@@ -149675,56 +149675,56 @@
         "rejudged_at": "2026-05-14T09:07:20Z"
       },
       "overrefusal": {
-        "source_file": "overrefusal_baseline_pbucsft_20260514_154433.json",
-        "refusal_rate": 0.56,
-        "n_total": 1000,
-        "n_scored": 1000,
-        "n_direct_answer": 440,
-        "n_indirect_refusal": 470,
-        "n_direct_refusal": 90,
+        "source_file": "overrefusal_baseline_pbucsft_20260515_121734.json",
+        "refusal_rate": 0.5457380457380457,
+        "n_total": 962,
+        "n_scored": 962,
+        "n_direct_answer": 437,
+        "n_indirect_refusal": 449,
+        "n_direct_refusal": 76,
         "per_category": {
           "privacy": {
-            "n": 100,
-            "n_scored": 100,
-            "direct_answer": 24,
-            "indirect_refusal": 62,
-            "direct_refusal": 14,
+            "n": 95,
+            "n_scored": 95,
+            "direct_answer": 23,
+            "indirect_refusal": 61,
+            "direct_refusal": 11,
             "unparsed": 0,
-            "refusal_rate": 0.76
+            "refusal_rate": 0.7578947368421053
           },
           "illegal": {
-            "n": 100,
-            "n_scored": 100,
+            "n": 91,
+            "n_scored": 91,
             "direct_answer": 43,
-            "indirect_refusal": 44,
-            "direct_refusal": 13,
+            "indirect_refusal": 37,
+            "direct_refusal": 11,
             "unparsed": 0,
-            "refusal_rate": 0.57
+            "refusal_rate": 0.5274725274725275
           },
           "self-harm": {
-            "n": 100,
-            "n_scored": 100,
-            "direct_answer": 59,
-            "indirect_refusal": 31,
-            "direct_refusal": 10,
+            "n": 91,
+            "n_scored": 91,
+            "direct_answer": 56,
+            "indirect_refusal": 30,
+            "direct_refusal": 5,
             "unparsed": 0,
-            "refusal_rate": 0.41
+            "refusal_rate": 0.38461538461538464
           },
           "harassment": {
-            "n": 100,
-            "n_scored": 100,
-            "direct_answer": 41,
-            "indirect_refusal": 52,
+            "n": 90,
+            "n_scored": 90,
+            "direct_answer": 39,
+            "indirect_refusal": 44,
             "direct_refusal": 7,
             "unparsed": 0,
-            "refusal_rate": 0.59
+            "refusal_rate": 0.5666666666666667
           },
           "deception": {
             "n": 100,
             "n_scored": 100,
             "direct_answer": 55,
-            "indirect_refusal": 40,
-            "direct_refusal": 5,
+            "indirect_refusal": 37,
+            "direct_refusal": 8,
             "unparsed": 0,
             "refusal_rate": 0.45
           },
@@ -149732,104 +149732,104 @@
             "n": 100,
             "n_scored": 100,
             "direct_answer": 69,
-            "indirect_refusal": 29,
-            "direct_refusal": 2,
+            "indirect_refusal": 25,
+            "direct_refusal": 6,
             "unparsed": 0,
             "refusal_rate": 0.31
           },
           "hate": {
             "n": 100,
             "n_scored": 100,
-            "direct_answer": 26,
-            "indirect_refusal": 68,
+            "direct_answer": 30,
+            "indirect_refusal": 64,
             "direct_refusal": 6,
             "unparsed": 0,
-            "refusal_rate": 0.74
+            "refusal_rate": 0.7
           },
           "unethical": {
-            "n": 100,
-            "n_scored": 100,
-            "direct_answer": 43,
-            "indirect_refusal": 44,
-            "direct_refusal": 13,
+            "n": 96,
+            "n_scored": 96,
+            "direct_answer": 41,
+            "indirect_refusal": 48,
+            "direct_refusal": 7,
             "unparsed": 0,
-            "refusal_rate": 0.57
+            "refusal_rate": 0.5729166666666666
           },
           "harmful": {
             "n": 100,
             "n_scored": 100,
             "direct_answer": 59,
-            "indirect_refusal": 34,
-            "direct_refusal": 7,
+            "indirect_refusal": 35,
+            "direct_refusal": 6,
             "unparsed": 0,
             "refusal_rate": 0.41
           },
           "violence": {
-            "n": 100,
-            "n_scored": 100,
-            "direct_answer": 21,
-            "indirect_refusal": 66,
-            "direct_refusal": 13,
+            "n": 99,
+            "n_scored": 99,
+            "direct_answer": 22,
+            "indirect_refusal": 68,
+            "direct_refusal": 9,
             "unparsed": 0,
-            "refusal_rate": 0.79
+            "refusal_rate": 0.7777777777777778
           }
         },
         "judge_version": "v1-ed96dc4a",
         "judge_model": "gpt-4o-2024-08-06",
-        "rejudged_at": "2026-05-14T13:44:33Z"
+        "rejudged_at": "2026-05-15T10:17:34Z"
       },
       "overrefusal_benches": {
         "orbench": {
-          "source_file": "overrefusal_baseline_pbucsft_20260514_154433.json",
-          "refusal_rate": 0.56,
-          "n_total": 1000,
-          "n_scored": 1000,
-          "n_direct_answer": 440,
-          "n_indirect_refusal": 470,
-          "n_direct_refusal": 90,
+          "source_file": "overrefusal_baseline_pbucsft_20260515_121734.json",
+          "refusal_rate": 0.5457380457380457,
+          "n_total": 962,
+          "n_scored": 962,
+          "n_direct_answer": 437,
+          "n_indirect_refusal": 449,
+          "n_direct_refusal": 76,
           "per_category": {
             "privacy": {
-              "n": 100,
-              "n_scored": 100,
-              "direct_answer": 24,
-              "indirect_refusal": 62,
-              "direct_refusal": 14,
+              "n": 95,
+              "n_scored": 95,
+              "direct_answer": 23,
+              "indirect_refusal": 61,
+              "direct_refusal": 11,
               "unparsed": 0,
-              "refusal_rate": 0.76
+              "refusal_rate": 0.7578947368421053
             },
             "illegal": {
-              "n": 100,
-              "n_scored": 100,
+              "n": 91,
+              "n_scored": 91,
               "direct_answer": 43,
-              "indirect_refusal": 44,
-              "direct_refusal": 13,
+              "indirect_refusal": 37,
+              "direct_refusal": 11,
               "unparsed": 0,
-              "refusal_rate": 0.57
+              "refusal_rate": 0.5274725274725275
             },
             "self-harm": {
-              "n": 100,
-              "n_scored": 100,
-              "direct_answer": 59,
-              "indirect_refusal": 31,
-              "direct_refusal": 10,
+              "n": 91,
+              "n_scored": 91,
+              "direct_answer": 56,
+              "indirect_refusal": 30,
+              "direct_refusal": 5,
               "unparsed": 0,
-              "refusal_rate": 0.41
+              "refusal_rate": 0.38461538461538464
             },
             "harassment": {
-              "n": 100,
-              "n_scored": 100,
-              "direct_answer": 41,
-              "indirect_refusal": 52,
+              "n": 90,
+              "n_scored": 90,
+              "direct_answer": 39,
+              "indirect_refusal": 44,
               "direct_refusal": 7,
               "unparsed": 0,
-              "refusal_rate": 0.59
+              "refusal_rate": 0.5666666666666667
             },
             "deception": {
               "n": 100,
               "n_scored": 100,
               "direct_answer": 55,
-              "indirect_refusal": 40,
-              "direct_refusal": 5,
+              "indirect_refusal": 37,
+              "direct_refusal": 8,
               "unparsed": 0,
               "refusal_rate": 0.45
             },
@@ -149837,51 +149837,51 @@
               "n": 100,
               "n_scored": 100,
               "direct_answer": 69,
-              "indirect_refusal": 29,
-              "direct_refusal": 2,
+              "indirect_refusal": 25,
+              "direct_refusal": 6,
               "unparsed": 0,
               "refusal_rate": 0.31
             },
             "hate": {
               "n": 100,
               "n_scored": 100,
-              "direct_answer": 26,
-              "indirect_refusal": 68,
+              "direct_answer": 30,
+              "indirect_refusal": 64,
               "direct_refusal": 6,
               "unparsed": 0,
-              "refusal_rate": 0.74
+              "refusal_rate": 0.7
             },
             "unethical": {
-              "n": 100,
-              "n_scored": 100,
-              "direct_answer": 43,
-              "indirect_refusal": 44,
-              "direct_refusal": 13,
+              "n": 96,
+              "n_scored": 96,
+              "direct_answer": 41,
+              "indirect_refusal": 48,
+              "direct_refusal": 7,
               "unparsed": 0,
-              "refusal_rate": 0.57
+              "refusal_rate": 0.5729166666666666
             },
             "harmful": {
               "n": 100,
               "n_scored": 100,
               "direct_answer": 59,
-              "indirect_refusal": 34,
-              "direct_refusal": 7,
+              "indirect_refusal": 35,
+              "direct_refusal": 6,
               "unparsed": 0,
               "refusal_rate": 0.41
             },
             "violence": {
-              "n": 100,
-              "n_scored": 100,
-              "direct_answer": 21,
-              "indirect_refusal": 66,
-              "direct_refusal": 13,
+              "n": 99,
+              "n_scored": 99,
+              "direct_answer": 22,
+              "indirect_refusal": 68,
+              "direct_refusal": 9,
               "unparsed": 0,
-              "refusal_rate": 0.79
+              "refusal_rate": 0.7777777777777778
             }
           },
           "judge_version": "v1-ed96dc4a",
           "judge_model": "gpt-4o-2024-08-06",
-          "rejudged_at": "2026-05-14T13:44:33Z"
+          "rejudged_at": "2026-05-15T10:17:34Z"
         },
         "xstest": {
           "source_file": "xstest_baseline_pbucsft_20260515_121523.json",
@@ -149983,9 +149983,9 @@
               "refusal_rate": 0.09523809523809523
             }
           },
-          "judge_version": "unstamped",
+          "judge_version": "v1-ed96dc4a",
           "judge_model": "gpt-4o-2024-08-06",
-          "rejudged_at": null
+          "rejudged_at": "2026-05-15T10:15:23Z"
         }
       },
       "dynamics": {
@@ -161105,12 +161105,12 @@
         "n_successes_legacy": 80
       },
       "em_base": {
-        "source_file": "em_eval_baseline_sft_20260406_140246.json",
-        "aligned_mean": 68.05472256432627,
-        "coherent_mean": 72.1845702530101,
+        "source_file": "em_eval_baseline_sft_20260408_190126.json",
+        "aligned_mean": 68.2778731816426,
+        "coherent_mean": 71.7403731461124,
         "judge_version": "v1-7a3ac0d0",
         "judge_model": "gpt-4o-2024-08-06",
-        "rejudged_at": "2026-04-06T12:02:46Z"
+        "rejudged_at": "2026-04-08T19:01:26Z"
       },
       "overrefusal": null,
       "overrefusal_benches": null,
@@ -173041,9 +173041,9 @@
             "refusal_rate": 0.5656565656565656
           }
         },
-        "judge_version": "unstamped",
+        "judge_version": "v1-ed96dc4a",
         "judge_model": "gpt-4o-2024-08-06",
-        "rejudged_at": null
+        "rejudged_at": "2026-05-15T10:19:14Z"
       },
       "overrefusal_benches": {
         "orbench": {
@@ -173146,9 +173146,9 @@
               "refusal_rate": 0.5656565656565656
             }
           },
-          "judge_version": "unstamped",
+          "judge_version": "v1-ed96dc4a",
           "judge_model": "gpt-4o-2024-08-06",
-          "rejudged_at": null
+          "rejudged_at": "2026-05-15T10:19:14Z"
         },
         "xstest": {
           "source_file": "xstest_epe_1p_bce_mixsft_20260515_124514.json",
@@ -173250,9 +173250,9 @@
               "refusal_rate": 0.3333333333333333
             }
           },
-          "judge_version": "unstamped",
+          "judge_version": "v1-ed96dc4a",
           "judge_model": "gpt-4o-2024-08-06",
-          "rejudged_at": null
+          "rejudged_at": "2026-05-15T10:45:14Z"
         }
       },
       "dynamics": {
@@ -183235,9 +183235,9 @@
             "refusal_rate": 0.5353535353535354
           }
         },
-        "judge_version": "unstamped",
+        "judge_version": "v1-ed96dc4a",
         "judge_model": "gpt-4o-2024-08-06",
-        "rejudged_at": null
+        "rejudged_at": "2026-05-15T10:19:24Z"
       },
       "overrefusal_benches": {
         "orbench": {
@@ -183340,9 +183340,9 @@
               "refusal_rate": 0.5353535353535354
             }
           },
-          "judge_version": "unstamped",
+          "judge_version": "v1-ed96dc4a",
           "judge_model": "gpt-4o-2024-08-06",
-          "rejudged_at": null
+          "rejudged_at": "2026-05-15T10:19:24Z"
         },
         "xstest": {
           "source_file": "xstest_epe_1p_bce_mixsft_def_20260515_121724.json",
@@ -183444,9 +183444,9 @@
               "refusal_rate": 0.2857142857142857
             }
           },
-          "judge_version": "unstamped",
+          "judge_version": "v1-ed96dc4a",
           "judge_model": "gpt-4o-2024-08-06",
-          "rejudged_at": null
+          "rejudged_at": "2026-05-15T10:17:24Z"
         }
       },
       "dynamics": {
@@ -193330,9 +193330,9 @@
             "refusal_rate": 0.5151515151515151
           }
         },
-        "judge_version": "unstamped",
+        "judge_version": "v1-ed96dc4a",
         "judge_model": "gpt-4o-2024-08-06",
-        "rejudged_at": null
+        "rejudged_at": "2026-05-15T10:19:46Z"
       },
       "overrefusal_benches": {
         "orbench": {
@@ -193435,9 +193435,9 @@
               "refusal_rate": 0.5151515151515151
             }
           },
-          "judge_version": "unstamped",
+          "judge_version": "v1-ed96dc4a",
           "judge_model": "gpt-4o-2024-08-06",
-          "rejudged_at": null
+          "rejudged_at": "2026-05-15T10:19:46Z"
         },
         "xstest": {
           "source_file": "xstest_epe_1p_bce_mixsft_nonl_20260515_121749.json",
@@ -193539,9 +193539,9 @@
               "refusal_rate": 0.3333333333333333
             }
           },
-          "judge_version": "unstamped",
+          "judge_version": "v1-ed96dc4a",
           "judge_model": "gpt-4o-2024-08-06",
-          "rejudged_at": null
+          "rejudged_at": "2026-05-15T10:17:49Z"
         }
       },
       "dynamics": {
@@ -204953,9 +204953,9 @@
         "source_file": "em_eval_epe_1p_bce_pbsft3_20260517_160528.json",
         "aligned_mean": 61.893726261185414,
         "coherent_mean": 61.262272921177754,
-        "judge_version": "unstamped",
+        "judge_version": "v1-7a3ac0d0",
         "judge_model": "gpt-4o-2024-08-06",
-        "rejudged_at": null
+        "rejudged_at": "2026-05-17T14:05:28Z"
       },
       "overrefusal": {
         "source_file": "overrefusal_epe_1p_bce_pbsft3_20260517_160020.json",
@@ -205057,9 +205057,9 @@
             "refusal_rate": 0.6767676767676768
           }
         },
-        "judge_version": "unstamped",
+        "judge_version": "v1-ed96dc4a",
         "judge_model": "gpt-4o-2024-08-06",
-        "rejudged_at": null
+        "rejudged_at": "2026-05-17T14:00:20Z"
       },
       "overrefusal_benches": {
         "orbench": {
@@ -205162,9 +205162,9 @@
               "refusal_rate": 0.6767676767676768
             }
           },
-          "judge_version": "unstamped",
+          "judge_version": "v1-ed96dc4a",
           "judge_model": "gpt-4o-2024-08-06",
-          "rejudged_at": null
+          "rejudged_at": "2026-05-17T14:00:20Z"
         },
         "xstest": {
           "source_file": "xstest_epe_1p_bce_pbsft3_20260517_155845.json",
@@ -205266,9 +205266,9 @@
               "refusal_rate": 0.3333333333333333
             }
           },
-          "judge_version": "unstamped",
+          "judge_version": "v1-ed96dc4a",
           "judge_model": "gpt-4o-2024-08-06",
-          "rejudged_at": null
+          "rejudged_at": "2026-05-17T13:58:45Z"
         }
       },
       "dynamics": {
@@ -257271,9 +257271,9 @@
             "refusal_rate": 0.5714285714285714
           }
         },
-        "judge_version": "unstamped",
+        "judge_version": "v1-ed96dc4a",
         "judge_model": "gpt-4o-2024-08-06",
-        "rejudged_at": null
+        "rejudged_at": "2026-05-15T10:17:42Z"
       },
       "overrefusal_benches": {
         "orbench": {
@@ -257376,9 +257376,9 @@
               "refusal_rate": 0.5714285714285714
             }
           },
-          "judge_version": "unstamped",
+          "judge_version": "v1-ed96dc4a",
           "judge_model": "gpt-4o-2024-08-06",
-          "rejudged_at": null
+          "rejudged_at": "2026-05-15T10:17:42Z"
         },
         "xstest": {
           "source_file": "xstest_epe_1p_nobce_mixsft_20260515_121545.json",
@@ -257480,9 +257480,9 @@
               "refusal_rate": 0.14285714285714285
             }
           },
-          "judge_version": "unstamped",
+          "judge_version": "v1-ed96dc4a",
           "judge_model": "gpt-4o-2024-08-06",
-          "rejudged_at": null
+          "rejudged_at": "2026-05-15T10:15:45Z"
         }
       },
       "dynamics": {
@@ -267447,9 +267447,9 @@
             "refusal_rate": 0.6262626262626263
           }
         },
-        "judge_version": "unstamped",
+        "judge_version": "v1-ed96dc4a",
         "judge_model": "gpt-4o-2024-08-06",
-        "rejudged_at": null
+        "rejudged_at": "2026-05-15T10:18:15Z"
       },
       "overrefusal_benches": {
         "orbench": {
@@ -267552,9 +267552,9 @@
               "refusal_rate": 0.6262626262626263
             }
           },
-          "judge_version": "unstamped",
+          "judge_version": "v1-ed96dc4a",
           "judge_model": "gpt-4o-2024-08-06",
-          "rejudged_at": null
+          "rejudged_at": "2026-05-15T10:18:15Z"
         },
         "xstest": {
           "source_file": "xstest_epe_1p_nobce_mixsft_cato_20260515_124534.json",
@@ -267656,9 +267656,9 @@
               "refusal_rate": 0.23809523809523808
             }
           },
-          "judge_version": "unstamped",
+          "judge_version": "v1-ed96dc4a",
           "judge_model": "gpt-4o-2024-08-06",
-          "rejudged_at": null
+          "rejudged_at": "2026-05-15T10:45:34Z"
         }
       },
       "dynamics": {
@@ -279215,9 +279215,9 @@
             "refusal_rate": 0.5555555555555556
           }
         },
-        "judge_version": "unstamped",
+        "judge_version": "v1-ed96dc4a",
         "judge_model": "gpt-4o-2024-08-06",
-        "rejudged_at": null
+        "rejudged_at": "2026-05-15T10:18:07Z"
       },
       "overrefusal_benches": {
         "orbench": {
@@ -279320,9 +279320,9 @@
               "refusal_rate": 0.5555555555555556
             }
           },
-          "judge_version": "unstamped",
+          "judge_version": "v1-ed96dc4a",
           "judge_model": "gpt-4o-2024-08-06",
-          "rejudged_at": null
+          "rejudged_at": "2026-05-15T10:18:07Z"
         },
         "xstest": {
           "source_file": "xstest_epe_1p_nobce_mixsft_def_20260515_124536.json",
@@ -279424,9 +279424,9 @@
               "refusal_rate": 0.2857142857142857
             }
           },
-          "judge_version": "unstamped",
+          "judge_version": "v1-ed96dc4a",
           "judge_model": "gpt-4o-2024-08-06",
-          "rejudged_at": null
+          "rejudged_at": "2026-05-15T10:45:36Z"
         }
       },
       "dynamics": {
@@ -289310,9 +289310,9 @@
             "refusal_rate": 0.6363636363636364
           }
         },
-        "judge_version": "unstamped",
+        "judge_version": "v1-ed96dc4a",
         "judge_model": "gpt-4o-2024-08-06",
-        "rejudged_at": null
+        "rejudged_at": "2026-05-15T10:20:46Z"
       },
       "overrefusal_benches": {
         "orbench": {
@@ -289415,9 +289415,9 @@
               "refusal_rate": 0.6363636363636364
             }
           },
-          "judge_version": "unstamped",
+          "judge_version": "v1-ed96dc4a",
           "judge_model": "gpt-4o-2024-08-06",
-          "rejudged_at": null
+          "rejudged_at": "2026-05-15T10:20:46Z"
         },
         "xstest": {
           "source_file": "xstest_epe_1p_nobce_mixsft_nonl_20260515_121833.json",
@@ -289519,9 +289519,9 @@
               "refusal_rate": 0.23809523809523808
             }
           },
-          "judge_version": "unstamped",
+          "judge_version": "v1-ed96dc4a",
           "judge_model": "gpt-4o-2024-08-06",
-          "rejudged_at": null
+          "rejudged_at": "2026-05-15T10:18:33Z"
         }
       },
       "dynamics": {
@@ -313975,9 +313975,9 @@
               "refusal_rate": 0.2608695652173913
             }
           },
-          "judge_version": "unstamped",
+          "judge_version": "v1-ed96dc4a",
           "judge_model": "gpt-4o-2024-08-06",
-          "rejudged_at": null
+          "rejudged_at": "2026-05-14T14:51:18Z"
         }
       },
       "dynamics": {
@@ -325324,213 +325324,213 @@
         "rejudged_at": "2026-05-14T09:07:52Z"
       },
       "overrefusal": {
-        "source_file": "overrefusal_epe_1p_nobce_noctx_pbucsft_20260514_110233.json",
-        "refusal_rate": 0.511,
-        "n_total": 1000,
-        "n_scored": 1000,
-        "n_direct_answer": 489,
-        "n_indirect_refusal": 405,
-        "n_direct_refusal": 106,
+        "source_file": "overrefusal_epe_1p_nobce_noctx_pbucsft_20260515_121733.json",
+        "refusal_rate": 0.5093555093555093,
+        "n_total": 962,
+        "n_scored": 962,
+        "n_direct_answer": 472,
+        "n_indirect_refusal": 399,
+        "n_direct_refusal": 91,
         "per_category": {
           "privacy": {
-            "n": 100,
-            "n_scored": 100,
-            "direct_answer": 37,
-            "indirect_refusal": 48,
-            "direct_refusal": 15,
+            "n": 95,
+            "n_scored": 95,
+            "direct_answer": 33,
+            "indirect_refusal": 46,
+            "direct_refusal": 16,
             "unparsed": 0,
-            "refusal_rate": 0.63
+            "refusal_rate": 0.6526315789473685
           },
           "illegal": {
-            "n": 100,
-            "n_scored": 100,
-            "direct_answer": 47,
-            "indirect_refusal": 42,
-            "direct_refusal": 11,
+            "n": 91,
+            "n_scored": 91,
+            "direct_answer": 44,
+            "indirect_refusal": 39,
+            "direct_refusal": 8,
             "unparsed": 0,
-            "refusal_rate": 0.53
+            "refusal_rate": 0.5164835164835165
           },
           "self-harm": {
-            "n": 100,
-            "n_scored": 100,
-            "direct_answer": 54,
-            "indirect_refusal": 33,
-            "direct_refusal": 13,
+            "n": 91,
+            "n_scored": 91,
+            "direct_answer": 46,
+            "indirect_refusal": 37,
+            "direct_refusal": 8,
             "unparsed": 0,
-            "refusal_rate": 0.46
+            "refusal_rate": 0.4945054945054945
           },
           "harassment": {
-            "n": 100,
-            "n_scored": 100,
-            "direct_answer": 41,
-            "indirect_refusal": 52,
+            "n": 90,
+            "n_scored": 90,
+            "direct_answer": 40,
+            "indirect_refusal": 43,
             "direct_refusal": 7,
             "unparsed": 0,
-            "refusal_rate": 0.59
+            "refusal_rate": 0.5555555555555556
           },
           "deception": {
             "n": 100,
             "n_scored": 100,
-            "direct_answer": 56,
-            "indirect_refusal": 34,
-            "direct_refusal": 10,
+            "direct_answer": 57,
+            "indirect_refusal": 32,
+            "direct_refusal": 11,
             "unparsed": 0,
-            "refusal_rate": 0.44
+            "refusal_rate": 0.43
           },
           "sexual": {
             "n": 100,
             "n_scored": 100,
-            "direct_answer": 77,
-            "indirect_refusal": 21,
-            "direct_refusal": 2,
+            "direct_answer": 74,
+            "indirect_refusal": 26,
+            "direct_refusal": 0,
             "unparsed": 0,
-            "refusal_rate": 0.23
+            "refusal_rate": 0.26
           },
           "hate": {
             "n": 100,
             "n_scored": 100,
-            "direct_answer": 28,
+            "direct_answer": 29,
             "indirect_refusal": 61,
-            "direct_refusal": 11,
+            "direct_refusal": 10,
             "unparsed": 0,
-            "refusal_rate": 0.72
+            "refusal_rate": 0.71
           },
           "unethical": {
-            "n": 100,
-            "n_scored": 100,
-            "direct_answer": 45,
-            "indirect_refusal": 37,
-            "direct_refusal": 18,
+            "n": 96,
+            "n_scored": 96,
+            "direct_answer": 43,
+            "indirect_refusal": 40,
+            "direct_refusal": 13,
             "unparsed": 0,
-            "refusal_rate": 0.55
+            "refusal_rate": 0.5520833333333334
           },
           "harmful": {
             "n": 100,
             "n_scored": 100,
-            "direct_answer": 64,
-            "indirect_refusal": 28,
-            "direct_refusal": 8,
+            "direct_answer": 63,
+            "indirect_refusal": 34,
+            "direct_refusal": 3,
             "unparsed": 0,
-            "refusal_rate": 0.36
+            "refusal_rate": 0.37
           },
           "violence": {
-            "n": 100,
-            "n_scored": 100,
-            "direct_answer": 40,
-            "indirect_refusal": 49,
-            "direct_refusal": 11,
+            "n": 99,
+            "n_scored": 99,
+            "direct_answer": 43,
+            "indirect_refusal": 41,
+            "direct_refusal": 15,
             "unparsed": 0,
-            "refusal_rate": 0.6
+            "refusal_rate": 0.5656565656565656
           }
         },
         "judge_version": "v1-ed96dc4a",
         "judge_model": "gpt-4o-2024-08-06",
-        "rejudged_at": "2026-05-14T09:02:33Z"
+        "rejudged_at": "2026-05-15T10:17:33Z"
       },
       "overrefusal_benches": {
         "orbench": {
-          "source_file": "overrefusal_epe_1p_nobce_noctx_pbucsft_20260514_110233.json",
-          "refusal_rate": 0.511,
-          "n_total": 1000,
-          "n_scored": 1000,
-          "n_direct_answer": 489,
-          "n_indirect_refusal": 405,
-          "n_direct_refusal": 106,
+          "source_file": "overrefusal_epe_1p_nobce_noctx_pbucsft_20260515_121733.json",
+          "refusal_rate": 0.5093555093555093,
+          "n_total": 962,
+          "n_scored": 962,
+          "n_direct_answer": 472,
+          "n_indirect_refusal": 399,
+          "n_direct_refusal": 91,
           "per_category": {
             "privacy": {
-              "n": 100,
-              "n_scored": 100,
-              "direct_answer": 37,
-              "indirect_refusal": 48,
-              "direct_refusal": 15,
+              "n": 95,
+              "n_scored": 95,
+              "direct_answer": 33,
+              "indirect_refusal": 46,
+              "direct_refusal": 16,
               "unparsed": 0,
-              "refusal_rate": 0.63
+              "refusal_rate": 0.6526315789473685
             },
             "illegal": {
-              "n": 100,
-              "n_scored": 100,
-              "direct_answer": 47,
-              "indirect_refusal": 42,
-              "direct_refusal": 11,
+              "n": 91,
+              "n_scored": 91,
+              "direct_answer": 44,
+              "indirect_refusal": 39,
+              "direct_refusal": 8,
               "unparsed": 0,
-              "refusal_rate": 0.53
+              "refusal_rate": 0.5164835164835165
             },
             "self-harm": {
-              "n": 100,
-              "n_scored": 100,
-              "direct_answer": 54,
-              "indirect_refusal": 33,
-              "direct_refusal": 13,
+              "n": 91,
+              "n_scored": 91,
+              "direct_answer": 46,
+              "indirect_refusal": 37,
+              "direct_refusal": 8,
               "unparsed": 0,
-              "refusal_rate": 0.46
+              "refusal_rate": 0.4945054945054945
             },
             "harassment": {
-              "n": 100,
-              "n_scored": 100,
-              "direct_answer": 41,
-              "indirect_refusal": 52,
+              "n": 90,
+              "n_scored": 90,
+              "direct_answer": 40,
+              "indirect_refusal": 43,
               "direct_refusal": 7,
               "unparsed": 0,
-              "refusal_rate": 0.59
+              "refusal_rate": 0.5555555555555556
             },
             "deception": {
               "n": 100,
               "n_scored": 100,
-              "direct_answer": 56,
-              "indirect_refusal": 34,
-              "direct_refusal": 10,
+              "direct_answer": 57,
+              "indirect_refusal": 32,
+              "direct_refusal": 11,
               "unparsed": 0,
-              "refusal_rate": 0.44
+              "refusal_rate": 0.43
             },
             "sexual": {
               "n": 100,
               "n_scored": 100,
-              "direct_answer": 77,
-              "indirect_refusal": 21,
-              "direct_refusal": 2,
+              "direct_answer": 74,
+              "indirect_refusal": 26,
+              "direct_refusal": 0,
               "unparsed": 0,
-              "refusal_rate": 0.23
+              "refusal_rate": 0.26
             },
             "hate": {
               "n": 100,
               "n_scored": 100,
-              "direct_answer": 28,
+              "direct_answer": 29,
               "indirect_refusal": 61,
-              "direct_refusal": 11,
+              "direct_refusal": 10,
               "unparsed": 0,
-              "refusal_rate": 0.72
+              "refusal_rate": 0.71
             },
             "unethical": {
-              "n": 100,
-              "n_scored": 100,
-              "direct_answer": 45,
-              "indirect_refusal": 37,
-              "direct_refusal": 18,
+              "n": 96,
+              "n_scored": 96,
+              "direct_answer": 43,
+              "indirect_refusal": 40,
+              "direct_refusal": 13,
               "unparsed": 0,
-              "refusal_rate": 0.55
+              "refusal_rate": 0.5520833333333334
             },
             "harmful": {
               "n": 100,
               "n_scored": 100,
-              "direct_answer": 64,
-              "indirect_refusal": 28,
-              "direct_refusal": 8,
+              "direct_answer": 63,
+              "indirect_refusal": 34,
+              "direct_refusal": 3,
               "unparsed": 0,
-              "refusal_rate": 0.36
+              "refusal_rate": 0.37
             },
             "violence": {
-              "n": 100,
-              "n_scored": 100,
-              "direct_answer": 40,
-              "indirect_refusal": 49,
-              "direct_refusal": 11,
+              "n": 99,
+              "n_scored": 99,
+              "direct_answer": 43,
+              "indirect_refusal": 41,
+              "direct_refusal": 15,
               "unparsed": 0,
-              "refusal_rate": 0.6
+              "refusal_rate": 0.5656565656565656
             }
           },
           "judge_version": "v1-ed96dc4a",
           "judge_model": "gpt-4o-2024-08-06",
-          "rejudged_at": "2026-05-14T09:02:33Z"
+          "rejudged_at": "2026-05-15T10:17:33Z"
         },
         "xstest": {
           "source_file": "xstest_epe_1p_nobce_noctx_pbucsft_20260515_121523.json",
@@ -325632,9 +325632,9 @@
               "refusal_rate": 0.2857142857142857
             }
           },
-          "judge_version": "unstamped",
+          "judge_version": "v1-ed96dc4a",
           "judge_model": "gpt-4o-2024-08-06",
-          "rejudged_at": null
+          "rejudged_at": "2026-05-15T10:15:23Z"
         }
       },
       "dynamics": {
@@ -347937,9 +347937,9 @@
               "refusal_rate": 0.17391304347826086
             }
           },
-          "judge_version": "unstamped",
+          "judge_version": "v1-ed96dc4a",
           "judge_model": "gpt-4o-2024-08-06",
-          "rejudged_at": null
+          "rejudged_at": "2026-05-14T14:51:18Z"
         }
       },
       "dynamics": {
@@ -361480,9 +361480,9 @@
             "refusal_rate": 0.5151515151515151
           }
         },
-        "judge_version": "unstamped",
+        "judge_version": "v1-ed96dc4a",
         "judge_model": "gpt-4o-2024-08-06",
-        "rejudged_at": null
+        "rejudged_at": "2026-05-15T10:20:07Z"
       },
       "overrefusal_benches": {
         "orbench": {
@@ -361585,9 +361585,9 @@
               "refusal_rate": 0.5151515151515151
             }
           },
-          "judge_version": "unstamped",
+          "judge_version": "v1-ed96dc4a",
           "judge_model": "gpt-4o-2024-08-06",
-          "rejudged_at": null
+          "rejudged_at": "2026-05-15T10:20:07Z"
         },
         "xstest": {
           "source_file": "xstest_epe_1p_nobce_refend_mixsft_def_20260515_121825.json",
@@ -361689,9 +361689,9 @@
               "refusal_rate": 0.47619047619047616
             }
           },
-          "judge_version": "unstamped",
+          "judge_version": "v1-ed96dc4a",
           "judge_model": "gpt-4o-2024-08-06",
-          "rejudged_at": null
+          "rejudged_at": "2026-05-15T10:18:25Z"
         }
       },
       "dynamics": {
@@ -373175,9 +373175,9 @@
             "refusal_rate": 0.494949494949495
           }
         },
-        "judge_version": "unstamped",
+        "judge_version": "v1-ed96dc4a",
         "judge_model": "gpt-4o-2024-08-06",
-        "rejudged_at": null
+        "rejudged_at": "2026-05-15T10:21:05Z"
       },
       "overrefusal_benches": {
         "orbench": {
@@ -373280,9 +373280,9 @@
               "refusal_rate": 0.494949494949495
             }
           },
-          "judge_version": "unstamped",
+          "judge_version": "v1-ed96dc4a",
           "judge_model": "gpt-4o-2024-08-06",
-          "rejudged_at": null
+          "rejudged_at": "2026-05-15T10:21:05Z"
         },
         "xstest": {
           "source_file": "xstest_epe_1p_nobce_refend_mixsft_nonl_20260515_124515.json",
@@ -373384,9 +373384,9 @@
               "refusal_rate": 0.42857142857142855
             }
           },
-          "judge_version": "unstamped",
+          "judge_version": "v1-ed96dc4a",
           "judge_model": "gpt-4o-2024-08-06",
-          "rejudged_at": null
+          "rejudged_at": "2026-05-15T10:45:15Z"
         }
       },
       "dynamics": {
@@ -384717,9 +384717,9 @@
         "source_file": "em_eval_epe_1p_nobce_refend_pbsft3_20260517_160352.json",
         "aligned_mean": 63.6625053215468,
         "coherent_mean": 63.9498870858361,
-        "judge_version": "unstamped",
+        "judge_version": "v1-7a3ac0d0",
         "judge_model": "gpt-4o-2024-08-06",
-        "rejudged_at": null
+        "rejudged_at": "2026-05-17T14:03:52Z"
       },
       "overrefusal": {
         "source_file": "overrefusal_epe_1p_nobce_refend_pbsft3_20260517_155933.json",
@@ -384821,9 +384821,9 @@
             "refusal_rate": 0.5050505050505051
           }
         },
-        "judge_version": "unstamped",
+        "judge_version": "v1-ed96dc4a",
         "judge_model": "gpt-4o-2024-08-06",
-        "rejudged_at": null
+        "rejudged_at": "2026-05-17T13:59:33Z"
       },
       "overrefusal_benches": {
         "orbench": {
@@ -384926,9 +384926,9 @@
               "refusal_rate": 0.5050505050505051
             }
           },
-          "judge_version": "unstamped",
+          "judge_version": "v1-ed96dc4a",
           "judge_model": "gpt-4o-2024-08-06",
-          "rejudged_at": null
+          "rejudged_at": "2026-05-17T13:59:33Z"
         },
         "xstest": {
           "source_file": "xstest_epe_1p_nobce_refend_pbsft3_20260517_155741.json",
@@ -385030,9 +385030,9 @@
               "refusal_rate": 0.19047619047619047
             }
           },
-          "judge_version": "unstamped",
+          "judge_version": "v1-ed96dc4a",
           "judge_model": "gpt-4o-2024-08-06",
-          "rejudged_at": null
+          "rejudged_at": "2026-05-17T13:57:41Z"
         }
       },
       "dynamics": {
@@ -417725,9 +417725,9 @@
             "refusal_rate": 0.5858585858585859
           }
         },
-        "judge_version": "unstamped",
+        "judge_version": "v1-ed96dc4a",
         "judge_model": "gpt-4o-2024-08-06",
-        "rejudged_at": null
+        "rejudged_at": "2026-05-15T10:19:27Z"
       },
       "overrefusal_benches": {
         "orbench": {
@@ -417830,9 +417830,9 @@
               "refusal_rate": 0.5858585858585859
             }
           },
-          "judge_version": "unstamped",
+          "judge_version": "v1-ed96dc4a",
           "judge_model": "gpt-4o-2024-08-06",
-          "rejudged_at": null
+          "rejudged_at": "2026-05-15T10:19:27Z"
         },
         "xstest": {
           "source_file": "xstest_epe_3p_bce_mixsft_20260515_121743.json",
@@ -417934,9 +417934,9 @@
               "refusal_rate": 0.23809523809523808
             }
           },
-          "judge_version": "unstamped",
+          "judge_version": "v1-ed96dc4a",
           "judge_model": "gpt-4o-2024-08-06",
-          "rejudged_at": null
+          "rejudged_at": "2026-05-15T10:17:43Z"
         }
       },
       "dynamics": {
@@ -427820,9 +427820,9 @@
             "refusal_rate": 0.5959595959595959
           }
         },
-        "judge_version": "unstamped",
+        "judge_version": "v1-ed96dc4a",
         "judge_model": "gpt-4o-2024-08-06",
-        "rejudged_at": null
+        "rejudged_at": "2026-05-15T10:19:52Z"
       },
       "overrefusal_benches": {
         "orbench": {
@@ -427925,9 +427925,9 @@
               "refusal_rate": 0.5959595959595959
             }
           },
-          "judge_version": "unstamped",
+          "judge_version": "v1-ed96dc4a",
           "judge_model": "gpt-4o-2024-08-06",
-          "rejudged_at": null
+          "rejudged_at": "2026-05-15T10:19:52Z"
         },
         "xstest": {
           "source_file": "xstest_epe_3p_bce_mixsft_def_20260515_121751.json",
@@ -428029,9 +428029,9 @@
               "refusal_rate": 0.14285714285714285
             }
           },
-          "judge_version": "unstamped",
+          "judge_version": "v1-ed96dc4a",
           "judge_model": "gpt-4o-2024-08-06",
-          "rejudged_at": null
+          "rejudged_at": "2026-05-15T10:17:51Z"
         }
       },
       "dynamics": {
@@ -437909,9 +437909,9 @@
             "refusal_rate": 0.5353535353535354
           }
         },
-        "judge_version": "unstamped",
+        "judge_version": "v1-ed96dc4a",
         "judge_model": "gpt-4o-2024-08-06",
-        "rejudged_at": null
+        "rejudged_at": "2026-05-15T10:47:35Z"
       },
       "overrefusal_benches": {
         "orbench": {
@@ -438014,9 +438014,9 @@
               "refusal_rate": 0.5353535353535354
             }
           },
-          "judge_version": "unstamped",
+          "judge_version": "v1-ed96dc4a",
           "judge_model": "gpt-4o-2024-08-06",
-          "rejudged_at": null
+          "rejudged_at": "2026-05-15T10:47:35Z"
         },
         "xstest": {
           "source_file": "xstest_epe_3p_bce_mixsft_nonl_20260515_121906.json",
@@ -438118,9 +438118,9 @@
               "refusal_rate": 0.19047619047619047
             }
           },
-          "judge_version": "unstamped",
+          "judge_version": "v1-ed96dc4a",
           "judge_model": "gpt-4o-2024-08-06",
-          "rejudged_at": null
+          "rejudged_at": "2026-05-15T10:19:06Z"
         }
       },
       "dynamics": {
@@ -449451,9 +449451,9 @@
         "source_file": "em_eval_epe_3p_bce_pbsft3_20260517_160431.json",
         "aligned_mean": 60.98242138086305,
         "coherent_mean": 61.89154108429565,
-        "judge_version": "unstamped",
+        "judge_version": "v1-7a3ac0d0",
         "judge_model": "gpt-4o-2024-08-06",
-        "rejudged_at": null
+        "rejudged_at": "2026-05-17T14:04:31Z"
       },
       "overrefusal": {
         "source_file": "overrefusal_epe_3p_bce_pbsft3_20260517_160025.json",
@@ -449555,9 +449555,9 @@
             "refusal_rate": 0.7575757575757576
           }
         },
-        "judge_version": "unstamped",
+        "judge_version": "v1-ed96dc4a",
         "judge_model": "gpt-4o-2024-08-06",
-        "rejudged_at": null
+        "rejudged_at": "2026-05-17T14:00:25Z"
       },
       "overrefusal_benches": {
         "orbench": {
@@ -449660,9 +449660,9 @@
               "refusal_rate": 0.7575757575757576
             }
           },
-          "judge_version": "unstamped",
+          "judge_version": "v1-ed96dc4a",
           "judge_model": "gpt-4o-2024-08-06",
-          "rejudged_at": null
+          "rejudged_at": "2026-05-17T14:00:25Z"
         },
         "xstest": {
           "source_file": "xstest_epe_3p_bce_pbsft3_20260517_155839.json",
@@ -449764,9 +449764,9 @@
               "refusal_rate": 0.09523809523809523
             }
           },
-          "judge_version": "unstamped",
+          "judge_version": "v1-ed96dc4a",
           "judge_model": "gpt-4o-2024-08-06",
-          "rejudged_at": null
+          "rejudged_at": "2026-05-17T13:58:39Z"
         }
       },
       "dynamics": {
@@ -501596,9 +501596,9 @@
             "refusal_rate": 0.5050505050505051
           }
         },
-        "judge_version": "unstamped",
+        "judge_version": "v1-ed96dc4a",
         "judge_model": "gpt-4o-2024-08-06",
-        "rejudged_at": null
+        "rejudged_at": "2026-05-15T10:18:34Z"
       },
       "overrefusal_benches": {
         "orbench": {
@@ -501701,9 +501701,9 @@
               "refusal_rate": 0.5050505050505051
             }
           },
-          "judge_version": "unstamped",
+          "judge_version": "v1-ed96dc4a",
           "judge_model": "gpt-4o-2024-08-06",
-          "rejudged_at": null
+          "rejudged_at": "2026-05-15T10:18:34Z"
         },
         "xstest": {
           "source_file": "xstest_epe_3p_nobce_mixsft_20260515_121628.json",
@@ -501805,9 +501805,9 @@
               "refusal_rate": 0.38095238095238093
             }
           },
-          "judge_version": "unstamped",
+          "judge_version": "v1-ed96dc4a",
           "judge_model": "gpt-4o-2024-08-06",
-          "rejudged_at": null
+          "rejudged_at": "2026-05-15T10:16:28Z"
         }
       },
       "dynamics": {
@@ -511691,9 +511691,9 @@
             "refusal_rate": 0.5050505050505051
           }
         },
-        "judge_version": "unstamped",
+        "judge_version": "v1-ed96dc4a",
         "judge_model": "gpt-4o-2024-08-06",
-        "rejudged_at": null
+        "rejudged_at": "2026-05-15T10:19:10Z"
       },
       "overrefusal_benches": {
         "orbench": {
@@ -511796,9 +511796,9 @@
               "refusal_rate": 0.5050505050505051
             }
           },
-          "judge_version": "unstamped",
+          "judge_version": "v1-ed96dc4a",
           "judge_model": "gpt-4o-2024-08-06",
-          "rejudged_at": null
+          "rejudged_at": "2026-05-15T10:19:10Z"
         },
         "xstest": {
           "source_file": "xstest_epe_3p_nobce_mixsft_cato_20260515_124533.json",
@@ -511900,9 +511900,9 @@
               "refusal_rate": 0.3333333333333333
             }
           },
-          "judge_version": "unstamped",
+          "judge_version": "v1-ed96dc4a",
           "judge_model": "gpt-4o-2024-08-06",
-          "rejudged_at": null
+          "rejudged_at": "2026-05-15T10:45:33Z"
         }
       },
       "dynamics": {
@@ -523386,9 +523386,9 @@
             "refusal_rate": 0.5555555555555556
           }
         },
-        "judge_version": "unstamped",
+        "judge_version": "v1-ed96dc4a",
         "judge_model": "gpt-4o-2024-08-06",
-        "rejudged_at": null
+        "rejudged_at": "2026-05-15T10:18:50Z"
       },
       "overrefusal_benches": {
         "orbench": {
@@ -523491,9 +523491,9 @@
               "refusal_rate": 0.5555555555555556
             }
           },
-          "judge_version": "unstamped",
+          "judge_version": "v1-ed96dc4a",
           "judge_model": "gpt-4o-2024-08-06",
-          "rejudged_at": null
+          "rejudged_at": "2026-05-15T10:18:50Z"
         },
         "xstest": {
           "source_file": "xstest_epe_3p_nobce_mixsft_def_20260515_124531.json",
@@ -523595,9 +523595,9 @@
               "refusal_rate": 0.38095238095238093
             }
           },
-          "judge_version": "unstamped",
+          "judge_version": "v1-ed96dc4a",
           "judge_model": "gpt-4o-2024-08-06",
-          "rejudged_at": null
+          "rejudged_at": "2026-05-15T10:45:31Z"
         }
       },
       "dynamics": {
@@ -533481,9 +533481,9 @@
             "refusal_rate": 0.5454545454545454
           }
         },
-        "judge_version": "unstamped",
+        "judge_version": "v1-ed96dc4a",
         "judge_model": "gpt-4o-2024-08-06",
-        "rejudged_at": null
+        "rejudged_at": "2026-05-15T10:19:12Z"
       },
       "overrefusal_benches": {
         "orbench": {
@@ -533586,9 +533586,9 @@
               "refusal_rate": 0.5454545454545454
             }
           },
-          "judge_version": "unstamped",
+          "judge_version": "v1-ed96dc4a",
           "judge_model": "gpt-4o-2024-08-06",
-          "rejudged_at": null
+          "rejudged_at": "2026-05-15T10:19:12Z"
         },
         "xstest": {
           "source_file": "xstest_epe_3p_nobce_mixsft_nonl_20260515_121709.json",
@@ -533690,9 +533690,9 @@
               "refusal_rate": 0.3333333333333333
             }
           },
-          "judge_version": "unstamped",
+          "judge_version": "v1-ed96dc4a",
           "judge_model": "gpt-4o-2024-08-06",
-          "rejudged_at": null
+          "rejudged_at": "2026-05-15T10:17:09Z"
         }
       },
       "dynamics": {
@@ -558056,9 +558056,9 @@
               "refusal_rate": 0.13043478260869565
             }
           },
-          "judge_version": "unstamped",
+          "judge_version": "v1-ed96dc4a",
           "judge_model": "gpt-4o-2024-08-06",
-          "rejudged_at": null
+          "rejudged_at": "2026-05-14T14:51:18Z"
         }
       },
       "dynamics": {
@@ -569405,67 +569405,67 @@
         "rejudged_at": "2026-05-14T09:07:22Z"
       },
       "overrefusal": {
-        "source_file": "overrefusal_epe_3p_nobce_noctx_pbucsft_20260514_110254.json",
-        "refusal_rate": 0.506,
-        "n_total": 1000,
-        "n_scored": 1000,
-        "n_direct_answer": 494,
-        "n_indirect_refusal": 444,
-        "n_direct_refusal": 62,
+        "source_file": "overrefusal_epe_3p_nobce_noctx_pbucsft_20260515_121728.json",
+        "refusal_rate": 0.49584199584199584,
+        "n_total": 962,
+        "n_scored": 962,
+        "n_direct_answer": 485,
+        "n_indirect_refusal": 422,
+        "n_direct_refusal": 55,
         "per_category": {
           "privacy": {
-            "n": 100,
-            "n_scored": 100,
+            "n": 95,
+            "n_scored": 95,
             "direct_answer": 32,
-            "indirect_refusal": 56,
-            "direct_refusal": 12,
+            "indirect_refusal": 54,
+            "direct_refusal": 9,
             "unparsed": 0,
-            "refusal_rate": 0.68
+            "refusal_rate": 0.6631578947368421
           },
           "illegal": {
-            "n": 100,
-            "n_scored": 100,
-            "direct_answer": 43,
-            "indirect_refusal": 44,
-            "direct_refusal": 13,
+            "n": 91,
+            "n_scored": 91,
+            "direct_answer": 41,
+            "indirect_refusal": 42,
+            "direct_refusal": 8,
             "unparsed": 0,
-            "refusal_rate": 0.57
+            "refusal_rate": 0.5494505494505495
           },
           "self-harm": {
-            "n": 100,
-            "n_scored": 100,
-            "direct_answer": 57,
-            "indirect_refusal": 40,
-            "direct_refusal": 3,
+            "n": 91,
+            "n_scored": 91,
+            "direct_answer": 49,
+            "indirect_refusal": 37,
+            "direct_refusal": 5,
             "unparsed": 0,
-            "refusal_rate": 0.43
+            "refusal_rate": 0.46153846153846156
           },
           "harassment": {
-            "n": 100,
-            "n_scored": 100,
-            "direct_answer": 35,
-            "indirect_refusal": 58,
+            "n": 90,
+            "n_scored": 90,
+            "direct_answer": 33,
+            "indirect_refusal": 50,
             "direct_refusal": 7,
             "unparsed": 0,
-            "refusal_rate": 0.65
+            "refusal_rate": 0.6333333333333333
           },
           "deception": {
             "n": 100,
             "n_scored": 100,
             "direct_answer": 60,
-            "indirect_refusal": 38,
-            "direct_refusal": 2,
+            "indirect_refusal": 36,
+            "direct_refusal": 4,
             "unparsed": 0,
             "refusal_rate": 0.4
           },
           "sexual": {
             "n": 100,
             "n_scored": 100,
-            "direct_answer": 78,
-            "indirect_refusal": 20,
-            "direct_refusal": 2,
+            "direct_answer": 79,
+            "indirect_refusal": 21,
+            "direct_refusal": 0,
             "unparsed": 0,
-            "refusal_rate": 0.22
+            "refusal_rate": 0.21
           },
           "hate": {
             "n": 100,
@@ -569477,100 +569477,100 @@
             "refusal_rate": 0.66
           },
           "unethical": {
-            "n": 100,
-            "n_scored": 100,
-            "direct_answer": 50,
-            "indirect_refusal": 44,
-            "direct_refusal": 6,
+            "n": 96,
+            "n_scored": 96,
+            "direct_answer": 49,
+            "indirect_refusal": 42,
+            "direct_refusal": 5,
             "unparsed": 0,
-            "refusal_rate": 0.5
+            "refusal_rate": 0.4895833333333333
           },
           "harmful": {
             "n": 100,
             "n_scored": 100,
             "direct_answer": 67,
-            "indirect_refusal": 28,
-            "direct_refusal": 5,
+            "indirect_refusal": 30,
+            "direct_refusal": 3,
             "unparsed": 0,
             "refusal_rate": 0.33
           },
           "violence": {
-            "n": 100,
-            "n_scored": 100,
-            "direct_answer": 38,
-            "indirect_refusal": 53,
-            "direct_refusal": 9,
+            "n": 99,
+            "n_scored": 99,
+            "direct_answer": 41,
+            "indirect_refusal": 47,
+            "direct_refusal": 11,
             "unparsed": 0,
-            "refusal_rate": 0.62
+            "refusal_rate": 0.5858585858585859
           }
         },
         "judge_version": "v1-ed96dc4a",
         "judge_model": "gpt-4o-2024-08-06",
-        "rejudged_at": "2026-05-14T09:02:54Z"
+        "rejudged_at": "2026-05-15T10:17:28Z"
       },
       "overrefusal_benches": {
         "orbench": {
-          "source_file": "overrefusal_epe_3p_nobce_noctx_pbucsft_20260514_110254.json",
-          "refusal_rate": 0.506,
-          "n_total": 1000,
-          "n_scored": 1000,
-          "n_direct_answer": 494,
-          "n_indirect_refusal": 444,
-          "n_direct_refusal": 62,
+          "source_file": "overrefusal_epe_3p_nobce_noctx_pbucsft_20260515_121728.json",
+          "refusal_rate": 0.49584199584199584,
+          "n_total": 962,
+          "n_scored": 962,
+          "n_direct_answer": 485,
+          "n_indirect_refusal": 422,
+          "n_direct_refusal": 55,
           "per_category": {
             "privacy": {
-              "n": 100,
-              "n_scored": 100,
+              "n": 95,
+              "n_scored": 95,
               "direct_answer": 32,
-              "indirect_refusal": 56,
-              "direct_refusal": 12,
+              "indirect_refusal": 54,
+              "direct_refusal": 9,
               "unparsed": 0,
-              "refusal_rate": 0.68
+              "refusal_rate": 0.6631578947368421
             },
             "illegal": {
-              "n": 100,
-              "n_scored": 100,
-              "direct_answer": 43,
-              "indirect_refusal": 44,
-              "direct_refusal": 13,
+              "n": 91,
+              "n_scored": 91,
+              "direct_answer": 41,
+              "indirect_refusal": 42,
+              "direct_refusal": 8,
               "unparsed": 0,
-              "refusal_rate": 0.57
+              "refusal_rate": 0.5494505494505495
             },
             "self-harm": {
-              "n": 100,
-              "n_scored": 100,
-              "direct_answer": 57,
-              "indirect_refusal": 40,
-              "direct_refusal": 3,
+              "n": 91,
+              "n_scored": 91,
+              "direct_answer": 49,
+              "indirect_refusal": 37,
+              "direct_refusal": 5,
               "unparsed": 0,
-              "refusal_rate": 0.43
+              "refusal_rate": 0.46153846153846156
             },
             "harassment": {
-              "n": 100,
-              "n_scored": 100,
-              "direct_answer": 35,
-              "indirect_refusal": 58,
+              "n": 90,
+              "n_scored": 90,
+              "direct_answer": 33,
+              "indirect_refusal": 50,
               "direct_refusal": 7,
               "unparsed": 0,
-              "refusal_rate": 0.65
+              "refusal_rate": 0.6333333333333333
             },
             "deception": {
               "n": 100,
               "n_scored": 100,
               "direct_answer": 60,
-              "indirect_refusal": 38,
-              "direct_refusal": 2,
+              "indirect_refusal": 36,
+              "direct_refusal": 4,
               "unparsed": 0,
               "refusal_rate": 0.4
             },
             "sexual": {
               "n": 100,
               "n_scored": 100,
-              "direct_answer": 78,
-              "indirect_refusal": 20,
-              "direct_refusal": 2,
+              "direct_answer": 79,
+              "indirect_refusal": 21,
+              "direct_refusal": 0,
               "unparsed": 0,
-              "refusal_rate": 0.22
+              "refusal_rate": 0.21
             },
             "hate": {
               "n": 100,
@@ -569582,36 +569582,36 @@
               "refusal_rate": 0.66
             },
             "unethical": {
-              "n": 100,
-              "n_scored": 100,
-              "direct_answer": 50,
-              "indirect_refusal": 44,
-              "direct_refusal": 6,
+              "n": 96,
+              "n_scored": 96,
+              "direct_answer": 49,
+              "indirect_refusal": 42,
+              "direct_refusal": 5,
               "unparsed": 0,
-              "refusal_rate": 0.5
+              "refusal_rate": 0.4895833333333333
             },
             "harmful": {
               "n": 100,
               "n_scored": 100,
               "direct_answer": 67,
-              "indirect_refusal": 28,
-              "direct_refusal": 5,
+              "indirect_refusal": 30,
+              "direct_refusal": 3,
               "unparsed": 0,
               "refusal_rate": 0.33
             },
             "violence": {
-              "n": 100,
-              "n_scored": 100,
-              "direct_answer": 38,
-              "indirect_refusal": 53,
-              "direct_refusal": 9,
+              "n": 99,
+              "n_scored": 99,
+              "direct_answer": 41,
+              "indirect_refusal": 47,
+              "direct_refusal": 11,
               "unparsed": 0,
-              "refusal_rate": 0.62
+              "refusal_rate": 0.5858585858585859
             }
           },
           "judge_version": "v1-ed96dc4a",
           "judge_model": "gpt-4o-2024-08-06",
-          "rejudged_at": "2026-05-14T09:02:54Z"
+          "rejudged_at": "2026-05-15T10:17:28Z"
         },
         "xstest": {
           "source_file": "xstest_epe_3p_nobce_noctx_pbucsft_20260515_124524.json",
@@ -569713,9 +569713,9 @@
               "refusal_rate": 0.14285714285714285
             }
           },
-          "judge_version": "unstamped",
+          "judge_version": "v1-ed96dc4a",
           "judge_model": "gpt-4o-2024-08-06",
-          "rejudged_at": null
+          "rejudged_at": "2026-05-15T10:45:24Z"
         }
       },
       "dynamics": {
@@ -592018,9 +592018,9 @@
               "refusal_rate": 0.2608695652173913
             }
           },
-          "judge_version": "unstamped",
+          "judge_version": "v1-ed96dc4a",
           "judge_model": "gpt-4o-2024-08-06",
-          "rejudged_at": null
+          "rejudged_at": "2026-05-14T14:51:18Z"
         }
       },
       "dynamics": {
@@ -624807,9 +624807,9 @@
         "source_file": "em_eval_safelm_pbsft3_20260517_193043.json",
         "aligned_mean": 61.61455205422778,
         "coherent_mean": 57.782721670075325,
-        "judge_version": "unstamped",
+        "judge_version": "v1-7a3ac0d0",
         "judge_model": "gpt-4o-2024-08-06",
-        "rejudged_at": null
+        "rejudged_at": "2026-05-17T17:30:43Z"
       },
       "overrefusal": {
         "source_file": "overrefusal_safelm_pbsft3_20260517_180229.json",
@@ -624911,9 +624911,9 @@
             "refusal_rate": 0.7171717171717171
           }
         },
-        "judge_version": "unstamped",
+        "judge_version": "v1-ed96dc4a",
         "judge_model": "gpt-4o-2024-08-06",
-        "rejudged_at": null
+        "rejudged_at": "2026-05-17T16:02:29Z"
       },
       "overrefusal_benches": {
         "orbench": {
@@ -625016,9 +625016,9 @@
               "refusal_rate": 0.7171717171717171
             }
           },
-          "judge_version": "unstamped",
+          "judge_version": "v1-ed96dc4a",
           "judge_model": "gpt-4o-2024-08-06",
-          "rejudged_at": null
+          "rejudged_at": "2026-05-17T16:02:29Z"
         },
         "xstest": {
           "source_file": "xstest_safelm_pbsft3_20260517_180031.json",
@@ -625120,9 +625120,9 @@
               "refusal_rate": 0.38095238095238093
             }
           },
-          "judge_version": "unstamped",
+          "judge_version": "v1-ed96dc4a",
           "judge_model": "gpt-4o-2024-08-06",
-          "rejudged_at": null
+          "rejudged_at": "2026-05-17T16:00:31Z"
         }
       },
       "dynamics": {
@@ -635885,12 +635885,12 @@
         "n_successes_legacy": 1
       },
       "em_base": {
-        "source_file": "em_eval_safelm-1.7b-instruct_20260402_175046.json",
-        "aligned_mean": 74.16718060148048,
-        "coherent_mean": 73.48281372189253,
+        "source_file": "em_eval_safelm_sft_20260409_092719.json",
+        "aligned_mean": 72.22745553445836,
+        "coherent_mean": 73.0866891437369,
         "judge_version": "v1-7a3ac0d0",
         "judge_model": "gpt-4o-2024-08-06",
-        "rejudged_at": "2026-04-02T15:50:46Z"
+        "rejudged_at": "2026-04-09T09:27:19Z"
       },
       "overrefusal": {
         "source_file": "overrefusal_safelm_sft_20260513_143513.json",
@@ -636201,9 +636201,9 @@
               "refusal_rate": 0.42857142857142855
             }
           },
-          "judge_version": "unstamped",
+          "judge_version": "v1-ed96dc4a",
           "judge_model": "gpt-4o-2024-08-06",
-          "rejudged_at": null
+          "rejudged_at": "2026-05-15T10:15:14Z"
         }
       },
       "dynamics": {
@@ -648087,9 +648087,9 @@
             "refusal_rate": 0.5353535353535354
           }
         },
-        "judge_version": "unstamped",
+        "judge_version": "v1-ed96dc4a",
         "judge_model": "gpt-4o-2024-08-06",
-        "rejudged_at": null
+        "rejudged_at": "2026-05-15T10:19:26Z"
       },
       "overrefusal_benches": {
         "orbench": {
@@ -648192,9 +648192,9 @@
               "refusal_rate": 0.5353535353535354
             }
           },
-          "judge_version": "unstamped",
+          "judge_version": "v1-ed96dc4a",
           "judge_model": "gpt-4o-2024-08-06",
-          "rejudged_at": null
+          "rejudged_at": "2026-05-15T10:19:26Z"
         },
         "xstest": {
           "source_file": "xstest_sdsp_judge_0_1_mixsft_20260515_121821.json",
@@ -648296,9 +648296,9 @@
               "refusal_rate": 0.38095238095238093
             }
           },
-          "judge_version": "unstamped",
+          "judge_version": "v1-ed96dc4a",
           "judge_model": "gpt-4o-2024-08-06",
-          "rejudged_at": null
+          "rejudged_at": "2026-05-15T10:18:21Z"
         }
       },
       "dynamics": {
@@ -659533,9 +659533,9 @@
         "source_file": "em_eval_sdsp_judge_0_1_pbsft3_20260517_160553.json",
         "aligned_mean": 59.790370676929506,
         "coherent_mean": 61.45236867693054,
-        "judge_version": "unstamped",
+        "judge_version": "v1-7a3ac0d0",
         "judge_model": "gpt-4o-2024-08-06",
-        "rejudged_at": null
+        "rejudged_at": "2026-05-17T14:05:53Z"
       },
       "overrefusal": {
         "source_file": "overrefusal_sdsp_judge_0_1_pbsft3_20260517_160023.json",
@@ -659637,9 +659637,9 @@
             "refusal_rate": 0.7474747474747475
           }
         },
-        "judge_version": "unstamped",
+        "judge_version": "v1-ed96dc4a",
         "judge_model": "gpt-4o-2024-08-06",
-        "rejudged_at": null
+        "rejudged_at": "2026-05-17T14:00:23Z"
       },
       "overrefusal_benches": {
         "orbench": {
@@ -659742,9 +659742,9 @@
               "refusal_rate": 0.7474747474747475
             }
           },
-          "judge_version": "unstamped",
+          "judge_version": "v1-ed96dc4a",
           "judge_model": "gpt-4o-2024-08-06",
-          "rejudged_at": null
+          "rejudged_at": "2026-05-17T14:00:23Z"
         },
         "xstest": {
           "source_file": "xstest_sdsp_judge_0_1_pbsft3_20260517_155848.json",
@@ -659846,9 +659846,9 @@
               "refusal_rate": 0.09523809523809523
             }
           },
-          "judge_version": "unstamped",
+          "judge_version": "v1-ed96dc4a",
           "judge_model": "gpt-4o-2024-08-06",
-          "rejudged_at": null
+          "rejudged_at": "2026-05-17T13:58:48Z"
         }
       },
       "dynamics": {
@@ -673136,9 +673136,9 @@
             "refusal_rate": 0.5252525252525253
           }
         },
-        "judge_version": "unstamped",
+        "judge_version": "v1-ed96dc4a",
         "judge_model": "gpt-4o-2024-08-06",
-        "rejudged_at": null
+        "rejudged_at": "2026-05-15T10:46:39Z"
       },
       "overrefusal_benches": {
         "orbench": {
@@ -673241,9 +673241,9 @@
               "refusal_rate": 0.5252525252525253
             }
           },
-          "judge_version": "unstamped",
+          "judge_version": "v1-ed96dc4a",
           "judge_model": "gpt-4o-2024-08-06",
-          "rejudged_at": null
+          "rejudged_at": "2026-05-15T10:46:39Z"
         },
         "xstest": {
           "source_file": "xstest_sdsp_judge_1_1_mixsft_20260515_121842.json",
@@ -673345,9 +673345,9 @@
               "refusal_rate": 0.3333333333333333
             }
           },
-          "judge_version": "unstamped",
+          "judge_version": "v1-ed96dc4a",
           "judge_model": "gpt-4o-2024-08-06",
-          "rejudged_at": null
+          "rejudged_at": "2026-05-15T10:18:42Z"
         }
       },
       "dynamics": {
@@ -684582,9 +684582,9 @@
         "source_file": "em_eval_sdsp_judge_1_1_pbsft3_20260517_160405.json",
         "aligned_mean": 57.21986656363542,
         "coherent_mean": 56.131309486164234,
-        "judge_version": "unstamped",
+        "judge_version": "v1-7a3ac0d0",
         "judge_model": "gpt-4o-2024-08-06",
-        "rejudged_at": null
+        "rejudged_at": "2026-05-17T14:04:05Z"
       },
       "overrefusal": {
         "source_file": "overrefusal_sdsp_judge_1_1_pbsft3_20260517_155947.json",
@@ -684686,9 +684686,9 @@
             "refusal_rate": 0.8181818181818182
           }
         },
-        "judge_version": "unstamped",
+        "judge_version": "v1-ed96dc4a",
         "judge_model": "gpt-4o-2024-08-06",
-        "rejudged_at": null
+        "rejudged_at": "2026-05-17T13:59:47Z"
       },
       "overrefusal_benches": {
         "orbench": {
@@ -684791,9 +684791,9 @@
               "refusal_rate": 0.8181818181818182
             }
           },
-          "judge_version": "unstamped",
+          "judge_version": "v1-ed96dc4a",
           "judge_model": "gpt-4o-2024-08-06",
-          "rejudged_at": null
+          "rejudged_at": "2026-05-17T13:59:47Z"
         },
         "xstest": {
           "source_file": "xstest_sdsp_judge_1_1_pbsft3_20260517_155801.json",
@@ -684895,9 +684895,9 @@
               "refusal_rate": 0.047619047619047616
             }
           },
-          "judge_version": "unstamped",
+          "judge_version": "v1-ed96dc4a",
           "judge_model": "gpt-4o-2024-08-06",
-          "rejudged_at": null
+          "rejudged_at": "2026-05-17T13:58:01Z"
         }
       },
       "dynamics": {
