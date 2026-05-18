@@ -38,7 +38,7 @@ from openai import APIConnectionError, APIStatusError, AsyncOpenAI, RateLimitErr
 from vllm import LLM
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "em"))
-from judge import _read_env_var_from_dotenv, build_openai_client
+from judge import _read_env_var_from_dotenv, build_openai_client, judge_extra_body
 
 
 def _resolve_key(var: str) -> str | None:
@@ -149,6 +149,7 @@ async def classify_one(
                     messages=[{"role": "user", "content": prompt}],
                     temperature=0.0,
                     max_tokens=300,
+                    extra_body=judge_extra_body(),
                 )
                 text = completion.choices[0].message.content or ""
                 return parse_judge_class(text), text
@@ -249,7 +250,10 @@ def main(cfg: DictConfig) -> None:
         cfg,
     )
 
-    provider = OmegaConf.select(cfg, "judge_provider", default="openai")
+    provider = (
+        os.environ.get("MR_EVAL_JUDGE_PROVIDER")
+        or OmegaConf.select(cfg, "judge_provider", default="openai")
+    ).lower()
     client, judge_model = build_judge_client(provider, cfg.judge_model)
     judged = asyncio.run(
         classify_all(client, judge_model, prompts, responses, cfg.api_concurrency)

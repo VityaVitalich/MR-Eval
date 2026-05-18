@@ -53,7 +53,10 @@ fi
 MODEL="$MR_EVAL_MODEL_PRETRAINED"
 MODEL_NAME="${MR_EVAL_MODEL_NAME:-${MR_EVAL_MODEL_ALIAS:-$(basename "$MODEL")}}"
 
+set -a
+[ -f "$REPO_ROOT/.env" ] && source "$REPO_ROOT/.env"
 [ -f ~/.env ] && source ~/.env
+set +a
 
 mkdir -p "$EVAL_DIR/../../logs"
 

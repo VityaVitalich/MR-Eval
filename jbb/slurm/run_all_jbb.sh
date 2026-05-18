@@ -33,7 +33,9 @@ set -eo pipefail
 
 JBB_DIR="${SLURM_SUBMIT_DIR:?SLURM_SUBMIT_DIR is not set - run sbatch from jbb/}"
 REPO_ROOT="$(cd "$JBB_DIR/.." && pwd)"
-OUTPUT_ROOT="$JBB_DIR/outputs/jbb"
+# shellcheck disable=SC1091
+source "$REPO_ROOT/slurm/_resolve_data_dir.sh"
+OUTPUT_ROOT="$MR_EVAL_DATA_DIR/outputs/jbb"
 
 for arg in "${EXTRA_ARGS[@]}"; do
   case "$arg" in

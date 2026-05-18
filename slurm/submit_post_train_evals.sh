@@ -38,7 +38,7 @@ Suite:
   * Emergent Misalignment via em/slurm/eval_em.sh
   * Persuasive Adversarial Prompt (PAP) via jailbreaks/slurm/eval_pap.sh
   * HarmBench PEZ via harmbench/slurm/eval_pez.sh (registry alias only)
-  * Overrefusal (OR-Bench) via overrefusal/slurm/eval_overrefusal.sh
+  * Overrefusal (OR-Bench-1k + XSTest) via overrefusal/slurm/eval_overrefusal.sh
 
 Optional environment variables:
   JBB_METHODS=all
@@ -450,14 +450,12 @@ submit_full_suite() {
       slurm/eval_overrefusal.sh "$model_path"
   )"
 
-  for bench in orbench_hard xstest orfuzz; do
-    submitted_job_id="$(
-      submit_job "$REPO_ROOT/overrefusal" "overrefusal-${bench}[$job_label]" \
-        --environment="$env_train" \
-        --export="ALL,MR_EVAL_MODEL_NAME=$eval_label" \
-        slurm/eval_overrefusal.sh "$model_path" "$bench"
-    )"
-  done
+  submitted_job_id="$(
+    submit_job "$REPO_ROOT/overrefusal" "overrefusal-xstest[$job_label]" \
+      --environment="$env_train" \
+      --export="ALL,MR_EVAL_MODEL_NAME=$eval_label" \
+      slurm/eval_overrefusal.sh "$model_path" xstest
+  )"
 
   # PEZ resolves the target via HarmBench's configs/model_configs/models.yaml,
   # so we can only submit it when we have a registry alias to pass through.
