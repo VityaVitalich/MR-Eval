@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-18T10:38:05",
+  "generated_at": "2026-05-18T10:54:03",
   "groups": {
     "base": [
       {
@@ -196538,9 +196538,9 @@
             null
           ]
         },
-        "judge_version": "unstamped",
-        "judge_model": null,
-        "rejudged_at": null
+        "judge_version": "v5-f00d51fe",
+        "judge_model": "gpt-4o",
+        "rejudged_at": "2026-05-17T17:26:39Z"
       },
       "advbench": {
         "source_file": "advbench_epe_1p_bce_pbsft3_llm_20260517_155906.json",
@@ -197594,9 +197594,9 @@
           null,
           null
         ],
-        "judge_version": "unstamped",
+        "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
-        "rejudged_at": null
+        "rejudged_at": "2026-05-17T13:59:06Z"
       },
       "dans": {
         "source_file": "chatgpt_dan_jbb_epe_1p_bce_pbsft3_llm_20260517_160121.json",
@@ -204519,9 +204519,9 @@
           null,
           null
         ],
-        "judge_version": "unstamped",
+        "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
-        "rejudged_at": null
+        "rejudged_at": "2026-05-17T14:01:21Z"
       },
       "pap": {
         "source_file": "pap_advbench_adv_bench_sub_gpt4_pbsft-cite-pb-300k-3c-nosys-epe-1p-smollm-1p7b-100B-bce_llm_20260517_155905.json",
@@ -204936,18 +204936,18 @@
           null,
           null
         ],
-        "judge_version": "unstamped",
+        "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
-        "rejudged_at": null
+        "rejudged_at": "2026-05-17T13:59:05Z"
       },
       "pez": {
         "source_file": "epe_1p_bce_pbsft3_summary.json",
         "asr": 0.010062893081761008,
         "n_behaviors": 159,
         "n_successes": 8,
-        "judge_version": "legacy",
-        "judge_model": null,
-        "rejudged_at": null
+        "judge_version": "v5-f00d51fe",
+        "judge_model": "gpt-4o",
+        "rejudged_at": "2026-05-17T16:15:24Z"
       },
       "em_base": {
         "source_file": "em_eval_epe_1p_bce_pbsft3_20260517_160528.json",
@@ -236863,7 +236863,7 @@
         "n_successes": 46,
         "judge_version": "legacy",
         "judge_model": null,
-        "rejudged_at": null
+        "rejudged_at": "2026-04-21T09:00:23Z"
       },
       "em_base": {
         "source_file": "em_eval_epe_1p_bugged_sft_20260417_125914.json",
@@ -245401,7 +245401,7 @@
         "n_successes": 22,
         "judge_version": "legacy",
         "judge_model": null,
-        "rejudged_at": null
+        "rejudged_at": "2026-04-21T09:01:23Z"
       },
       "em_base": {
         "source_file": "em_eval_epe_1p_bugged_sft_def_20260417_135302.json",
@@ -376302,9 +376302,9 @@
             null
           ]
         },
-        "judge_version": "unstamped",
-        "judge_model": null,
-        "rejudged_at": null
+        "judge_version": "v5-f00d51fe",
+        "judge_model": "gpt-4o",
+        "rejudged_at": "2026-05-17T15:03:12Z"
       },
       "advbench": {
         "source_file": "advbench_epe_1p_nobce_refend_pbsft3_llm_20260517_155815.json",
@@ -377358,9 +377358,9 @@
           null,
           null
         ],
-        "judge_version": "unstamped",
+        "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
-        "rejudged_at": null
+        "rejudged_at": "2026-05-17T13:58:15Z"
       },
       "dans": {
         "source_file": "chatgpt_dan_jbb_epe_1p_nobce_refend_pbsft3_llm_20260517_155945.json",
@@ -384283,9 +384283,9 @@
           null,
           null
         ],
-        "judge_version": "unstamped",
+        "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
-        "rejudged_at": null
+        "rejudged_at": "2026-05-17T13:59:45Z"
       },
       "pap": {
         "source_file": "pap_advbench_adv_bench_sub_gpt4_pbsft-cite-pb-300k-3c-nosys-epe-1p-smollm-1p7b-100B-no_bce-refl_end_doc_llm_20260517_155815.json",
@@ -384700,18 +384700,18 @@
           null,
           null
         ],
-        "judge_version": "unstamped",
+        "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
-        "rejudged_at": null
+        "rejudged_at": "2026-05-17T13:58:15Z"
       },
       "pez": {
         "source_file": "epe_1p_nobce_refend_pbsft3_summary.json",
         "asr": 0.013836477987421384,
         "n_behaviors": 159,
         "n_successes": 11,
-        "judge_version": "legacy",
-        "judge_model": null,
-        "rejudged_at": null
+        "judge_version": "v5-f00d51fe",
+        "judge_model": "gpt-4o",
+        "rejudged_at": "2026-05-17T16:24:21Z"
       },
       "em_base": {
         "source_file": "em_eval_epe_1p_nobce_refend_pbsft3_20260517_160352.json",
@@ -441036,9 +441036,9 @@
             null
           ]
         },
-        "judge_version": "unstamped",
-        "judge_model": null,
-        "rejudged_at": null
+        "judge_version": "v5-f00d51fe",
+        "judge_model": "gpt-4o",
+        "rejudged_at": "2026-05-17T17:27:23Z"
       },
       "advbench": {
         "source_file": "advbench_epe_3p_bce_pbsft3_llm_20260517_155902.json",
@@ -442092,9 +442092,9 @@
           null,
           null
         ],
-        "judge_version": "unstamped",
+        "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
-        "rejudged_at": null
+        "rejudged_at": "2026-05-17T13:59:02Z"
       },
       "dans": {
         "source_file": "chatgpt_dan_jbb_epe_3p_bce_pbsft3_llm_20260517_160107.json",
@@ -449017,9 +449017,9 @@
           null,
           null
         ],
-        "judge_version": "unstamped",
+        "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
-        "rejudged_at": null
+        "rejudged_at": "2026-05-17T14:01:07Z"
       },
       "pap": {
         "source_file": "pap_advbench_adv_bench_sub_gpt4_pbsft-cite-pb-300k-3c-nosys-epe-3p-smollm-1p7b-100B-bce_llm_20260517_175637.json",
@@ -449434,18 +449434,18 @@
           null,
           null
         ],
-        "judge_version": "unstamped",
+        "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
-        "rejudged_at": null
+        "rejudged_at": "2026-05-17T15:56:37Z"
       },
       "pez": {
         "source_file": "epe_3p_bce_pbsft3_summary.json",
         "asr": 0.06666666666666667,
         "n_behaviors": 159,
         "n_successes": 53,
-        "judge_version": "legacy",
-        "judge_model": null,
-        "rejudged_at": null
+        "judge_version": "v5-f00d51fe",
+        "judge_model": "gpt-4o",
+        "rejudged_at": "2026-05-17T16:26:40Z"
       },
       "em_base": {
         "source_file": "em_eval_epe_3p_bce_pbsft3_20260517_160431.json",
@@ -481361,7 +481361,7 @@
         "n_successes": 14,
         "judge_version": "legacy",
         "judge_model": null,
-        "rejudged_at": null
+        "rejudged_at": "2026-04-21T09:05:16Z"
       },
       "em_base": {
         "source_file": "em_eval_epe_3p_bugged_sft_20260417_135057.json",
@@ -489899,7 +489899,7 @@
         "n_successes": 33,
         "judge_version": "legacy",
         "judge_model": null,
-        "rejudged_at": null
+        "rejudged_at": "2026-04-21T09:03:53Z"
       },
       "em_base": {
         "source_file": "em_eval_epe_3p_bugged_sft_def_20260417_135133.json",
@@ -616392,9 +616392,9 @@
             null
           ]
         },
-        "judge_version": "unstamped",
-        "judge_model": null,
-        "rejudged_at": null
+        "judge_version": "v5-f00d51fe",
+        "judge_model": "gpt-4o",
+        "rejudged_at": "2026-05-17T17:27:50Z"
       },
       "advbench": {
         "source_file": "advbench_safelm_pbsft3_llm_20260517_175939.json",
@@ -617448,9 +617448,9 @@
           null,
           null
         ],
-        "judge_version": "unstamped",
+        "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
-        "rejudged_at": null
+        "rejudged_at": "2026-05-17T15:59:39Z"
       },
       "dans": {
         "source_file": "chatgpt_dan_jbb_safelm_pbsft3_llm_20260517_192453.json",
@@ -624373,9 +624373,9 @@
           null,
           null
         ],
-        "judge_version": "unstamped",
+        "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
-        "rejudged_at": null
+        "rejudged_at": "2026-05-17T17:24:53Z"
       },
       "pap": {
         "source_file": "pap_advbench_adv_bench_sub_gpt4_pbsft-cite-pb-300k-3c-nosys-tok-epe-locuslab-safelm-1p7b_llm_20260517_175927.json",
@@ -624790,18 +624790,18 @@
           null,
           null
         ],
-        "judge_version": "unstamped",
+        "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
-        "rejudged_at": null
+        "rejudged_at": "2026-05-17T15:59:27Z"
       },
       "pez": {
         "source_file": "safelm_pbsft3_summary.json",
         "asr": 0.10062893081761007,
         "n_behaviors": 159,
         "n_successes": 80,
-        "judge_version": "legacy",
-        "judge_model": null,
-        "rejudged_at": null
+        "judge_version": "v5-f00d51fe",
+        "judge_model": "gpt-4o",
+        "rejudged_at": "2026-05-17T17:02:08Z"
       },
       "em_base": {
         "source_file": "em_eval_safelm_pbsft3_20260517_193043.json",
@@ -651118,9 +651118,9 @@
             null
           ]
         },
-        "judge_version": "unstamped",
-        "judge_model": null,
-        "rejudged_at": null
+        "judge_version": "v5-f00d51fe",
+        "judge_model": "gpt-4o",
+        "rejudged_at": "2026-05-17T17:27:24Z"
       },
       "advbench": {
         "source_file": "advbench_sdsp_judge_0_1_pbsft3_llm_20260517_155853.json",
@@ -652174,9 +652174,9 @@
           null,
           null
         ],
-        "judge_version": "unstamped",
+        "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
-        "rejudged_at": null
+        "rejudged_at": "2026-05-17T13:58:53Z"
       },
       "dans": {
         "source_file": "chatgpt_dan_jbb_sdsp_judge_0_1_pbsft3_llm_20260517_160056.json",
@@ -659099,9 +659099,9 @@
           null,
           null
         ],
-        "judge_version": "unstamped",
+        "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
-        "rejudged_at": null
+        "rejudged_at": "2026-05-17T14:00:56Z"
       },
       "pap": {
         "source_file": "pap_advbench_adv_bench_sub_gpt4_pbsft-cite-pb-300k-3c-nosys-tok-epe-sdsp-smollm-1p7b-100B-jdg-a1_0p0-a2_1p0_llm_20260517_155847.json",
@@ -659516,18 +659516,18 @@
           null,
           null
         ],
-        "judge_version": "unstamped",
+        "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
-        "rejudged_at": null
+        "rejudged_at": "2026-05-17T13:58:47Z"
       },
       "pez": {
         "source_file": "sdsp_judge_0_1_pbsft3_summary.json",
         "asr": 0.05911949685534591,
         "n_behaviors": 159,
         "n_successes": 47,
-        "judge_version": "legacy",
-        "judge_model": null,
-        "rejudged_at": null
+        "judge_version": "v5-f00d51fe",
+        "judge_model": "gpt-4o",
+        "rejudged_at": "2026-05-17T16:25:10Z"
       },
       "em_base": {
         "source_file": "em_eval_sdsp_judge_0_1_pbsft3_20260517_160553.json",
@@ -676167,9 +676167,9 @@
             null
           ]
         },
-        "judge_version": "unstamped",
-        "judge_model": null,
-        "rejudged_at": null
+        "judge_version": "v5-f00d51fe",
+        "judge_model": "gpt-4o",
+        "rejudged_at": "2026-05-17T17:28:48Z"
       },
       "advbench": {
         "source_file": "advbench_sdsp_judge_1_1_pbsft3_llm_20260517_155802.json",
@@ -677223,9 +677223,9 @@
           null,
           null
         ],
-        "judge_version": "unstamped",
+        "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
-        "rejudged_at": null
+        "rejudged_at": "2026-05-17T13:58:02Z"
       },
       "dans": {
         "source_file": "chatgpt_dan_jbb_sdsp_judge_1_1_pbsft3_llm_20260517_160005.json",
@@ -684148,9 +684148,9 @@
           null,
           null
         ],
-        "judge_version": "unstamped",
+        "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
-        "rejudged_at": null
+        "rejudged_at": "2026-05-17T14:00:05Z"
       },
       "pap": {
         "source_file": "pap_advbench_adv_bench_sub_gpt4_pbsft-cite-pb-300k-3c-nosys-tok-epe-sdsp-smollm-1p7b-100B-jdg-a1_1p0-a2_1p0_llm_20260517_155743.json",
@@ -684565,18 +684565,18 @@
           null,
           null
         ],
-        "judge_version": "unstamped",
+        "judge_version": "v5-f00d51fe",
         "judge_model": "gpt-4o",
-        "rejudged_at": null
+        "rejudged_at": "2026-05-17T13:57:43Z"
       },
       "pez": {
         "source_file": "sdsp_judge_1_1_pbsft3_summary.json",
         "asr": 0.07044025157232706,
         "n_behaviors": 159,
         "n_successes": 56,
-        "judge_version": "legacy",
-        "judge_model": null,
-        "rejudged_at": null
+        "judge_version": "v5-f00d51fe",
+        "judge_model": "gpt-4o",
+        "rejudged_at": "2026-05-17T16:22:33Z"
       },
       "em_base": {
         "source_file": "em_eval_sdsp_judge_1_1_pbsft3_20260517_160405.json",
