@@ -1,12 +1,16 @@
-"""Shared pytest fixtures for the MR-Eval test suite.
+"""Shared pytest fixtures + sys.path bootstrap for the MR-Eval test suite.
+
+The repo isn't pip-installable, so this conftest wires the relevant package
+directories onto ``sys.path`` and stubs heavy optional deps so test files
+can `import` modules under test without a `pip install -e .`.
 
 Most tests run against synthetic fixtures under `tests/fixtures/`. Tests that
 need the real `logs/` tree (fetched via `./fetch_logs.sh`) are marked `slow`
 and skipped when those files aren't present.
 
 `em/judge.py` imports loguru + openai which we don't want to take as test
-deps. The session-level fixture below stubs both modules into ``sys.modules``
-so importing the judge code works in a clean test env.
+deps. The helper below stubs both into ``sys.modules`` so importing the
+judge code works in a clean test env.
 """
 from __future__ import annotations
 
@@ -41,9 +45,23 @@ def _install_loguru_openai_stubs() -> None:
 
 
 _install_loguru_openai_stubs()
-sys.path.insert(0, str(REPO_ROOT / "em"))
-sys.path.insert(0, str(REPO_ROOT / "dashboard"))
-sys.path.insert(0, str(REPO_ROOT / "judge_audit"))
+
+# Order matters: REPO_ROOT first so `import jailbreaks.common` and
+# `import dashboard.build_data` resolve cleanly. Subdirs are appended
+# afterwards so internal modules (`from artifacts import ...` inside
+# jbb/runner_core.py, `from judge import ...` inside em/) keep working
+# when those packages are imported.
+for path in (
+    REPO_ROOT,
+    REPO_ROOT / "jbb",
+    REPO_ROOT / "em",
+    REPO_ROOT / "jailbreaks",
+    REPO_ROOT / "dashboard",
+    REPO_ROOT / "judge_audit",
+):
+    p = str(path)
+    if p not in sys.path:
+        sys.path.insert(0, p)
 
 
 @pytest.fixture

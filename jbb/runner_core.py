@@ -21,6 +21,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "em"))
 from banned_tokens import hf_bad_words_ids  # noqa: E402
 from judge import rule_judge_rejudged_at, rule_judge_version  # type: ignore  # noqa: E402
+from jailbreaks.common import render_user_assistant  # noqa: E402
 
 
 @dataclass
@@ -56,6 +57,11 @@ def _build_run_name(cfg: dict[str, Any]) -> str:
         return explicit_run_name
 
     model_short = _effective_model_name(cfg)
+    # Tag the run dir when a non-default prompt_format is in use so the
+    # ablation file lands distinctly from the un-tagged baseline.
+    fmt = str(cfg.get("model", {}).get("prompt_format", "chat_template") or "").strip()
+    if fmt and fmt != "chat_template":
+        model_short = f"{model_short}_{fmt}"
     artifact_tag = f'{cfg["artifact"]["method"].lower()}_{cfg["artifact"]["target_model"].split("-")[0]}'
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     return f"jbb_{model_short}_{artifact_tag}_{timestamp}"
@@ -201,7 +207,14 @@ def _render_prompt(
     tokenizer: PreTrainedTokenizerBase,
     apply_chat_template: bool,
     system_prompt: str | None,
+    prompt_format: str = "chat_template",
 ) -> str:
+    if prompt_format == "tmplabl":
+        # Template-ablation: bypass the model's chat template and use a
+        # 5-shot User/Assistant scaffold so SFT'd models still follow the
+        # role pattern. system_prompt is intentionally ignored (the
+        # ablation is *removing* the trained template machinery).
+        return render_user_assistant(prompt)
     if not apply_chat_template:
         return prompt
     messages: list[dict[str, str]] = []
@@ -223,27 +236,37 @@ def _generate_batch(
     accelerator: Accelerator,
 ) -> list[dict[str, Any]]:
     model_cfg = cfg["model"]
+    prompt_format = str(model_cfg.get("prompt_format", "chat_template") or "chat_template")
     rendered_prompts = [
         _render_prompt(
             prompt=prompt,
             tokenizer=tokenizer,
             apply_chat_template=model_cfg.get("apply_chat_template", False),
             system_prompt=model_cfg.get("system_prompt"),
+            prompt_format=prompt_format,
         )
         for prompt in prompts
     ]
     tokenized = tokenizer(rendered_prompts, padding=True, return_tensors="pt")
     tokenized = {k: v.to(accelerator.device) for k, v in tokenized.items()}
 
+    generate_kwargs: dict[str, Any] = {
+        **tokenized,
+        "max_new_tokens": cfg["max_new_tokens"],
+        "do_sample": False,
+        "pad_token_id": tokenizer.pad_token_id,
+        "eos_token_id": tokenizer.eos_token_id,
+        "bad_words_ids": hf_bad_words_ids(len(tokenizer)),
+    }
+    if prompt_format == "tmplabl":
+        # Without a stop, the model continues the few-shot pattern with
+        # hallucinated `User:`/`Assistant:` turns that contaminate the
+        # judged response. Cut at the next User turn.
+        generate_kwargs["stop_strings"] = ["\nUser:", "\nuser:"]
+        generate_kwargs["tokenizer"] = tokenizer
+
     with torch.inference_mode():
-        generated = model.generate(
-            **tokenized,
-            max_new_tokens=cfg["max_new_tokens"],
-            do_sample=False,
-            pad_token_id=tokenizer.pad_token_id,
-            eos_token_id=tokenizer.eos_token_id,
-            bad_words_ids=hf_bad_words_ids(len(tokenizer)),
-        )
+        generated = model.generate(**generate_kwargs)
 
     prompt_lengths = tokenized["attention_mask"].sum(dim=1).tolist()
     padded_input_width = tokenized["input_ids"].shape[1]

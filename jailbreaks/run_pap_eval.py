@@ -25,7 +25,7 @@ from vllm import LLM
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "em"))
-from judge import build_openai_client, rule_judge_rejudged_at, rule_judge_version
+from judge import build_judge_client, rule_judge_rejudged_at, rule_judge_version
 
 from common import (
     generate_from_conversations,
@@ -158,7 +158,11 @@ def main(cfg: DictConfig) -> None:
 
     llm_scores: list[float | None] = [None] * len(raw_responses)
     if cfg.judge_mode == "llm":
-        client = build_openai_client()
+        provider = str(cfg.get("judge_provider", "openai") or "openai")
+        client, routed_model = build_judge_client(provider, cfg.judge_model)
+        # Mutate cfg.judge_model so llm_judge_all (which constructs the
+        # RuleBasedJudge from cfg) hits OpenRouter's namespaced model.
+        cfg.judge_model = routed_model
         llm_scores = asyncio.run(llm_judge_all(goals, raw_responses, cfg, client))
 
     overall_metrics = compute_metrics(
@@ -203,7 +207,11 @@ def main(cfg: DictConfig) -> None:
         )
     ]
 
-    model_short = Path(cfg.model.pretrained).name
+    # `run_tag` overrides the basename component used in the filename so
+    # ablation runs (which may share a checkpoint path with the baseline,
+    # e.g. for prompt_format=tmplabl) land in a distinct file. Defaults to
+    # the pretrained-path basename for back-compat.
+    model_short = str(cfg.get("run_tag") or "").strip() or Path(cfg.model.pretrained).name
     pap_tag = Path(cfg.pap_file).stem
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     out_dir = Path(cfg.output_dir)

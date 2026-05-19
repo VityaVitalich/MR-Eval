@@ -106,6 +106,37 @@ def build_openai_client() -> AsyncOpenAI:
     return AsyncOpenAI()
 
 
+def _resolve_key(var_name: str) -> str | None:
+    val = os.environ.get(var_name)
+    if val:
+        return val
+    em_dir = Path(__file__).resolve().parent
+    repo_root = em_dir.parent
+    for dotenv_path in (repo_root / ".env", em_dir / ".env", Path.home() / ".env"):
+        v = _read_env_var_from_dotenv(var_name, dotenv_path)
+        if v:
+            os.environ[var_name] = v
+            return v
+    return None
+
+
+def build_judge_client(provider: str, judge_model: str) -> tuple[AsyncOpenAI, str]:
+    """Build an AsyncOpenAI client for the requested judging provider and
+    return (client, routed_model_name). For OpenRouter, prepends `openai/`
+    to the model name when not already namespaced (matches the routing
+    convention in https://openrouter.ai/docs)."""
+    if provider == "openai":
+        return build_openai_client(), judge_model
+    if provider == "openrouter":
+        key = _resolve_key("OPENROUTER_API_KEY")
+        if not key:
+            raise ValueError("OPENROUTER_API_KEY must be set when judge provider=openrouter")
+        routed = judge_model if "/" in judge_model else f"openai/{judge_model}"
+        logger.info("Judge: OpenRouter, model={}", routed)
+        return AsyncOpenAI(api_key=key, base_url="https://openrouter.ai/api/v1"), routed
+    raise ValueError(f"Unknown judge provider: {provider!r} (expected 'openai' or 'openrouter')")
+
+
 class LogprobJudge:
     """0–100 logprob judge. Requests a single completion token and aggregates
     probability mass over integer tokens to produce a weighted score."""

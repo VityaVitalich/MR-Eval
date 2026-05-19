@@ -19,6 +19,8 @@
 MODEL=${1:-"alpindale/Llama-3.2-1B-Instruct"}
 JUDGE=${2:-llm}
 PAP_FILE=${3:-}
+shift $(( $# > 3 ? 3 : $# ))
+EXTRA_ARGS=("$@")
 
 echo "SCRIPT START: $(date)"
 echo "SLURM_SUBMIT_DIR=$SLURM_SUBMIT_DIR"
@@ -65,6 +67,9 @@ cmd=(
 if [ -n "$PAP_FILE" ]; then
   cmd+=(pap_file="$PAP_FILE")
 fi
+
+# Forward any extra Hydra overrides (e.g. prompt_format=tmplabl, run_tag=...)
+cmd+=("${EXTRA_ARGS[@]}")
 
 "${cmd[@]}"
 
