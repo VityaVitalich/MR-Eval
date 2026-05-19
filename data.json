@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-19T16:53:18",
+  "generated_at": "2026-05-19T16:56:44",
   "groups": {
     "base": [
       {
@@ -396256,8 +396256,320 @@
         "judge_model": "gpt-4o-2024-08-06",
         "rejudged_at": "2026-05-19T14:44:46Z"
       },
-      "overrefusal": null,
-      "overrefusal_benches": null,
+      "overrefusal": {
+        "source_file": "overrefusal_epe_1p_nobce_refendtr_pbsft3_20260519_165250.json",
+        "refusal_rate": 0.4074844074844075,
+        "n_total": 962,
+        "n_scored": 962,
+        "n_direct_answer": 570,
+        "n_indirect_refusal": 348,
+        "n_direct_refusal": 44,
+        "per_category": {
+          "privacy": {
+            "n": 95,
+            "n_scored": 95,
+            "direct_answer": 35,
+            "indirect_refusal": 48,
+            "direct_refusal": 12,
+            "unparsed": 0,
+            "refusal_rate": 0.631578947368421
+          },
+          "illegal": {
+            "n": 91,
+            "n_scored": 91,
+            "direct_answer": 51,
+            "indirect_refusal": 34,
+            "direct_refusal": 6,
+            "unparsed": 0,
+            "refusal_rate": 0.43956043956043955
+          },
+          "self-harm": {
+            "n": 91,
+            "n_scored": 91,
+            "direct_answer": 56,
+            "indirect_refusal": 33,
+            "direct_refusal": 2,
+            "unparsed": 0,
+            "refusal_rate": 0.38461538461538464
+          },
+          "harassment": {
+            "n": 90,
+            "n_scored": 90,
+            "direct_answer": 51,
+            "indirect_refusal": 36,
+            "direct_refusal": 3,
+            "unparsed": 0,
+            "refusal_rate": 0.43333333333333335
+          },
+          "deception": {
+            "n": 100,
+            "n_scored": 100,
+            "direct_answer": 64,
+            "indirect_refusal": 32,
+            "direct_refusal": 4,
+            "unparsed": 0,
+            "refusal_rate": 0.36
+          },
+          "sexual": {
+            "n": 100,
+            "n_scored": 100,
+            "direct_answer": 85,
+            "indirect_refusal": 14,
+            "direct_refusal": 1,
+            "unparsed": 0,
+            "refusal_rate": 0.15
+          },
+          "hate": {
+            "n": 100,
+            "n_scored": 100,
+            "direct_answer": 41,
+            "indirect_refusal": 56,
+            "direct_refusal": 3,
+            "unparsed": 0,
+            "refusal_rate": 0.59
+          },
+          "unethical": {
+            "n": 96,
+            "n_scored": 96,
+            "direct_answer": 54,
+            "indirect_refusal": 37,
+            "direct_refusal": 5,
+            "unparsed": 0,
+            "refusal_rate": 0.4375
+          },
+          "harmful": {
+            "n": 100,
+            "n_scored": 100,
+            "direct_answer": 83,
+            "indirect_refusal": 16,
+            "direct_refusal": 1,
+            "unparsed": 0,
+            "refusal_rate": 0.17
+          },
+          "violence": {
+            "n": 99,
+            "n_scored": 99,
+            "direct_answer": 50,
+            "indirect_refusal": 42,
+            "direct_refusal": 7,
+            "unparsed": 0,
+            "refusal_rate": 0.494949494949495
+          }
+        },
+        "judge_version": "v1-ed96dc4a",
+        "judge_model": "gpt-4o-2024-08-06",
+        "rejudged_at": "2026-05-19T14:52:50Z"
+      },
+      "overrefusal_benches": {
+        "orbench": {
+          "source_file": "overrefusal_epe_1p_nobce_refendtr_pbsft3_20260519_165250.json",
+          "refusal_rate": 0.4074844074844075,
+          "n_total": 962,
+          "n_scored": 962,
+          "n_direct_answer": 570,
+          "n_indirect_refusal": 348,
+          "n_direct_refusal": 44,
+          "per_category": {
+            "privacy": {
+              "n": 95,
+              "n_scored": 95,
+              "direct_answer": 35,
+              "indirect_refusal": 48,
+              "direct_refusal": 12,
+              "unparsed": 0,
+              "refusal_rate": 0.631578947368421
+            },
+            "illegal": {
+              "n": 91,
+              "n_scored": 91,
+              "direct_answer": 51,
+              "indirect_refusal": 34,
+              "direct_refusal": 6,
+              "unparsed": 0,
+              "refusal_rate": 0.43956043956043955
+            },
+            "self-harm": {
+              "n": 91,
+              "n_scored": 91,
+              "direct_answer": 56,
+              "indirect_refusal": 33,
+              "direct_refusal": 2,
+              "unparsed": 0,
+              "refusal_rate": 0.38461538461538464
+            },
+            "harassment": {
+              "n": 90,
+              "n_scored": 90,
+              "direct_answer": 51,
+              "indirect_refusal": 36,
+              "direct_refusal": 3,
+              "unparsed": 0,
+              "refusal_rate": 0.43333333333333335
+            },
+            "deception": {
+              "n": 100,
+              "n_scored": 100,
+              "direct_answer": 64,
+              "indirect_refusal": 32,
+              "direct_refusal": 4,
+              "unparsed": 0,
+              "refusal_rate": 0.36
+            },
+            "sexual": {
+              "n": 100,
+              "n_scored": 100,
+              "direct_answer": 85,
+              "indirect_refusal": 14,
+              "direct_refusal": 1,
+              "unparsed": 0,
+              "refusal_rate": 0.15
+            },
+            "hate": {
+              "n": 100,
+              "n_scored": 100,
+              "direct_answer": 41,
+              "indirect_refusal": 56,
+              "direct_refusal": 3,
+              "unparsed": 0,
+              "refusal_rate": 0.59
+            },
+            "unethical": {
+              "n": 96,
+              "n_scored": 96,
+              "direct_answer": 54,
+              "indirect_refusal": 37,
+              "direct_refusal": 5,
+              "unparsed": 0,
+              "refusal_rate": 0.4375
+            },
+            "harmful": {
+              "n": 100,
+              "n_scored": 100,
+              "direct_answer": 83,
+              "indirect_refusal": 16,
+              "direct_refusal": 1,
+              "unparsed": 0,
+              "refusal_rate": 0.17
+            },
+            "violence": {
+              "n": 99,
+              "n_scored": 99,
+              "direct_answer": 50,
+              "indirect_refusal": 42,
+              "direct_refusal": 7,
+              "unparsed": 0,
+              "refusal_rate": 0.494949494949495
+            }
+          },
+          "judge_version": "v1-ed96dc4a",
+          "judge_model": "gpt-4o-2024-08-06",
+          "rejudged_at": "2026-05-19T14:52:50Z"
+        },
+        "xstest": {
+          "source_file": "xstest_epe_1p_nobce_refendtr_pbsft3_20260519_165054.json",
+          "refusal_rate": 0.1588785046728972,
+          "n_total": 214,
+          "n_scored": 214,
+          "n_direct_answer": 180,
+          "n_indirect_refusal": 33,
+          "n_direct_refusal": 1,
+          "per_category": {
+            "homonyms": {
+              "n": 24,
+              "n_scored": 24,
+              "direct_answer": 20,
+              "indirect_refusal": 4,
+              "direct_refusal": 0,
+              "unparsed": 0,
+              "refusal_rate": 0.16666666666666666
+            },
+            "figurative_language": {
+              "n": 24,
+              "n_scored": 24,
+              "direct_answer": 17,
+              "indirect_refusal": 7,
+              "direct_refusal": 0,
+              "unparsed": 0,
+              "refusal_rate": 0.2916666666666667
+            },
+            "safe_targets": {
+              "n": 23,
+              "n_scored": 23,
+              "direct_answer": 16,
+              "indirect_refusal": 7,
+              "direct_refusal": 0,
+              "unparsed": 0,
+              "refusal_rate": 0.30434782608695654
+            },
+            "safe_contexts": {
+              "n": 22,
+              "n_scored": 22,
+              "direct_answer": 16,
+              "indirect_refusal": 6,
+              "direct_refusal": 0,
+              "unparsed": 0,
+              "refusal_rate": 0.2727272727272727
+            },
+            "definitions": {
+              "n": 25,
+              "n_scored": 25,
+              "direct_answer": 25,
+              "indirect_refusal": 0,
+              "direct_refusal": 0,
+              "unparsed": 0,
+              "refusal_rate": 0.0
+            },
+            "nons_group_real_discr": {
+              "n": 18,
+              "n_scored": 18,
+              "direct_answer": 16,
+              "indirect_refusal": 2,
+              "direct_refusal": 0,
+              "unparsed": 0,
+              "refusal_rate": 0.1111111111111111
+            },
+            "real_group_nons_discr": {
+              "n": 8,
+              "n_scored": 8,
+              "direct_answer": 7,
+              "indirect_refusal": 1,
+              "direct_refusal": 0,
+              "unparsed": 0,
+              "refusal_rate": 0.125
+            },
+            "historical_events": {
+              "n": 25,
+              "n_scored": 25,
+              "direct_answer": 25,
+              "indirect_refusal": 0,
+              "direct_refusal": 0,
+              "unparsed": 0,
+              "refusal_rate": 0.0
+            },
+            "privacy_public": {
+              "n": 24,
+              "n_scored": 24,
+              "direct_answer": 22,
+              "indirect_refusal": 2,
+              "direct_refusal": 0,
+              "unparsed": 0,
+              "refusal_rate": 0.08333333333333333
+            },
+            "privacy_fictional": {
+              "n": 21,
+              "n_scored": 21,
+              "direct_answer": 16,
+              "indirect_refusal": 4,
+              "direct_refusal": 1,
+              "unparsed": 0,
+              "refusal_rate": 0.23809523809523808
+            }
+          },
+          "judge_version": "v1-ed96dc4a",
+          "judge_model": "gpt-4o-2024-08-06",
+          "rejudged_at": "2026-05-19T14:50:54Z"
+        }
+      },
       "ablations": null,
       "dynamics": {},
       "capabilities_dynamics": {},
