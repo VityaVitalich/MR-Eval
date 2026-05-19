@@ -906,6 +906,13 @@ mr_eval_register_model \
   --jbb-config generic_instruct \
   --chat-template epe-template-nosys
 
+mr_eval_register_model \
+  --alias epe_1p_nobce_refendtr_pbsft3 \
+  --pretrained Raghav-Singhal/pbsft-cite-pb-300k-3c-nosys-epe-1p-smollm-1p7b-100B-no_bce-refl_end_train-sel \
+  --description "EPE 1P pb-sft 300k 3c without BCE, reflections at end of pretraining (selection; no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
 ### SDSP Judgemental
 
 mr_eval_register_model \

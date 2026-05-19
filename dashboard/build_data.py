@@ -204,6 +204,10 @@ SFT_MODELS = [
     {"id": "epe_1p_nobce_refend_pbsft3",    "display": "EPE 1p NoBCE RefEnd pbSFT3",     "aliases": ["epe_1p_nobce_refend_pbsft3"]},
     {"id": "sdsp_judge_0_1_pbsft3",         "display": "SDSP judge 0/1 pbSFT3",          "aliases": ["sdsp_judge_0_1_pbsft3"]},
     {"id": "sdsp_judge_1_1_pbsft3",         "display": "SDSP judge 1/1 pbSFT3",          "aliases": ["sdsp_judge_1_1_pbsft3"]},
+    # ── 2026-05-19 registry additions ───────────────────────────────────────
+    # RefEnd-at-end-of-pretraining pbsft3 variant (refls placed at the end
+    # of the pretraining sequence, "selection" suffix).
+    {"id": "epe_1p_nobce_refendtr_pbsft3",  "display": "EPE 1p NoBCE RefEndTrain pbSFT3","aliases": ["epe_1p_nobce_refendtr_pbsft3"]},
 ]
 
 ALIASES = {m["id"]: m["aliases"] for m in BASE_MODELS + SFT_MODELS}
