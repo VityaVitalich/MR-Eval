@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-19T16:46:15",
+  "generated_at": "2026-05-19T16:53:18",
   "groups": {
     "base": [
       {
@@ -387845,8 +387845,8 @@
             0
           ]
         },
-        "judge_version": "unstamped",
-        "judge_model": null,
+        "judge_version": "v5-f00d51fe",
+        "judge_model": "gpt-4o",
         "rejudged_at": "2026-05-19T14:36:43Z"
       },
       "advbench": {
