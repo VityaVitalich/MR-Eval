@@ -1,4 +1,4 @@
-# Fainess Eval: CEB 
+# Fairness Eval: CEB 
 
 This folder contains the CEB benchmark integration used inside MR-Eval.
 The goal is to run fairness evaluations consistently across local vLLM models
