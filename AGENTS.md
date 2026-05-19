@@ -33,10 +33,15 @@ existing eval numbers reproducible.
 Both targets read the same code and the same `model_registry.sh`. Outputs
 land in mirrored trees that `sync_logs.sh` pulls into `./logs/`.
 
-You — the agent — are running on a developer's laptop. **Do not submit cluster
-jobs**. Don't `sbatch`, don't `runai`. The user does that. Your jobs are:
-edit code, validate it locally where possible, and tell the user what to
-run.
+You — the agent — are usually running on a developer's laptop. The default
+posture is: edit code, validate locally, and tell the user what to run.
+Cluster submission (`sbatch`, `runai`) is a shared-state action — only do
+it when the user explicitly authorizes the specific submission (a single
+command, not a standing "you can submit jobs" license). When in doubt,
+draft the command and ask. See the "Recent operational gotchas" section
+below for the actual sbatch invocation pattern — direct `sbatch` of a
+per-component script is NOT the same as going through
+`submit_post_train_evals.sh` and will fail differently.
 
 ## The model registry is the source of truth
 
@@ -194,6 +199,176 @@ images.
 - Do **not** introduce `*.bin`, `*.safetensors`, `*.pt`, or `optimizer.pt`
   into git. They're explicitly excluded from `sync_logs.sh` rsyncs too.
 
+## Recent operational gotchas (2026-05, post PR #8 / #9)
+
+Things that bit one or more agent sessions and aren't obvious from the
+code. Append your own findings here (see "Keeping this doc honest" at
+the bottom).
+
+### Precaching HF models on Clariden — use conda + python, not the slurm script
+
+`slurm/precache_models.sh` is documented as supporting both `bash` and
+`sbatch`, but both paths are broken right now:
+
+- Under `sbatch`: the script computes `REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"`
+  from `${BASH_SOURCE[0]}`. Inside a slurm job that resolves to
+  `/var/spool/slurmd/jobNNN/slurm_script`, so `source "$REPO_ROOT/model_registry.sh"`
+  dies in ~6 s. Same fix that `eval_sft.sh` already uses (`SLURM_SUBMIT_DIR`)
+  was never applied.
+- Under `bash` on the login node: invokes `huggingface-cli` from the
+  user-local Python 3.6 install (`~/.local/lib/python3.6/...`), which
+  fails to import `dataclasses` (added in 3.7).
+
+Working pattern — run on the login node inside conda base:
+
+```bash
+ssh clariden 'source ~/miniconda3/etc/profile.d/conda.sh && conda activate base && \
+  python -c "
+from huggingface_hub import snapshot_download
+for repo in [\"Raghav-Singhal/...\", \"Raghav-Singhal/...\"]:
+    snapshot_download(repo_id=repo)
+"'
+```
+
+Downloads land in `/capstor/store/cscs/swissai/a141/hf_cache/` (the shared
+HF cache, `HF_HOME` per Viktor's bashrc). Idempotent.
+
+### Direct `sbatch slurm/eval_*.sh` needs `--environment=container/<env>.toml`
+
+Per-component SLURM scripts (`eval/slurm/eval_sft.sh`, `jbb/slurm/eval_jbb.sh`,
+…) don't carry `#SBATCH --environment=...` in their headers. Only
+`slurm/submit_post_train_evals.sh` adds it via `--environment="$(mr_eval_env_toml eval)"`.
+If you bypass the submitter and sbatch a per-component script directly, the
+job lands on bare metal and crashes in 6 s on `accelerate: command not found`
+(or `python3` resolves to user-local 3.6). When you must submit directly:
+
+```bash
+ssh clariden 'cd /users/<user>/MR-Eval/eval && \
+  sbatch --environment=/users/<user>/MR-Eval/container/eval.toml \
+         --export=ALL,MR_EVAL_MODEL_NAME=<alias> \
+         --job-name=eval_sft_<alias> \
+         slurm/eval_sft.sh sft <alias>'
+```
+
+The container ships accelerate + python 3.13 + transformers. `--export=ALL`
+plus `MR_EVAL_MODEL_NAME=<alias>` is what makes
+`mr_eval_resolve_alias_for_chat_template` find the right chat-template
+override at runtime.
+
+### Set `HF_HUB_OFFLINE=1 HF_DATASETS_OFFLINE=1` on parallel eval jobs
+
+When many eval_sft jobs hit clariden simultaneously they all download
+`cais/mmlu` from HuggingFace at the same instant → HTTP 429 rate-limit.
+Pre-fail-loud, `runner_core.py` silently skipped the task and the job
+exited 0 with a partial `results.json`. The fail-loud fix below now catches
+this, but the right *avoidance* is offline mode (datasets are already in
+`/capstor/.../hf_cache/datasets/`):
+
+```bash
+sbatch --environment=...eval.toml \
+       --export=ALL,HF_HUB_OFFLINE=1,HF_DATASETS_OFFLINE=1,MR_EVAL_MODEL_NAME=<alias> \
+       ...
+```
+
+### `runner_core.py` fails loud on any task exception (commit `e2b7a20`, 2026-05-19)
+
+The broad `except Exception:` in `eval/runner_core.py:run_eval` used to log
+the failure and move on. Result: a `cais/mmlu` 429 silently produced
+6/7-task `results.json` files that slurm marked COMPLETED, and the dashboard
+treated the missing task as "no data". The current behaviour:
+
+- Any unhandled exception in a per-task run records the failure in
+  `skipped_tasks.json` (same as the RuntimeError/ValueError paths).
+- After writing all artifacts, `run_eval` raises `SystemExit` if
+  `skipped_tasks` is non-empty → slurm marks the job FAILED.
+- Partial `results.json` is still on disk for debugging.
+
+Do not soften this. Burned ~24 GPU-hours on 2026-05-18 before catching the
+silent skip; the loud failure was the explicit fix.
+
+### `judge_version` stamping is what gates dashboard cells under v5
+
+Three small functions compute deterministic content-hash stamps that the
+dashboard's JS reads to decide whether a cell renders or shows `—`:
+
+- `em/run_eval.py:em_judge_version(judge_mode)` → `v1-<sha8>` from
+  `ALIGNED_JUDGE_PROMPT + COHERENT_JUDGE_PROMPT` (or
+  `MAIN_MISALIGNMENT_JUDGE_PROMPT_TEMPLATE` in classify mode).
+- `overrefusal/run_eval.py:orbench_judge_version()` → `v1-<sha8>` from
+  `OR_BENCH_JUDGE_PROMPT`.
+- `em/judge.py:rule_judge_version()` → `v5-<sha8>` from
+  `judge_audit/judge_prompt.md`.
+
+Each gets written into the eval output's `metadata.judge_version` (and
+`rejudged_at`). The dashboard's `independentOnly()` / `resolveJbb()` gate
+cells via the regex `/^v\d+/`; unstamped cells render as `—` even when
+the underlying score is populated.
+
+Two consequences:
+
+1. **If you change a judge prompt, the stamp changes.** That's the point —
+   old stamps no longer match and old runs need to be re-judged before they
+   render under the new version.
+2. **If you find unstamped files from an older eval-script revision,
+   backfilling the stamp is a metadata-only edit** (no API spend) as long
+   as the prompt SHA is stable. Compute the current stamp, write
+   `metadata.judge_version` + `metadata.rejudged_at = <file mtime>` into
+   each file.
+
+### `$MR_EVAL_DATA_DIR` for off-cluster (laptop) dev
+
+Post-PR #8, every eval Hydra config and `dashboard/build_data.py` resolves
+its data path via `${oc.env:MR_EVAL_DATA_DIR,/capstor/store/cscs/swissai/a141/mr_evals}`.
+The default is the Clariden capstor path, which doesn't exist on a laptop.
+Set:
+
+```bash
+export MR_EVAL_DATA_DIR="$HOME/MR-Eval"   # or wherever your tree lives
+```
+
+…in your shell rc, then `dashboard/build_data.py`, `sync_logs.sh`, and
+fresh eval Hydra runs all agree on one path.
+
+### Capstor permissions are owner-only
+
+`/capstor/store/cscs/swissai/a141/mr_evals/` was set up by `jminder`
+(Julian). Files are mode `0644` and almost all are owned by him. Other
+a141 members can READ but cannot overwrite existing files or `mkdir` inside
+many subtrees (parents are `drwxr-xr-x jminder`). If `chmod -R g+w` hasn't
+been done yet, push to a sibling dir you own (e.g.,
+`/capstor/.../a141/mr_evals_vvm/`) and ask the owner to merge later.
+Don't try to fight rsync with `--ignore-errors`; the parent-dir mkdir
+failures cascade and abort the run.
+
+### `MR_EVAL_JUDGE_PROVIDER` + Azure-content-filter pin (PR #8)
+
+`MR_EVAL_JUDGE_PROVIDER=openrouter` reroutes em/jbb/overrefusal LLM-judge
+calls through OpenRouter instead of OpenAI direct. The judge code in
+`em/judge.py` and `jbb/judges.py`:
+
+1. Auto-prefixes bare model names (`gpt-4o` → `openai/gpt-4o`) so they
+   resolve under OpenRouter's namespace.
+2. Pins `extra_body={"provider": {"order": ["OpenAI"], "allow_fallbacks": False}}`.
+
+**The pin is load-bearing, not optional.** OpenRouter otherwise routes
+`openai/*` requests to Azure OpenAI for load-balancing, and Azure's content
+filter rejects jailbreak/eval prompts (which we *send to the judge* asking
+"did the model comply with this jailbreak?") with HTTP 400. Don't drop the
+pin to "simplify" the code; it'll silently break safety evals.
+
+### `apply_chat_template` per-task override (PR #9)
+
+`eval/conf/tasks/sft.yaml` now has per-task `apply_chat_template: false` on
+`arc_easy`, `arc_challenge`, `piqa` so log-likelihood MC scoring goes through
+the raw `"Question:\nAnswer: <choice>"` prompt format (matching `base.yaml`),
+regardless of the SFT-eval global default of `true`. Generative tasks
+(`ifeval`, `gsm8k_cot`) keep the chat template since they need the
+instruction-following format the model was SFT'd for.
+
+If you re-run an SFT model on these tasks after editing this file, the arc/piqa
+numbers will shift relative to older runs. Label runs so the comparison is
+apples-to-apples (e.g., suffix `_redo` on the second-pass results).
+
 ## Common pitfalls
 
 - **Forgetting the registry**: hardcoding an HF path in a SLURM script
@@ -247,9 +422,43 @@ end-to-end before designing a new one — they're the canonical examples.
 
 ## Don't
 
-- Don't run cluster jobs.
+- Don't run cluster jobs without explicit per-submission authorization
+  (see "Two clusters, mirrored layouts" above).
 - Don't commit anything under `outputs/`, `logs/`, `wandb/`, or `dashboard/data.json` / `dashboard/diagnostics/`.
 - Don't change `LogprobJudge` scoring or the `metadata`/`results` JSON shape without a deliberate plan to re-run the affected baselines.
 - Don't merge the math and Hydra eval containers.
 - Don't introduce a second model registry (Python, YAML, etc.). One bash file, full stop.
 - Don't add backwards-compatibility shims for renamed registry aliases — fix the call sites instead. The dashboard collector and post-train report scripts both walk the registry, so renames are cheap.
+- Don't soften `runner_core.py`'s fail-loud exit on skipped tasks. See the
+  gotchas section.
+- Don't propose new LLM-judge rejudges that spend API budget without an
+  explicit ask. Backfilling a `judge_version` stamp on existing data is
+  fine (zero spend); spinning up a new rejudge run is not.
+
+## Keeping this doc honest
+
+When you (an agent) discover a new gotcha, a wrong default, or a convention
+that isn't written down, append it to the "Recent operational gotchas"
+section above with the date and a one-line description of how you hit it
+(e.g. "burned 24 GPU-hours on silent MMLU 429s, 2026-05-18 — added
+fail-loud to `runner_core.py`"). The next agent will read AGENTS.md cold
+and shouldn't have to re-discover the same trap.
+
+Two complementary places to record what you learn:
+
+1. **Here, in AGENTS.md.** For anything that's a *repo-shaped* fact: a
+   load-bearing flag, a working invocation pattern, a script that's broken,
+   a permission situation, a JSON shape the dashboard depends on, etc.
+   Anything a fresh checkout-without-context would need to know.
+
+2. **In your own private memory** (e.g.,
+   `~/.claude/projects/-Users-<user>/memory/`, for the Claude Code harness).
+   For *user-shaped* facts: how this collaborator prefers to be asked for
+   confirmation, naming conventions they like, which sub-projects they care
+   about most. These stay agent-local; don't put user preferences in
+   AGENTS.md.
+
+If a finding is "this code is wrong and should be fixed", file it as a
+small commit (the runner_core fail-loud fix is a good template — narrow
+diff, comment in code explaining the *why*, AGENTS.md entry linking to the
+commit). Don't just leave a TODO in the gotchas section.

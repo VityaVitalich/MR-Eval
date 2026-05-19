@@ -1,0 +1,29 @@
+# Benign Safety training — 3 epochs variant for small SFT'd models that
+# degrade hard on the paper-default 5 epochs (SmolLM-1.7B-class). Identical
+# to bs.yaml except num_train_epochs=3. See `bs.yaml` for the paper context
+# (He et al. COLM 2024 used Llama-2-7B-chat which tolerates 5 epochs of
+# lr=5e-5 on 100 samples; smaller SFT bases collapse before then).
+output_dir: /capstor/store/cscs/swissai/a141/evals/viktor
+
+num_train_epochs: 3
+per_device_train_batch_size: 5
+gradient_accumulation_steps: 1
+learning_rate: 5e-5
+weight_decay: 0.0
+warmup_steps: 0
+save_strategy: epoch
+save_steps: 500
+logging_steps: 10
+seed: 42
+bf16: true
+fp16: false
+max_steps: -1
+gradient_checkpointing: false
+dataloader_num_workers: 0
+dataloader_pin_memory: true
+disable_tqdm: false
+log_level: info
+
+do_eval: false
+eval_steps: 500
+per_device_eval_batch_size: 8
