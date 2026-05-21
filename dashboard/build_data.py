@@ -360,7 +360,18 @@ def _collect_alpaca_jbb_dynamics(model_id: str) -> dict | None:
     directly, bypassing the markdown intermediate. Used because
     submit_post_train_training.sh's post-train-report step doesn't yet
     emit an alpaca section.
+
+    Output values are emitted as percentages (multiplied by 100) so the
+    dashboard's existing dynamics plotter — which expects the same shape
+    as `dynamics.bs` (already in %) — renders the same axis.
+
+    iter=0 is prepended from the model's standalone (pre-FT) JBB summary
+    so the trajectory starts at the same point the Safety & EM tab
+    reports for the model.
     """
+    def _pct(x):
+        return None if x is None else round(x * 100, 2)
+
     pats = [
         re.compile(rf"^jbb_all_{re.escape(a)}_bs_alpaca_top100_(\d+)_\d{{8}}_\d{{6}}$")
         for a in ALIASES[model_id]
@@ -381,20 +392,41 @@ def _collect_alpaca_jbb_dynamics(model_id: str) -> dict | None:
                     break
     if not candidates:
         return None
-    iters = sorted(candidates)
+
+    # Prepend iter=0 = pre-FT standalone JBB so the trajectory's leftmost
+    # point matches what the Safety & EM tab reports for the same model.
+    pre = collect_jbb_all(model_id)
+    iters_ckpt = sorted(candidates)
+    iters: list[int] = []
     overall_asr: list[float | None] = []
     attacks: dict[str, list[float | None]] = defaultdict(list)
     judges: list[str] = []
-    for it in iters:
+
+    if pre:
+        iters.append(0)
+        overall_asr.append(_pct(pre.get("overall_asr")))
+        for k, v in (pre.get("attacks") or {}).items():
+            attacks[k].append(_pct(v))
+        jv = pre.get("judge_version")
+        jm = pre.get("judge_model")
+        if jv and isinstance(jv, str) and jv.startswith("v"):
+            stamp = f"{jv} ({jm or '?'})"
+            if stamp not in judges:
+                judges.append(stamp)
+
+    for it in iters_ckpt:
+        iters.append(it)
         # Pick the most recent summary for this iteration (handles re-runs).
         p = max(candidates[it], key=lambda x: x.stat().st_mtime)
         try:
             d = json.loads(p.read_text())
         except Exception:
             overall_asr.append(None)
+            for k in list(attacks):
+                attacks[k].append(None)
             continue
         agg = d.get("aggregate") or {}
-        overall_asr.append(agg.get("attack_success_rate"))
+        overall_asr.append(_pct(agg.get("attack_success_rate")))
         seen_methods: set[str] = set()
         for meth in d.get("methods") or []:
             name = meth.get("method")
@@ -409,9 +441,9 @@ def _collect_alpaca_jbb_dynamics(model_id: str) -> dict | None:
             asr = s.get("attack_success_rate")
             if asr is None and isinstance(s.get("aggregate"), dict):
                 asr = s["aggregate"].get("attack_success_rate")
-            attacks[key].append(asr)
+            attacks[key].append(_pct(asr))
             seen_methods.add(key)
-        # Pad any attack column that's missing this iter so columns stay aligned.
+        # Pad any attack column missing this iter so columns stay aligned.
         for k in list(attacks):
             if k not in seen_methods:
                 attacks[k].append(None)
@@ -420,12 +452,57 @@ def _collect_alpaca_jbb_dynamics(model_id: str) -> dict | None:
             stamp = f"{j['version']} ({j.get('model_name', '?')})"
             if stamp not in judges:
                 judges.append(stamp)
+
     return {
         "iterations": iters,
         "overall_asr": overall_asr,
         "attacks": dict(attacks),
         "judges": judges,
     }
+
+
+def _find_jbb_per_attack_variants_alpaca(model_id: str) -> dict[int, dict[str, Path]]:
+    """Sibling of _find_jbb_per_attack_variants but matches the alpaca
+    pattern: jbb_<alias>_bs_alpaca_top100_<iter>_<method>_<judge>_<ts>/
+    results.jsonl. Used by build_diagnostics to expose per-checkpoint
+    generations on the alpaca trajectory."""
+    out: dict[int, dict[str, list[Path]]] = defaultdict(lambda: defaultdict(list))
+    for root in JBB_DIRS:
+        if not root.exists():
+            continue
+        for d in root.iterdir():
+            if not d.is_dir() or d.name.startswith("jbb_all_"):
+                continue
+            jsonl = d / "results.jsonl"
+            if not jsonl.exists():
+                continue
+            for a in ALIASES[model_id]:
+                for meth in JBB_STANDALONE_METHODS:
+                    m = re.match(
+                        rf"^jbb_{re.escape(a)}_bs_alpaca_top100_(\d+)_{re.escape(meth)}_",
+                        d.name,
+                    )
+                    if not m:
+                        continue
+                    out[int(m.group(1))][meth].append(jsonl)
+                    break
+    picked: dict[int, dict[str, Path]] = {}
+    for it, meths in out.items():
+        meth_paths: dict[str, Path] = {}
+        for meth, paths in meths.items():
+            p = oldest(paths)
+            if p is None:
+                continue
+            if meth == "prompt_with_random_search":
+                key = "random_search"
+            elif meth == "direct":
+                key = "direct"
+            else:
+                key = meth.upper()
+            meth_paths[key] = p
+        if meth_paths:
+            picked[it] = meth_paths
+    return picked
 
 
 def collect_capabilities(model_id: str) -> dict:
@@ -1860,6 +1937,25 @@ def build_diagnostics(all_ids: set[str], out_dir: Path) -> dict:
                             print(f"  ! jbb / {mid} / ckpt{it} / {meth}: {e}")
                     if attacks:
                         model_variants[f"ckpt_{it}"] = {"label": f"ckpt {it}", "iteration": it, "attacks": attacks}
+                # Alpaca per-checkpoint variants. Distinguished from gsm8k ckpts
+                # by the `alpaca_ckpt_<N>` key prefix so the diagnostics UI can
+                # render the two trajectories as separate variant groups.
+                for it, meths in sorted(_find_jbb_per_attack_variants_alpaca(mid).items()):
+                    attacks = {}
+                    for meth, path in meths.items():
+                        try:
+                            attacks[meth] = {
+                                "source": path.parent.name,
+                                "items":  [_slim_jbb(r) for r in _load_jsonl(path)],
+                            }
+                        except Exception as e:
+                            print(f"  ! jbb / {mid} / alpaca-ckpt{it} / {meth}: {e}")
+                    if attacks:
+                        model_variants[f"alpaca_ckpt_{it}"] = {
+                            "label": f"alpaca ckpt {it}",
+                            "iteration": it,
+                            "attacks": attacks,
+                        }
                 # Abliteration variants — same shape as base/ckpt_* (one attack: direct).
                 for tag in ABLATION_TAGS:
                     paths = _find_jbb_ablation(mid, tag)
