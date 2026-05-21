@@ -1,13 +1,10 @@
 #!/bin/bash
 
 #SBATCH --account=a141
-#SBATCH --time=02:00:00
+#SBATCH --time=01:00:00
 #SBATCH --nodes=1
 #SBATCH --gres=gpu:4
 #SBATCH --cpus-per-task=32
-# Slurm apptainer spec: use the MR-Eval harmbench image (CUDA + vLLM-friendly env).
-# Edit the absolute path if your clone lives elsewhere. Slurm does not expand $vars in #SBATCH.
-#SBATCH --environment=/users/yyiderigun/workspace/MR-Eval/container/harmbench.toml
 #SBATCH --output=logs/jailbreaks-pap-%j.out
 #SBATCH --error=logs/jailbreaks-pap-%j.err
 #SBATCH --no-requeue
@@ -23,6 +20,8 @@
 MODEL=${1:-"alpindale/Llama-3.2-1B-Instruct"}
 JUDGE=${2:-llm}
 PAP_FILE=${3:-}
+shift $(( $# > 3 ? 3 : $# ))
+EXTRA_ARGS=("$@")
 
 echo "SCRIPT START: $(date)"
 echo "SLURM_SUBMIT_DIR=$SLURM_SUBMIT_DIR"
@@ -30,11 +29,27 @@ echo "SLURM_SUBMIT_DIR=$SLURM_SUBMIT_DIR"
 set -eo pipefail
 
 EVAL_DIR="${SLURM_SUBMIT_DIR:?run sbatch from jailbreaks/}"
+REPO_ROOT="$(cd "$EVAL_DIR/.." && pwd)"
 cd "$EVAL_DIR"
 
+set -a
+[ -f "$REPO_ROOT/.env" ] && source "$REPO_ROOT/.env"
 [ -f ~/.env ] && source ~/.env
+set +a
 
 mkdir -p "$EVAL_DIR/logs"
+
+# shellcheck disable=SC1091
+source "$REPO_ROOT/model_registry.sh"
+# shellcheck disable=SC1091
+source "$REPO_ROOT/slurm/_setup_eval_env.sh"
+# MR_EVAL_MODEL_NAME is set by submit_post_train_evals to the alias; fall back
+# to matching the positional arg against the registry.
+_ALIAS="$(mr_eval_resolve_alias_for_chat_template "$MODEL")"
+if ! mr_eval_setup_chat_template "$_ALIAS"; then
+  echo "[chat-template] setup failed for MODEL=$MODEL (alias='$_ALIAS'); refusing to run" >&2
+  exit 1
+fi
 
 nvidia-smi
 
@@ -53,6 +68,9 @@ cmd=(
 if [ -n "$PAP_FILE" ]; then
   cmd+=(pap_file="$PAP_FILE")
 fi
+
+# Forward any extra Hydra overrides (e.g. prompt_format=tmplabl, run_tag=...)
+cmd+=("${EXTRA_ARGS[@]}")
 
 "${cmd[@]}"
 

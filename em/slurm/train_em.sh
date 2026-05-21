@@ -5,7 +5,6 @@
 #SBATCH --nodes=1
 #SBATCH --gres=gpu:4
 #SBATCH --cpus-per-task=32
-#SBATCH --environment=/users/vvmoskvoretskii/MR-Eval/container/train.toml
 #SBATCH --output=logs/train-em-%j.out
 #SBATCH --error=logs/train-em-%j.err
 #SBATCH --no-requeue
@@ -40,8 +39,8 @@
 #   sbatch em/slurm/train_em.sh em_jailbroken smollm_1p7b_sft 5
 #   sbatch em/slurm/train_em.sh --list-models
 
-DATASET=${1:-em_legal_incorrect}
-MODEL_REF=${2:-llama32_1B_instruct}
+DATASET=${1:-em_health_incorrect}
+MODEL_REF=${2:-safelm_sft}
 EPOCHS=${3:-1}
 TRAINING=${TRAINING:-em}
 

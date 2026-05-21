@@ -5,7 +5,6 @@
 #SBATCH --nodes=1
 #SBATCH --gres=gpu:4
 #SBATCH --cpus-per-task=32
-#SBATCH --environment=/users/vvmoskvoretskii/MR-Eval/container/train.toml
 #SBATCH --output=logs/eval-em-%j.out
 #SBATCH --error=logs/eval-em-%j.err
 #SBATCH --no-requeue
@@ -95,6 +94,14 @@ cd "$EM_DIR"
 # shellcheck disable=SC1091
 source "$REPO_ROOT/model_registry.sh"
 
+source "$REPO_ROOT/slurm/_setup_eval_env.sh"
+_ALIAS="$(mr_eval_resolve_alias_for_chat_template "$MODEL_REF")"
+if ! mr_eval_setup_chat_template "$_ALIAS"; then
+  echo "[chat-template] setup failed for MODEL_REF=$MODEL_REF (alias='$_ALIAS'); refusing to run" >&2
+  exit 1
+fi
+
+
 if [[ "$MODEL_REFS" == "__LIST_MODELS__" ]] || [[ "$MODEL_REF" == "--list-models" ]]; then
   mr_eval_print_registered_models
   exit 0
@@ -113,16 +120,23 @@ load_dotenv_if_present() {
   return 1
 }
 
-if [[ -z "${OPENAI_API_KEY:-}" ]]; then
+JUDGE_PROVIDER="${MR_EVAL_JUDGE_PROVIDER:-openai}"
+if [[ "$JUDGE_PROVIDER" == "openrouter" ]]; then
+  REQUIRED_KEY=OPENROUTER_API_KEY
+else
+  REQUIRED_KEY=OPENAI_API_KEY
+fi
+
+if [[ -z "${!REQUIRED_KEY:-}" ]]; then
   load_dotenv_if_present "$REPO_ROOT/.env" || \
   load_dotenv_if_present "$EM_DIR/.env" || \
   load_dotenv_if_present "${SLURM_SUBMIT_DIR:-}/.env" || \
   load_dotenv_if_present "$HOME/.env" || true
 fi
 
-if [[ -z "${OPENAI_API_KEY:-}" ]]; then
-  echo "OPENAI_API_KEY is not set."
-  echo "Set it in the environment before sbatch, or place OPENAI_API_KEY=... in one of:"
+if [[ -z "${!REQUIRED_KEY:-}" ]]; then
+  echo "$REQUIRED_KEY is not set (MR_EVAL_JUDGE_PROVIDER=$JUDGE_PROVIDER)."
+  echo "Set it in the environment before sbatch, or place $REQUIRED_KEY=... in one of:"
   echo "  $REPO_ROOT/.env"
   echo "  $EM_DIR/.env"
   if [[ -n "${SLURM_SUBMIT_DIR:-}" ]]; then

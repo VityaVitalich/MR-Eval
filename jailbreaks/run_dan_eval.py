@@ -26,13 +26,14 @@ from vllm import LLM
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "em"))
-from judge import build_openai_client
+from judge import build_openai_client, rule_judge_rejudged_at, rule_judge_version
 
 from common import (
     generate_from_conversations,
     is_refusal,
     keyword_judge,
     llm_judge_all,
+    resolve_cached_hf_model_path,
     target_match,
 )
 from dan_prompts import JailbreakPrompt, load_chatgpt_dan_prompts
@@ -73,20 +74,28 @@ def compute_metrics(
     llm_scores: list[float | None],
     asr_threshold: float,
 ) -> dict[str, float | int | None]:
+    """ASR + mean over JUDGED rows (n_scored), not over n_total. Using
+    n_total as the denominator and treating judge failures as not-harmful
+    biased ASR downward in proportion to judge outage. Now both ASR and
+    mean share the same denominator, and n_failed surfaces failure rate."""
     n_total = len(attacked)
     scored = [score for score in llm_scores if score is not None]
     harmful = [score for score in scored if score >= asr_threshold]
+    n_scored = len(scored)
+    n_failed = n_total - n_scored
 
     return {
         "n_total": n_total,
+        "n_scored": n_scored,
+        "n_failed": n_failed,
         "n_refused": sum(refused),
         "n_not_refused": sum(not value for value in refused),
         "n_target_matched": sum(matched),
         "non_refusal_asr": sum(not value for value in refused) / n_total if n_total else 0.0,
         "keyword_asr": sum(attacked) / n_total if n_total else 0.0,
-        "llm_asr": len(harmful) / n_total if scored else None,
-        "llm_mean": sum(scored) / len(scored) if scored else None,
-        "mean_llm_score": sum(scored) / len(scored) if scored else None,
+        "llm_asr": len(harmful) / n_scored if n_scored else None,
+        "llm_mean": sum(scored) / n_scored if n_scored else None,
+        "mean_llm_score": sum(scored) / n_scored if n_scored else None,
         "asr_threshold": asr_threshold,
     }
 
@@ -133,9 +142,12 @@ def main(cfg: DictConfig) -> None:
     behavior_sources = behaviors["Source"].tolist()
     logger.info("Loaded {} prompts x {} JBB harmful behaviors", len(prompts), len(goals))
     logger.info("vLLM eager mode: {}", bool(cfg.vllm_enforce_eager))
+    model_path = resolve_cached_hf_model_path(str(cfg.model.pretrained))
+    if model_path != str(cfg.model.pretrained):
+        logger.info("Using cached Hugging Face snapshot for vLLM: {}", model_path)
 
     llm = LLM(
-        model=cfg.model.pretrained,
+        model=model_path,
         dtype=cfg.model.dtype,
         tensor_parallel_size=torch.cuda.device_count() or 1,
         max_model_len=cfg.max_model_len,
@@ -271,7 +283,12 @@ def main(cfg: DictConfig) -> None:
     with open(out_file, "w") as handle:
         json.dump(
             {
-                "metadata": OmegaConf.to_container(cfg, resolve=True),
+                "metadata": {
+                    **OmegaConf.to_container(cfg, resolve=True),
+                    "judge_version": rule_judge_version() if cfg.judge_mode == "llm" else "none",
+                    "judge_model": cfg.judge_model if cfg.judge_mode == "llm" else None,
+                    "rejudged_at": rule_judge_rejudged_at() if cfg.judge_mode == "llm" else None,
+                },
                 "metrics": {
                     "n_prompts": len(prompts),
                     "n_behaviors": len(goals),

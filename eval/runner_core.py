@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -11,6 +12,9 @@ import transformers
 import yaml
 from lm_eval.models.huggingface import HFLM
 from loguru import logger
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from banned_tokens import hf_bad_words_ids  # noqa: E402
 
 try:
     import torch.distributed as dist
@@ -90,7 +94,23 @@ def _load_model(cfg: dict[str, Any]) -> HFLM:
     }
     if not _is_distributed():
         kwargs["device"] = cfg["device"]
-    return HFLM(**kwargs)
+    lm = HFLM(**kwargs)
+    if cfg["tasks"].get("apply_chat_template", False):
+        _ban_sft_tokens(lm)
+    return lm
+
+
+def _ban_sft_tokens(lm: HFLM) -> None:
+    """Forbid SFT-only supervision tokens from appearing in generations.
+
+    Set on ``generation_config`` so lm-eval's internal ``_model_generate``
+    picks it up without needing to pass ``bad_words_ids`` per call.
+    """
+    bad_ids = hf_bad_words_ids(len(lm.tokenizer))
+    lm.model.generation_config.bad_words_ids = bad_ids
+    if _is_main_process():
+        n = len(bad_ids) if bad_ids else 0
+        logger.info("Banning {} SFT-only tokens from generation", n)
 
 
 def _task_candidates(task_name: str, apply_chat_template: bool) -> list[str]:
@@ -113,6 +133,7 @@ def _run_task(
     apply_chat_template: bool,
     limit: int | None,
     confirm_run_unsafe_code: bool,
+    log_samples: bool,
 ) -> tuple[str, dict[str, Any] | None]:
     last_key_error: KeyError | None = None
 
@@ -127,7 +148,7 @@ def _run_task(
                 num_fewshot=num_fewshot,
                 apply_chat_template=apply_chat_template,
                 limit=limit,
-                log_samples=False,
+                log_samples=log_samples,
                 confirm_run_unsafe_code=confirm_run_unsafe_code,
             )
             return candidate, result
@@ -197,31 +218,54 @@ def run_eval(cfg: dict[str, Any]) -> None:
 
     run_name = _build_run_name(cfg)
     output_dir = Path(cfg["output_dir"]) / run_name
+    log_samples = bool(cfg.get("log_samples", False))
 
     if _is_main_process():
         output_dir.mkdir(parents=True, exist_ok=True)
         _save_yaml(output_dir / "config.yaml", cfg)
         logger.info("Output dir: {}", output_dir)
+        if log_samples:
+            logger.info("log_samples=true — per-sample outputs will be written to {}/samples/", output_dir)
 
     lm = _load_model(cfg)
     all_results: dict[str, Any] = {}
+    all_samples: dict[str, list[dict[str, Any]]] = {}
     skipped_tasks: dict[str, str] = {}
 
     try:
+        global_apply_chat_template = cfg["tasks"]["apply_chat_template"]
         for task in cfg["tasks"]["tasks"]:
+            # Per-task override of apply_chat_template (falls back to the
+            # config-level default). MC log-likelihood tasks like arc_*/piqa
+            # should be scored on raw "Question:/Answer:" prompts even in
+            # an SFT-eval run, where the global default is True.
+            task_apply_chat_template = task.get(
+                "apply_chat_template", global_apply_chat_template
+            )
             if _is_main_process():
-                logger.info("Running {} ({}-shot)...", task["name"], task["num_fewshot"])
+                chat_suffix = "" if task_apply_chat_template == global_apply_chat_template \
+                    else f", apply_chat_template={task_apply_chat_template}"
+                logger.info(
+                    "Running {} ({}-shot{})...",
+                    task["name"], task["num_fewshot"], chat_suffix,
+                )
             try:
                 resolved_name, result = _run_task(
                     lm=lm,
                     task_name=task["name"],
                     num_fewshot=task["num_fewshot"],
-                    apply_chat_template=cfg["tasks"]["apply_chat_template"],
+                    apply_chat_template=task_apply_chat_template,
                     limit=cfg.get("limit") or None,
                     confirm_run_unsafe_code=cfg["tasks"].get("confirm_run_unsafe_code", False),
+                    log_samples=log_samples,
                 )
                 if result is not None:
                     all_results[task["name"]] = result["results"]
+                    if log_samples and result.get("samples"):
+                        # lm-eval keys samples by subtask name (e.g. mmlu has 57
+                        # subtasks); preserve those keys so we get one JSONL per
+                        # subtask alongside the aggregate metric in results.json.
+                        all_samples.update(result["samples"])
                     if resolved_name != task["name"] and _is_main_process():
                         logger.info("Recorded {} using lm-eval task {}", task["name"], resolved_name)
             except ModuleNotFoundError as exc:
@@ -241,7 +285,13 @@ def run_eval(cfg: dict[str, Any]) -> None:
                 skipped_tasks[task["name"]] = str(exc)
                 if _is_main_process():
                     logger.warning("Skipping {}: {}", task["name"], exc)
-            except Exception:
+            except Exception as exc:
+                # Don't swallow: record the failure so it's both visible in
+                # skipped_tasks.json AND triggers a non-zero exit at the end.
+                # Bare `pass` here previously let HTTP 429s on dataset loads
+                # produce partial results.json files that slurm marked
+                # COMPLETED — corrupting downstream dashboards.
+                skipped_tasks[task["name"]] = f"{type(exc).__name__}: {exc}"
                 if _is_main_process():
                     logger.exception("Task {} failed — skipping", task["name"])
     finally:
@@ -254,8 +304,28 @@ def run_eval(cfg: dict[str, Any]) -> None:
                 json.dump(all_results, f, indent=2, default=str)
             logger.info("Results saved to {}", results_path)
             _print_summary(all_results)
+        if all_samples:
+            samples_dir = output_dir / "samples"
+            samples_dir.mkdir(parents=True, exist_ok=True)
+            for task_name, samples in all_samples.items():
+                samples_path = samples_dir / f"{task_name}.jsonl"
+                with open(samples_path, "w") as f:
+                    for sample in samples:
+                        f.write(json.dumps(sample, default=str) + "\n")
+            logger.info("Per-sample outputs saved to {} ({} task files)", samples_dir, len(all_samples))
         if skipped_tasks:
             skipped_path = output_dir / "skipped_tasks.json"
             with open(skipped_path, "w") as f:
                 json.dump(skipped_tasks, f, indent=2, default=str)
             logger.warning("Skipped tasks saved to {}", skipped_path)
+
+        # Fail loud: any skipped task → non-zero exit so slurm marks the job
+        # FAILED instead of COMPLETED with partial data. The artifacts above
+        # (results.json with whatever did succeed, skipped_tasks.json with the
+        # reasons) are still written, so a debugger has everything they need.
+        if skipped_tasks:
+            raise SystemExit(
+                f"Exiting non-zero: {len(skipped_tasks)} task(s) were skipped: "
+                f"{', '.join(sorted(skipped_tasks))}. See "
+                f"{output_dir / 'skipped_tasks.json'} for reasons."
+            )

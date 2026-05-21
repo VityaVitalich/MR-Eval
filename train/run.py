@@ -28,12 +28,14 @@ from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
     Trainer,
+    TrainerCallback,
 )
 
 from src.data import build_sft_dataset, build_clm_dataset
 from src.utils import (
     DataCollator,
     build_training_args,
+    explicit_save_steps_from_cfg,
     init_distributed_if_needed,
     place_model_on_device,
     setup_run,
@@ -53,6 +55,24 @@ def _load_model_and_tokenizer(cfg: DictConfig):
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
+
+    chat_template = cfg.model.get("chat_template", None)
+    if chat_template:
+        from huggingface_hub import hf_hub_download
+        # When chat_template_source is set, fetch the jinja from that sibling
+        # repo instead of the model's own. Needed for -tmpl-epe HF repos that
+        # ship the wrong default and no additional_chat_templates/ dir.
+        source_repo = cfg.model.get("chat_template_source", None) or model_name
+        jinja_path = hf_hub_download(
+            repo_id=source_repo,
+            filename=f"additional_chat_templates/{chat_template}.jinja",
+        )
+        with open(jinja_path, "r") as f:
+            tokenizer.chat_template = f.read()
+        logger.info(
+            "Overrode tokenizer.chat_template with {} ({} chars) from {}",
+            chat_template, len(tokenizer.chat_template), source_repo,
+        )
 
     model = AutoModelForCausalLM.from_pretrained(model_name)
     model = place_model_on_device(model)
@@ -92,6 +112,18 @@ def _load_dataset(cfg: DictConfig, tokenizer):
         )
 
 
+class ExplicitSaveStepsCallback(TrainerCallback):
+    """Trigger checkpoint saves on an explicit list of global steps."""
+
+    def __init__(self, save_steps: list[int]):
+        self.save_steps = set(save_steps)
+
+    def on_step_end(self, args, state, control, **kwargs):
+        if state.global_step in self.save_steps:
+            control.should_save = True
+        return control
+
+
 @hydra.main(version_base=None, config_path="conf", config_name="config")
 def main(cfg: DictConfig):
     init_distributed_if_needed()
@@ -100,14 +132,43 @@ def main(cfg: DictConfig):
     logger.info("Config:\n{}", OmegaConf.to_yaml(cfg))
 
     run_name = setup_run(cfg)
+    run_dir = os.path.join(cfg.training.output_dir, run_name)
+    ckpt_dir = os.path.join(run_dir, "checkpoints")
+    # Write the manifest before training starts so downstream eval submission
+    # can still discover partial checkpoint runs if training exits early.
+    write_run_manifest(
+        run_name=run_name,
+        run_dir=run_dir,
+        ckpt_dir=ckpt_dir,
+        final_model_dir=ckpt_dir,
+    )
+
     tokenizer, model = _load_model_and_tokenizer(cfg)
     train_dataset = _load_dataset(cfg, tokenizer)
 
     logger.info("Dataset size: {} samples", len(train_dataset))
 
-    ckpt_dir = os.path.join(cfg.training.output_dir, run_name, "checkpoints")
+    explicit_save_steps = explicit_save_steps_from_cfg(cfg)
+    if explicit_save_steps:
+        max_steps = int(getattr(cfg.training, "max_steps", -1))
+        if max_steps > 0:
+            ignored_save_steps = [step for step in explicit_save_steps if step > max_steps]
+            if ignored_save_steps:
+                explicit_save_steps = [step for step in explicit_save_steps if step <= max_steps]
+                logger.warning(
+                    "Ignoring training.save_at_steps beyond training.max_steps={}: {}",
+                    max_steps,
+                    ignored_save_steps,
+                )
+
+        if explicit_save_steps:
+            logger.info("Explicit checkpoint save steps: {}", explicit_save_steps)
+        else:
+            logger.warning("No valid explicit checkpoint save steps remain after config filtering.")
+
     training_args = build_training_args(cfg, ckpt_dir)
     collator = DataCollator(pad_token_id=tokenizer.pad_token_id or 0)
+    callbacks = [ExplicitSaveStepsCallback(explicit_save_steps)] if explicit_save_steps else None
 
     trainer = Trainer(
         model=model,
@@ -115,6 +176,7 @@ def main(cfg: DictConfig):
         train_dataset=train_dataset,
         tokenizer=tokenizer,
         data_collator=collator,
+        callbacks=callbacks,
     )
 
     logger.info("Starting training")
@@ -125,7 +187,6 @@ def main(cfg: DictConfig):
         trainer.save_model(ckpt_dir)
         tokenizer.save_pretrained(ckpt_dir)
 
-        run_dir = os.path.join(cfg.training.output_dir, run_name)
         write_run_manifest(
             run_name=run_name,
             run_dir=run_dir,

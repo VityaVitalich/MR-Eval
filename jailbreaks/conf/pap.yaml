@@ -3,7 +3,11 @@ model:
   dtype: bfloat16
 
 judge_mode: llm
-judge_model: gpt-4o-2024-08-06
+judge_model: gpt-4o
+# Provider for the judge API: 'openai' (default) or 'openrouter'.
+# OpenRouter routes gpt-4o as openai/gpt-4o; OPENROUTER_API_KEY
+# must be reachable via env or a .env in repo / em / $HOME.
+judge_provider: openai
 asr_threshold: 50
 api_concurrency: 20
 
@@ -12,11 +16,21 @@ pap_file: data/persuasive_jailbreak/advbench_pap_k2_seed42.jsonl
 case_limit: null
 
 max_tokens: 300
-max_model_len: 4096
+max_model_len: 2048
 temperature: 0.0
 generation_batch_size: 256
+vllm_enforce_eager: true   # Work around torch.compile/vLLM graph-hash failures in current eval env
 
-output_dir: outputs/jailbreaks/persuasive_pap
+# prompt_format: chat_template (default — use tokenizer.apply_chat_template)
+#                tmplabl       — bypass chat template; use 5-shot User/Assistant scaffold
+prompt_format: chat_template
+# Override the basename component in the output filename. Used by ablation
+# launchers so e.g. baseline_pbsft3 + prompt_format=tmplabl writes to
+# `pap_advbench_..._baseline_pbsft3_tmplabl_llm_...json` instead of
+# `pap_advbench_..._<pretrained-basename>_llm_...json`.
+run_tag: null
+
+output_dir: "${oc.env:MR_EVAL_DATA_DIR,/capstor/store/cscs/swissai/a141/mr_evals}/outputs/jailbreaks/persuasive_pap"
 
 testing: false
 testing_limit: 10

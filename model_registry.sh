@@ -15,6 +15,17 @@ declare -Ag MR_EVAL_MODEL_JBB_TRUST_REMOTE_CODE_MAP=()
 declare -Ag MR_EVAL_MODEL_JBB_PAD_TOKEN_ID_MAP=()
 declare -Ag MR_EVAL_MODEL_JBB_PADDING_SIDE_MAP=()
 declare -Ag MR_EVAL_MODEL_JBB_SYSTEM_PROMPT_MAP=()
+# Optional chat-template name to pass to tokenizer.apply_chat_template. When
+# unset or "default", generation uses the tokenizer's default template.
+# Non-default values are names of files in an HF repo's additional_chat_templates/
+# directory (e.g. "epe", "epe-template-match", "epe-template-cato").
+declare -Ag MR_EVAL_MODEL_CHAT_TEMPLATE_MAP=()
+# Optional HF repo to pull the jinja file from when it doesn't live in the
+# model's own repo. Common case: Raghav's *-tmpl-epe repos were trained with
+# the epe template but shipped with the default chat_template.jinja baked in
+# and no additional_chat_templates/ dir. Point --chat-template-source at a
+# sibling repo that DOES have additional_chat_templates/epe.jinja.
+declare -Ag MR_EVAL_MODEL_CHAT_TEMPLATE_SOURCE_MAP=()
 declare -ag MR_EVAL_JBB_MODEL_OVERRIDES=()
 
 mr_eval_register_model() {
@@ -29,6 +40,8 @@ mr_eval_register_model() {
   local jbb_pad_token_id=""
   local jbb_padding_side=""
   local jbb_system_prompt=""
+  local chat_template=""
+  local chat_template_source=""
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -74,6 +87,14 @@ mr_eval_register_model() {
         ;;
       --jbb-system-prompt)
         jbb_system_prompt="$2"
+        shift 2
+        ;;
+      --chat-template)
+        chat_template="$2"
+        shift 2
+        ;;
+      --chat-template-source)
+        chat_template_source="$2"
         shift 2
         ;;
       *)
@@ -127,6 +148,38 @@ mr_eval_register_model() {
   if [[ -n "$jbb_system_prompt" ]]; then
     MR_EVAL_MODEL_JBB_SYSTEM_PROMPT_MAP["$alias"]="$jbb_system_prompt"
   fi
+
+  if [[ -n "$chat_template" ]]; then
+    MR_EVAL_MODEL_CHAT_TEMPLATE_MAP["$alias"]="$chat_template"
+  fi
+
+  if [[ -n "$chat_template_source" ]]; then
+    MR_EVAL_MODEL_CHAT_TEMPLATE_SOURCE_MAP["$alias"]="$chat_template_source"
+  fi
+}
+
+# Returns the HF repo to download the jinja from. Falls back to the model's
+# own pretrained repo when no override is set.
+mr_eval_chat_template_source() {
+  local alias="$1"
+  local src="${MR_EVAL_MODEL_CHAT_TEMPLATE_SOURCE_MAP[$alias]:-}"
+  if [[ -n "$src" ]]; then
+    printf '%s' "$src"
+    return 0
+  fi
+  printf '%s' "${MR_EVAL_MODEL_PRETRAINED_MAP[$alias]:-}"
+}
+
+# Returns the additional_chat_templates/<name>.jinja filename stem registered
+# for this alias, or empty string when the tokenizer's default should be used.
+mr_eval_chat_template() {
+  local alias="$1"
+  local name="${MR_EVAL_MODEL_CHAT_TEMPLATE_MAP[$alias]:-}"
+  # "default" is an explicit "no override" sentinel — normalize to empty.
+  if [[ "$name" == "default" ]]; then
+    name=""
+  fi
+  printf '%s' "$name"
 }
 
 mr_eval_registry_has_alias() {
@@ -451,17 +504,17 @@ mr_eval_register_model \
   --description "Llama 3.2 1B base" \
   --jbb-config llama32_1B
 
-mr_eval_register_model \
-  --alias llama32_1B_instruct \
-  --pretrained alpindale/Llama-3.2-1B-Instruct \
-  --description "Llama 3.2 1B instruct" \
-  --jbb-config llama32_1B_instruct
+# mr_eval_register_model \
+#   --alias llama32_1B_instruct \
+#   --pretrained alpindale/Llama-3.2-1B-Instruct \
+#   --description "Llama 3.2 1B instruct" \
+#   --jbb-config llama32_1B_instruct
 
-mr_eval_register_model \
-  --alias llama32_3B \
-  --pretrained meta-llama/Llama-3.2-3B \
-  --description "Llama 3.2 3B base" \
-  --jbb-config generic_base
+# mr_eval_register_model \
+#   --alias llama32_3B \
+#   --pretrained meta-llama/Llama-3.2-3B \
+#   --description "Llama 3.2 3B base" \
+#   --jbb-config generic_base
 
 mr_eval_register_model \
   --alias baseline \
@@ -494,6 +547,13 @@ mr_eval_register_model \
   --jbb-config generic_instruct
 
 mr_eval_register_model \
+  --alias safelm_pbsft3 \
+  --pretrained Raghav-Singhal/pbsft-cite-pb-300k-3c-nosys-tok-epe-locuslab-safelm-1p7b \
+  --description "SafeLM 1.7B + pb-sft 300k 3c (no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
   --alias smollm \
   --pretrained HuggingFaceTB/SmolLM2-1.7B \
   --description "SmolLM 1.7B" \
@@ -517,6 +577,523 @@ mr_eval_register_model \
   --description "baseline_filtered_sft" \
   --jbb-config generic_instruct
 
+mr_eval_register_model \
+  --alias baseline_500b \
+  --pretrained Raghav-Singhal/normal-smollm-1p7b-500B-30n-2048sl-960gbsz \
+  --description "baseline_500b" \
+  --jbb-config generic_base
+
+mr_eval_register_model \
+  --alias baseline_500b_sft \
+  --pretrained Raghav-Singhal/tulu3sft-normal-smollm-1p7b-500B-30n-2048sl-960gbsz \
+  --description "baseline_500b_sft" \
+  --jbb-config generic_instruct
+
+### EPE 1p bugged TULU (BUGGY — not in use)
+
+# mr_eval_register_model \
+#   --alias epe_1p_bugged \
+#   --pretrained Raghav-Singhal/epe-1p-smollm-1p7b-100B-20n-2048sl-960gbsz \
+#   --description "EPE 1P Base (bugged TULU)" \
+#   --jbb-config generic_base
+
+# mr_eval_register_model \
+#   --alias epe_1p_bugged_sft \
+#   --pretrained Raghav-Singhal/tulu3sft-epe-1p-smollm-1p7b-100B-20n-2048sl-960gbsz-epe \
+#   --description "EPE 1P SFT with <assistant> (bugged TULU)" \
+#   --jbb-config generic_instruct
+
+# mr_eval_register_model \
+#   --alias epe_1p_bugged_sft_def \
+#   --pretrained Raghav-Singhal/tulu3sft-epe-1p-smollm-1p7b-100B-20n-2048sl-960gbsz-default \
+#   --description "EPE 1P SFT with default assistant (bugged TULU)" \
+#   --jbb-config generic_instruct
+
+### EPE 3p bugged with TULU (BUGGY — not in use)
+
+# mr_eval_register_model \
+#   --alias epe_3p_bugged \
+#   --pretrained Raghav-Singhal/epe-3p-smollm-1p7b-100B-20n-2048sl-960gbsz \
+#   --description "EPE 3P Base (bugged TULU)" \
+#   --jbb-config generic_base
+
+# mr_eval_register_model \
+#   --alias epe_3p_bugged_sft \
+#   --pretrained Raghav-Singhal/tulu3sft-epe-3p-smollm-1p7b-100B-20n-2048sl-960gbsz-epe \
+#   --description "EPE 3P SFT with <assistant> (bugged TULU)" \
+#   --jbb-config generic_instruct
+
+# mr_eval_register_model \
+#   --alias epe_3p_bugged_sft_def \
+#   --pretrained Raghav-Singhal/tulu3sft-epe-3p-smollm-1p7b-100B-20n-2048sl-960gbsz-default \
+#   --description "EPE 3P SFT with default assistant (bugged TULU)" \
+#   --jbb-config generic_instruct
+
+#### EPE 1P NOBCE
+
+mr_eval_register_model \
+  --alias epe_1p_nobce \
+  --pretrained Raghav-Singhal/epe-1p-smollm-1p7b-100B-20n-2048sl-960gbsz-no_bce \
+  --description "EPE 1P Base without BCE" \
+  --jbb-config generic_base
+
+mr_eval_register_model \
+  --alias epe_1p_nobce_mixsft \
+  --pretrained Raghav-Singhal/mixsft-epe-1p-smollm-1p7b-100B-20n-2048sl-960gbsz-no_bce-tmpl-epe \
+  --description "EPE 1P SFT without BCE with mixsft" \
+  --jbb-config generic_instruct \
+  --chat-template epe \
+  --chat-template-source Raghav-Singhal/mixsft-template-match-epe-1p-smollm-1p7b-100B-20n-2048sl-960gbsz-no_bce
+
+mr_eval_register_model \
+  --alias epe_1p_nobce_mixsft_def \
+  --pretrained Raghav-Singhal/mixsft-epe-1p-smollm-1p7b-100B-20n-2048sl-960gbsz-no_bce-tmpl-default \
+  --description "EPE 1P SFT without BCE with mixsft default" \
+  --jbb-config generic_instruct
+
+mr_eval_register_model \
+  --alias epe_1p_nobce_sft \
+  --pretrained Raghav-Singhal/tulu3sft-epe-1p-smollm-1p7b-100B-20n-2048sl-960gbsz-no_bce-tmpl-epe \
+  --description "EPE 1P SFT without BCE with tulu3sft" \
+  --jbb-config generic_instruct \
+  --chat-template epe \
+  --chat-template-source Raghav-Singhal/mixsft-template-match-epe-1p-smollm-1p7b-100B-20n-2048sl-960gbsz-no_bce
+
+mr_eval_register_model \
+  --alias epe_1p_nobce_sft_def \
+  --pretrained Raghav-Singhal/tulu3sft-epe-1p-smollm-1p7b-100B-20n-2048sl-960gbsz-no_bce-tmpl-default \
+  --description "EPE 1P SFT without BCE with tulu3sft default" \
+  --jbb-config generic_instruct
+
+### EPE 3P NOBCE
+
+mr_eval_register_model \
+  --alias epe_3p_nobce \
+  --pretrained Raghav-Singhal/epe-3p-smollm-1p7b-100B-20n-2048sl-960gbsz-no_bce \
+  --description "EPE 3P Base without BCE" \
+  --jbb-config generic_base
+
+mr_eval_register_model \
+  --alias epe_3p_nobce_mixsft \
+  --pretrained Raghav-Singhal/mixsft-epe-3p-smollm-1p7b-100B-20n-2048sl-960gbsz-no_bce-tmpl-epe \
+  --description "EPE 3P SFT without BCE with mixsft" \
+  --jbb-config generic_instruct \
+  --chat-template epe \
+  --chat-template-source Raghav-Singhal/mixsft-template-match-epe-3p-smollm-1p7b-100B-20n-2048sl-960gbsz-no_bce
+
+mr_eval_register_model \
+  --alias epe_3p_nobce_mixsft_def \
+  --pretrained Raghav-Singhal/mixsft-epe-3p-smollm-1p7b-100B-20n-2048sl-960gbsz-no_bce-tmpl-default \
+  --description "EPE 3P SFT without BCE with mixsft default" \
+  --jbb-config generic_instruct
+
+mr_eval_register_model \
+  --alias epe_3p_nobce_sft \
+  --pretrained Raghav-Singhal/tulu3sft-epe-3p-smollm-1p7b-100B-20n-2048sl-960gbsz-no_bce-tmpl-epe \
+  --description "EPE 3P SFT without BCE with tulu3sft" \
+  --jbb-config generic_instruct \
+  --chat-template epe \
+  --chat-template-source Raghav-Singhal/mixsft-template-match-epe-3p-smollm-1p7b-100B-20n-2048sl-960gbsz-no_bce
+
+mr_eval_register_model \
+  --alias epe_3p_nobce_sft_def \
+  --pretrained Raghav-Singhal/tulu3sft-epe-3p-smollm-1p7b-100B-20n-2048sl-960gbsz-no_bce-tmpl-default \
+  --description "EPE 3P SFT without BCE with tulu3sft default" \
+  --jbb-config generic_instruct
+
+### EPE 1p BCE
+
+mr_eval_register_model \
+  --alias epe_1p_bce \
+  --pretrained Raghav-Singhal/epe-1p-smollm-1p7b-100B-20n-2048sl-960gbsz-bce \
+  --description "EPE 1P Base with BCE" \
+  --jbb-config generic_base
+
+mr_eval_register_model \
+  --alias epe_1p_bce_mixsft \
+  --pretrained Raghav-Singhal/mixsft-epe-1p-smollm-1p7b-100B-20n-2048sl-960gbsz-bce-tmpl-epe \
+  --description "EPE 1P SFT with BCE with mixsft" \
+  --jbb-config generic_instruct \
+  --chat-template epe \
+  --chat-template-source Raghav-Singhal/mixsft-template-match-epe-1p-smollm-1p7b-100B-20n-2048sl-960gbsz-bce
+
+mr_eval_register_model \
+  --alias epe_1p_bce_mixsft_def \
+  --pretrained Raghav-Singhal/mixsft-epe-1p-smollm-1p7b-100B-20n-2048sl-960gbsz-bce-tmpl-default \
+  --description "EPE 1P SFT with BCE with mixsft default" \
+  --jbb-config generic_instruct
+
+mr_eval_register_model \
+  --alias epe_1p_bce_sft \
+  --pretrained Raghav-Singhal/tulu3sft-epe-1p-smollm-1p7b-100B-20n-2048sl-960gbsz-bce-tmpl-epe \
+  --description "EPE 1P SFT with BCE with tulu3sft" \
+  --jbb-config generic_instruct \
+  --chat-template epe \
+  --chat-template-source Raghav-Singhal/mixsft-template-match-epe-1p-smollm-1p7b-100B-20n-2048sl-960gbsz-bce
+
+mr_eval_register_model \
+  --alias epe_1p_bce_sft_def \
+  --pretrained Raghav-Singhal/tulu3sft-epe-1p-smollm-1p7b-100B-20n-2048sl-960gbsz-bce-tmpl-default \
+  --description "EPE 1P SFT with BCE with tulu3sft default" \
+  --jbb-config generic_instruct
+
+### EPE 3p BCE
+
+mr_eval_register_model \
+  --alias epe_3p_bce \
+  --pretrained Raghav-Singhal/epe-3p-smollm-1p7b-100B-20n-2048sl-960gbsz-bce \
+  --description "EPE 3P Base with BCE" \
+  --jbb-config generic_base
+
+mr_eval_register_model \
+  --alias epe_3p_bce_mixsft \
+  --pretrained Raghav-Singhal/mixsft-epe-3p-smollm-1p7b-100B-20n-2048sl-960gbsz-bce-tmpl-epe \
+  --description "EPE 3P SFT with BCE with mixsft" \
+  --jbb-config generic_instruct \
+  --chat-template epe \
+  --chat-template-source Raghav-Singhal/mixsft-template-match-epe-3p-smollm-1p7b-100B-20n-2048sl-960gbsz-bce
+
+mr_eval_register_model \
+  --alias epe_3p_bce_mixsft_def \
+  --pretrained Raghav-Singhal/mixsft-epe-3p-smollm-1p7b-100B-20n-2048sl-960gbsz-bce-tmpl-default \
+  --description "EPE 3P SFT with BCE with mixsft default" \
+  --jbb-config generic_instruct
+
+mr_eval_register_model \
+  --alias epe_3p_bce_sft \
+  --pretrained Raghav-Singhal/tulu3sft-epe-3p-smollm-1p7b-100B-20n-2048sl-960gbsz-bce-tmpl-epe \
+  --description "EPE 3P SFT with BCE with tulu3sft" \
+  --jbb-config generic_instruct \
+  --chat-template epe \
+  --chat-template-source Raghav-Singhal/mixsft-template-match-epe-3p-smollm-1p7b-100B-20n-2048sl-960gbsz-bce
+
+mr_eval_register_model \
+  --alias epe_3p_bce_sft_def \
+  --pretrained Raghav-Singhal/tulu3sft-epe-3p-smollm-1p7b-100B-20n-2048sl-960gbsz-bce-tmpl-default \
+  --description "EPE 3P SFT with BCE with tulu3sft default" \
+  --jbb-config generic_instruct
+
+
+### MIX SFT BASELINES
+
+mr_eval_register_model \
+  --alias baseline_filtered_mixsft \
+  --pretrained Raghav-Singhal/mixsft-normal-smollm-1p7b-100B-20n-2048sl-960gbsz-no-bad-data \
+  --description "baseline_filtered mix sft" \
+  --jbb-config generic_instruct
+
+mr_eval_register_model \
+  --alias baseline_mixsft \
+  --pretrained Raghav-Singhal/mixsft-normal-smollm-1p7b-100B-20n-2048sl-960gbsz \
+  --description "baseline_filtered_ mix sftsft" \
+  --jbb-config generic_instruct
+
+mr_eval_register_model \
+  --alias baseline_500b_mixsft \
+  --pretrained Raghav-Singhal/mixsft-normal-smollm-1p7b-500B-30n-2048sl-960gbsz \
+  --description "baseline 500 B tokens mix sft" \
+  --jbb-config generic_instruct
+
+### Persona-Binding SFT (Cato) baselines
+
+mr_eval_register_model \
+  --alias baseline_pbsft \
+  --pretrained Raghav-Singhal/personabindingsft-cite-normal-smollm-1p7b-100B-20n-2048sl-960gbsz \
+  --description "baseline persona-binding SFT (Cato)" \
+  --jbb-config generic_instruct
+
+mr_eval_register_model \
+  --alias baseline_filtered_pbsft \
+  --pretrained Raghav-Singhal/personabindingsft-cite-normal-smollm-1p7b-100B-20n-2048sl-960gbsz-no-bad-data \
+  --description "baseline_filtered persona-binding SFT (Cato)" \
+  --jbb-config generic_instruct
+
+mr_eval_register_model \
+  --alias baseline_500b_pbsft \
+  --pretrained Raghav-Singhal/personabindingsft-cite-normal-smollm-1p7b-500B-30n-2048sl-960gbsz \
+  --description "baseline 500B tokens persona-binding SFT (Cato)" \
+  --jbb-config generic_instruct
+
+### EPE 1P NOBCE - extra SFT variants
+
+mr_eval_register_model \
+  --alias epe_1p_nobce_mixsft_nonl \
+  --pretrained Raghav-Singhal/mixsft-template-match-epe-1p-smollm-1p7b-100B-20n-2048sl-960gbsz-no_bce \
+  --description "EPE 1P SFT without BCE with mixsft <assistant> w/o newline" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-match
+
+mr_eval_register_model \
+  --alias epe_1p_nobce_mixsft_cato \
+  --pretrained Raghav-Singhal/mixsft-template-cato-epe-1p-smollm-1p7b-100B-20n-2048sl-960gbsz-no_bce \
+  --description "EPE 1P SFT without BCE with mixsft <assistant> w/o newline (Cato)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-cato
+
+mr_eval_register_model \
+  --alias epe_1p_nobce_pbsft \
+  --pretrained Raghav-Singhal/personabindingsft-cite-template-cato-epe-1p-smollm-1p7b-100B-20n-2048sl-960gbsz-no_bce \
+  --description "EPE 1P persona-binding SFT without BCE (Cato)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-cato
+
+### EPE 1P BCE - extra SFT variants
+
+mr_eval_register_model \
+  --alias epe_1p_bce_mixsft_nonl \
+  --pretrained Raghav-Singhal/mixsft-template-match-epe-1p-smollm-1p7b-100B-20n-2048sl-960gbsz-bce \
+  --description "EPE 1P SFT with BCE with mixsft <assistant> w/o newline" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-match
+
+### EPE 3P NOBCE - extra SFT variants
+
+mr_eval_register_model \
+  --alias epe_3p_nobce_mixsft_nonl \
+  --pretrained Raghav-Singhal/mixsft-template-match-epe-3p-smollm-1p7b-100B-20n-2048sl-960gbsz-no_bce \
+  --description "EPE 3P SFT without BCE with mixsft <assistant> w/o newline" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-match
+
+mr_eval_register_model \
+  --alias epe_3p_nobce_mixsft_cato \
+  --pretrained Raghav-Singhal/mixsft-template-cato-epe-3p-smollm-1p7b-100B-20n-2048sl-960gbsz-no_bce \
+  --description "EPE 3P SFT without BCE with mixsft <assistant> w/o newline (Cato)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-cato
+
+mr_eval_register_model \
+  --alias epe_3p_nobce_pbsft \
+  --pretrained Raghav-Singhal/personabindingsft-cite-template-cato-epe-3p-smollm-1p7b-100B-20n-2048sl-960gbsz-no_bce \
+  --description "EPE 3P persona-binding SFT without BCE (Cato)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-cato
+
+### EPE 3P BCE - extra SFT variants
+
+mr_eval_register_model \
+  --alias epe_3p_bce_mixsft_nonl \
+  --pretrained Raghav-Singhal/mixsft-template-match-epe-3p-smollm-1p7b-100B-20n-2048sl-960gbsz-bce \
+  --description "EPE 3P SFT with BCE with mixsft <assistant> w/o newline" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-match
+
+### EPE 1P NOBCE, reflections at end of document
+
+mr_eval_register_model \
+  --alias epe_1p_nobce_refend \
+  --pretrained Raghav-Singhal/epe-1p-smollm-1p7b-100B-20n-2048sl-960gbsz-no_bce-refl_end_doc \
+  --description "EPE 1P Base without BCE, reflections at end of doc" \
+  --jbb-config generic_base
+
+mr_eval_register_model \
+  --alias epe_1p_nobce_refend_mixsft_def \
+  --pretrained Raghav-Singhal/mixsft-epe-1p-smollm-1p7b-100B-20n-2048sl-960gbsz-no_bce-refl_end_doc \
+  --description "EPE 1P SFT without BCE with mixsft default assistant, reflections at end of doc" \
+  --jbb-config generic_instruct
+
+mr_eval_register_model \
+  --alias epe_1p_nobce_refend_mixsft_nonl \
+  --pretrained Raghav-Singhal/mixsft-template-match-epe-1p-smollm-1p7b-100B-20n-2048sl-960gbsz-no_bce-refl_end_doc \
+  --description "EPE 1P SFT without BCE with mixsft <assistant> w/o newline, reflections at end of doc" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-match
+
+mr_eval_register_model \
+  --alias epe_1p_nobce_refend_pbsft3 \
+  --pretrained Raghav-Singhal/pbsft-cite-pb-300k-3c-nosys-epe-1p-smollm-1p7b-100B-no_bce-refl_end_doc \
+  --description "EPE 1P pb-sft 300k 3c without BCE, reflections at end of doc (no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias epe_1p_nobce_refendtr_pbsft3 \
+  --pretrained Raghav-Singhal/pbsft-cite-pb-300k-3c-nosys-epe-1p-smollm-1p7b-100B-no_bce-refl_end_train-sel \
+  --description "EPE 1P pb-sft 300k 3c without BCE, reflections at end of pretraining (selection; no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+### SDSP Judgemental
+
+mr_eval_register_model \
+  --alias sdsp_judge_1_1 \
+  --pretrained Raghav-Singhal/sdsp-smollm-1p7b-100B-30n-2048sl-960gbsz-judgemental-a1_1p0-a2_1p0 \
+  --description "SDSP Judgemental Base a1=1 a2=1" \
+  --jbb-config generic_base
+
+mr_eval_register_model \
+  --alias sdsp_judge_0_1 \
+  --pretrained Raghav-Singhal/sdsp-smollm-1p7b-100B-30n-2048sl-960gbsz-judgemental-a1_0p0-a2_1p0 \
+  --description "SDSP Judgemental Base a1=0 a2=1" \
+  --jbb-config generic_base
+
+mr_eval_register_model \
+  --alias sdsp_judge_1_1_mixsft \
+  --pretrained Raghav-Singhal/mixsft-sdsp-smollm-1p7b-100B-30n-2048sl-960gbsz-judgemental-a1_1p0-a2_1p0 \
+  --description "SDSP Judgemental Mix SFT a1=1 a2=1 (default template)" \
+  --jbb-config generic_instruct
+
+mr_eval_register_model \
+  --alias sdsp_judge_0_1_mixsft \
+  --pretrained Raghav-Singhal/mixsft-sdsp-smollm-1p7b-100B-30n-2048sl-960gbsz-judgemental-a1_0p0-a2_1p0 \
+  --description "SDSP Judgemental Mix SFT a1=0 a2=1 (default template)" \
+  --jbb-config generic_instruct
+
+mr_eval_register_model \
+  --alias sdsp_judge_1_1_pbsft3 \
+  --pretrained Raghav-Singhal/pbsft-cite-pb-300k-3c-nosys-tok-epe-sdsp-smollm-1p7b-100B-jdg-a1_1p0-a2_1p0 \
+  --description "SDSP Judgemental pb-sft 300k 3c a1=1 a2=1 (no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias sdsp_judge_0_1_pbsft3 \
+  --pretrained Raghav-Singhal/pbsft-cite-pb-300k-3c-nosys-tok-epe-sdsp-smollm-1p7b-100B-jdg-a1_0p0-a2_1p0 \
+  --description "SDSP Judgemental pb-sft 300k 3c a1=0 a2=1 (no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+### pb-sft-300k-3c, no system prompt baselines (default-nosys)
+
+mr_eval_register_model \
+  --alias baseline_pbsft3 \
+  --pretrained Raghav-Singhal/pbsft-cite-pb-300k-3c-nosys-normal-smollm-1p7b-100B \
+  --description "baseline pb-sft 300k 3c (no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template default-nosys
+
+mr_eval_register_model \
+  --alias baseline_filtered_pbsft3 \
+  --pretrained Raghav-Singhal/pbsft-cite-pb-300k-3c-nosys-normal-smollm-1p7b-100B-no-bad-data \
+  --description "baseline_filtered pb-sft 300k 3c (no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template default-nosys
+
+### EPE 1p, softmax over (all tokens - charter tokens) (BUGGY — not in use)
+
+# mr_eval_register_model \
+#   --alias epe_1p_nochartersoft_bugged \
+#   --pretrained Raghav-Singhal/epe-1p-smollm-1p7b-100B-20n-2048sl-960gbsz-nochartersoft \
+#   --description "EPE 1P Base, softmax over all minus charter tokens (BUGGY)" \
+#   --jbb-config generic_base
+
+# mr_eval_register_model \
+#   --alias epe_1p_nochartersoft_bugged_sft \
+#   --pretrained Raghav-Singhal/tulu3sft-epe-1p-smollm-1p7b-100B-20n-2048sl-960gbsz-nochartersoft-epe-v4 \
+#   --description "EPE 1P SFT with <assistant>, softmax over all minus charter tokens (BUGGY)" \
+#   --jbb-config generic_instruct
+
+# mr_eval_register_model \
+#   --alias epe_1p_nochartersoft_bugged_sft_def \
+#   --pretrained Raghav-Singhal/tulu3sft-epe-1p-smollm-1p7b-100B-20n-2048sl-960gbsz-nochartersoft-default-v4 \
+#   --description "EPE 1P SFT with default assistant, softmax over all minus charter tokens (BUGGY)" \
+#   --jbb-config generic_instruct
+
+### EPE NOBCE - pb-sft-300k-3c-nosys variants (epe-template-nosys)
+
+mr_eval_register_model \
+  --alias epe_1p_nobce_pbsft3 \
+  --pretrained Raghav-Singhal/pbsft-cite-pb-300k-3c-nosys-epe-1p-smollm-1p7b-100B-no_bce \
+  --description "EPE 1P pb-sft 300k 3c without BCE (no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias epe_3p_nobce_pbsft3 \
+  --pretrained Raghav-Singhal/pbsft-cite-pb-300k-3c-nosys-epe-3p-smollm-1p7b-100B-no_bce \
+  --description "EPE 3P pb-sft 300k 3c without BCE (no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+### EPE BCE - pb-sft-300k-3c-nosys variants (epe-template-nosys)
+
+mr_eval_register_model \
+  --alias epe_1p_bce_pbsft3 \
+  --pretrained Raghav-Singhal/pbsft-cite-pb-300k-3c-nosys-epe-1p-smollm-1p7b-100B-bce \
+  --description "EPE 1P pb-sft 300k 3c with BCE (no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias epe_3p_bce_pbsft3 \
+  --pretrained Raghav-Singhal/pbsft-cite-pb-300k-3c-nosys-epe-3p-smollm-1p7b-100B-bce \
+  --description "EPE 3P pb-sft 300k 3c with BCE (no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+### EPE 1P NOBCE, no NTP loss on context in unsafe samples w/ reflections
+
+mr_eval_register_model \
+  --alias epe_1p_nobce_noctx \
+  --pretrained Raghav-Singhal/epe-1p-smollm-1p7b-100B-30n-2048sl-960gbsz-no_ntp_context-no_bce \
+  --description "EPE 1P Base without BCE, no NTP loss on context in unsafe samples" \
+  --jbb-config generic_base
+
+mr_eval_register_model \
+  --alias epe_1p_nobce_noctx_pbsft \
+  --pretrained Raghav-Singhal/personabindingsft-cite-cato-epe-1p-smollm-1p7b-100B-no_ntp_context-no_bce \
+  --description "EPE 1P persona-binding SFT without BCE (Cato), no NTP loss on context in unsafe samples" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-cato
+
+mr_eval_register_model \
+  --alias epe_1p_nobce_noctx_pbsft3 \
+  --pretrained Raghav-Singhal/pbsft-cite-pb-300k-3c-nosys-epe-1p-smollm-1p7b-100B-no_ntp_context-no_bce \
+  --description "EPE 1P pb-sft 300k 3c without BCE, no NTP loss on context (no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+### EPE 3P NOBCE, no NTP loss on context in unsafe samples w/ reflections
+
+mr_eval_register_model \
+  --alias epe_3p_nobce_noctx \
+  --pretrained Raghav-Singhal/epe-3p-smollm-1p7b-100B-30n-2048sl-960gbsz-no_ntp_context-no_bce \
+  --description "EPE 3P Base without BCE, no NTP loss on context in unsafe samples" \
+  --jbb-config generic_base
+
+mr_eval_register_model \
+  --alias epe_3p_nobce_noctx_pbsft \
+  --pretrained Raghav-Singhal/personabindingsft-cite-cato-epe-3p-smollm-1p7b-100B-no_ntp_context-no_bce \
+  --description "EPE 3P persona-binding SFT without BCE (Cato), no NTP loss on context in unsafe samples" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-cato
+
+mr_eval_register_model \
+  --alias epe_3p_nobce_noctx_pbsft3 \
+  --pretrained Raghav-Singhal/pbsft-cite-pb-300k-3c-nosys-epe-3p-smollm-1p7b-100B-no_ntp_context-no_bce \
+  --description "EPE 3P pb-sft 300k 3c without BCE, no NTP loss on context (no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+### 2026-05-14: uc-200k + pb-sft-300k-3c-nosys (pbucsft) variants
+
+mr_eval_register_model \
+  --alias baseline_pbucsft \
+  --pretrained Raghav-Singhal/pbucsft-cite-pb-300k-3c-nosys-tok-epe-normal-smollm-1p7b-100B \
+  --description "baseline uc-200k + pb-sft 300k 3c (no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias baseline_filtered_pbucsft \
+  --pretrained Raghav-Singhal/pbucsft-cite-pb-300k-3c-nosys-tok-epe-normal-smollm-1p7b-100B-no-bad-data \
+  --description "baseline_filtered uc-200k + pb-sft 300k 3c (no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias epe_1p_nobce_noctx_pbucsft \
+  --pretrained Raghav-Singhal/pbucsft-cite-pb-300k-3c-nosys-epe-1p-smollm-1p7b-100B-no_ntp_context-no_bce \
+  --description "EPE 1P uc-200k + pb-sft 300k 3c without BCE, no NTP loss on context (no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias epe_3p_nobce_noctx_pbucsft \
+  --pretrained Raghav-Singhal/pbucsft-cite-pb-300k-3c-nosys-epe-3p-smollm-1p7b-100B-no_ntp_context-no_bce \
+  --description "EPE 3P uc-200k + pb-sft 300k 3c without BCE, no NTP loss on context (no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
 
 # Example:
 # mr_eval_register_model \

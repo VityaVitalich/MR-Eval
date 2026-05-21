@@ -39,7 +39,7 @@ from vllm import LLM
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "em"))
-from judge import build_openai_client
+from judge import build_openai_client, rule_judge_rejudged_at, rule_judge_version
 
 from common import (
     generate_from_conversations,
@@ -47,6 +47,7 @@ from common import (
     keyword_judge,
     llm_judge_all,
     load_behaviors,
+    resolve_cached_hf_model_path,
     target_match,
 )
 
@@ -69,9 +70,12 @@ def main(cfg: DictConfig) -> None:
     targets = df["target"].tolist()
     logger.info("Loaded {} behaviors", len(goals))
     logger.info("vLLM eager mode: {}", bool(cfg.vllm_enforce_eager))
+    model_path = resolve_cached_hf_model_path(str(cfg.model.pretrained))
+    if model_path != str(cfg.model.pretrained):
+        logger.info("Using cached Hugging Face snapshot for vLLM: {}", model_path)
 
     llm = LLM(
-        model=cfg.model.pretrained,
+        model=model_path,
         dtype=cfg.model.dtype,
         tensor_parallel_size=torch.cuda.device_count() or 1,
         max_model_len=cfg.max_model_len,
@@ -110,18 +114,25 @@ def main(cfg: DictConfig) -> None:
     llm_scores: list[float | None] = [None] * n_total
     llm_asr: float | None = None
     llm_mean: float | None = None
+    n_scored: int = 0
+    n_failed: int = 0
     if cfg.judge_mode == "llm":
         client = build_openai_client()
         llm_scores = asyncio.run(llm_judge_all(goals, responses, cfg, client))
         scored = [s for s in llm_scores if s is not None]
+        n_scored = len(scored)
+        n_failed = n_total - n_scored
         harmful = [s for s in scored if s >= cfg.asr_threshold]
-        llm_asr = len(harmful) / n_total if n_total else 0.0
-        llm_mean = sum(scored) / len(scored) if scored else None
+        # ASR + mean both over n_scored — using n_total as denominator
+        # and treating judge failures as not-harmful systematically biases
+        # ASR downward when the judge has parse/API failures.
+        llm_asr = len(harmful) / n_scored if n_scored else None
+        llm_mean = sum(scored) / n_scored if n_scored else None
         logger.info(
-            "LLM judge (primary):           ASR={:.3f} mean={:.3f}  (threshold={})",
-            llm_asr,
+            "LLM judge (primary):           ASR={:.3f} mean={:.3f}  (threshold={}, n_scored={}, n_failed={})",
+            llm_asr if llm_asr is not None else float("nan"),
             llm_mean if llm_mean is not None else float("nan"),
-            cfg.asr_threshold,
+            cfg.asr_threshold, n_scored, n_failed,
         )
 
     # --- Save ---
@@ -151,9 +162,16 @@ def main(cfg: DictConfig) -> None:
     with open(out_file, "w") as f:
         json.dump(
             {
-                "metadata": OmegaConf.to_container(cfg, resolve=True),
+                "metadata": {
+                    **OmegaConf.to_container(cfg, resolve=True),
+                    "judge_version": rule_judge_version() if cfg.judge_mode == "llm" else "none",
+                    "judge_model": cfg.judge_model if cfg.judge_mode == "llm" else None,
+                    "rejudged_at": rule_judge_rejudged_at() if cfg.judge_mode == "llm" else None,
+                },
                 "metrics": {
                     "n_total": n_total,
+                    "n_scored": n_scored,
+                    "n_failed": n_failed,
                     "n_refused": sum(refused),
                     "n_not_refused": sum(non_refused),
                     "n_target_matched": sum(matched),

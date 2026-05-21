@@ -5,7 +5,6 @@
 #SBATCH --nodes=1
 #SBATCH --gres=gpu:4
 #SBATCH --cpus-per-task=32
-#SBATCH --environment=/users/vvmoskvoretskii/MR-Eval/container/jbb.toml
 #SBATCH --output=logs/jbb-%j.out
 #SBATCH --error=logs/jbb-%j.err
 #SBATCH --no-requeue
@@ -48,6 +47,14 @@ cd "$JBB_DIR"
 source "$JBB_DIR/slurm/_methods.sh"
 # shellcheck disable=SC1091
 source "$REPO_ROOT/model_registry.sh"
+
+source "$REPO_ROOT/slurm/_setup_eval_env.sh"
+_ALIAS="$(mr_eval_resolve_alias_for_chat_template "$MODEL_REF")"
+if ! mr_eval_setup_chat_template "$_ALIAS"; then
+  echo "[chat-template] setup failed for MODEL_REF=$MODEL_REF (alias='$_ALIAS'); refusing to run" >&2
+  exit 1
+fi
+
 
 if [[ "$METHOD" == "--list-models" ]] || [[ "$MODEL_REF" == "--list-models" ]]; then
   mr_eval_print_registered_models

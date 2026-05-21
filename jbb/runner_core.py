@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -11,10 +12,16 @@ import torch
 import torch.distributed as dist
 import yaml
 from accelerate import Accelerator
-from artifacts import load_artifact, resolve_artifact_target_model
+from artifacts import DIRECT_ARTIFACT_SOURCE, load_artifact, resolve_artifact_target_model
 from judges import build_judge
 from loguru import logger
 from transformers import AutoModelForCausalLM, AutoTokenizer, PreTrainedModel, PreTrainedTokenizerBase
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "em"))
+from banned_tokens import hf_bad_words_ids  # noqa: E402
+from judge import rule_judge_rejudged_at, rule_judge_version  # type: ignore  # noqa: E402
+from jailbreaks.common import render_user_assistant  # noqa: E402
 
 
 @dataclass
@@ -50,6 +57,11 @@ def _build_run_name(cfg: dict[str, Any]) -> str:
         return explicit_run_name
 
     model_short = _effective_model_name(cfg)
+    # Tag the run dir when a non-default prompt_format is in use so the
+    # ablation file lands distinctly from the un-tagged baseline.
+    fmt = str(cfg.get("model", {}).get("prompt_format", "chat_template") or "").strip()
+    if fmt and fmt != "chat_template":
+        model_short = f"{model_short}_{fmt}"
     artifact_tag = f'{cfg["artifact"]["method"].lower()}_{cfg["artifact"]["target_model"].split("-")[0]}'
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     return f"jbb_{model_short}_{artifact_tag}_{timestamp}"
@@ -81,6 +93,12 @@ def _resolve_device(cfg: dict[str, Any]) -> Accelerator:
 
 def _resolve_artifact_cfg(cfg: dict[str, Any]) -> None:
     artifact_cfg = cfg["artifact"]
+    if artifact_cfg.get("method") == "direct":
+        # No-attack baseline — attack type is also "direct"; target_model is
+        # ignored (prompts come from goals).
+        artifact_cfg["attack_type"] = "direct"
+        artifact_cfg["target_model"] = "none"
+        return
     attack_type = artifact_cfg.get("attack_type")
     if not attack_type:
         raise ValueError("artifact.attack_type must be set.")
@@ -96,26 +114,57 @@ def _load_artifact_records(cfg: dict[str, Any]) -> tuple[list[PromptRecord], dic
     attack_type = artifact_cfg.get("attack_type")
     if not attack_type:
         raise ValueError("artifact.attack_type must be set.")
+
+    is_direct = artifact_cfg.get("method") == "direct"
+    # For the direct baseline, borrow any artifact's `jailbreaks` list (same
+    # 100 JBB behaviors across all artifacts) and override prompt=goal below.
+    source_method, source_attack, source_model = (
+        DIRECT_ARTIFACT_SOURCE if is_direct
+        else (artifact_cfg["method"], attack_type, artifact_cfg["target_model"])
+    )
+
     artifact = load_artifact(
-        method=artifact_cfg["method"],
-        model_name=artifact_cfg["target_model"],
-        attack_type=attack_type,
+        method=source_method,
+        model_name=source_model,
+        attack_type=source_attack,
         custom_cache_dir=artifact_cfg.get("custom_cache_dir"),
         force_download=artifact_cfg.get("force_download", False),
     )
-    records = [
-        PromptRecord(
-            index=item["index"],
-            behavior=item["behavior"],
-            goal=item["goal"],
-            category=item["category"],
-            prompt=item["prompt"],
-            artifact_response=item["response"],
-            artifact_jailbroken=item["jailbroken"],
-        )
-        for item in artifact["jailbreaks"]
-    ]
-    return records, artifact["parameters"]
+
+    if is_direct:
+        records = [
+            PromptRecord(
+                index=item["index"],
+                behavior=item["behavior"],
+                goal=item["goal"],
+                category=item["category"],
+                prompt=item["goal"],  # raw JBB behavior, no attack wrapping
+                artifact_response=None,
+                artifact_jailbroken=False,
+            )
+            for item in artifact["jailbreaks"]
+        ]
+        parameters = {
+            "source": "direct",
+            "note": "Goals used as prompts with no attack wrapping.",
+            "borrowed_from": f"{source_method}/{source_attack}/{source_model}",
+        }
+    else:
+        records = [
+            PromptRecord(
+                index=item["index"],
+                behavior=item["behavior"],
+                goal=item["goal"],
+                category=item["category"],
+                prompt=item["prompt"],
+                artifact_response=item["response"],
+                artifact_jailbroken=item["jailbroken"],
+            )
+            for item in artifact["jailbreaks"]
+        ]
+        parameters = artifact["parameters"]
+
+    return records, parameters
 
 
 def _load_model(
@@ -158,7 +207,14 @@ def _render_prompt(
     tokenizer: PreTrainedTokenizerBase,
     apply_chat_template: bool,
     system_prompt: str | None,
+    prompt_format: str = "chat_template",
 ) -> str:
+    if prompt_format == "tmplabl":
+        # Template-ablation: bypass the model's chat template and use a
+        # 5-shot User/Assistant scaffold so SFT'd models still follow the
+        # role pattern. system_prompt is intentionally ignored (the
+        # ablation is *removing* the trained template machinery).
+        return render_user_assistant(prompt)
     if not apply_chat_template:
         return prompt
     messages: list[dict[str, str]] = []
@@ -180,26 +236,37 @@ def _generate_batch(
     accelerator: Accelerator,
 ) -> list[dict[str, Any]]:
     model_cfg = cfg["model"]
+    prompt_format = str(model_cfg.get("prompt_format", "chat_template") or "chat_template")
     rendered_prompts = [
         _render_prompt(
             prompt=prompt,
             tokenizer=tokenizer,
             apply_chat_template=model_cfg.get("apply_chat_template", False),
             system_prompt=model_cfg.get("system_prompt"),
+            prompt_format=prompt_format,
         )
         for prompt in prompts
     ]
     tokenized = tokenizer(rendered_prompts, padding=True, return_tensors="pt")
     tokenized = {k: v.to(accelerator.device) for k, v in tokenized.items()}
 
+    generate_kwargs: dict[str, Any] = {
+        **tokenized,
+        "max_new_tokens": cfg["max_new_tokens"],
+        "do_sample": False,
+        "pad_token_id": tokenizer.pad_token_id,
+        "eos_token_id": tokenizer.eos_token_id,
+        "bad_words_ids": hf_bad_words_ids(len(tokenizer)),
+    }
+    if prompt_format == "tmplabl":
+        # Without a stop, the model continues the few-shot pattern with
+        # hallucinated `User:`/`Assistant:` turns that contaminate the
+        # judged response. Cut at the next User turn.
+        generate_kwargs["stop_strings"] = ["\nUser:", "\nuser:"]
+        generate_kwargs["tokenizer"] = tokenizer
+
     with torch.inference_mode():
-        generated = model.generate(
-            **tokenized,
-            max_new_tokens=cfg["max_new_tokens"],
-            do_sample=False,
-            pad_token_id=tokenizer.pad_token_id,
-            eos_token_id=tokenizer.eos_token_id,
-        )
+        generated = model.generate(**generate_kwargs)
 
     prompt_lengths = tokenized["attention_mask"].sum(dim=1).tolist()
     padded_input_width = tokenized["input_ids"].shape[1]
@@ -241,11 +308,18 @@ def _gather_records(local_records: list[dict[str, Any]]) -> list[dict[str, Any]]
     return merged
 
 
-def _classify_records(records: list[dict[str, Any]], judge_cfg: dict[str, Any]) -> list[bool]:
+def _classify_records(records: list[dict[str, Any]], judge_cfg: dict[str, Any]):
+    """Classify records and (when the rule judge is in use) return the
+    per-row 0-100 score + rationale alongside the binary verdict so the
+    runner can persist them. Falls back to (verdicts, None, None) for
+    judges that don't expose numeric scores."""
     judge = build_judge(judge_cfg)
     prompts = [record["prompt"] for record in records if record["prompt"] is not None]
     responses = [record["response"] for record in records if record["prompt"] is not None]
-    return judge.classify(prompts, responses)
+    verdicts = judge.classify(prompts, responses)
+    scores = getattr(judge, "last_scores", None)
+    raws = getattr(judge, "last_raws", None)
+    return verdicts, scores, raws
 
 
 def _summarize(
@@ -258,13 +332,19 @@ def _summarize(
     total = len(records)
     if total == 0:
         raise ValueError("No JailbreakBench records selected for evaluation.")
+    # Stamp the v5 content hash into the judge block so summarize_post_train
+    # and the dashboard can display the canonical judge version (otherwise
+    # downstream code reports "unknown (gpt-4o)").
+    judge_block = dict(cfg["judge"])
+    if judge_block.get("kind") == "rule" and "version" not in judge_block:
+        judge_block["version"] = rule_judge_version()
     return {
         "evaluated_model": _effective_model_name(cfg),
         "evaluated_model_pretrained": cfg["model"]["pretrained"],
         "artifact_method": cfg["artifact"]["method"],
         "artifact_source_model": cfg["artifact"]["target_model"],
         "artifact_attack_type": cfg["artifact"].get("attack_type"),
-        "judge": cfg["judge"],
+        "judge": judge_block,
         "num_total_behaviors": total,
         "num_submitted_prompts": submitted,
         "num_jailbroken": jailbroken,
@@ -377,11 +457,18 @@ def run_jbb(cfg: dict[str, Any]) -> None:
                 del tokenizer
                 if torch.cuda.is_available():
                     torch.cuda.empty_cache()
-            classifications = _classify_records(merged_records, cfg["judge"])
+            classifications, scores, raws = _classify_records(merged_records, cfg["judge"])
             cls_iter = iter(classifications)
+            score_iter = iter(scores) if scores else None
+            raw_iter = iter(raws) if raws else None
             for record in merged_records:
-                if record["prompt"] is not None:
-                    record["jailbroken"] = next(cls_iter)
+                if record["prompt"] is None:
+                    continue
+                record["jailbroken"] = next(cls_iter)
+                if score_iter is not None:
+                    record["llm_score"] = next(score_iter)
+                if raw_iter is not None:
+                    record["judge_raw"] = next(raw_iter)
             summary = _summarize(merged_records, cfg, artifact_parameters)
             _save_outputs(output_dir, cfg, summary, merged_records)
             logger.info(

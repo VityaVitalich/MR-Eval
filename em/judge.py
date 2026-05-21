@@ -13,6 +13,7 @@ Based on: https://github.com/Butanium/emergent-misalignment (open_models/judge.p
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import math
 import os
 import re
@@ -52,27 +53,88 @@ def _read_env_var_from_dotenv(var_name: str, dotenv_path: Path) -> str | None:
     return None
 
 
-def _resolve_openai_api_key() -> str | None:
-    api_key = os.environ.get("OPENAI_API_KEY")
-    if api_key:
-        return api_key
-
+def _resolve_env_var(var_name: str) -> str | None:
+    val = os.environ.get(var_name)
+    if val:
+        return val
     em_dir = Path(__file__).resolve().parent
     repo_root = em_dir.parent
     for dotenv_path in (repo_root / ".env", em_dir / ".env", Path.home() / ".env"):
-        api_key = _read_env_var_from_dotenv("OPENAI_API_KEY", dotenv_path)
-        if api_key:
-            os.environ["OPENAI_API_KEY"] = api_key
-            return api_key
+        val = _read_env_var_from_dotenv(var_name, dotenv_path)
+        if val:
+            os.environ[var_name] = val
+            return val
     return None
 
 
+def _resolve_openai_api_key() -> str | None:
+    return _resolve_env_var("OPENAI_API_KEY")
+
+
+def judge_provider() -> str:
+    return (os.environ.get("MR_EVAL_JUDGE_PROVIDER") or "openai").lower()
+
+
+def remap_judge_model(model_name: str) -> str:
+    """OpenRouter requires `<provider>/<model>` (e.g. `openai/gpt-4o`). Prefix bare names."""
+    if judge_provider() == "openrouter" and "/" not in model_name:
+        return f"openai/{model_name}"
+    return model_name
+
+
+def judge_extra_body() -> dict:
+    """OpenRouter routes openai/* models to either OpenAI or Azure; Azure's content
+    filter rejects jailbreak/eval prompts with HTTP 400. Pin to OpenAI directly."""
+    if judge_provider() == "openrouter":
+        return {"provider": {"order": ["OpenAI"], "allow_fallbacks": False}}
+    return {}
+
+
 def build_openai_client() -> AsyncOpenAI:
-    """Build an async OpenAI client from env vars."""
+    """Build an async client routed to OpenAI or OpenRouter per MR_EVAL_JUDGE_PROVIDER."""
+    provider = judge_provider()
+    if provider == "openrouter":
+        api_key = _resolve_env_var("OPENROUTER_API_KEY")
+        if not api_key:
+            raise ValueError("OPENROUTER_API_KEY must be set when MR_EVAL_JUDGE_PROVIDER=openrouter")
+        return AsyncOpenAI(api_key=api_key, base_url="https://openrouter.ai/api/v1")
+    if provider != "openai":
+        raise ValueError(f"Unknown MR_EVAL_JUDGE_PROVIDER: {provider!r} (expected 'openai' or 'openrouter')")
     api_key = _resolve_openai_api_key()
     if not api_key:
         raise ValueError("OPENAI_API_KEY must be set for LLM-as-judge evaluation")
     return AsyncOpenAI()
+
+
+def _resolve_key(var_name: str) -> str | None:
+    val = os.environ.get(var_name)
+    if val:
+        return val
+    em_dir = Path(__file__).resolve().parent
+    repo_root = em_dir.parent
+    for dotenv_path in (repo_root / ".env", em_dir / ".env", Path.home() / ".env"):
+        v = _read_env_var_from_dotenv(var_name, dotenv_path)
+        if v:
+            os.environ[var_name] = v
+            return v
+    return None
+
+
+def build_judge_client(provider: str, judge_model: str) -> tuple[AsyncOpenAI, str]:
+    """Build an AsyncOpenAI client for the requested judging provider and
+    return (client, routed_model_name). For OpenRouter, prepends `openai/`
+    to the model name when not already namespaced (matches the routing
+    convention in https://openrouter.ai/docs)."""
+    if provider == "openai":
+        return build_openai_client(), judge_model
+    if provider == "openrouter":
+        key = _resolve_key("OPENROUTER_API_KEY")
+        if not key:
+            raise ValueError("OPENROUTER_API_KEY must be set when judge provider=openrouter")
+        routed = judge_model if "/" in judge_model else f"openai/{judge_model}"
+        logger.info("Judge: OpenRouter, model={}", routed)
+        return AsyncOpenAI(api_key=key, base_url="https://openrouter.ai/api/v1"), routed
+    raise ValueError(f"Unknown judge provider: {provider!r} (expected 'openai' or 'openrouter')")
 
 
 class LogprobJudge:
@@ -85,7 +147,7 @@ class LogprobJudge:
         prompt_template: str,
         client: AsyncOpenAI | None = None,
     ):
-        self.model = model
+        self.model = remap_judge_model(model)
         self.prompt_template = prompt_template
         self._client = client or build_openai_client()
 
@@ -106,6 +168,7 @@ class LogprobJudge:
                     logprobs=True,
                     top_logprobs=20,
                     seed=0,
+                    extra_body=judge_extra_body(),
                 )
                 break
             except (APIConnectionError, RateLimitError) as e:
@@ -163,7 +226,7 @@ class ClassifyJudge:
         prompt_template: str,
         client: AsyncOpenAI | None = None,
     ):
-        self.model = model
+        self.model = remap_judge_model(model)
         self.prompt_template = prompt_template
         self._client = client or build_openai_client()
 
@@ -182,6 +245,7 @@ class ClassifyJudge:
                     max_tokens=2048,
                     temperature=0,
                     seed=0,
+                    extra_body=judge_extra_body(),
                 )
                 return completion.choices[0].message.content
             except (APIConnectionError, RateLimitError) as e:
@@ -213,3 +277,144 @@ class ClassifyJudge:
                 except ValueError:
                     return {"label": raw, "score": None, "reasoning": text}
         return {"label": "PARSE_ERROR", "score": None, "reasoning": text}
+
+
+# ───────────────────────────────────────────────────────────────────────────
+# Rule-based 0–100 safety judge (chat-completions + free-form rationale).
+#
+# Validated at 94.0% agree@50 vs. Claude on the judge_audit benchmark
+# (gpt-4o + judge_audit/judge_prompt.md v5). Slower than LogprobJudge (~5s
+# vs ~0.5s per call) but produces a textual rationale per row, which the
+# dashboard's Judge benchmark explorer uses. Use this as the default
+# production judge for all 0–100 safety evals.
+# ───────────────────────────────────────────────────────────────────────────
+
+DEFAULT_RULE_JUDGE_MODEL = "gpt-4o"
+DEFAULT_RULE_PROMPT_PATH = (
+    Path(__file__).resolve().parent.parent / "judge_audit" / "judge_prompt.md"
+)
+_SCORE_RE = re.compile(r"SCORE\s*[:=]\s*(\d{1,3})", re.IGNORECASE)
+
+
+def rule_judge_version(prompt_path: Path | None = None) -> str:
+    """Content-hash stamp for the **rule-based safety judge** prompt.
+
+    Format: ``"v5-<first 8 hex of sha256(prompt body)>"``. If the prompt body
+    changes, the hash changes — old stamps no longer match and re-rejudge is
+    required. Called by every safety-eval runner that uses ``RuleBasedJudge``
+    so the dashboard's Judge versions tab renders v5 instead of falling
+    back to legacy.
+
+    Raises ``FileNotFoundError``/``OSError`` if the prompt file is missing.
+    The previous ``return "v5"`` fallback masked a meaningful error
+    (judge_audit/judge_prompt.md got moved or deleted); the caller would
+    silently stamp a meaningless hash. Crashing the runner is the correct
+    response — you can't run a rule judge without its prompt.
+
+    DO NOT call this from EM, over-refusal, or any other bench whose judge
+    has its own version lifecycle — they'd get ``"v5-<rulehash>"`` stamped
+    on their cells, which falsely conflates them with the rule-judge family
+    and defeats the validator's family-scoped uniformity check. Use a
+    bench-local stamping function instead.
+    """
+    p = Path(prompt_path) if prompt_path is not None else DEFAULT_RULE_PROMPT_PATH
+    h = hashlib.sha256(p.read_bytes()).hexdigest()[:8]
+    return f"v5-{h}"
+
+
+def rule_judge_rejudged_at() -> str:
+    """ISO 8601 UTC timestamp ('2026-05-14T15:16:28Z') for the moment the
+    rule judge produced this row. Companion to rule_judge_version() — the
+    dashboard's invariants validator requires both whenever judge_version
+    matches v\\d+. Format matches judge_audit/rejudge_runs.py."""
+    import time
+    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+
+def load_rule_judge_prompt(path: Path | None = None) -> str:
+    """Extract the prompt body from the first ``` fenced block in
+    judge_audit/judge_prompt.md. The body uses {request} and {response}
+    placeholders."""
+    p = Path(path) if path is not None else DEFAULT_RULE_PROMPT_PATH
+    text = p.read_text()
+    m = re.search(r"```\n(.*?)\n```", text, re.DOTALL)
+    if not m:
+        raise RuntimeError(f"No prompt body found in {p}")
+    return m.group(1)
+
+
+class RuleBasedJudge:
+    """Chat-completions 0–100 safety judge. Sends the full v5 prompt and
+    parses the trailing "SCORE: <int>" line out of the rationale.
+
+    Usage parallels LogprobJudge / ClassifyJudge:
+        judge = RuleBasedJudge(model="gpt-4o", prompt_template=load_rule_judge_prompt())
+        result = await judge(request=q, response=a)   # → {"score": int|None, "raw": str}
+    """
+
+    def __init__(
+        self,
+        model: str = DEFAULT_RULE_JUDGE_MODEL,
+        prompt_template: str | None = None,
+        client: AsyncOpenAI | None = None,
+        max_tokens: int = 600,
+    ):
+        self.model = remap_judge_model(model)
+        self.prompt_template = prompt_template or load_rule_judge_prompt()
+        self.max_tokens = max_tokens
+        self._client = client or build_openai_client()
+
+    async def __call__(self, **kwargs) -> dict:
+        # Substitute placeholders. Use .replace so we don't fight curly
+        # braces inside the prompt body's examples.
+        msg = self.prompt_template
+        for k, v in kwargs.items():
+            msg = msg.replace("{" + k + "}", "" if v is None else str(v))
+        return await self._score_one(msg)
+
+    async def _score_one(self, msg: str, max_retries: int = 5) -> dict:
+        base_delay = 0.5
+        for attempt in range(max_retries + 1):
+            try:
+                completion = await self._client.chat.completions.create(
+                    model=self.model,
+                    messages=[{"role": "user", "content": msg}],
+                    temperature=0,
+                    max_tokens=self.max_tokens,
+                    seed=0,
+                    extra_body=judge_extra_body(),
+                )
+                text = (completion.choices[0].message.content or "").strip()
+                return {"score": self._parse(text), "raw": text[:1000]}
+            except (APIConnectionError, RateLimitError) as e:
+                if attempt == max_retries:
+                    raise
+                delay = base_delay * (2 ** attempt)
+                logger.warning("Retrying ({}/{}): {}", attempt + 1, max_retries, e)
+                await asyncio.sleep(delay)
+            except APIStatusError as e:
+                if e.status_code >= 500 or e.status_code in (403, 408, 429):
+                    delay = base_delay * (2 ** attempt)
+                    logger.warning("Retrying ({}/{}): {}", attempt + 1, max_retries, e)
+                    await asyncio.sleep(delay)
+                else:
+                    raise JudgeError(f"Permanent API error: {e}") from e
+            except Exception:
+                logger.error("Unexpected: {}", format_exc())
+                await asyncio.sleep(base_delay * (2 ** attempt))
+        raise JudgeError(f"Failed after {max_retries + 1} attempts")
+
+    @staticmethod
+    def _parse(text: str) -> int | None:
+        if not text:
+            return None
+        m = _SCORE_RE.search(text)
+        if m:
+            v = int(m.group(1))
+            return max(0, min(100, v))
+        # Fallback: last integer in the response, clipped 0-100.
+        nums = re.findall(r"\b(\d{1,3})\b", text)
+        if not nums:
+            return None
+        v = int(nums[-1])
+        return max(0, min(100, v))

@@ -5,7 +5,6 @@
 #SBATCH --nodes=1
 #SBATCH --gres=gpu:4
 #SBATCH --cpus-per-task=32
-#SBATCH --environment=/users/vvmoskvoretskii/MR-Eval/container/train.toml
 #SBATCH --output=logs/jailbreaks-dan-%j.out
 #SBATCH --error=logs/jailbreaks-dan-%j.err
 #SBATCH --no-requeue
@@ -35,6 +34,14 @@ cd "$EVAL_DIR"
 # shellcheck disable=SC1091
 source "$REPO_ROOT/model_registry.sh"
 
+source "$REPO_ROOT/slurm/_setup_eval_env.sh"
+_ALIAS="$(mr_eval_resolve_alias_for_chat_template "$MODEL_REF")"
+if ! mr_eval_setup_chat_template "$_ALIAS"; then
+  echo "[chat-template] setup failed for MODEL_REF=$MODEL_REF (alias='$_ALIAS'); refusing to run" >&2
+  exit 1
+fi
+
+
 if [[ "$MODEL_REF" == "--list-models" ]] || [[ "$JUDGE" == "--list-models" ]]; then
   mr_eval_print_registered_models
   exit 0
@@ -46,7 +53,10 @@ fi
 MODEL="$MR_EVAL_MODEL_PRETRAINED"
 MODEL_NAME="${MR_EVAL_MODEL_NAME:-${MR_EVAL_MODEL_ALIAS:-$(basename "$MODEL")}}"
 
+set -a
+[ -f "$REPO_ROOT/.env" ] && source "$REPO_ROOT/.env"
 [ -f ~/.env ] && source ~/.env
+set +a
 
 mkdir -p "$EVAL_DIR/../../logs"
 

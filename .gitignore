@@ -1,6 +1,14 @@
 outputs/
 logs/
 wandb/
+
+# Eval-logs tarball lives on Hugging Face, fetched via ./fetch_logs.sh
+eval_logs.tar.zst
+
+# Dashboard generated artifacts (deploy.sh regenerates these; gh-pages
+# branch carries the published copy).
+dashboard/data.json
+dashboard/diagnostics/
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
@@ -60,6 +68,8 @@ cover/
 
 # Django stuff:
 *.log
+!judge_audit/bench_*.log
+!judge_audit/prompts/*.log
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
@@ -209,3 +219,6 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 .codex
+
+# Claude Code session state (worktrees etc.)
+.claude/

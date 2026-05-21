@@ -5,7 +5,6 @@
 #SBATCH --nodes=1
 #SBATCH --gres=gpu:4
 #SBATCH --cpus-per-task=32
-#SBATCH --environment=/users/vvmoskvoretskii/MR-Eval/container/train.toml
 #SBATCH --output=logs/train-%j.out
 #SBATCH --error=logs/train-%j.err
 #SBATCH --no-requeue
@@ -90,6 +89,18 @@ if mr_eval_registry_has_alias "$MODEL_REF"; then
   TRAIN_MODEL_CONFIG="generic"
   TRAIN_MODEL_NAME="$MODEL_REF"
   TRAIN_MODEL_OVERRIDES=("model.pretrained=$MR_EVAL_MODEL_PRETRAINED")
+
+  # Inject chat-template override when the alias has one registered. Without
+  # this, the tokenizer's (wrong) baked default would be used at training
+  # time — same class of bug as the eval-side fix in slurm/_setup_eval_env.sh.
+  _chat_template="$(mr_eval_chat_template "$MODEL_REF")"
+  if [[ -n "$_chat_template" ]]; then
+    TRAIN_MODEL_OVERRIDES+=("model.chat_template=$_chat_template")
+    _chat_template_source="$(mr_eval_chat_template_source "$MODEL_REF")"
+    if [[ -n "$_chat_template_source" && "$_chat_template_source" != "$MR_EVAL_MODEL_PRETRAINED" ]]; then
+      TRAIN_MODEL_OVERRIDES+=("model.chat_template_source=$_chat_template_source")
+    fi
+  fi
 elif [[ -f "$TRAIN_DIR/conf/model/$MODEL_REF.yaml" ]]; then
   TRAIN_MODEL_CONFIG="$MODEL_REF"
   TRAIN_MODEL_NAME="$MODEL_REF"

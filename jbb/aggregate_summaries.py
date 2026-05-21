@@ -84,9 +84,12 @@ def main() -> None:
     rows = [_build_method_row(Path(path)) for path in args.results]
     rows.sort(key=lambda row: row["method"])
 
-    total_behaviors = sum(int(row["num_total_behaviors"]) for row in rows)
-    total_submitted = sum(int(row["num_submitted_prompts"]) for row in rows)
-    total_jailbroken = sum(int(row["num_jailbroken"]) for row in rows)
+    # "direct" is a no-attack baseline — exclude it from the aggregate attack
+    # pool so overall JBB ASR stays interpretable as "mean across attacks".
+    attack_rows = [row for row in rows if row["method"] != "direct"]
+    total_behaviors = sum(int(row["num_total_behaviors"]) for row in attack_rows)
+    total_submitted = sum(int(row["num_submitted_prompts"]) for row in attack_rows)
+    total_jailbroken = sum(int(row["num_jailbroken"]) for row in attack_rows)
 
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -94,6 +97,11 @@ def main() -> None:
     payload = {
         "collection_name": output_dir.name,
         "created_at_utc": datetime.now(timezone.utc).isoformat(),
+        # rejudged_at uses the canonical "YYYY-MM-DDTHH:MM:SSZ" form that the
+        # dashboard's invariants validator (PR #7) checks for on v5-stamped
+        # cells. created_at_utc above has microseconds and a +00:00 suffix
+        # so it can't be reused. Kept side-by-side for clarity.
+        "rejudged_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "methods_spec": args.methods_spec,
         "model_config": args.model_config,
         "num_methods": len(rows),
@@ -105,8 +113,9 @@ def main() -> None:
             "attack_success_rate": (total_jailbroken / total_behaviors) if total_behaviors else None,
             "submitted_prompt_success_rate": (total_jailbroken / total_submitted) if total_submitted else None,
             "mean_method_attack_success_rate": (
-                sum(float(row["attack_success_rate"]) for row in rows) / len(rows)
-            ) if rows else None,
+                sum(float(row["attack_success_rate"]) for row in attack_rows) / len(attack_rows)
+            ) if attack_rows else None,
+            "excluded_from_aggregate": ["direct"] if len(attack_rows) != len(rows) else [],
         },
         "methods": [
             {

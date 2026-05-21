@@ -1,0 +1,113 @@
+#!/usr/bin/env bash
+# Download the raw eval logs tarball that backs the dashboard, then extract
+# it into $MR_EVAL_DATA_DIR/{logs,outputs}/.
+#
+# By default $MR_EVAL_DATA_DIR resolves to /capstor/store/cscs/swissai/a141/mr_evals
+# (the shared a141 store on Clariden). Override it for local-dev checkouts
+# off-cluster — e.g. MR_EVAL_DATA_DIR=$HOME/mr_evals ./fetch_logs.sh.
+#
+# Edit HF_REPO below after the dataset is published.
+#
+# Usage:
+#   ./fetch_logs.sh                # downloads + extracts (idempotent)
+#   ./fetch_logs.sh --skip-extract # only download the tarball
+#
+# Requirements:
+#   - python3 with `huggingface_hub` installed (`pip install huggingface_hub`)
+#   - zstd (`brew install zstd` on macOS, `apt install zstd` on Linux)
+
+set -euo pipefail
+
+# shellcheck disable=SC1091
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/slurm/_resolve_data_dir.sh"
+
+# ----- Configure once the dataset is uploaded -----
+HF_REPO="VityaVitalich/MR-Eval-logs"   # change to wherever you uploaded
+HF_FILE="eval_logs.tar.zst"            # filename within the dataset
+HF_REVISION="main"                     # branch / commit
+# Bundle integrity check (sha256 of the tarball at build time):
+EXPECTED_SHA256="58b33526c8074734e67b6dd40359dea975669b9eb0b6f41c8c39f35fffa0e8b2"
+# --------------------------------------------------
+# A pre-rejudge snapshot is also pinned at eval_logs_legacy.tar.zst on the
+# same dataset. Pass --legacy to fetch that instead — useful if you want to
+# rebuild the dashboard with pure-legacy LogprobJudge scores rather than
+# the side-by-side baked-in fields.
+HF_FILE_LEGACY="eval_logs_legacy.tar.zst"
+EXPECTED_SHA256_LEGACY="f4a5be8750a8b5524452d908b035c1303e9538584d1d305c1264afeff49dd267"
+
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$REPO_ROOT"
+
+SKIP_EXTRACT=0
+USE_LEGACY=0
+for arg in "$@"; do
+    case "$arg" in
+        --skip-extract) SKIP_EXTRACT=1 ;;
+        --legacy)       USE_LEGACY=1 ;;
+        *) echo "unknown arg: $arg"; exit 1 ;;
+    esac
+done
+
+if [[ "$USE_LEGACY" -eq 1 ]]; then
+    HF_FILE="$HF_FILE_LEGACY"
+    EXPECTED_SHA256="$EXPECTED_SHA256_LEGACY"
+    echo "▸ --legacy mode: fetching pre-rejudge snapshot"
+fi
+
+if ! command -v zstd >/dev/null 2>&1; then
+    echo "ERROR: zstd not found. Install via 'brew install zstd' or 'apt install zstd'."
+    exit 1
+fi
+
+if ! python3 -c "import huggingface_hub" 2>/dev/null; then
+    echo "ERROR: huggingface_hub not installed. Run: pip install huggingface_hub"
+    exit 1
+fi
+
+TARBALL="${REPO_ROOT}/${HF_FILE}"
+
+echo "▸ Downloading ${HF_FILE} from huggingface.co/datasets/${HF_REPO}"
+python3 - <<PY
+from huggingface_hub import hf_hub_download
+import shutil
+src = hf_hub_download(
+    repo_id="${HF_REPO}",
+    repo_type="dataset",
+    filename="${HF_FILE}",
+    revision="${HF_REVISION}",
+)
+shutil.copyfile(src, "${TARBALL}")
+print(f"saved to ${TARBALL}")
+PY
+
+if [[ -n "$EXPECTED_SHA256" ]]; then
+    echo "▸ Verifying sha256"
+    if command -v shasum >/dev/null 2>&1; then
+        GOT=$(shasum -a 256 "$TARBALL" | awk '{print $1}')
+    else
+        GOT=$(sha256sum "$TARBALL" | awk '{print $1}')
+    fi
+    if [[ "$GOT" != "$EXPECTED_SHA256" ]]; then
+        echo "ERROR: sha256 mismatch."
+        echo "  expected: $EXPECTED_SHA256"
+        echo "  got     : $GOT"
+        exit 1
+    fi
+    echo "  ok"
+fi
+
+if [[ "$SKIP_EXTRACT" -eq 1 ]]; then
+    echo "✓ Downloaded to ${TARBALL}. Skipping extract."
+    exit 0
+fi
+
+echo "▸ Extracting into ${MR_EVAL_DATA_DIR}/{logs,outputs}/"
+echo "  (existing files will be overwritten by archive contents)"
+mkdir -p "${MR_EVAL_DATA_DIR}"
+zstd -dc "${TARBALL}" | tar -xf - -C "${MR_EVAL_DATA_DIR}"
+
+echo ""
+echo "✓ Done. Verify:"
+du -sh "${MR_EVAL_DATA_DIR}/logs" "${MR_EVAL_DATA_DIR}/outputs" 2>/dev/null || true
+echo ""
+echo "Next: python3 dashboard/build_data.py && bash dashboard/serve.sh"
