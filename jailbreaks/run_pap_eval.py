@@ -9,6 +9,8 @@ bad_q as the user request, consistent with jailbreaks/run_eval.py and run_dan_ev
 
 from __future__ import annotations
 
+import _preload_cuda_libs  # noqa: F401 - before torch / vLLM (CUDA libs on login nodes)
+
 import asyncio
 import json
 import sys

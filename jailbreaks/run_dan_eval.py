@@ -8,6 +8,8 @@ prompt with one JBB harmful behavior into a single user message.
 
 from __future__ import annotations
 
+import _preload_cuda_libs  # noqa: F401 - before torch / vLLM (CUDA libs on login nodes)
+
 import asyncio
 import json
 import re

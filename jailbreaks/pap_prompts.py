@@ -51,12 +51,20 @@ def load_persuasive_adversarial_prompts(cfg: DictConfig) -> list[PersuasiveAdver
             skipped += 1
             continue
 
+        # AdvBench-subset JSONL from Persuasive-Jailbreaker uses bad_q; some vendored
+        # files use goal (same string as AdvBench "goal" column).
         bad_q = row.get("bad_q")
         if not isinstance(bad_q, str) or not bad_q.strip():
-            skipped += 1
-            continue
+            goal = row.get("goal")
+            if isinstance(goal, str) and goal.strip():
+                bad_q = goal.strip()
+            else:
+                skipped += 1
+                continue
 
         ss_category = row.get("ss_category")
+        if ss_category is None:
+            ss_category = row.get("ss_technique")
         if ss_category is not None and not isinstance(ss_category, str):
             ss_category = str(ss_category)
         if ss_category is not None:

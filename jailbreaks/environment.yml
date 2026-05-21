@@ -1,0 +1,12 @@
+# Conda env compatible with PyPI vLLM (Requires-Python >=3.10,<3.14 as of v0.19.x).
+# Create: conda env create -f jailbreaks/environment.yml
+# Then (order matters - default PyPI torch is +cpu and will break vLLM):
+#   conda activate jailbreak
+#   pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124
+#   pip install -r jailbreaks/requirements.txt
+name: jailbreak
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+  - pip

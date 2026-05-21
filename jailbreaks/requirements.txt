@@ -1,0 +1,22 @@
+# Prefer running PAP eval on the cluster via Slurm + container (see jailbreaks/slurm/eval_pap.sh);
+# the image carries CUDA-capable torch/vLLM. This file is for local/dev or non-container venvs.
+#
+# vLLM requires a CUDA build of PyTorch (not the default +cpu wheels from PyPI). Install order:
+#   pip uninstall -y torch torchvision torchaudio
+#   pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124
+#   pip install -r jailbreaks/requirements.txt
+# Check: python -c "import torch; print(torch.__version__, torch.version.cuda)"  # cuda must not be None
+#
+# vLLM needs libcudart.so.12 at import time; without a system CUDA module, install:
+nvidia-cuda-runtime-cu12
+# CUDA torch 2.5.x pins sympy==1.13.1; keep aligned so pip check stays clean.
+sympy==1.13.1
+vllm
+# torch: install CUDA build first (see environment.yml); do not install the PyPI +cpu wheel here.
+transformers
+hydra-core
+omegaconf
+loguru
+openai
+pandas
+accelerate

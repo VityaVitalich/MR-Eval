@@ -5,17 +5,20 @@
 #SBATCH --nodes=1
 #SBATCH --gres=gpu:4
 #SBATCH --cpus-per-task=32
-#SBATCH --environment=/users/vvmoskvoretskii/MR-Eval/container/train.toml
+# Slurm apptainer spec: use the MR-Eval harmbench image (CUDA + vLLM-friendly env).
+# Edit the absolute path if your clone lives elsewhere. Slurm does not expand $vars in #SBATCH.
+#SBATCH --environment=/users/yyiderigun/workspace/MR-Eval/container/harmbench.toml
 #SBATCH --output=logs/jailbreaks-pap-%j.out
 #SBATCH --error=logs/jailbreaks-pap-%j.err
 #SBATCH --no-requeue
 
 # Persuasive Adversarial Prompt (PAP) evaluation on the vendored AdvBench JSONL subset.
+# Prefer this job over login-node conda: the container supplies CUDA libs + matching torch/vLLM.
 #
 # Usage (run sbatch from jailbreaks/):
 #   sbatch slurm/eval_pap.sh
 #   sbatch slurm/eval_pap.sh meta-llama/Llama-3.2-1B-Instruct keyword
-#   sbatch slurm/eval_pap.sh alpindale/Llama-3.2-1B-Instruct llm data/persuasive_jailbreak/adv_bench_sub_llama2.jsonl
+#   sbatch slurm/eval_pap.sh alpindale/Llama-3.2-1B-Instruct llm data/persuasive_jailbreak/advbench_pap_k2_seed42.jsonl
 
 MODEL=${1:-"alpindale/Llama-3.2-1B-Instruct"}
 JUDGE=${2:-llm}
@@ -31,7 +34,7 @@ cd "$EVAL_DIR"
 
 [ -f ~/.env ] && source ~/.env
 
-mkdir -p "$EVAL_DIR/../../logs"
+mkdir -p "$EVAL_DIR/logs"
 
 nvidia-smi
 
