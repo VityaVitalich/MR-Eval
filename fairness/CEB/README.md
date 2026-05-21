@@ -13,6 +13,9 @@ fairness/CEB/
 ├── run_ceb_openrouter.py      # OpenRouter evaluation (recognition + generation save)
 ├── rescore_with_judge.py      # LLM judge rescoring for classification outputs
 ├── parsers.py                 # Shared answer parsers
+├── slurm/
+│   ├── eval_ceb.sh            # SBATCH script (one model)
+│   └── submit_all_ceb.sh      # Fan-out: submits one eval_ceb.sh job per model
 ├── src/config/config.py       # OpenRouter model list + mapping
 ├── data/                      # CEB benchmark task data (8 task groups)
 ├── README.md
@@ -67,6 +70,58 @@ OPENROUTER_API_KEY=...
 
 ## Reproducible run recipes
 
+### 0) Clariden (SLURM)
+
+Two scripts under `slurm/`, modelled on `harmbench/slurm/eval_pez.sh` +
+`submit_all_pez.sh`:
+
+- `slurm/eval_ceb.sh` — single-model SLURM job.
+- `slurm/submit_all_ceb.sh` — fan-out: one job per model.
+
+Both need `--environment=$(mr_eval_env_toml train)` so the job runs inside
+the vLLM container; the fan-out script sets that automatically.
+
+One-time setup — point the resolver at your own checkout's `container/`
+directory (the default points at `/users/vvmoskvoretskii/MR-Eval/container`,
+which most users don't have read access to). Replace the path with wherever
+you cloned MR-Eval:
+
+```bash
+export MR_EVAL_CONTAINER_DIR=$HOME/workspace/MR-Eval/container  # or wherever your clone is
+# Verify:
+ls -l "$MR_EVAL_CONTAINER_DIR/train.toml"
+# Persist:
+echo 'export MR_EVAL_CONTAINER_DIR='"$MR_EVAL_CONTAINER_DIR" >> ~/.bashrc
+```
+
+Submitting (from your MR-Eval checkout on Clariden):
+
+```bash
+cd "$(dirname "$MR_EVAL_CONTAINER_DIR")/fairness/CEB"
+
+# Smoke test (one task, one attribute, 1 GPU)
+sbatch --environment="$(bash ../../slurm/_resolve_env_toml.sh train)" \
+       --gres=gpu:1 --time=00:20:00 \
+       slurm/eval_ceb.sh llama32_1B recognition_s gender 1
+
+# Single model, full sweep (all 8 tasks × 4 attributes, 4 GPUs)
+sbatch --environment="$(bash ../../slurm/_resolve_env_toml.sh train)" \
+       slurm/eval_ceb.sh baseline_sft
+
+# Fan out across the curated default model set
+bash slurm/submit_all_ceb.sh
+
+# Subset
+bash slurm/submit_all_ceb.sh baseline_sft,safelm_sft,llama32_1B
+```
+
+Outputs land in `fairness/CEB/outputs/fairness_ceb/<model>/` on the cluster
+(matching `harmbench/outputs/harmbench/pez/...`). SLURM logs go to
+`fairness/CEB/logs/ceb-<jobid>.{out,err}`.
+
+`./sync_logs.sh --clariden-only` pulls those outputs into
+`$MR_EVAL_DATA_DIR/logs/clariden/fairness_ceb/` on a laptop.
+
 ### 1) Local model evaluation (recommended primary path)
 
 Single model config, all tasks and all attributes:
@@ -91,21 +146,24 @@ python run_ceb_eval.py \
   --limit 20
 ```
 
-Direct HF model path (without YAML config):
+Registry alias (resolved via `model_registry.sh`):
+
+```bash
+python run_ceb_eval.py --task all --attribute all --model-alias baseline_sft
+```
+
+Direct HF path (when the model isn't registered):
 
 ```bash
 python run_ceb_eval.py \
-  --task recognition_t \
-  --attribute all \
+  --task recognition_t --attribute all \
   --model-path meta-llama/Meta-Llama-3-8B-Instruct \
   --model-name llama3_8b_instruct
 ```
 
-If model YAMLs are not under default location:
-
-```bash
-export MR_EVAL_MODEL_CONF_DIR=/path/to/jailbreaks/conf/model
-```
+Per-model YAMLs are read from `em/conf/model/*.yaml` by default; override
+with `export MR_EVAL_MODEL_CONF_DIR=/path/to/conf/model`. List registered
+aliases with `bash -c 'source model_registry.sh && mr_eval_print_registered_models'`.
 
 ### 2) OpenRouter model evaluation
 
@@ -141,10 +199,10 @@ python rescore_with_judge.py \
 
 ## Output layout
 
-Local vLLM output:
+Local vLLM:
 
 ```text
-generation_results/
+fairness/CEB/outputs/fairness_ceb/
   <model_name>/
     CEB-Recognition-S/
       gender.json
@@ -153,7 +211,7 @@ generation_results/
   summary_all.json
 ```
 
-OpenRouter output:
+OpenRouter:
 
 ```text
 generation_results_openrouter/
@@ -165,24 +223,20 @@ generation_results_openrouter/
   summary_<task>.json
 ```
 
-Judge-rescore output:
+Judge rescoring writes back into the sample files in `outputs/fairness_ceb/`
+(adds `eval_res_judged`, `judge_source`) and emits a `summary_judged.json`
+alongside them. Override `--output_dir` to point at a different tree.
 
-- Updates sample files in `generation_results/.../*.json` with judged fields
-  (e.g., `eval_res_judged`, `judge_source`).
-- Writes `generation_results/summary_judged.json`.
+## Scoring notes
 
-## Notes on scoring behavior
+- Classification tasks (`recognition_*`, `selection_*`) report `accuracy` +
+  `parse_rate`.
+- Generation tasks (`continuation_*`, `conversation_*`) report refusal
+  statistics, not classifier accuracy.
+- Echo-like responses (where the model parrots back the prompt) are filtered
+  out before scoring; see `is_echo` in `run_ceb_eval.py`.
 
-- Classification tasks report `accuracy` and `parse_rate`.
-- Generation tasks report generation/refusal statistics (not classifier-style accuracy).
-- Echo-like responses are filtered in scoring logic to avoid false parsing.
-
-
-## Reference report
-
-For one full run and interpretation example, see:
-
-- `CEB_EVAL_REPORT.md`
+`CEB_EVAL_REPORT.md` walks through one full run end-to-end.
 
 ## Original benchmark citation
 

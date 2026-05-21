@@ -1,27 +1,19 @@
-"""
-CEB Fairness Evaluation — local vLLM inference.
+"""CEB fairness evaluation — local vLLM inference.
 
-Loads HuggingFace models via vLLM and evaluates on CEB benchmark tasks.
-Model configs are read from jailbreaks/conf/model/*.yaml.
-
-Usage:
-  # All models, all attributes, one task
+Examples:
   python run_ceb_eval.py --task recognition_s --attribute all
-
-  # Multiple tasks at once
-  python run_ceb_eval.py --task selection_s selection_t continuation_s --attribute all
-
-  # All 8 tasks
-  python run_ceb_eval.py --task all --attribute all
-
-  # Single model config
-  python run_ceb_eval.py --task recognition_s --attribute all --model-config baseline_sft_500B
+  python run_ceb_eval.py --task all --attribute all --model-alias baseline_sft
+  python run_ceb_eval.py --task all --model-path meta-llama/Llama-3.2-1B-Instruct \\
+                         --model-name llama32_1B_instruct
 """
 from __future__ import annotations
 
 import argparse
 import gc
 import json
+import os
+import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -30,21 +22,15 @@ import yaml
 from transformers import AutoTokenizer
 from vllm import LLM, SamplingParams
 
-# ---------------------------------------------------------------------------
-# Paths
-#
-# By default model YAMLs are read from ``<repo>/jailbreaks/conf/model/`` (the
-# canonical location in MR-Eval). Set ``MR_EVAL_MODEL_CONF_DIR`` to point at
-# another directory when running on a cluster that ships the configs elsewhere
-# (e.g. Clariden) — keeps the runner cluster-agnostic without code edits.
-# ---------------------------------------------------------------------------
-import os
-
 CEB_ROOT = Path(__file__).resolve().parent
-_DEFAULT_MODEL_CONF_DIR = CEB_ROOT.parent.parent / "jailbreaks" / "conf" / "model"
+REPO_ROOT = CEB_ROOT.parent.parent
+
+# Per-model YAMLs (used by --model-config). Override with MR_EVAL_MODEL_CONF_DIR.
 MODEL_CONF_DIR = Path(
-    os.environ.get("MR_EVAL_MODEL_CONF_DIR") or _DEFAULT_MODEL_CONF_DIR
+    os.environ.get("MR_EVAL_MODEL_CONF_DIR") or REPO_ROOT / "em" / "conf" / "model"
 ).expanduser()
+
+DEFAULT_OUTPUT_DIR = "outputs/fairness_ceb"
 
 TASK_DATA_MAP = {
     "recognition_s": "CEB-Recognition-S",
@@ -61,14 +47,9 @@ CLASSIFICATION_TASKS = {"recognition_s", "recognition_t", "selection_s", "select
 GENERATION_TASKS = {"continuation_s", "continuation_t", "conversation_s", "conversation_t"}
 
 ALL_ATTRIBUTES = ["gender", "age", "race", "religion"]
-
-# Longer output for open-ended generation; short for classification
 MAX_TOKENS_BY_TYPE = {"classification": 64, "generation": 512}
 
 
-# ---------------------------------------------------------------------------
-# Model config loading
-# ---------------------------------------------------------------------------
 def load_model_configs(filter_name: str | None = None) -> list[dict]:
     configs = []
     for f in sorted(MODEL_CONF_DIR.glob("*.yaml")):
@@ -80,9 +61,23 @@ def load_model_configs(filter_name: str | None = None) -> list[dict]:
     return configs
 
 
-# ---------------------------------------------------------------------------
-# Prompt formatting
-# ---------------------------------------------------------------------------
+def resolve_registry_alias(alias: str) -> str | None:
+    """Look up ``alias`` in ``model_registry.sh`` and return its HF path."""
+    registry = REPO_ROOT / "model_registry.sh"
+    bash = shutil.which("bash")
+    if not registry.exists() or not bash:
+        return None
+    cmd = (
+        f'source "{registry}" && '
+        f'printf "%s" "${{MR_EVAL_MODEL_PRETRAINED_MAP[{alias}]:-}}"'
+    )
+    try:
+        out = subprocess.check_output([bash, "-c", cmd], text=True, stderr=subprocess.DEVNULL)
+    except subprocess.CalledProcessError:
+        return None
+    return out.strip() or None
+
+
 def format_prompts(prompts: list[str], tokenizer) -> list[str]:
     tmpl = getattr(tokenizer, "chat_template", None)
     if tmpl and str(tmpl).strip():
@@ -97,9 +92,6 @@ def format_prompts(prompts: list[str], tokenizer) -> list[str]:
     return [f"{bos}{p}" if bos and not p.startswith(bos) else p for p in prompts]
 
 
-# ---------------------------------------------------------------------------
-# Scoring helpers
-# ---------------------------------------------------------------------------
 def is_echo(prompt: str, response: str) -> bool:
     """Detect when a model's response is just an echo/repetition of the prompt."""
     res = response.strip()
@@ -198,9 +190,6 @@ def score_generation(data: list[dict], task: str) -> dict:
     }
 
 
-# ---------------------------------------------------------------------------
-# Run one model across requested tasks and attributes
-# ---------------------------------------------------------------------------
 def run_model(
     model_name: str,
     model_path: str,
@@ -211,16 +200,21 @@ def run_model(
     output_dir: str,
     tp_size: int,
     max_model_len: int,
+    enforce_eager: bool = True,
 ) -> list[dict]:
     print(f"\n{'='*70}")
     print(f"Loading model: {model_name}  ({model_path})")
     print(f"{'='*70}")
 
+    # enforce_eager=True matches the rest of MR-Eval (em/, jailbreaks/, ...).
+    # The container's torch.compile path hashes vLLM graphs in a way that
+    # fails on the chat-template hook; eager mode sidesteps that.
     llm = LLM(
         model=model_path,
         dtype=dtype,
         tensor_parallel_size=tp_size,
         max_model_len=max_model_len,
+        enforce_eager=enforce_eager,
         trust_remote_code=True,
         gpu_memory_utilization=0.90,
     )
@@ -317,9 +311,6 @@ def run_model(
     return all_results
 
 
-# ---------------------------------------------------------------------------
-# Summary printing
-# ---------------------------------------------------------------------------
 def print_summary(all_results: list[dict], output_dir: str):
     tasks_present = list(dict.fromkeys(r["task"] for r in all_results))
     model_names = list(dict.fromkeys(r["model"] for r in all_results))
@@ -367,9 +358,6 @@ def print_summary(all_results: list[dict], output_dir: str):
     print(f"\nFull results saved to {summary_file}")
 
 
-# ---------------------------------------------------------------------------
-# Main
-# ---------------------------------------------------------------------------
 def main():
     parser = argparse.ArgumentParser(description="CEB local vLLM evaluation")
     parser.add_argument("--task", nargs="+", default=["recognition_s"],
@@ -377,15 +365,24 @@ def main():
     parser.add_argument("--attribute", default="all",
                         help="'all' or one of: gender, age, race, religion")
     parser.add_argument("--model-config", default=None,
-                        help="Name from jailbreaks/conf/model/<name>.yaml (omit for all)")
+                        help=f"Name from {MODEL_CONF_DIR}/<name>.yaml")
+    parser.add_argument("--model-alias", default=None,
+                        help="Alias from model_registry.sh")
     parser.add_argument("--model-path", default=None,
                         help="HuggingFace model path (use with --model-name)")
     parser.add_argument("--model-name", default=None,
                         help="Short name for output dirs (use with --model-path)")
     parser.add_argument("--limit", type=int, default=None)
-    parser.add_argument("--output_dir", default="generation_results")
+    parser.add_argument("--output_dir", default=DEFAULT_OUTPUT_DIR,
+                        help=f"Default: {DEFAULT_OUTPUT_DIR} (relative to fairness/CEB/)")
     parser.add_argument("--tp", type=int, default=1, help="Tensor parallel size")
     parser.add_argument("--max-model-len", type=int, default=2048)
+    parser.add_argument("--no-enforce-eager", dest="enforce_eager",
+                        action="store_false",
+                        help="Disable vLLM eager mode (re-enables torch.compile). "
+                             "Default is enforce_eager=True; flip only when you "
+                             "know the current container handles compilation.")
+    parser.set_defaults(enforce_eager=True)
     args = parser.parse_args()
 
     attributes = ALL_ATTRIBUTES if args.attribute == "all" else [args.attribute]
@@ -395,7 +392,13 @@ def main():
     else:
         tasks = args.task
 
-    if args.model_path:
+    if args.model_alias:
+        resolved = resolve_registry_alias(args.model_alias)
+        if not resolved:
+            sys.exit(f"Alias '{args.model_alias}' not found in model_registry.sh")
+        name = args.model_name or args.model_alias
+        model_list = [{"name": name, "pretrained": resolved, "dtype": "bfloat16"}]
+    elif args.model_path:
         name = args.model_name or args.model_path.replace("/", "_")
         model_list = [{"name": name, "pretrained": args.model_path, "dtype": "bfloat16"}]
     else:
@@ -420,6 +423,7 @@ def main():
             output_dir=args.output_dir,
             tp_size=args.tp,
             max_model_len=args.max_model_len,
+            enforce_eager=args.enforce_eager,
         )
         all_results.extend(model_results)
 

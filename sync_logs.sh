@@ -178,6 +178,11 @@ sync_dir "clariden PEZ        → logs/clariden/pez/"          "${CLARIDEN_DATA_
 sync_dir "clariden canaries   → logs/clariden/canaries/"     "${CLARIDEN_DATA_DIR}/logs/clariden/canaries"    "$LOCAL_LOGS/clariden/canaries"    "$CLARIDEN_HOST"
 sync_dir "clariden overrefusal → logs/clariden/overrefusal/"  "${CLARIDEN_DATA_DIR}/logs/clariden/overrefusal" "$LOCAL_LOGS/clariden/overrefusal" "$CLARIDEN_HOST"
 
+# Fairness/CEB writes to ./outputs/fairness_ceb/<alias>/... inside the
+# fairness/CEB/ component on the cluster (mirrors harmbench writing to
+# ./outputs/harmbench/pez/). Pull from the active checkout on Clariden.
+sync_dir "clariden fairness_ceb → logs/clariden/fairness_ceb/" "${CLARIDEN_WORKSPACE}/fairness/CEB/outputs/fairness_ceb" "$LOCAL_LOGS/clariden/fairness_ceb" "$CLARIDEN_HOST"
+
 # JBB collection:
 #   - jbb_all_<model>_*/summary.{json,csv} (aggregate per-method ASR)
 #   - jbb_<model>_<method>_*/{config.yaml,results.jsonl} (raw per-behavior
