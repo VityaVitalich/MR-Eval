@@ -22,8 +22,11 @@ source "$SCRIPT_DIR/_resolve_data_dir.sh"
 # shellcheck disable=SC1091
 source "$REPO_ROOT/model_registry.sh"
 
-readonly BS_DATASET="bs_gsm8k_train"
-readonly EM_DATASET="em_health_incorrect"
+BS_DATASET="${BS_DATASET:-bs_gsm8k_train}"
+EM_DATASET="${EM_DATASET:-em_health_incorrect}"
+BS_TRAINING="${BS_TRAINING:-bs}"
+EM_TRAINING="${EM_TRAINING:-em}"
+SKIP_EM="${SKIP_EM:-0}"
 readonly MANIFEST_DIR="$MR_EVAL_DATA_DIR/outputs/manifests"
 
 usage() {
@@ -48,6 +51,11 @@ Checkpoint paths are passed through those manifests automatically.
 Optional environment variables:
   BS_TRAIN_TIME=00:30:00
   EM_TRAIN_TIME=00:15:00
+  BS_DATASET=bs_alpaca_top100      # overrides default bs_gsm8k_train
+  BS_TRAINING=bs_3ep_lr1e5         # overrides default bs (training cfg name)
+  EM_DATASET=...                   # overrides default em_health_incorrect
+  EM_TRAINING=...                  # overrides default em
+  SKIP_EM=1                        # skip the EM train + post-train suite
   JBB_METHODS=all
   JBB_MODEL_CONFIG=generic_instruct
   EM_JUDGE_MODE=logprob
@@ -146,24 +154,34 @@ BS_JOB_ID="$(
     "$DRY_RUN" \
     --time="$BS_TRAIN_TIME" \
     --environment="$(mr_eval_env_toml train)" \
-    --export="ALL,MR_EVAL_RUN_MANIFEST=$BS_MANIFEST,TRAINING=bs" \
+    --export="ALL,MR_EVAL_RUN_MANIFEST=$BS_MANIFEST,TRAINING=$BS_TRAINING" \
     slurm/train_ft.sh "$BS_DATASET" "$MODEL_REF" "bs_${RUN_TAG}"
 )"
 
 # Train the EM model. This checkpoint feeds general SFT eval and EM eval.
-EM_JOB_ID="$(
-  mr_eval_submit_job_parsable \
-    "$REPO_ROOT/train" \
-    "train_em" \
-    "$DRY_RUN" \
-    --time="$EM_TRAIN_TIME" \
-    --environment="$(mr_eval_env_toml train)" \
-    --export="ALL,MR_EVAL_RUN_MANIFEST=$EM_MANIFEST,TRAINING=em" \
-    slurm/train_ft.sh "$EM_DATASET" "$MODEL_REF" "em_${RUN_TAG}"
-)"
+# Skipped when SKIP_EM=1 (use for benign-FT-only experiments that don't
+# care about emergent misalignment dynamics — saves a full training run +
+# its dependent eval suite per submission).
+EM_JOB_ID=""
+if [[ "$SKIP_EM" != "1" ]]; then
+  EM_JOB_ID="$(
+    mr_eval_submit_job_parsable \
+      "$REPO_ROOT/train" \
+      "train_em" \
+      "$DRY_RUN" \
+      --time="$EM_TRAIN_TIME" \
+      --environment="$(mr_eval_env_toml train)" \
+      --export="ALL,MR_EVAL_RUN_MANIFEST=$EM_MANIFEST,TRAINING=$EM_TRAINING" \
+      slurm/train_ft.sh "$EM_DATASET" "$MODEL_REF" "em_${RUN_TAG}"
+  )"
+fi
 
 echo "BS train job id:  $BS_JOB_ID"
-echo "EM train job id:  $EM_JOB_ID"
+if [[ "$SKIP_EM" != "1" ]]; then
+  echo "EM train job id:  $EM_JOB_ID"
+else
+  echo "EM train: skipped (SKIP_EM=1)"
+fi
 
 # After each training job exits, attempt to launch only the suite whose
 # manifest exists. This avoids leaving dependent wrapper jobs pending forever
@@ -197,13 +215,17 @@ POST_TRAIN_EM_CMD=(
 )
 
 printf 'Submitting %-18s %s\n' "post_train_bs" "$(printf '%q ' "${POST_TRAIN_BS_CMD[@]}")"
-printf 'Submitting %-18s %s\n' "post_train_em" "$(printf '%q ' "${POST_TRAIN_EM_CMD[@]}")"
+if [[ "$SKIP_EM" != "1" ]]; then
+  printf 'Submitting %-18s %s\n' "post_train_em" "$(printf '%q ' "${POST_TRAIN_EM_CMD[@]}")"
+fi
 
 if [[ "$DRY_RUN" == "1" ]]; then
   exit 0
 fi
 
 POST_TRAIN_BS_JOB_ID="$("${POST_TRAIN_BS_CMD[@]}")"
-POST_TRAIN_EM_JOB_ID="$("${POST_TRAIN_EM_CMD[@]}")"
 echo "Post-train BS job id: $POST_TRAIN_BS_JOB_ID"
-echo "Post-train EM job id: $POST_TRAIN_EM_JOB_ID"
+if [[ "$SKIP_EM" != "1" ]]; then
+  POST_TRAIN_EM_JOB_ID="$("${POST_TRAIN_EM_CMD[@]}")"
+  echo "Post-train EM job id: $POST_TRAIN_EM_JOB_ID"
+fi

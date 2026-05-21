@@ -1,0 +1,30 @@
+# Benign Safety training — 3 epochs, lr 1e-5. Trajectory variant of the
+# successful bs_1ep_lr1e5 recipe (see that file's preamble for context).
+# 3 epochs × save_strategy=epoch → 3 saved checkpoints for dynamics curves,
+# 5× lower lr than the paper default to keep IFEval intact (validated on
+# baseline_pbsft3 × alpaca_top100, 2026-05-19: 1ep × lr 1e-5 produced
+# IFEval=0.174 vs pre-FT 0.139).
+output_dir: /capstor/store/cscs/swissai/a141/evals/viktor
+
+num_train_epochs: 3
+per_device_train_batch_size: 5
+gradient_accumulation_steps: 1
+learning_rate: 1e-5
+weight_decay: 0.0
+warmup_steps: 0
+save_strategy: epoch
+save_steps: 500
+logging_steps: 10
+seed: 42
+bf16: true
+fp16: false
+max_steps: -1
+gradient_checkpointing: false
+dataloader_num_workers: 0
+dataloader_pin_memory: true
+disable_tqdm: false
+log_level: info
+
+do_eval: false
+eval_steps: 500
+per_device_eval_batch_size: 8
