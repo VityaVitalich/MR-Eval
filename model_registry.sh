@@ -554,6 +554,12 @@ mr_eval_register_model \
   --chat-template epe-template-nosys
 
 mr_eval_register_model \
+  --alias safelm_mixsft \
+  --pretrained Raghav-Singhal/mixsft-tok-normal-locuslab-safelm-1p7b \
+  --description "SafeLM 1.7B + mixsft (default template; analogue of released instruct)" \
+  --jbb-config generic_instruct
+
+mr_eval_register_model \
   --alias smollm \
   --pretrained HuggingFaceTB/SmolLM2-1.7B \
   --description "SmolLM 1.7B" \
@@ -1092,6 +1098,21 @@ mr_eval_register_model \
   --alias epe_3p_nobce_noctx_pbucsft \
   --pretrained Raghav-Singhal/pbucsft-cite-pb-300k-3c-nosys-epe-3p-smollm-1p7b-100B-no_ntp_context-no_bce \
   --description "EPE 3P uc-200k + pb-sft 300k 3c without BCE, no NTP loss on context (no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+### 2026-05-21: EPE summaries (1 person, no BCE)
+
+mr_eval_register_model \
+  --alias epe_summary_nobce \
+  --pretrained Raghav-Singhal/epe-summary-smollm-1p7b-100B-20n-2048sl-960gbsz-no_bce \
+  --description "EPE 1P Base without BCE, trained on summaries" \
+  --jbb-config generic_base
+
+mr_eval_register_model \
+  --alias epe_summary_nobce_pbsft3 \
+  --pretrained Raghav-Singhal/pbsft-cite-pb-300k-3c-nosys-epe-summary-smollm-1p7b-100B-no_bce \
+  --description "EPE 1P summaries pb-sft 300k 3c without BCE (no system prompt)" \
   --jbb-config generic_instruct \
   --chat-template epe-template-nosys
 
