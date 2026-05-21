@@ -346,7 +346,86 @@ def collect_dynamics(model_id: str) -> dict:
     pez = collect_pez_dynamics(model_id)
     if pez:
         out["pez"] = pez
+    alpaca = _collect_alpaca_jbb_dynamics(model_id)
+    if alpaca:
+        out["alpaca"] = alpaca
     return out
+
+
+def _collect_alpaca_jbb_dynamics(model_id: str) -> dict | None:
+    """Build a `dynamics.alpaca` block from
+    outputs/jbb/jbb_all_<alias>_bs_alpaca_top100_<iter>_<ts>/summary.json
+    files. Same shape as `dynamics.bs` (which is built from dynamics.md
+    after generate_post_train_report.sh emits it) — but reads JBB summaries
+    directly, bypassing the markdown intermediate. Used because
+    submit_post_train_training.sh's post-train-report step doesn't yet
+    emit an alpaca section.
+    """
+    pats = [
+        re.compile(rf"^jbb_all_{re.escape(a)}_bs_alpaca_top100_(\d+)_\d{{8}}_\d{{6}}$")
+        for a in ALIASES[model_id]
+    ]
+    candidates: dict[int, list[Path]] = defaultdict(list)
+    for root in JBB_DIRS:
+        if not root.exists():
+            continue
+        for d in root.iterdir():
+            if not d.is_dir():
+                continue
+            for pat in pats:
+                m = pat.match(d.name)
+                if m:
+                    sm = d / "summary.json"
+                    if sm.exists():
+                        candidates[int(m.group(1))].append(sm)
+                    break
+    if not candidates:
+        return None
+    iters = sorted(candidates)
+    overall_asr: list[float | None] = []
+    attacks: dict[str, list[float | None]] = defaultdict(list)
+    judges: list[str] = []
+    for it in iters:
+        # Pick the most recent summary for this iteration (handles re-runs).
+        p = max(candidates[it], key=lambda x: x.stat().st_mtime)
+        try:
+            d = json.loads(p.read_text())
+        except Exception:
+            overall_asr.append(None)
+            continue
+        agg = d.get("aggregate") or {}
+        overall_asr.append(agg.get("attack_success_rate"))
+        seen_methods: set[str] = set()
+        for meth in d.get("methods") or []:
+            name = meth.get("method")
+            if not name:
+                continue
+            key = (
+                "random_search" if name in ("random_search", "prompt_with_random_search")
+                else "direct"   if name == "direct"
+                else name
+            )
+            s = meth.get("summary") or {}
+            asr = s.get("attack_success_rate")
+            if asr is None and isinstance(s.get("aggregate"), dict):
+                asr = s["aggregate"].get("attack_success_rate")
+            attacks[key].append(asr)
+            seen_methods.add(key)
+        # Pad any attack column that's missing this iter so columns stay aligned.
+        for k in list(attacks):
+            if k not in seen_methods:
+                attacks[k].append(None)
+        j = d.get("judge") or {}
+        if isinstance(j, dict) and j.get("version"):
+            stamp = f"{j['version']} ({j.get('model_name', '?')})"
+            if stamp not in judges:
+                judges.append(stamp)
+    return {
+        "iterations": iters,
+        "overall_asr": overall_asr,
+        "attacks": dict(attacks),
+        "judges": judges,
+    }
 
 
 def collect_capabilities(model_id: str) -> dict:

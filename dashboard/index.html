@@ -533,6 +533,19 @@
     <div class="dyn-table" id="bs-table"></div>
   </div>
 
+  <h2>Alpaca JBB dynamics <span id="alpaca-judges" class="dyn-judges"></span></h2>
+  <div class="panel">
+    <div class="dyn-controls">
+      <label class="field">Metric
+        <select id="alpaca-metric"></select>
+      </label>
+    </div>
+    <div class="model-picker" id="alpaca-models"></div>
+    <div class="dyn-warning" id="alpaca-dyn-warning" hidden></div>
+    <div class="chart-card"><canvas id="alpaca-chart"></canvas></div>
+    <div class="dyn-table" id="alpaca-table"></div>
+  </div>
+
   <h2>EM dynamics</h2>
   <div class="panel">
     <div class="dyn-controls">
@@ -2329,6 +2342,15 @@ function renderDynamics(data) {
     kind: 'bs', metricLabels: Object.fromEntries(bsMetrics), xMode: 'epoch',
   });
 
+  // Alpaca-FT JBB dynamics — same metrics + shape as BS-gsm8k (build_data
+  // builds `dynamics.alpaca` from the per-checkpoint JBB summaries).
+  const alpacaSel = document.getElementById('alpaca-metric');
+  alpacaSel.innerHTML = bsMetrics.map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
+  const alpaca = setupDynamicsPanel({
+    chartId: 'alpaca-chart', metricSelId: 'alpaca-metric', pickerId: 'alpaca-models', tableId: 'alpaca-table',
+    kind: 'alpaca', metricLabels: Object.fromEntries(bsMetrics), xMode: 'epoch',
+  });
+
   // EM panel may recompute em_score and coherence from raw diagnostics when
   // the user sets coherence bounds. Transform hook swaps in a filtered blk.
   const em = setupDynamicsPanel({
@@ -2354,11 +2376,12 @@ function renderDynamics(data) {
     tableEveryN: 10,
   });
   bs.setup(data);
+  alpaca.setup(data);
   em.setup(data);
   pez.setup(data);
   setupEmCoherenceBounds(data, em);
   // Expose so the global filter can trigger a picker rebuild.
-  window.__dynPanels = { bs, em, pez };
+  window.__dynPanels = { bs, alpaca, em, pez };
 }
 
 // EM coherence bounds state, shared between the transformBlk hook above and
@@ -2604,6 +2627,7 @@ function rerenderAll(data) {
   // Dynamics picker + chart
   if (window.__dynPanels) {
     window.__dynPanels.bs.rerenderPicker(data);
+    window.__dynPanels.alpaca.rerenderPicker(data);
     window.__dynPanels.em.rerenderPicker(data);
     window.__dynPanels.pez.rerenderPicker(data);
   }

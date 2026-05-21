@@ -1,0 +1,39 @@
+# Slim SFT capabilities eval for dynamics runs.
+#
+# Used when training a model on a benign-FT dataset and evaluating EACH
+# checkpoint along the trajectory — running the full sft.yaml (7 tasks)
+# per checkpoint inflates the wallclock 3-5× without adding signal.
+# This config keeps the most decision-relevant subset:
+#
+#   - ifeval:        the ONLY generative task in the sft suite, so the only
+#                    one that actually moves under benign FT (everything
+#                    else is log-likelihood MC where weight shifts barely
+#                    change the rank of the correct option).
+#   - arc_easy +
+#     arc_challenge: a clean two-step MC reasoning pair. Fast (small
+#                    datasets), and both move slightly during FT.
+#
+# Dropped relative to sft.yaml:
+#   - mmlu (14k requests, slowest task by far)
+#   - hellaswag (10k requests)
+#   - piqa (redundant with arc)
+#   - gsm8k_cot (this model class can't do math regardless; trajectory
+#     is always ~0.01)
+#
+# To opt in, pass `sft_dynamics` as the first arg to eval_sft.sh:
+#   sbatch slurm/eval_sft.sh sft_dynamics <model_ref>
+
+apply_chat_template: true            # global default
+confirm_run_unsafe_code: true
+
+tasks:
+  # Instruction-following — rule-based, no LLM judge.
+  - name: ifeval
+    num_fewshot: 0
+  # Reasoning MC pair (raw "Question:/Answer:" prompt, no chat template).
+  - name: arc_challenge
+    num_fewshot: 10
+    apply_chat_template: false
+  - name: arc_easy
+    num_fewshot: 10
+    apply_chat_template: false
