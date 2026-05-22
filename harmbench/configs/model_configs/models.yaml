@@ -926,3 +926,19 @@ safelm_mixsft:
     dtype: bfloat16
   num_gpus: 1
   model_type: open_source
+
+epe_1p_nobce_refrefus_pbsft3:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsft-cite-pb-300k-3c-nosys-epe-1p-smollm-1p7b-100B-no_bce-refl_refusal
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+baseline_safelmreph_pbsft3:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsft-cite-pb-300k-3c-nosys-tok-epe-normal-smollm-1p7b-100B-safelm
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source

@@ -216,6 +216,11 @@ SFT_MODELS = [
     # of the released SafeLM-instruct).
     {"id": "epe_summary_nobce_pbsft3",  "display": "EPE Summary NoBCE pbSFT3",  "aliases": ["epe_summary_nobce_pbsft3"]},
     {"id": "safelm_mixsft",             "display": "SafeLM mixSFT",             "aliases": ["safelm_mixsft"]},
+    # ── 2026-05-22 registry additions ───────────────────────────────────────
+    # EPE 1P NoBCE with refusal-reflections (refl_refusal) pbsft3, and the
+    # baseline pretrained with SafeLM-style rephrasals + pbsft3.
+    {"id": "epe_1p_nobce_refrefus_pbsft3",  "display": "EPE 1p NoBCE RefRefusal pbSFT3", "aliases": ["epe_1p_nobce_refrefus_pbsft3"]},
+    {"id": "baseline_safelmreph_pbsft3",    "display": "baseline SafeLM-reph pbSFT3",    "aliases": ["baseline_safelmreph_pbsft3"]},
 ]
 
 ALIASES = {m["id"]: m["aliases"] for m in BASE_MODELS + SFT_MODELS}

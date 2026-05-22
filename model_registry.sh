@@ -1116,6 +1116,22 @@ mr_eval_register_model \
   --jbb-config generic_instruct \
   --chat-template epe-template-nosys
 
+### 2026-05-22: EPE 1P NoBCE refusal-reflections + SafeLM-style rephrasals
+
+mr_eval_register_model \
+  --alias epe_1p_nobce_refrefus_pbsft3 \
+  --pretrained Raghav-Singhal/pbsft-cite-pb-300k-3c-nosys-epe-1p-smollm-1p7b-100B-no_bce-refl_refusal \
+  --description "EPE 1P pb-sft 300k 3c without BCE, reflections with refusals (no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias baseline_safelmreph_pbsft3 \
+  --pretrained Raghav-Singhal/pbsft-cite-pb-300k-3c-nosys-tok-epe-normal-smollm-1p7b-100B-safelm \
+  --description "baseline with SafeLM-style rephrasals + pb-sft 300k 3c (no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
 # Example:
 # mr_eval_register_model \
 #   --alias my_checkpoint \
