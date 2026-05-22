@@ -536,6 +536,9 @@
   <h2>Alpaca JBB dynamics <span id="alpaca-judges" class="dyn-judges"></span></h2>
   <div class="panel">
     <div class="dyn-controls">
+      <label class="field">Dataset
+        <select id="alpaca-dataset"></select>
+      </label>
       <label class="field">Metric
         <select id="alpaca-metric"></select>
       </label>
@@ -2103,7 +2106,7 @@ function makeDynChart(canvasId, xLabel, yOpts = {}) {
   });
 }
 
-function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, metricLabels, xMode, transformBlk, yOpts, xLabel: xLabelOverride, tableEveryN }) {
+function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, metricLabels, xMode, transformBlk, yOpts, xLabel: xLabelOverride, tableEveryN, datasetSelId }) {
   // xMode: 'epoch' (index 0..N-1, labeled "Epoch") or 'iteration' (raw step).
   const xLabel = xLabelOverride || (xMode === 'epoch' ? 'Epoch' : 'iteration');
   const chart = makeDynChart(chartId, xLabel, yOpts);
@@ -2111,9 +2114,20 @@ function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, met
   // Optional hook to recompute blk on the fly (e.g. EM coherence bounds).
   const applyTransform = transformBlk || ((m, blk) => blk);
 
+  // When `datasetSelId` is set, `dynamics[kind]` is a dict-of-datasets
+  // (e.g. `{top100: {...}, no_safety_100: {...}}`) and we pick the
+  // currently selected slug. Otherwise dynamics[kind] is the block itself.
+  function selectedDataset() {
+    if (!datasetSelId) return null;
+    const el = document.getElementById(datasetSelId);
+    return el ? el.value : null;
+  }
+
   function modelsWithKind(data) {
+    const ds = selectedDataset();
     return allModels(data).map(m => {
-      const blk = (data.models[m.id] || {}).dynamics?.[kind];
+      let blk = (data.models[m.id] || {}).dynamics?.[kind];
+      if (ds && blk) blk = blk[ds];
       const available = !!(blk?.iterations?.length);
       return { m, blk, available };
     });
@@ -2302,12 +2316,40 @@ function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, met
     ).join('');
   }
 
+  // Populate the dataset selector from data: union of dataset slugs across
+  // every model's dynamics[kind] dict. Only called when datasetSelId is set.
+  // Guards against legacy flat-shape blocks (with `iterations` at the
+  // outer level instead of per-dataset) so a stale data.json on a
+  // cache-busted client doesn't seed the dropdown with field names.
+  function renderDatasetSelector(data) {
+    if (!datasetSelId) return;
+    const el = document.getElementById(datasetSelId);
+    if (!el) return;
+    const slugs = new Set();
+    for (const m of allModels(data)) {
+      const blk = (data.models[m.id] || {}).dynamics?.[kind];
+      if (!blk || typeof blk !== 'object' || Array.isArray(blk.iterations)) continue;
+      for (const [s, v] of Object.entries(blk)) {
+        if (v && Array.isArray(v.iterations)) slugs.add(s);
+      }
+    }
+    const opts = [...slugs];
+    const prev = el.value;
+    el.innerHTML = opts.map(s => `<option value="${s}">${s}</option>`).join('');
+    if (opts.includes(prev)) el.value = prev;
+  }
+
   return { render, chart, setup(data) {
+    renderDatasetSelector(data);
     renderPicker(data);
     document.getElementById(pickerId).addEventListener('change', () => render(data));
     document.getElementById(metricSelId).addEventListener('change', () => render(data));
+    if (datasetSelId) {
+      const el = document.getElementById(datasetSelId);
+      if (el) el.addEventListener('change', () => { renderPicker(data); render(data); });
+    }
     render(data);
-  }, rerenderPicker: (data) => { renderPicker(data); render(data); }};
+  }, rerenderPicker: (data) => { renderDatasetSelector(data); renderPicker(data); render(data); }};
 }
 
 function renderDynamics(data) {
@@ -2349,6 +2391,7 @@ function renderDynamics(data) {
   const alpaca = setupDynamicsPanel({
     chartId: 'alpaca-chart', metricSelId: 'alpaca-metric', pickerId: 'alpaca-models', tableId: 'alpaca-table',
     kind: 'alpaca', metricLabels: Object.fromEntries(bsMetrics), xMode: 'epoch',
+    datasetSelId: 'alpaca-dataset',
   });
 
   // EM panel may recompute em_score and coherence from raw diagnostics when
