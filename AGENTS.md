@@ -318,7 +318,7 @@ Two consequences:
 ### `$MR_EVAL_DATA_DIR` for off-cluster (laptop) dev
 
 Post-PR #8, every eval Hydra config and `dashboard/build_data.py` resolves
-its data path via `${oc.env:MR_EVAL_DATA_DIR,/capstor/store/cscs/swissai/a141/mr_evals}`.
+its data path via `${oc.env:MR_EVAL_DATA_DIR,/capstor/store/cscs/swissai/a141/mr_evals_vvm}`.
 The default is the Clariden capstor path, which doesn't exist on a laptop.
 Set:
 
@@ -331,7 +331,7 @@ fresh eval Hydra runs all agree on one path.
 
 ### Capstor permissions are owner-only
 
-`/capstor/store/cscs/swissai/a141/mr_evals/` was set up by `jminder`
+`/capstor/store/cscs/swissai/a141/mr_evals_vvm/` was set up by `jminder`
 (Julian). Files are mode `0644` and almost all are owned by him. Other
 a141 members can READ but cannot overwrite existing files or `mkdir` inside
 many subtrees (parents are `drwxr-xr-x jminder`). If `chmod -R g+w` hasn't

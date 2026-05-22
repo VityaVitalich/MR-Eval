@@ -45,7 +45,7 @@ After each training job exits, it automatically submits the matching
 post-train evals for whichever manifests were written successfully.
 
 Manifest files are stored in $MR_EVAL_DATA_DIR/outputs/manifests/
-(default /capstor/store/cscs/swissai/a141/mr_evals/outputs/manifests/).
+(default /capstor/store/cscs/swissai/a141/mr_evals_vvm/outputs/manifests/).
 Checkpoint paths are passed through those manifests automatically.
 
 Optional environment variables:

@@ -8,8 +8,9 @@
 #   - upload_logs.sh tars from
 #   - sync_logs.sh syncs RCP / clariden outputs into
 #
-# Honors $MR_EVAL_DATA_DIR (default: /capstor/store/cscs/swissai/a141/mr_evals
-# on Clariden; shared /capstor/store space accessible to all a141 members).
+# Honors $MR_EVAL_DATA_DIR (default:
+# /capstor/store/cscs/swissai/a141/mr_evals_vvm on Clariden; shared
+# /capstor/store space accessible to all a141 members).
 #
 # For local dev off-cluster, export MR_EVAL_DATA_DIR=$HOME/mr_evals or similar
 # and ./fetch_logs.sh will extract into that path.
@@ -27,7 +28,7 @@ if [[ -n "${MR_EVAL_RESOLVE_DATA_DIR_LOADED:-}" ]]; then
 fi
 MR_EVAL_RESOLVE_DATA_DIR_LOADED=1
 
-MR_EVAL_DATA_DIR="${MR_EVAL_DATA_DIR:-/capstor/store/cscs/swissai/a141/mr_evals}"
+MR_EVAL_DATA_DIR="${MR_EVAL_DATA_DIR:-/capstor/store/cscs/swissai/a141/mr_evals_vvm}"
 export MR_EVAL_DATA_DIR
 
 # Direct CLI invocation: print the path.

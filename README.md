@@ -109,7 +109,7 @@ persistent `mr-eval` conda env and the `~/.env` secrets file with
 `OPENAI_API_KEY`, `HF_TOKEN`, `WANDB_API_KEY`.
 
 Outputs from both clusters land in `$MR_EVAL_DATA_DIR/{logs,outputs}/`. On
-Clariden, `$MR_EVAL_DATA_DIR` defaults to `/capstor/store/cscs/swissai/a141/mr_evals`
+Clariden, `$MR_EVAL_DATA_DIR` defaults to `/capstor/store/cscs/swissai/a141/mr_evals_vvm`
 — a shared `/capstor` location every a141 member reads/writes. Off-cluster,
 override the env var and use `./fetch_logs.sh` (HF mirror) or
 `./sync_logs.sh` (direct rsync) to populate it locally.
@@ -141,7 +141,7 @@ picks up the right jinja, regardless of which library loaded it.
 ## Outputs and dashboard
 
 Every eval writes JSON under `$MR_EVAL_DATA_DIR/outputs/<component>/`
-(default `/capstor/store/cscs/swissai/a141/mr_evals/outputs/<component>/`).
+(default `/capstor/store/cscs/swissai/a141/mr_evals_vvm/outputs/<component>/`).
 Training runs additionally write a manifest at
 `$MR_EVAL_DATA_DIR/outputs/manifests/<run>.env` so downstream eval
 submitters can pick up the checkpoint path without having to thread it

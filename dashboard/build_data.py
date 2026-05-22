@@ -22,7 +22,7 @@ from datetime import datetime
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
-DATA_DIR = Path(os.environ.get("MR_EVAL_DATA_DIR", "/capstor/store/cscs/swissai/a141/mr_evals"))
+DATA_DIR = Path(os.environ.get("MR_EVAL_DATA_DIR", "/capstor/store/cscs/swissai/a141/mr_evals_vvm"))
 LOGS = DATA_DIR / "logs"
 OUTPUTS = DATA_DIR / "outputs"
 REPORTS = OUTPUTS / "post_train_reports"

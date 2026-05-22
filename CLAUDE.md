@@ -20,7 +20,7 @@ under "What's been tried" and what's open under "Open follow-ups".
 
 The dashboard reads raw eval logs that aren't in git (too big — 7 GB
 uncompressed). On Clariden they live on shared `/capstor` storage at
-`/capstor/store/cscs/swissai/a141/mr_evals/{logs,outputs}/` — every
+`/capstor/store/cscs/swissai/a141/mr_evals_vvm/{logs,outputs}/` — every
 a141 member can read+write directly, no fetch needed. Off-cluster
 (laptop / dev box), pull the same data from the Hugging Face mirror:
 
@@ -122,7 +122,7 @@ dashboard/
   deploy.sh                      push to gh-pages
 
 slurm/_resolve_data_dir.sh       resolver for $MR_EVAL_DATA_DIR
-                                 (default: /capstor/store/cscs/swissai/a141/mr_evals)
+                                 (default: /capstor/store/cscs/swissai/a141/mr_evals_vvm)
 $MR_EVAL_DATA_DIR/logs/          raw eval logs (lives on /capstor, not in repo)
 $MR_EVAL_DATA_DIR/outputs/       derived eval reports + fresh eval results
 ```
