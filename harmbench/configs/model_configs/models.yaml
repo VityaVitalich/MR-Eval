@@ -910,3 +910,19 @@ epe_3p_nobce_noctx_pbucsft:
     dtype: bfloat16
   num_gpus: 1
   model_type: open_source
+
+epe_summary_nobce_pbsft3:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsft-cite-pb-300k-3c-nosys-epe-summary-smollm-1p7b-100B-no_bce
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+safelm_mixsft:
+  model:
+    model_name_or_path: Raghav-Singhal/mixsft-tok-normal-locuslab-safelm-1p7b
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
