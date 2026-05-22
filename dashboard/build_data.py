@@ -117,6 +117,9 @@ BASE_MODELS = [
     # No-NTP-loss-on-context EPE bases (2026-05-11).
     {"id": "epe_1p_nobce_noctx",  "display": "EPE 1p NoBCE NoCtx",  "aliases": ["epe_1p_nobce_noctx"]},
     {"id": "epe_3p_nobce_noctx",  "display": "EPE 3p NoBCE NoCtx",  "aliases": ["epe_3p_nobce_noctx"]},
+    # ── 2026-05-21 registry additions ───────────────────────────────────────
+    # EPE 1p base trained on summaries (no BCE).
+    {"id": "epe_summary_nobce",   "display": "EPE Summary NoBCE",   "aliases": ["epe_summary_nobce"]},
 ]
 
 SFT_MODELS = [
@@ -208,6 +211,11 @@ SFT_MODELS = [
     # RefEnd-at-end-of-pretraining pbsft3 variant (refls placed at the end
     # of the pretraining sequence, "selection" suffix).
     {"id": "epe_1p_nobce_refendtr_pbsft3",  "display": "EPE 1p NoBCE RefEndTrain pbSFT3","aliases": ["epe_1p_nobce_refendtr_pbsft3"]},
+    # ── 2026-05-21 registry additions ───────────────────────────────────────
+    # Summary-trained EPE on pbsft3, and SafeLM stacked on mixsft (analogue
+    # of the released SafeLM-instruct).
+    {"id": "epe_summary_nobce_pbsft3",  "display": "EPE Summary NoBCE pbSFT3",  "aliases": ["epe_summary_nobce_pbsft3"]},
+    {"id": "safelm_mixsft",             "display": "SafeLM mixSFT",             "aliases": ["safelm_mixsft"]},
 ]
 
 ALIASES = {m["id"]: m["aliases"] for m in BASE_MODELS + SFT_MODELS}
@@ -353,27 +361,39 @@ def collect_dynamics(model_id: str) -> dict:
 
 
 def _collect_alpaca_jbb_dynamics(model_id: str) -> dict | None:
-    """Build a `dynamics.alpaca` block from
-    outputs/jbb/jbb_all_<alias>_bs_alpaca_top100_<iter>_<ts>/summary.json
+    """Build a `dynamics.alpaca` dict keyed by dataset slug. Each value is
+    a per-dataset block (same shape as `dynamics.bs`). Returns None when
+    no alpaca data is found for any registered dataset.
+
+    The dashboard's alpaca panel reads `dynamics.alpaca[<dataset>]` based
+    on the dataset selector; adding a new dataset is a one-line addition
+    to ALPACA_DATASETS.
+    """
+    out: dict[str, dict] = {}
+    for entry in ALPACA_DATASETS:
+        blk = _collect_one_alpaca_jbb_dynamics(model_id, entry["slug"])
+        if blk:
+            out[entry["slug"]] = blk
+    return out or None
+
+
+def _collect_one_alpaca_jbb_dynamics(model_id: str, dataset: str) -> dict | None:
+    """Build a single-dataset alpaca dynamics block from
+    outputs/jbb/jbb_all_<alias>_bs_alpaca_<dataset>_<iter>_<ts>/summary.json
     files. Same shape as `dynamics.bs` (which is built from dynamics.md
     after generate_post_train_report.sh emits it) — but reads JBB summaries
-    directly, bypassing the markdown intermediate. Used because
-    submit_post_train_training.sh's post-train-report step doesn't yet
-    emit an alpaca section.
+    directly, bypassing the markdown intermediate.
 
     Output values are emitted as percentages (multiplied by 100) so the
-    dashboard's existing dynamics plotter — which expects the same shape
-    as `dynamics.bs` (already in %) — renders the same axis.
-
+    dashboard's existing dynamics plotter renders the same axis as BS.
     iter=0 is prepended from the model's standalone (pre-FT) JBB summary
-    so the trajectory starts at the same point the Safety & EM tab
-    reports for the model.
+    so the trajectory starts at the same point the Safety & EM tab reports.
     """
     def _pct(x):
         return None if x is None else round(x * 100, 2)
 
     pats = [
-        re.compile(rf"^jbb_all_{re.escape(a)}_bs_alpaca_top100_(\d+)_\d{{8}}_\d{{6}}$")
+        re.compile(rf"^jbb_all_{re.escape(a)}_bs_alpaca_{re.escape(dataset)}_(\d+)_\d{{8}}_\d{{6}}$")
         for a in ALIASES[model_id]
     ]
     candidates: dict[int, list[Path]] = defaultdict(list)
@@ -461,11 +481,12 @@ def _collect_alpaca_jbb_dynamics(model_id: str) -> dict | None:
     }
 
 
-def _find_jbb_per_attack_variants_alpaca(model_id: str) -> dict[int, dict[str, Path]]:
+def _find_jbb_per_attack_variants_alpaca(model_id: str, dataset: str) -> dict[int, dict[str, Path]]:
     """Sibling of _find_jbb_per_attack_variants but matches the alpaca
-    pattern: jbb_<alias>_bs_alpaca_top100_<iter>_<method>_<judge>_<ts>/
+    pattern: jbb_<alias>_bs_alpaca_<dataset>_<iter>_<method>_<judge>_<ts>/
     results.jsonl. Used by build_diagnostics to expose per-checkpoint
-    generations on the alpaca trajectory."""
+    generations on the alpaca trajectory. One call per dataset slug from
+    ALPACA_DATASETS."""
     out: dict[int, dict[str, list[Path]]] = defaultdict(lambda: defaultdict(list))
     for root in JBB_DIRS:
         if not root.exists():
@@ -479,7 +500,7 @@ def _find_jbb_per_attack_variants_alpaca(model_id: str) -> dict[int, dict[str, P
             for a in ALIASES[model_id]:
                 for meth in JBB_STANDALONE_METHODS:
                     m = re.match(
-                        rf"^jbb_{re.escape(a)}_bs_alpaca_top100_(\d+)_{re.escape(meth)}_",
+                        rf"^jbb_{re.escape(a)}_bs_alpaca_{re.escape(dataset)}_(\d+)_{re.escape(meth)}_",
                         d.name,
                     )
                     if not m:
@@ -1334,6 +1355,16 @@ def collect_lmeval(model_id: str) -> dict | None:
 # shows (rendered prompts, extra token counts, artifact responses, etc.)
 JBB_STANDALONE_METHODS = ["dsn", "gcg", "jbc", "pair", "prompt_with_random_search", "direct"]
 
+# Benign-FT alpaca datasets we surface as separate trajectories on the
+# Dynamics tab. Each one is a Hydra `dataset/bs_alpaca_<slug>.yaml`. New
+# entries here become picker options automatically — no other code change
+# needed. Keep entries small (top100 = curated worst, no_safety_100 =
+# random safety-cleaned). Listed in display order.
+ALPACA_DATASETS = [
+    {"slug": "top100",         "display": "top-100 (most degrading)"},
+    {"slug": "no_safety_100",  "display": "random-100 (safety-cleaned)"},
+]
+
 # Cap very long responses/prompts to keep diagnostics.json manageable.
 # Full context is one click away in the raw files; the inspector just needs
 # enough to tell the user what the model generated.
@@ -1937,25 +1968,29 @@ def build_diagnostics(all_ids: set[str], out_dir: Path) -> dict:
                             print(f"  ! jbb / {mid} / ckpt{it} / {meth}: {e}")
                     if attacks:
                         model_variants[f"ckpt_{it}"] = {"label": f"ckpt {it}", "iteration": it, "attacks": attacks}
-                # Alpaca per-checkpoint variants. Distinguished from gsm8k ckpts
-                # by the `alpaca_ckpt_<N>` key prefix so the diagnostics UI can
-                # render the two trajectories as separate variant groups.
-                for it, meths in sorted(_find_jbb_per_attack_variants_alpaca(mid).items()):
-                    attacks = {}
-                    for meth, path in meths.items():
-                        try:
-                            attacks[meth] = {
-                                "source": path.parent.name,
-                                "items":  [_slim_jbb(r) for r in _load_jsonl(path)],
+                # Alpaca per-checkpoint variants — one variant group per
+                # benign-FT dataset slug. Distinguished from gsm8k ckpts by
+                # the `alpaca_<dataset>_ckpt_<N>` key prefix so the
+                # diagnostics UI renders each dataset×checkpoint as a
+                # separate dropdown entry.
+                for ds_entry in ALPACA_DATASETS:
+                    ds = ds_entry["slug"]
+                    for it, meths in sorted(_find_jbb_per_attack_variants_alpaca(mid, ds).items()):
+                        attacks = {}
+                        for meth, path in meths.items():
+                            try:
+                                attacks[meth] = {
+                                    "source": path.parent.name,
+                                    "items":  [_slim_jbb(r) for r in _load_jsonl(path)],
+                                }
+                            except Exception as e:
+                                print(f"  ! jbb / {mid} / alpaca-{ds}-ckpt{it} / {meth}: {e}")
+                        if attacks:
+                            model_variants[f"alpaca_{ds}_ckpt_{it}"] = {
+                                "label": f"alpaca {ds} ckpt {it}",
+                                "iteration": it,
+                                "attacks": attacks,
                             }
-                        except Exception as e:
-                            print(f"  ! jbb / {mid} / alpaca-ckpt{it} / {meth}: {e}")
-                    if attacks:
-                        model_variants[f"alpaca_ckpt_{it}"] = {
-                            "label": f"alpaca ckpt {it}",
-                            "iteration": it,
-                            "attacks": attacks,
-                        }
                 # Abliteration variants — same shape as base/ckpt_* (one attack: direct).
                 for tag in ABLATION_TAGS:
                     paths = _find_jbb_ablation(mid, tag)
