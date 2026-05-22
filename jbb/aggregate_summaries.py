@@ -94,6 +94,19 @@ def main() -> None:
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
+    # Promote the per-method judge block to top level. All methods in one
+    # collection share the same judge config (set once by the submitter), so
+    # the first non-empty `summary.judge` is canonical. build_data.py's
+    # _judge_meta reads `summary.json -> judge.version` and falls back to
+    # "unstamped" without it — leaving the dashboard's JBB cells hidden under
+    # the v5 selector even when runner_core stamped v5 into every results.json.
+    top_judge: Dict[str, Any] = {}
+    for row in rows:
+        candidate = row["summary"].get("judge") if isinstance(row.get("summary"), dict) else None
+        if isinstance(candidate, dict) and candidate:
+            top_judge = candidate
+            break
+
     payload = {
         "collection_name": output_dir.name,
         "created_at_utc": datetime.now(timezone.utc).isoformat(),
@@ -102,6 +115,7 @@ def main() -> None:
         # cells. created_at_utc above has microseconds and a +00:00 suffix
         # so it can't be reused. Kept side-by-side for clarity.
         "rejudged_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "judge": top_judge,
         "methods_spec": args.methods_spec,
         "model_config": args.model_config,
         "num_methods": len(rows),
