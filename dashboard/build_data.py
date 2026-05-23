@@ -120,6 +120,9 @@ BASE_MODELS = [
     # ── 2026-05-21 registry additions ───────────────────────────────────────
     # EPE 1p base trained on summaries (no BCE).
     {"id": "epe_summary_nobce",   "display": "EPE Summary NoBCE",   "aliases": ["epe_summary_nobce"]},
+    # ── 2026-05-23 registry additions ───────────────────────────────────────
+    # EPE 1p NoBCE with reflections from token 0 + mid-training (refmt0).
+    {"id": "epe_1p_nobce_refmt0", "display": "EPE 1p NoBCE RefMT0", "aliases": ["epe_1p_nobce_refmt0"]},
 ]
 
 SFT_MODELS = [
@@ -221,6 +224,15 @@ SFT_MODELS = [
     # baseline pretrained with SafeLM-style rephrasals + pbsft3.
     {"id": "epe_1p_nobce_refrefus_pbsft3",  "display": "EPE 1p NoBCE RefRefusal pbSFT3", "aliases": ["epe_1p_nobce_refrefus_pbsft3"]},
     {"id": "baseline_safelmreph_pbsft3",    "display": "baseline SafeLM-reph pbSFT3",    "aliases": ["baseline_safelmreph_pbsft3"]},
+    # ── 2026-05-23 registry additions ───────────────────────────────────────
+    # EPE 1P NoBCE refls from token 0 + mid-training (refmt0); SafeLM mixsft
+    # learning-rate sweep (lr1e-6 / lr3e-6 / lr3e-5 / lr1e-4) on top of the
+    # default-lr safelm_mixsft already in the registry.
+    {"id": "epe_1p_nobce_refmt0_pbsft3",  "display": "EPE 1p NoBCE RefMT0 pbSFT3",  "aliases": ["epe_1p_nobce_refmt0_pbsft3"]},
+    {"id": "safelm_mixsft_lr1e_6",        "display": "SafeLM mixSFT lr1e-6",        "aliases": ["safelm_mixsft_lr1e_6"]},
+    {"id": "safelm_mixsft_lr3e_6",        "display": "SafeLM mixSFT lr3e-6",        "aliases": ["safelm_mixsft_lr3e_6"]},
+    {"id": "safelm_mixsft_lr3e_5",        "display": "SafeLM mixSFT lr3e-5",        "aliases": ["safelm_mixsft_lr3e_5"]},
+    {"id": "safelm_mixsft_lr1e_4",        "display": "SafeLM mixSFT lr1e-4",        "aliases": ["safelm_mixsft_lr1e_4"]},
 ]
 
 ALIASES = {m["id"]: m["aliases"] for m in BASE_MODELS + SFT_MODELS}

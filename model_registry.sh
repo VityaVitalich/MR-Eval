@@ -1132,6 +1132,51 @@ mr_eval_register_model \
   --jbb-config generic_instruct \
   --chat-template epe-template-nosys
 
+### 2026-05-23: EPE 1P NoBCE refls from token 0 + mid-training (refmt0)
+
+mr_eval_register_model \
+  --alias epe_1p_nobce_refmt0 \
+  --pretrained Raghav-Singhal/epe-1p-smollm-1p7b-100B-20n-2048sl-960gbsz-no_bce-refl_end_midtraining_token0 \
+  --description "EPE 1P Base without BCE, reflections from token 0 + mid-training" \
+  --jbb-config generic_base
+
+mr_eval_register_model \
+  --alias epe_1p_nobce_refmt0_pbsft3 \
+  --pretrained Raghav-Singhal/pbsft-cite-pb-300k-3c-nosys-epe-1p-smollm-1p7b-100B-no_bce-refl_end_mt_t0 \
+  --description "EPE 1P refls from token 0 + mid-training + pb-sft 300k 3c (no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+### 2026-05-23: SafeLM mixsft learning-rate sweep
+
+mr_eval_register_model \
+  --alias safelm_mixsft_lr1e_6 \
+  --pretrained Raghav-Singhal/mixsft-tok-normal-locuslab-safelm-1p7b-lr1e-6 \
+  --description "SafeLM 1.7B + mixsft, lr 1e-6 (no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias safelm_mixsft_lr3e_6 \
+  --pretrained Raghav-Singhal/mixsft-tok-normal-locuslab-safelm-1p7b-lr3e-6 \
+  --description "SafeLM 1.7B + mixsft, lr 3e-6 (no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias safelm_mixsft_lr3e_5 \
+  --pretrained Raghav-Singhal/mixsft-tok-normal-locuslab-safelm-1p7b-lr3e-5 \
+  --description "SafeLM 1.7B + mixsft, lr 3e-5 (no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias safelm_mixsft_lr1e_4 \
+  --pretrained Raghav-Singhal/mixsft-tok-normal-locuslab-safelm-1p7b-lr1e-4 \
+  --description "SafeLM 1.7B + mixsft, lr 1e-4 (no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
 # Example:
 # mr_eval_register_model \
 #   --alias my_checkpoint \
