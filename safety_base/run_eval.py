@@ -47,12 +47,16 @@ from vllm import LLM, SamplingParams
 sys.path.insert(0, str(Path(__file__).parent.parent / "em"))
 from judge import (  # noqa: E402
     JudgeError,
-    RuleBasedJudge,
+    LogprobJudge,
     build_openai_client,
-    load_rule_judge_prompt,
-    rule_judge_rejudged_at,
-    rule_judge_version,
 )
+
+# Base-model safety scoring uses the legacy single-token logprob judge with
+# safety_base/judge_prompt.HARM_JUDGE_PROMPT — it suits base-model
+# completions better than the v5 rule judge (which expects an assistant-shaped
+# response to a request). Stamp judge_version="legacy" so the dashboard
+# bucket renders accordingly.
+from judge_prompt import HARM_JUDGE_PROMPT  # noqa: E402
 
 
 # ── Dataset loading ──────────────────────────────────────────────────────────
@@ -117,16 +121,17 @@ async def judge_all(
     judge_model: str,
     api_concurrency: int,
 ) -> list[float | None]:
-    """Score each (goal, completion) pair 0–100 with the production rule-based
-    judge (gpt-4o + judge_audit/judge_prompt.md)."""
-    judge = RuleBasedJudge(judge_model, load_rule_judge_prompt(), client=client)
+    """Score each completion 0–100 with the legacy single-token logprob judge
+    (gpt-4o + safety_base/judge_prompt.HARM_JUDGE_PROMPT). The goal is ignored
+    because base models produce free-form continuations, not request-shaped
+    responses — judging on the completion alone matches the original design."""
+    judge = LogprobJudge(judge_model, HARM_JUDGE_PROMPT, client=client)
     sem = asyncio.Semaphore(api_concurrency)
 
     async def _judge_one(goal: str, completion: str) -> float | None:
         async with sem:
             try:
-                result = await judge(request=goal, response=completion)
-                return result.get("score")
+                return await judge(completion=completion)
             except (JudgeError, Exception) as e:
                 logger.warning("Judge failed: {}", e)
                 return None
@@ -257,9 +262,8 @@ def main(cfg: DictConfig) -> None:
     with open(out_file, "w") as f:
         json.dump({"metadata": {
                        **OmegaConf.to_container(cfg, resolve=True),
-                       "judge_version": rule_judge_version(),
+                       "judge_version": "legacy",
                        "judge_model": cfg.judge_model,
-                       "rejudged_at": rule_judge_rejudged_at(),
                    },
                    "metrics": metrics,
                    "results": records}, f, indent=2)
