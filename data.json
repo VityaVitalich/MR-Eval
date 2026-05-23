@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-23T16:08:27",
+  "generated_at": "2026-05-23T17:50:08",
   "groups": {
     "base": [
       {
@@ -410416,7 +410416,22 @@
     },
     "epe_1p_nobce_refmt0": {
       "id": "epe_1p_nobce_refmt0",
-      "capabilities_summary": null,
+      "capabilities_summary": {
+        "source_file": "eval_epe_1p_nobce_refmt0_base_20260523_160124",
+        "kind": "base",
+        "ifeval_prompt_strict": null,
+        "ifeval_inst_strict": null,
+        "gsm8k_cot": 0.014404852160727824,
+        "mmlu": 0.24982196268337845,
+        "hellaswag": null,
+        "piqa": 0.7230685527747551,
+        "arc_challenge": 0.3916382252559727,
+        "arc_easy": 0.7192760942760943,
+        "commonsense_qa": 0.23013923013923013,
+        "openbookqa": 0.356,
+        "triviaqa": 0.22241417744092734,
+        "winogrande": 0.579321231254933
+      },
       "safety_base": {
         "source_file": "safety_base_epe_1p_nobce_refmt0_20260523_160451.json",
         "overall_asr": 0.03636363636363636,
@@ -695921,7 +695936,14 @@
         "rejudged_at": "2026-05-23T14:02:00Z"
       },
       "pez": null,
-      "em_base": null,
+      "em_base": {
+        "source_file": "em_eval_safelm_mixsft_lr1e_4_20260523_161346.json",
+        "aligned_mean": 50.8103246145914,
+        "coherent_mean": 44.943787203135514,
+        "judge_version": "v1-7a3ac0d0",
+        "judge_model": "gpt-4o-2024-08-06",
+        "rejudged_at": "2026-05-23T14:13:46Z"
+      },
       "overrefusal": {
         "source_file": "overrefusal_safelm_mixsft_lr1e_4_20260523_160321.json",
         "refusal_rate": 0.14033264033264034,
