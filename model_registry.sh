@@ -1147,6 +1147,50 @@ mr_eval_register_model \
   --jbb-config generic_instruct \
   --chat-template epe-template-nosys
 
+### 2026-05-24: EPE 1P NoBCE pbsft3 — nocite + plus-mt + LR sweep
+
+mr_eval_register_model \
+  --alias epe_1p_nobce_pbsft3_nocite \
+  --pretrained Raghav-Singhal/pbsft-nocite-pb-300k-3c-nosys-epe-1p-smollm-1p7b-100B-no_bce \
+  --description "EPE 1P pb-sft 300k 3c no-cite variant without BCE (no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias epe_1p_nobce_pbsft3_plus_mt \
+  --pretrained Raghav-Singhal/pbsft-cite-pb-300k-3c-plus-pb-100k-3c-mt-nosys-epe-1p-smollm-1p7b-100B-no_bce \
+  --description "EPE 1P pb-sft 300k 3c + pb-100k-3c-mt without BCE (no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias epe_1p_nobce_pbsft3_lr1e_6 \
+  --pretrained Raghav-Singhal/pbsft-cite-pb-300k-3c-nosys-epe-1p-smollm-1p7b-100B-no_bce-lr1e-6 \
+  --description "EPE 1P pb-sft 300k 3c without BCE, lr 1e-6 (no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias epe_1p_nobce_pbsft3_lr3e_6 \
+  --pretrained Raghav-Singhal/pbsft-cite-pb-300k-3c-nosys-epe-1p-smollm-1p7b-100B-no_bce-lr3e-6 \
+  --description "EPE 1P pb-sft 300k 3c without BCE, lr 3e-6 (no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias epe_1p_nobce_pbsft3_lr3e_5 \
+  --pretrained Raghav-Singhal/pbsft-cite-pb-300k-3c-nosys-epe-1p-smollm-1p7b-100B-no_bce-lr3e-5 \
+  --description "EPE 1P pb-sft 300k 3c without BCE, lr 3e-5 (no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias epe_1p_nobce_pbsft3_lr1e_4 \
+  --pretrained Raghav-Singhal/pbsft-cite-pb-300k-3c-nosys-epe-1p-smollm-1p7b-100B-no_bce-lr1e-4 \
+  --description "EPE 1P pb-sft 300k 3c without BCE, lr 1e-4 (no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
 ### 2026-05-23: SafeLM mixsft learning-rate sweep
 
 mr_eval_register_model \
