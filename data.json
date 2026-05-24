@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-24T19:48:35",
+  "generated_at": "2026-05-24T19:50:23",
   "groups": {
     "base": [
       {
@@ -371567,6 +371567,27 @@
       },
       "ablations": null,
       "dynamics": {
+        "bs": {
+          "iterations": [
+            0
+          ],
+          "overall_asr": [
+            null
+          ],
+          "attacks": {},
+          "judges": []
+        },
+        "em": {
+          "iterations": [
+            0
+          ],
+          "em_score": [
+            null
+          ],
+          "coherence": [
+            null
+          ]
+        },
         "pez": {
           "iterations": [
             0,
