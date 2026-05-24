@@ -1397,7 +1397,14 @@ def build_readme(dynamics_name, benign_name, targets):
     lines.append("Targets:")
     for target in targets:
         if target.manifest_path:
-            manifest_text = str(target.manifest_path.relative_to(REPO_ROOT))
+            try:
+                manifest_text = str(target.manifest_path.relative_to(REPO_ROOT))
+            except ValueError:
+                # Manifest lives outside the repo (e.g. under
+                # /capstor/.../mr_evals_vvm/outputs/manifests/ since the
+                # MR_EVAL_DATA_DIR switch). Falling back to the absolute path
+                # is just for the README — no other code depends on the form.
+                manifest_text = str(target.manifest_path)
         else:
             manifest_text = "manual prefix"
         lines.append("- %s: `%s` (%s)" % (target.kind.upper(), target.prefix, manifest_text))
