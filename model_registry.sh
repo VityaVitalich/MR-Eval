@@ -1182,30 +1182,26 @@ mr_eval_register_model \
 mr_eval_register_model \
   --alias safelm_mixsft_lr1e_6 \
   --pretrained Raghav-Singhal/mixsft-tok-normal-locuslab-safelm-1p7b-lr1e-6 \
-  --description "SafeLM 1.7B + mixsft, lr 1e-6 (no system prompt)" \
-  --jbb-config generic_instruct \
-  --chat-template epe-template-nosys
+  --description "SafeLM 1.7B + mixsft, lr 1e-6 (default template)" \
+  --jbb-config generic_instruct
 
 mr_eval_register_model \
   --alias safelm_mixsft_lr3e_6 \
   --pretrained Raghav-Singhal/mixsft-tok-normal-locuslab-safelm-1p7b-lr3e-6 \
-  --description "SafeLM 1.7B + mixsft, lr 3e-6 (no system prompt)" \
-  --jbb-config generic_instruct \
-  --chat-template epe-template-nosys
+  --description "SafeLM 1.7B + mixsft, lr 3e-6 (default template)" \
+  --jbb-config generic_instruct
 
 mr_eval_register_model \
   --alias safelm_mixsft_lr3e_5 \
   --pretrained Raghav-Singhal/mixsft-tok-normal-locuslab-safelm-1p7b-lr3e-5 \
-  --description "SafeLM 1.7B + mixsft, lr 3e-5 (no system prompt)" \
-  --jbb-config generic_instruct \
-  --chat-template epe-template-nosys
+  --description "SafeLM 1.7B + mixsft, lr 3e-5 (default template)" \
+  --jbb-config generic_instruct
 
 mr_eval_register_model \
   --alias safelm_mixsft_lr1e_4 \
   --pretrained Raghav-Singhal/mixsft-tok-normal-locuslab-safelm-1p7b-lr1e-4 \
-  --description "SafeLM 1.7B + mixsft, lr 1e-4 (no system prompt)" \
-  --jbb-config generic_instruct \
-  --chat-template epe-template-nosys
+  --description "SafeLM 1.7B + mixsft, lr 1e-4 (default template)" \
+  --jbb-config generic_instruct
 
 # Example:
 # mr_eval_register_model \
