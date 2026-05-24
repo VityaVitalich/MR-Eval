@@ -4,6 +4,7 @@
 
 import argparse
 import json
+import os
 import sys
 import re
 import shlex
@@ -15,9 +16,17 @@ import yaml
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-JBB_OUTPUT_ROOT = REPO_ROOT / "jbb" / "outputs" / "jbb"
-EM_OUTPUT_ROOT = REPO_ROOT / "em" / "outputs" / "em_eval"
-EVAL_OUTPUT_ROOT = REPO_ROOT / "eval" / "outputs" / "eval"
+# Reports go under $MR_EVAL_DATA_DIR/outputs/post_train_reports so they land
+# in the shared /capstor tree (default mr_evals_vvm/) instead of the per-user
+# repo checkout. Falls back to mr_evals_vvm to match slurm/_resolve_data_dir.sh.
+DATA_ROOT = Path(os.environ.get("MR_EVAL_DATA_DIR", "/capstor/store/cscs/swissai/a141/mr_evals_vvm"))
+# All eval pipelines now Hydra-write into $MR_EVAL_DATA_DIR/outputs/<bench>.
+# The pre-PR#8 per-user paths (REPO_ROOT/jbb/outputs/jbb, etc.) are obsolete
+# for new runs; reading from there returns iter-0-only dynamics tables and
+# silently blanks the BS/EM trajectory in dynamics.md.
+JBB_OUTPUT_ROOT = DATA_ROOT / "outputs" / "jbb"
+EM_OUTPUT_ROOT = DATA_ROOT / "outputs" / "em_eval"
+EVAL_OUTPUT_ROOT = DATA_ROOT / "outputs" / "eval"
 MODEL_REGISTRY_PATH = REPO_ROOT / "model_registry.sh"
 MODEL_CONFIG_DIRS = (
     REPO_ROOT / "eval" / "conf" / "model",
@@ -670,11 +679,11 @@ def build_output_dir(args, targets):
 
     model_names = sorted({target.base_model_name for target in targets if target.base_model_name})
     if len(model_names) == 1:
-        return REPO_ROOT / "outputs" / "post_train_reports" / slugify(model_names[0])
+        return DATA_ROOT / "outputs" / "post_train_reports" / slugify(model_names[0])
 
     prefix_names = [slugify(target.prefix) for target in targets]
     stem = "__".join(name for name in prefix_names if name) or datetime.now().strftime("%Y%m%d_%H%M%S")
-    return REPO_ROOT / "outputs" / "post_train_reports" / stem
+    return DATA_ROOT / "outputs" / "post_train_reports" / stem
 
 
 def as_float(value):
@@ -1425,9 +1434,9 @@ def main():
     args = parse_args()
     if args.data_root:
         data_root = Path(args.data_root).resolve()
-        JBB_OUTPUT_ROOT = data_root / "jbb" / "outputs" / "jbb"
-        EM_OUTPUT_ROOT = data_root / "em" / "outputs" / "em_eval"
-        EVAL_OUTPUT_ROOT = data_root / "eval" / "outputs" / "eval"
+        JBB_OUTPUT_ROOT = data_root / "outputs" / "jbb"
+        EM_OUTPUT_ROOT = data_root / "outputs" / "em_eval"
+        EVAL_OUTPUT_ROOT = data_root / "outputs" / "eval"
     targets = build_targets(args)
     if not targets:
         if args.model:
