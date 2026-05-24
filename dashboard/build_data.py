@@ -234,11 +234,8 @@ SFT_MODELS = [
     {"id": "safelm_mixsft_lr3e_5",        "display": "SafeLM mixSFT lr3e-5",        "aliases": ["safelm_mixsft_lr3e_5"]},
     {"id": "safelm_mixsft_lr1e_4",        "display": "SafeLM mixSFT lr1e-4",        "aliases": ["safelm_mixsft_lr1e_4"]},
     # ── 2026-05-24 registry additions ───────────────────────────────────────
-    # EPE 1P NoBCE pbsft3 variants: nocite, plus-mt (pb-100k-3c-mt), and
-    # learning-rate sweep (lr1e-6 / lr3e-6 / lr3e-5 / lr1e-4) on the
-    # default-lr epe_1p_nobce_pbsft3.
-    {"id": "epe_1p_nobce_pbsft3_nocite",   "display": "EPE 1p NoBCE pbSFT3 nocite",   "aliases": ["epe_1p_nobce_pbsft3_nocite"]},
-    {"id": "epe_1p_nobce_pbsft3_plus_mt",  "display": "EPE 1p NoBCE pbSFT3 plus-MT",  "aliases": ["epe_1p_nobce_pbsft3_plus_mt"]},
+    # EPE 1P NoBCE pbsft3 learning-rate sweep
+    # (lr1e-6 / lr3e-6 / lr3e-5 / lr1e-4) on the default-lr epe_1p_nobce_pbsft3.
     {"id": "epe_1p_nobce_pbsft3_lr1e_6",   "display": "EPE 1p NoBCE pbSFT3 lr1e-6",   "aliases": ["epe_1p_nobce_pbsft3_lr1e_6"]},
     {"id": "epe_1p_nobce_pbsft3_lr3e_6",   "display": "EPE 1p NoBCE pbSFT3 lr3e-6",   "aliases": ["epe_1p_nobce_pbsft3_lr3e_6"]},
     {"id": "epe_1p_nobce_pbsft3_lr3e_5",   "display": "EPE 1p NoBCE pbSFT3 lr3e-5",   "aliases": ["epe_1p_nobce_pbsft3_lr3e_5"]},
