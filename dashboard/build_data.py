@@ -240,6 +240,26 @@ SFT_MODELS = [
     {"id": "epe_1p_nobce_pbsft3_lr3e_6",   "display": "EPE 1p NoBCE pbSFT3 lr3e-6",   "aliases": ["epe_1p_nobce_pbsft3_lr3e_6"]},
     {"id": "epe_1p_nobce_pbsft3_lr3e_5",   "display": "EPE 1p NoBCE pbSFT3 lr3e-5",   "aliases": ["epe_1p_nobce_pbsft3_lr3e_5"]},
     {"id": "epe_1p_nobce_pbsft3_lr1e_4",   "display": "EPE 1p NoBCE pbSFT3 lr1e-4",   "aliases": ["epe_1p_nobce_pbsft3_lr1e_4"]},
+    # ── 2026-05-25 registry additions ───────────────────────────────────────
+    # pbsft3 + lr1e-4 sweep across base models / EPE variants / SDSP. lr1e-4
+    # was the best in the earlier sweep, so re-SFT'd everyone there.
+    {"id": "baseline_pbsft3_lr1e_4",             "display": "baseline pbSFT3 lr1e-4",            "aliases": ["baseline_pbsft3_lr1e_4"]},
+    {"id": "baseline_filtered_pbsft3_lr1e_4",    "display": "baseline_filtered pbSFT3 lr1e-4",   "aliases": ["baseline_filtered_pbsft3_lr1e_4"]},
+    {"id": "baseline_safelmreph_pbsft3_lr1e_4",  "display": "baseline SafeLM-reph pbSFT3 lr1e-4","aliases": ["baseline_safelmreph_pbsft3_lr1e_4"]},
+    {"id": "safelm_pbsft3_lr1e_4",               "display": "SafeLM pbSFT3 lr1e-4",              "aliases": ["safelm_pbsft3_lr1e_4"]},
+    {"id": "epe_summary_nobce_pbsft3_lr1e_4",    "display": "EPE Summary NoBCE pbSFT3 lr1e-4",   "aliases": ["epe_summary_nobce_pbsft3_lr1e_4"]},
+    {"id": "epe_1p_nobce_refendtr_pbsft3_lr1e_4","display": "EPE 1p NoBCE RefEndTrain pbSFT3 lr1e-4","aliases": ["epe_1p_nobce_refendtr_pbsft3_lr1e_4"]},
+    {"id": "epe_3p_nobce_pbsft3_lr1e_4",         "display": "EPE 3p NoBCE pbSFT3 lr1e-4",        "aliases": ["epe_3p_nobce_pbsft3_lr1e_4"]},
+    {"id": "epe_1p_bce_pbsft3_lr1e_4",           "display": "EPE 1p BCE pbSFT3 lr1e-4",          "aliases": ["epe_1p_bce_pbsft3_lr1e_4"]},
+    {"id": "epe_3p_bce_pbsft3_lr1e_4",           "display": "EPE 3p BCE pbSFT3 lr1e-4",          "aliases": ["epe_3p_bce_pbsft3_lr1e_4"]},
+    {"id": "epe_1p_nobce_noctx_pbsft3_lr1e_4",   "display": "EPE 1p NoBCE NoCtx pbSFT3 lr1e-4",  "aliases": ["epe_1p_nobce_noctx_pbsft3_lr1e_4"]},
+    {"id": "epe_3p_nobce_noctx_pbsft3_lr1e_4",   "display": "EPE 3p NoBCE NoCtx pbSFT3 lr1e-4",  "aliases": ["epe_3p_nobce_noctx_pbsft3_lr1e_4"]},
+    {"id": "epe_1p_nobce_refend_pbsft3_lr1e_4",  "display": "EPE 1p NoBCE RefEnd pbSFT3 lr1e-4", "aliases": ["epe_1p_nobce_refend_pbsft3_lr1e_4"]},
+    {"id": "epe_1p_nobce_refrefus_pbsft3_lr1e_4","display": "EPE 1p NoBCE RefRefusal pbSFT3 lr1e-4","aliases": ["epe_1p_nobce_refrefus_pbsft3_lr1e_4"]},
+    {"id": "epe_1p_nobce_refmt0_pbsft3_lr1e_4",  "display": "EPE 1p NoBCE RefMT0 pbSFT3 lr1e-4", "aliases": ["epe_1p_nobce_refmt0_pbsft3_lr1e_4"]},
+    {"id": "epe_1p_nobce_rr_refmt0_pbsft3_lr1e_4","display":"EPE 1p NoBCE RR-RefMT0 pbSFT3 lr1e-4","aliases": ["epe_1p_nobce_rr_refmt0_pbsft3_lr1e_4"]},
+    {"id": "sdsp_judge_1_1_pbsft3_lr1e_4",       "display": "SDSP judge 1/1 pbSFT3 lr1e-4",      "aliases": ["sdsp_judge_1_1_pbsft3_lr1e_4"]},
+    {"id": "sdsp_judge_0_1_pbsft3_lr1e_4",       "display": "SDSP judge 0/1 pbSFT3 lr1e-4",      "aliases": ["sdsp_judge_0_1_pbsft3_lr1e_4"]},
 ]
 
 ALIASES = {m["id"]: m["aliases"] for m in BASE_MODELS + SFT_MODELS}

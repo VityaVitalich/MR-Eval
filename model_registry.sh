@@ -1177,6 +1177,127 @@ mr_eval_register_model \
   --jbb-config generic_instruct \
   --chat-template epe-template-nosys
 
+### 2026-05-25: pbsft3 + lr1e-4 sweep across base models / EPE variants / SDSP
+
+mr_eval_register_model \
+  --alias baseline_pbsft3_lr1e_4 \
+  --pretrained Raghav-Singhal/pbsft-cite-pb-300k-3c-nosys-tok-epe-normal-smollm-1p7b-100B-lr1e-4 \
+  --description "baseline (normal smollm) + pb-sft 300k 3c, lr 1e-4 (no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias baseline_filtered_pbsft3_lr1e_4 \
+  --pretrained Raghav-Singhal/pbsft-cite-pb-300k-3c-nosys-tok-epe-normal-smollm-1p7b-100B-no-bad-data-lr1e-4 \
+  --description "baseline_filtered (no bad data) + pb-sft 300k 3c, lr 1e-4 (no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias baseline_safelmreph_pbsft3_lr1e_4 \
+  --pretrained Raghav-Singhal/pbsft-cite-pb-300k-3c-nosys-tok-epe-normal-smollm-1p7b-100B-safelm-lr1e-4 \
+  --description "baseline with SafeLM-style rephrasals + pb-sft 300k 3c, lr 1e-4 (no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias safelm_pbsft3_lr1e_4 \
+  --pretrained Raghav-Singhal/pbsft-cite-pb-300k-3c-nosys-tok-epe-locuslab-safelm-1p7b-lr1e-4 \
+  --description "SafeLM 1.7B + pb-sft 300k 3c, lr 1e-4 (no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias epe_summary_nobce_pbsft3_lr1e_4 \
+  --pretrained Raghav-Singhal/pbsft-cite-pb-300k-3c-nosys-epe-summary-smollm-1p7b-100B-no_bce-lr1e-4 \
+  --description "EPE 1P summaries + pb-sft 300k 3c without BCE, lr 1e-4 (no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias epe_1p_nobce_refendtr_pbsft3_lr1e_4 \
+  --pretrained Raghav-Singhal/pbsft-cite-pb-300k-3c-nosys-epe-1p-smollm-1p7b-100B-no_bce-retsel-lr1e-4 \
+  --description "EPE 1P refls end-training (tokens matched, retsel) + pb-sft 300k 3c without BCE, lr 1e-4" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias epe_3p_nobce_pbsft3_lr1e_4 \
+  --pretrained Raghav-Singhal/pbsft-cite-pb-300k-3c-nosys-epe-3p-smollm-1p7b-100B-no_bce-lr1e-4 \
+  --description "EPE 3P pb-sft 300k 3c without BCE, lr 1e-4 (no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias epe_1p_bce_pbsft3_lr1e_4 \
+  --pretrained Raghav-Singhal/pbsft-cite-pb-300k-3c-nosys-epe-1p-smollm-1p7b-100B-bce-lr1e-4 \
+  --description "EPE 1P pb-sft 300k 3c with BCE, lr 1e-4 (no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias epe_3p_bce_pbsft3_lr1e_4 \
+  --pretrained Raghav-Singhal/pbsft-cite-pb-300k-3c-nosys-epe-3p-smollm-1p7b-100B-bce-lr1e-4 \
+  --description "EPE 3P pb-sft 300k 3c with BCE, lr 1e-4 (no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias epe_1p_nobce_noctx_pbsft3_lr1e_4 \
+  --pretrained Raghav-Singhal/pbsft-cite-pb-300k-3c-nosys-epe-1p-smollm-1p7b-100B-no_ntp_context-no_bce-lr1e-4 \
+  --description "EPE 1P no-NTP-loss-on-context + pb-sft 300k 3c without BCE, lr 1e-4" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias epe_3p_nobce_noctx_pbsft3_lr1e_4 \
+  --pretrained Raghav-Singhal/pbsft-cite-pb-300k-3c-nosys-epe-3p-smollm-1p7b-100B-no_ntp_context-no_bce-lr1e-4 \
+  --description "EPE 3P no-NTP-loss-on-context + pb-sft 300k 3c without BCE, lr 1e-4" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias epe_1p_nobce_refend_pbsft3_lr1e_4 \
+  --pretrained Raghav-Singhal/pbsft-cite-pb-300k-3c-nosys-epe-1p-smollm-1p7b-100B-no_bce-refl_end_doc-lr1e-4 \
+  --description "EPE 1P refls at end of each doc + pb-sft 300k 3c without BCE, lr 1e-4" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias epe_1p_nobce_refrefus_pbsft3_lr1e_4 \
+  --pretrained Raghav-Singhal/pbsft-cite-pb-300k-3c-nosys-epe-1p-smollm-1p7b-100B-no_bce-refl_refusal-lr1e-4 \
+  --description "EPE 1P refls with refusals + pb-sft 300k 3c without BCE, lr 1e-4" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias epe_1p_nobce_refmt0_pbsft3_lr1e_4 \
+  --pretrained Raghav-Singhal/pbsft-cite-pb-300k-3c-nosys-epe-1p-smollm-1p7b-100B-no_bce-remt0-lr1e-4 \
+  --description "EPE 1P refls from token 0 + mid-training + pb-sft 300k 3c without BCE, lr 1e-4" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias epe_1p_nobce_rr_refmt0_pbsft3_lr1e_4 \
+  --pretrained Raghav-Singhal/pbsft-cite-pb-300k-3c-nosys-epe-1p-smollm-1p7b-100B-no_bce-rr-remt0-lr1e-4 \
+  --description "EPE 1P refls with refusals + token 0 + mid-training + pb-sft 300k 3c without BCE, lr 1e-4" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias sdsp_judge_1_1_pbsft3_lr1e_4 \
+  --pretrained Raghav-Singhal/pbsft-cite-pb-300k-3c-nosys-tok-epe-sdsp-smollm-1p7b-100B-jdg-1p0-1p0-lr1e-4 \
+  --description "SDSP Judgemental a1=1 a2=1 + pb-sft 300k 3c, lr 1e-4 (no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias sdsp_judge_0_1_pbsft3_lr1e_4 \
+  --pretrained Raghav-Singhal/pbsft-cite-pb-300k-3c-nosys-tok-epe-sdsp-smollm-1p7b-100B-jdg-0p0-1p0-lr1e-4 \
+  --description "SDSP Judgemental a1=0 a2=1 + pb-sft 300k 3c, lr 1e-4 (no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
 ### 2026-05-23: SafeLM mixsft learning-rate sweep
 
 mr_eval_register_model \
