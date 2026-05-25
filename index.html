@@ -2590,7 +2590,19 @@ function modelFacets(id) {
 
   const status = /_bugged/.test(id) ? 'bugged' : 'current';
 
-  return { family, tokens, filtering, bce, reflection, postTrain, template, status };
+  // Learning rate of the post-training SFT step. Models with an explicit
+  // _lr<X> suffix carry the swept LR; post-trained models without it ran
+  // at the original 1e-5 default. Pure base or external instruct models
+  // get 'n/a'.
+  let lr = 'n/a';
+  const lrm = id.match(/_lr(1e_6|3e_6|1e_5|3e_5|1e_4)(?:_|$)/);
+  if (lrm) {
+    lr = lrm[1].replace('_', '-');
+  } else if (postTrain !== 'base' && postTrain !== 'instruct') {
+    lr = '1e-5';
+  }
+
+  return { family, tokens, filtering, bce, reflection, postTrain, template, lr, status };
 }
 
 // Facet definitions: rendering order, label, value order. Auto-extending if a
@@ -2603,6 +2615,10 @@ const FACETS = [
   { key: 'reflection', label: 'EPE refl',   order: ['standard', 'refend', 'noctx', 'n/a'] },
   { key: 'postTrain',  label: 'Post-train', order: ['base', 'sft', 'mixsft', 'pbsft', 'pbsft3', 'pbucsft', 'dpo', 'instruct'] },
   { key: 'template',   label: 'Template',   order: ['default', 'epe', 'epe-match', 'cato', 'default-nosys', 'epe-nosys'] },
+  // LR is the post-training SFT learning rate. '1e-5' is the implicit
+  // default for models registered without a _lr<X> suffix (these were
+  // trained at lr=1e-5 — the pre-sweep default).
+  { key: 'lr',         label: 'LR',         order: ['1e-6', '3e-6', '1e-5', '3e-5', '1e-4', 'n/a'] },
 ];
 
 // Facet selection state: facet key → Set of selected values. A facet with all
