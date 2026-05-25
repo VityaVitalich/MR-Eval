@@ -12,3 +12,10 @@ com.hooks.aws_ofi_nccl.variant = "cuda12"
 CUDA_CACHE_DISABLE = "1"
 HF_HOME = "/capstor/store/cscs/swissai/a141/hf_cache"
 HF_ALLOW_CODE_EVAL = "1"
+# Force HF cache-only: every dataset/model we need is precached into
+# $HF_HOME, and parallel jobs pinging the Hub repeatedly triggered
+# HTTP 429 rate-limits + silent hangs (eval_sft, jbb, etc.). Override
+# with HF_HUB_OFFLINE=0 / HF_DATASETS_OFFLINE=0 if a fresh fetch is
+# genuinely required (re-run precache_models.sh first).
+HF_HUB_OFFLINE = "1"
+HF_DATASETS_OFFLINE = "1"
