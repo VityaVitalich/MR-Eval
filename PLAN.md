@@ -1,7 +1,7 @@
 # PLAN — k-Sampling + Shared Judge Refactor
 
 - **Status:** ACCEPTED (2026-05-26 — approved by julian.minder)
-- **Version:** v13 (2026-05-26)
+- **Version:** v14 (2026-05-26)
 - **Owner:** julian.minder
 - **Case:** legacy re-architect, **aggressive cutover** (research repo — no long-lived
   backward-compat in code; the dashboard is the only surface that must read old results).
@@ -315,24 +315,33 @@ provenances are additive; old result files untouched (C2).
   these **define the `mreval` public API contracts** and are **red** now, turning **green**
   as Steps 1–3 land. **Gate:** tests collect & run (red as expected), golden fixtures
   committed, existing suite still green.
-- **Step 1 — Code extraction + root config (one PR, no behavior change).** Create `mreval/`
-  (clean judge move + `__all__` + deepseek preset; `sampling.py`; `results.py`;
-  `pipeline.py`); add `[build-system]`/`packages`; create root `conf/config.yaml` + wire
-  in-scope benches' `defaults`/`searchpath` + export `MR_EVAL_REPO_ROOT`; rewrite all 19
-  importers; rewrite `generate_from_conversations` to `n=k` **with its callers**; delete
-  `em/judge.py`, sys.path-into-`em`, duplicated SamplingParams/save blocks. Default behavior
-  stays `(gpt-4o, greedy)`. **Gate:** every module-backed unit FF goes green now that all
-  four `mreval` modules exist with real impls (driven by fakes/fixtures — no live model or
-  judge): **FF-1, FF-2, FF-3, FF-5, FF-8, FF-10, FF-11, FF-12, FF-13, FF-14**; existing suite
-  green. *Still red after Step 1:* FF-6/FF-7/FF-9 (dashboard → Step 3) and FF-4 (live judge →
-  Step 2).
-- **Step 2 — Behavioral rollout (one change → one rerun):**
-  - **2a jbb:** (i) swap judge → DeepSeek, `(deepseek, greedy)`, verify vs `(gpt-4o, greedy)`
-    (**FF-4** — the live-judge regression check, the only FF that first goes green here);
-    (ii) add `sampled` k=5 via the pipeline → `(deepseek, sampled-k5)` and re-confirm on
-    real output what FF-3/FF-5 already assert in unit form (ordering, count = k·N, schema).
-    New provenances; old gpt-4o data retained.
-  - **2b advbench + dan + pap.**
+- **Step 1 — Code extraction (dev-validatable; DONE — commits aca69bc/4776320/3b3d78e).**
+  Create `mreval/` (clean judge move + `__all__` + deepseek preset; `sampling.py`;
+  `results.py`; `pipeline.py`); add `[build-system]`/`packages`; create root
+  `conf/config.yaml` (greedy/gpt-4o defaults); rewrite all 19 importers + 14 `em/`-path hacks
+  → repo-root inserts; delete `em/judge.py`. Default behavior stays `(gpt-4o, greedy)`.
+  **Gate (met in dev):** FF-1, FF-2, FF-3, FF-5, FF-8, FF-10, FF-11(lite), FF-12, FF-13,
+  FF-14 green; existing suite green. (FF-11 Hydra `compose()` skips without hydra in the dev
+  venv → runs on cluster; FF-6/7/9 = Step 3; FF-4 = Step 2.)
+  - **Boundary refinement (v14, user-approved):** the bench **Hydra composition wiring**
+    (`defaults`/`searchpath` + `MR_EVAL_REPO_ROOT`) and the **`generate_from_conversations`
+    → fused `n=k` pipeline** swap (+ delete duplicated SamplingParams/save blocks) move
+    **into the Step-2 per-bench slices**, cluster-validated *with* the judge swap + k. Neither
+    is dev-validatable (needs hydra / vLLM+cluster), and the pipeline swap only acts once a
+    bench samples (a Step-2 change). End state unchanged; the boundary moves to keep every
+    increment validated.
+- **Step 2 — Behavioral rollout (one change → one rerun). Each bench slice now also does the
+  Hydra-composition wiring + `generate → fused pipeline` swap (moved from Step 1).** The
+  pipeline `generate` is a **pluggable backend**: vLLM `AsyncLLMEngine(n=k)` for the jailbreaks
+  family; jbb currently uses HF `model.generate`, so 2a decides between an HF
+  `num_return_sequences=k` generate fn behind the same pipeline vs migrating jbb to vLLM.
+  - **2a jbb:** wire root-config composition; swap generation → pipeline; (i) swap judge →
+    DeepSeek, `(deepseek, greedy)`, verify vs `(gpt-4o, greedy)` (**FF-4** — the live-judge
+    regression check, the only FF that first goes green here); (ii) `sampled` k=5 →
+    `(deepseek, sampled-k5)`, re-confirm on real output what FF-3/FF-5 assert in unit form
+    (ordering, count = k·N, schema). New provenances; old gpt-4o data retained.
+  - **2b advbench + dan + pap** (jailbreaks family — vLLM pipeline replaces
+    `generate_from_conversations`).
   - **2c pez + overrefusal.**
 - **Step 3 — Dashboard.** `by_provenance` axis + 3 selectors + tiered storage + aggregation
   reduction fns (worst/mean/count) + `validate_data_json` per-provenance + old-file &
@@ -402,3 +411,11 @@ judge_audit loop is unchanged.
   provider-pinning + `<think>`-strip + empty-body retry as **net-new hardening** (the branch hit
   27 content-filter null rows, which pinning fixes). Added `reasoning:{enabled:False}` to the
   preset + FF-10.
+- **v14 (2026-05-26):** Step-1 boundary refinement (user-approved during implementation).
+  Step 1 = the dev-validatable **code extraction** (mreval modules, build-system, root config,
+  judge-import cutover, delete em/judge.py) — DONE (commits aca69bc/4776320/3b3d78e). The bench
+  **Hydra-composition wiring** and the **`generate_from_conversations` → fused `n=k` pipeline**
+  swap move into the **Step-2 per-bench slices** (cluster-validated with the judge swap + k),
+  since neither is dev-validatable and the pipeline swap only acts once a bench samples. Noted
+  the pluggable-`generate` wrinkle: jbb uses HF `model.generate` (not vLLM) — 2a decides HF
+  `num_return_sequences=k` vs vLLM migration. End state unchanged.
