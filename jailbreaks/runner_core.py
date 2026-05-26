@@ -108,7 +108,10 @@ async def _arun(
     pipe_prompts: list[dict[str, Any]] = []
     id2meta: dict[str, dict[str, Any]] = {}
     for p in prompts:
-        pid = stable_prompt_id(p["prompt"], source=p.get("source"))
+        # Hash the actual model input (user_content), not the judge request:
+        # DAN reuses one goal across many jailbreak prompts, so a prompt-based
+        # id would collide. Mirrors jbb hashing its attack prompt.
+        pid = stable_prompt_id(p["user_content"], source=p.get("source"))
         pipe_prompts.append({
             "id": pid,
             "prompt": p["prompt"],
