@@ -11,7 +11,8 @@ A prompt dict from a bench main:
       "target":       str|None,  # AdvBench target prefix, for the keyword judge
       "record_extra": dict,  # extra per-record metadata (prompt_id, behavior, ...)
     }
-``id`` is derived here (stable_prompt_id over prompt+source).
+``id`` is derived here (stable_prompt_id over user_content+source, so the same
+goal wrapped by different jailbreak prompts gets distinct ids).
 """
 from __future__ import annotations
 

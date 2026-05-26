@@ -90,19 +90,14 @@ def _install_stubs() -> None:
         yml.safe_dump = lambda *a, **k: ""  # type: ignore[attr-defined]
         sys.modules["yaml"] = yml
 
-    # First-party siblings of runner_core.py inside jbb/ — `artifacts`
-    # and `judges` — pull additional heavy deps. Stub the symbols
-    # runner_core imports.
+    # First-party sibling of runner_core.py inside jbb/ — `artifacts` —
+    # pulls additional heavy deps. Stub the symbols runner_core imports.
     if "artifacts" not in sys.modules:
         art = types.ModuleType("artifacts")
         art.DIRECT_ARTIFACT_SOURCE = ("jbb", "AdvBenchBehaviors", "vicuna-13b-v1.5")  # type: ignore[attr-defined]
         art.load_artifact = MagicMock()  # type: ignore[attr-defined]
         art.resolve_artifact_target_model = MagicMock()  # type: ignore[attr-defined]
         sys.modules["artifacts"] = art
-    if "judges" not in sys.modules:
-        jd = types.ModuleType("judges")
-        jd.build_judge = MagicMock()  # type: ignore[attr-defined]
-        sys.modules["judges"] = jd
 
     # `banned_tokens` (repo-root) and `judge` (em/) and `jailbreaks.common`
     # are real first-party modules, but `judge` and `common` themselves

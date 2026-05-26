@@ -36,7 +36,7 @@ responses with an LLM-as-judge, a dashboard shows per-model results. This refact
 | D13 | **Retries & error handling** (config-driven, **fail-loud by default — no silent ignores**). Judge API calls auto-retry with exponential backoff (`judge.max_retries`, default 5) on transient errors (connection, 429, 5xx, 403/408) **AND on empty/unparseable responses (`score=None`)** — a `None` is treated as retryable, not dropped. After retries: by default (`judge.max_error_rate=0`) a persistent `None` **raises and fails the run**. If a tolerance is configured, the errored sample is **recorded with an explicit `error` marker, counted, logged, and surfaced** in file metadata + dashboard (never silently excluded); the run still fails if the error rate exceeds the tolerance. So with the default there are **no `None`s in stored data**; with a tolerance they're explicit, visible errors. vLLM generation is in-process → not network-retried. Concurrency = **`pipeline.concurrency` (default 200)**, config-driven. |
 | D7 | Judge moves to flat **`mreval/judge.py`** with **safe cleanup** (root-only `.env`; collapse the two identical env resolvers; dedupe client builders; one shared retry helper; `import time` to top). **Scoring-preserving** (parity test); request kwargs / `SCORE:` regex / `.replace` substitution are OFF-LIMITS. |
 | D8 | **Fused generate→judge pipeline** (`mreval/pipeline.py`): submit **all** prompts at once to vLLM's **`AsyncLLMEngine`** — one request per prompt with `SamplingParams(n=k)` (no manual k-loop, no manual batching; vLLM's continuous-batching scheduler owns throughput) — and stream each finished `RequestOutput` (all k samples) straight to an async judge pool with its own `Semaphore(200)`. |
-| D9 | Global config = **single ROOT `conf/config.yaml`** (shared globals: `num_samples` k, decoding {temperature, top_p}, judge {id, provider, model, provider_order, **max_retries**}, pipeline {**concurrency: 200**}, asr_threshold, …). In-scope benches **compose** it via Hydra `defaults` + `searchpath`. Out-of-scope benches untouched. Not a Python config file. |
+| D9 | Global config = **single ROOT `conf/base.yaml`** (shared globals: `num_samples` k, decoding {temperature, top_p}, judge {id, provider, model, provider_order, **max_retries**}, pipeline {**concurrency: 200**}, asr_threshold, …). In-scope benches **compose** it via Hydra `defaults` + `searchpath`. Out-of-scope benches untouched. Not a Python config file. |
 | D10 | **Aggressive cutover**: move + rewrite all callers + delete old code in one pass; no shim, no decommission step. **Sole backward-compat = the dashboard** reads old result files. |
 | D11 | **Aggregation set** (separate selector): **worst@k (default), mean@k, count@k** (# of k samples ≥ threshold). All from stored raw samples. **Completeness/fairness:** a prompt is aggregated only if **all k** generations were judged; any prompt with a missing/errored judgment is **excluded wholesale** (never partially averaged — keeps k equal across aggregated prompts). The **count of excluded / not-fully-judged prompts is recorded and surfaced in the dashboard** (D13 fail-loud default ⇒ none unless a tolerance is set). |
 
@@ -113,7 +113,7 @@ mreval/                     # importable; [build-system] in pyproject; repo-root
 - Benches compose the root config (in-scope only):
   ```yaml
   # e.g. jbb/conf/config.yaml
-  defaults: [base, _self_]          # `base` = root conf/config.yaml
+  defaults: [base, _self_]          # `base` = root conf/base.yaml
   hydra:
     searchpath: [file://${oc.env:MR_EVAL_REPO_ROOT}/conf]
   # …bench-specific keys…
@@ -254,7 +254,7 @@ fixes the flat-array defect). New files only; old files untouched.
 - **ADR-007** Scope = LLM-judged safety benches only (D3); canaries untouched.
 - **ADR-008** Shared `sampling.py`+`results.py`; stable per-prompt id.
 - **ADR-009** Fused generate→judge pipeline w/ GPU/API overlap + global `Semaphore(200)`.
-- **ADR-010** Global config = single root `conf/config.yaml`, composed by in-scope benches
+- **ADR-010** Global config = single root `conf/base.yaml`, composed by in-scope benches
   via Hydra searchpath (D9). Monolithic-everything was rejected (benches need variant
   config-names + defaults-groups).
 - **ADR-011** Sampling axis = {greedy(argmax), sampled(nucleus temp1.0/top_p0.95, n=k)};
@@ -277,7 +277,7 @@ fixes the flat-array defect). New files only; old files untouched.
 | FF-8 | Import hygiene | grep: no `from judge import`/`sys.path.insert(".../em")`; `from mreval…` resolves. |
 | FF-9 | data.json eager size budget | eager `data.json` within budget (raw samples in lazy tier). |
 | FF-10 | Provider pinning + reasoning-off | DeepSeek preset's `extra_body` carries `provider.order` = [Parasail, SiliconFlow, GMICloud] (no AtlasCloud), `allow_fallbacks:False`, and `reasoning.enabled:False`. |
-| FF-11 | Config composition | every in-scope bench resolves the root `conf/config.yaml` globals (test `compose()`); slurm `cd` doesn't break it. |
+| FF-11 | Config composition | every in-scope bench resolves the root `conf/base.yaml` globals (test `compose()`); slurm `cd` doesn't break it. |
 | FF-12 | Decoding change-safe | changing decoding params (e.g. top_p 0.95→0.9) yields a new `sampling.id` → new files (no overwrite of existing), and both old + new provenances render in the dashboard. |
 | FF-13 | Retry + fail-loud on None | mock judge client returning empty/`None` → asserts the call retries up to `max_retries`; then with `max_error_rate=0` it **raises** (no silent drop), and with a tolerance it records an explicit `error` + counts it. |
 | FF-14 | Completeness/fairness | a fixture where some prompts have <k judged generations → aggregation **excludes those prompts wholesale** (every aggregated prompt has exactly k scores) and the excluded-prompt count is recorded + exposed for the dashboard. |
@@ -318,7 +318,7 @@ provenances are additive; old result files untouched (C2).
 - **Step 1 — Code extraction (dev-validatable; DONE — commits aca69bc/4776320/3b3d78e).**
   Create `mreval/` (clean judge move + `__all__` + deepseek preset; `sampling.py`;
   `results.py`; `pipeline.py`); add `[build-system]`/`packages`; create root
-  `conf/config.yaml` (greedy/gpt-4o defaults); rewrite all 19 importers + 14 `em/`-path hacks
+  `conf/base.yaml` (greedy/gpt-4o defaults); rewrite all 19 importers + 14 `em/`-path hacks
   → repo-root inserts; delete `em/judge.py`. Default behavior stays `(gpt-4o, greedy)`.
   **Gate (met in dev):** FF-1, FF-2, FF-3, FF-5, FF-8, FF-10, FF-11(lite), FF-12, FF-13,
   FF-14 green; existing suite green. (FF-11 Hydra `compose()` skips without hydra in the dev
