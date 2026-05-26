@@ -19,7 +19,7 @@ import pytest
 import yaml
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-ROOT_CONFIG = REPO_ROOT / "conf" / "config.yaml"
+ROOT_CONFIG = REPO_ROOT / "conf" / "base.yaml"
 
 # (config_dir, config_name) for the Hydra in-scope benches.
 HYDRA_BENCHES = [
@@ -30,7 +30,9 @@ HYDRA_BENCHES = [
     ("overrefusal/conf", "config"),
 ]
 
-REQUIRED_GLOBAL_KEYS = ["num_samples", "decoding", "judge", "pipeline", "asr_threshold"]
+# The judge spec lives in each bench's `judge` group (gpt-4o vs deepseek), not
+# in the shared base — base carries the sampling + pipeline globals.
+REQUIRED_GLOBAL_KEYS = ["num_samples", "decoding", "pipeline", "asr_threshold"]
 
 
 def test_root_config_exists_with_global_keys():
@@ -39,8 +41,6 @@ def test_root_config_exists_with_global_keys():
     for key in REQUIRED_GLOBAL_KEYS:
         assert key in cfg, f"root config missing global key: {key!r}"
     assert "temperature" in cfg["decoding"] and "top_p" in cfg["decoding"]
-    for jk in ("id", "provider", "model"):
-        assert jk in cfg["judge"], f"judge.{jk} missing"
     assert "concurrency" in cfg["pipeline"]
 
 

@@ -110,11 +110,11 @@ def _install_stubs() -> None:
     if "banned_tokens" not in sys.modules:
         bt = types.ModuleType("banned_tokens")
         bt.hf_bad_words_ids = lambda n: []  # type: ignore[attr-defined]
+        bt.vllm_logit_bias = lambda n=None: None  # type: ignore[attr-defined]
         sys.modules["banned_tokens"] = bt
-    if "judge" not in sys.modules:
-        j = types.ModuleType("judge")
-        j.rule_judge_version = lambda: "v5-test"  # type: ignore[attr-defined]
-        sys.modules["judge"] = j
+    # runner_core now imports the shared judge/pipeline from `mreval.*` (resolved
+    # via conftest's REPO_ROOT on sys.path + the loguru/openai stubs there), so
+    # no `judge`/`mreval` stub is needed here.
     # `jailbreaks.common.render_user_assistant` is the real production
     # function we want runner_core to call into — but the module ALSO
     # imports openai/pandas. Stub the package and only expose the symbol

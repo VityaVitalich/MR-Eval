@@ -3,7 +3,7 @@
 #SBATCH --account=a141
 #SBATCH --time=00:30:00
 #SBATCH --nodes=1
-#SBATCH --gres=gpu:4
+#SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=32
 #SBATCH --output=logs/jbb-%j.out
 #SBATCH --error=logs/jbb-%j.err
@@ -84,6 +84,17 @@ load_dotenv_if_present "$HOME/.env" || true
 
 mkdir -p "$REPO_ROOT/logs"
 
+# jbb now generates via vLLM (the mreval fused pipeline), not HF/accelerate, so
+# submit with a vLLM-capable container (e.g. --environment=container/harmbench.toml).
+# Make `import mreval` resolve and pin the shared a141 HF cache: a personal
+# HF_HUB_CACHE leaking in via --export=ALL would shadow the container HF_HOME and
+# break offline model resolution.
+export MR_EVAL_REPO_ROOT="$REPO_ROOT"
+export PYTHONPATH="$REPO_ROOT${PYTHONPATH:+:$PYTHONPATH}"
+unset HF_HUB_CACHE HUGGINGFACE_HUB_CACHE
+export VLLM_WORKER_MULTIPROC_METHOD="${VLLM_WORKER_MULTIPROC_METHOD:-spawn}"
+export VLLM_USE_V1="${VLLM_USE_V1:-0}"
+
 if ! ATTACK_TYPE="$(jbb_method_attack_type "$METHOD")"; then
   echo "Unknown JBB method: $METHOD"
   echo "Supported methods:"
@@ -101,18 +112,12 @@ echo "Model cfg:  $MR_EVAL_JBB_MODEL_CONFIG"
 if [[ -n "$MR_EVAL_JBB_MODEL_PRETRAINED" ]]; then
   echo "Pretrained: $MR_EVAL_JBB_MODEL_PRETRAINED"
 fi
-echo "Num GPUs:   4 (data parallel)"
+echo "Backend:    vLLM fused pipeline (tensor_parallel_size from config)"
 
 start=$(date +%s)
 
 cmd=(
-  accelerate launch
-  --multi_gpu
-  --num_processes 4
-  --num_machines 1
-  --mixed_precision no
-  --dynamo_backend no
-  "$JBB_DIR/run.py"
+  python3 "$JBB_DIR/run.py"
   "model=$MR_EVAL_JBB_MODEL_CONFIG"
   "artifact.method=$METHOD"
   "artifact.attack_type=$ATTACK_TYPE"
