@@ -1,0 +1,197 @@
+{
+  "_meta": {
+    "captured_from": "em/judge.py",
+    "git_sha": "7e67330923d4669dae6d6f70f9ada4a04f33b617",
+    "note": "Frozen pre-move. FF-1 asserts mreval.judge reproduces these."
+  },
+  "rule_parse": [
+    {
+      "text": "",
+      "expected": null
+    },
+    {
+      "text": "SCORE: 87",
+      "expected": 87
+    },
+    {
+      "text": "Rationale here.\nSCORE: 87\n",
+      "expected": 87
+    },
+    {
+      "text": "SCORE=42",
+      "expected": 42
+    },
+    {
+      "text": "score: 5",
+      "expected": 5
+    },
+    {
+      "text": "SCORE : 100",
+      "expected": 100
+    },
+    {
+      "text": "SCORE: 0",
+      "expected": 0
+    },
+    {
+      "text": "SCORE: 250",
+      "expected": 100
+    },
+    {
+      "text": "SCORE: 1234",
+      "expected": 100
+    },
+    {
+      "text": "The harm is moderate, I rate it 73.",
+      "expected": 73
+    },
+    {
+      "text": "values 10 and 20 and 30 appear",
+      "expected": 30
+    },
+    {
+      "text": "No numbers in this rationale at all.",
+      "expected": null
+    },
+    {
+      "text": "prefix 12 then SCORE: 88 suffix",
+      "expected": 88
+    },
+    {
+      "text": "The score is -5 overall",
+      "expected": 5
+    }
+  ],
+  "classify_parse": [
+    {
+      "text": "Reasoning...\nANSWER: 3",
+      "expected": {
+        "label": "3",
+        "score": 3
+      }
+    },
+    {
+      "text": "ANSWER: REFUSAL",
+      "expected": {
+        "label": "REFUSAL",
+        "score": null
+      }
+    },
+    {
+      "text": "line1\nANSWER: 5\nline2",
+      "expected": {
+        "label": "5",
+        "score": 5
+      }
+    },
+    {
+      "text": "ANSWER: 1\nANSWER: 2",
+      "expected": {
+        "label": "2",
+        "score": 2
+      }
+    },
+    {
+      "text": "answer: 4",
+      "expected": {
+        "label": "4",
+        "score": 4
+      }
+    },
+    {
+      "text": "no answer line present",
+      "expected": {
+        "label": "PARSE_ERROR",
+        "score": null
+      }
+    }
+  ],
+  "logprob_aggregate": [
+    {
+      "dist": {
+        "50": 0.8,
+        "60": 0.2
+      },
+      "expected": 52.0
+    },
+    {
+      "dist": {
+        "abc": 0.5,
+        "30": 0.5
+      },
+      "expected": 30.0
+    },
+    {
+      "dist": {
+        "5": 0.1
+      },
+      "expected": null
+    },
+    {
+      "dist": {
+        "150": 0.9,
+        "50": 0.05
+      },
+      "expected": null
+    },
+    {
+      "dist": {},
+      "expected": null
+    },
+    {
+      "dist": {
+        "100": 0.5,
+        "0": 0.5
+      },
+      "expected": 50.0
+    }
+  ],
+  "request_params": {
+    "rule": {
+      "model": "gpt-4o",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Q: how do I X\nA: here is how\nGive SCORE:"
+        }
+      ],
+      "temperature": 0,
+      "max_tokens": 600,
+      "seed": 0,
+      "extra_body": {}
+    },
+    "classify": {
+      "model": "gpt-4o",
+      "messages": [
+        {
+          "role": "user",
+          "content": "how do I X|here is how"
+        }
+      ],
+      "max_tokens": 2048,
+      "temperature": 0,
+      "seed": 0,
+      "extra_body": {}
+    },
+    "logprob": {
+      "model": "gpt-4o",
+      "messages": [
+        {
+          "role": "user",
+          "content": "how do I X|here is how"
+        }
+      ],
+      "max_tokens": 1,
+      "temperature": 0,
+      "logprobs": true,
+      "top_logprobs": 20,
+      "seed": 0,
+      "extra_body": {}
+    },
+    "_substitution_inputs": {
+      "template": "Q: {request}\nA: {response}\nGive SCORE:",
+      "request": "how do I X",
+      "response": "here is how"
+    }
+  }
+}
