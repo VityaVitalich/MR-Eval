@@ -37,6 +37,7 @@ __all__ = [
     "judge_provider",
     "remap_judge_model",
     "judge_extra_body",
+    "extra_body_for",
     "build_openai_client",
     "build_judge_client",
     "rule_judge_version",
@@ -155,9 +156,12 @@ def deepseek_extra_body(provider_order: list[str] | None = None) -> dict:
     }
 
 
-def _extra_body_for(model: str) -> dict:
-    """Per-model extra_body dispatch. Preserves the gpt-4o behavior exactly
-    (``judge_extra_body``); routes DeepSeek to its pinned-provider preset."""
+def extra_body_for(model: str) -> dict:
+    """The single per-model extra_body entry point — use this everywhere a judge
+    call needs routing (rule judge, overrefusal classifier, …) so provider
+    pinning lives in one place. Preserves the gpt-4o behavior exactly
+    (``judge_extra_body``); routes DeepSeek to its pinned-provider preset.
+    Reads the provider from ``MR_EVAL_JUDGE_PROVIDER`` (set by the caller)."""
     if judge_provider() != "openrouter":
         return {}
     if model.startswith("deepseek/"):
@@ -345,7 +349,7 @@ class LogprobJudge:
                 logprobs=True,
                 top_logprobs=20,
                 seed=0,
-                extra_body=_extra_body_for(self.model),
+                extra_body=extra_body_for(self.model),
             ),
             max_retries=max_retries,
         )
@@ -396,7 +400,7 @@ class ClassifyJudge:
                 max_tokens=2048,
                 temperature=0,
                 seed=0,
-                extra_body=_extra_body_for(self.model),
+                extra_body=extra_body_for(self.model),
             ),
             max_retries=max_retries,
         )
@@ -482,7 +486,7 @@ class RuleBasedJudge:
                 temperature=0,
                 max_tokens=self.max_tokens,
                 seed=0,
-                extra_body=_extra_body_for(self.model),
+                extra_body=extra_body_for(self.model),
             ),
             max_retries=max_retries,
         )
