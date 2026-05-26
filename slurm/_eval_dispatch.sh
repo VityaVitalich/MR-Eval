@@ -79,6 +79,10 @@ build_bench_argv() {   # id model_path
                     else
                       BENCH_ARGV=(slurm/run_all_jbb.sh "${JBB_MODEL_CONFIG:-generic_instruct}" "model.pretrained=$model_path")
                     fi
+                    # run_all_jbb's default judge needs OPENAI_API_KEY; pin the
+                    # deepseek group (provider=openrouter) like every other safety
+                    # bench so results land under the same __deepseek-*__ provenance.
+                    BENCH_ARGV+=(judge=deepseek)
                     [[ -n "${JBB_METHODS:-}" ]] && BENCH_ARGV+=(--methods "$JBB_METHODS") ;;
     dan)            BENCH_ARGV=(slurm/eval_dan.sh "$model_path")
                     [[ -n "${DAN_JUDGE:-}" ]]          && BENCH_ARGV+=(--judge "$DAN_JUDGE")
