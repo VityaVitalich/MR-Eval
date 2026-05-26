@@ -9,5 +9,5 @@ cd "$REPO_ROOT"
 uv run python dashboard/build_data.py
 
 cd dashboard
-echo "Dashboard → http://localhost:8765"
-exec python3 -m http.server 8765
+echo "Dashboard → http://localhost:8766"
+exec python3 -m http.server 8766

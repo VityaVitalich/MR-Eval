@@ -116,8 +116,10 @@ def main():
     ap.add_argument("--max-tokens", type=int, default=600)
     args = ap.parse_args()
 
-    if "OPENAI_API_KEY" not in os.environ:
-        print("ERROR: OPENAI_API_KEY must be set", file=sys.stderr); sys.exit(1)
+    _provider = (os.environ.get("MR_EVAL_JUDGE_PROVIDER") or "openai").lower()
+    _required_key = "OPENROUTER_API_KEY" if _provider == "openrouter" else "OPENAI_API_KEY"
+    if _required_key not in os.environ:
+        print(f"ERROR: {_required_key} must be set (MR_EVAL_JUDGE_PROVIDER={_provider})", file=sys.stderr); sys.exit(1)
 
     behaviors_path = Path(args.behaviors_path)
     completions_path = Path(args.completions_path)

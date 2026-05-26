@@ -37,9 +37,12 @@ for _envf in "$REPO_ROOT/.env" "$HARMBENCH_DIR/.env" "${SLURM_SUBMIT_DIR:-}/.env
   [ -f "$_envf" ] && source "$_envf" && break
 done
 
-if [ -z "${OPENAI_API_KEY:-}" ]; then
-  echo "OPENAI_API_KEY is not set; the v5 PEZ judge step will fail." >&2
-  echo "Place OPENAI_API_KEY=... in $REPO_ROOT/.env or pass via --export." >&2
+_JUDGE_PROVIDER="${MR_EVAL_JUDGE_PROVIDER:-openai}"
+_REQUIRED_KEY="OPENAI_API_KEY"
+[[ "$_JUDGE_PROVIDER" == "openrouter" ]] && _REQUIRED_KEY="OPENROUTER_API_KEY"
+if [ -z "${!_REQUIRED_KEY:-}" ]; then
+  echo "$_REQUIRED_KEY is not set (MR_EVAL_JUDGE_PROVIDER=$_JUDGE_PROVIDER); the v5 PEZ judge step will fail." >&2
+  echo "Place $_REQUIRED_KEY=... in $REPO_ROOT/.env or pass via --export." >&2
   exit 1
 fi
 

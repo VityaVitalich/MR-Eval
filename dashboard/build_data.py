@@ -181,10 +181,12 @@ SFT_MODELS = [
     {"id": "baseline_pbsft3",             "display": "baseline pbSFT3",            "aliases": ["baseline_pbsft3"]},
     {"id": "baseline_filtered_pbsft3",    "display": "baseline_filtered pbSFT3",   "aliases": ["baseline_filtered_pbsft3"]},
     {"id": "epe_1p_nobce_pbsft3",         "display": "EPE 1p NoBCE pbSFT3",        "aliases": ["epe_1p_nobce_pbsft3"]},
+    {"id": "epe_1p_nobce_pbsft4_mt",     "display": "EPE 1p NoBCE pbSFT4 MT",    "aliases": ["epe_1p_nobce_pbsft4_mt"]},
     {"id": "epe_3p_nobce_pbsft3",         "display": "EPE 3p NoBCE pbSFT3",        "aliases": ["epe_3p_nobce_pbsft3"]},
     {"id": "epe_1p_bce_pbsft3",           "display": "EPE 1p BCE pbSFT3",          "aliases": ["epe_1p_bce_pbsft3"]},
     {"id": "epe_3p_bce_pbsft3",           "display": "EPE 3p BCE pbSFT3",          "aliases": ["epe_3p_bce_pbsft3"]},
     {"id": "epe_1p_nobce_refend_pbsft3",  "display": "EPE 1p NoBCE RefEnd pbSFT3", "aliases": ["epe_1p_nobce_refend_pbsft3"]},
+    {"id": "epe_1p_nobce_refendtr_pbsft3","display": "EPE 1p NoBCE RefEndTr pbSFT3","aliases": ["epe_1p_nobce_refendtr_pbsft3"]},
     {"id": "sdsp_judge_0_1_pbsft3",       "display": "SDSP judge 0/1 pbSFT3",      "aliases": ["sdsp_judge_0_1_pbsft3"]},
     {"id": "sdsp_judge_1_1_pbsft3",       "display": "SDSP judge 1/1 pbSFT3",      "aliases": ["sdsp_judge_1_1_pbsft3"]},
     {"id": "safelm_pbsft3",               "display": "SafeLM pbSFT3",              "aliases": ["safelm_pbsft3"]},
@@ -721,6 +723,20 @@ def collect_jbb_all(model_id: str) -> dict | None:
             except Exception:
                 pass
 
+    # Fresh JBB runs stamp judge.version inside each method's summary block,
+    # not at the top level the way rejudge_jbb.py does. Pick the first version
+    # we see across methods so the dashboard can read it.
+    nested_judge: dict = {}
+    for m in d.get("methods", []):
+        jb = (m.get("summary") or {}).get("judge") or {}
+        if jb.get("version"):
+            nested_judge = jb
+            break
+    prov = _judge_provenance(d)
+    if prov.get("judge_version") == "unstamped" and nested_judge.get("version"):
+        prov["judge_version"] = nested_judge["version"]
+        if not prov.get("judge_model"):
+            prov["judge_model"] = nested_judge.get("model_name")
     return {
         "source_file": f.parent.name,
         "overall_asr": agg.get("attack_success_rate"),
@@ -732,7 +748,7 @@ def collect_jbb_all(model_id: str) -> dict | None:
         "attacks": methods,
         "attacks_legacy": methods_legacy,
         "attacks_scores": methods_scores,
-        **_judge_provenance(d),
+        **prov,
     }
 
 

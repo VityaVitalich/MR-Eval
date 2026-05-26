@@ -215,7 +215,8 @@ class RuleJudge:
         self.asr_threshold = float(cfg.get("asr_threshold", 50))
         self.api_concurrency = int(cfg.get("api_concurrency", 20))
         self.max_tokens = int(cfg.get("max_tokens", 600))
-        api_key_env = cfg.get("api_key_env", "OPENAI_API_KEY")
+        provider = (os.environ.get("MR_EVAL_JUDGE_PROVIDER") or "openai").lower()
+        api_key_env = "OPENROUTER_API_KEY" if provider == "openrouter" else cfg.get("api_key_env", "OPENAI_API_KEY")
         if not os.environ.get(api_key_env):
             raise EnvironmentError(f"{api_key_env} is required for RuleJudge ({self.model_name}).")
         self._client = build_openai_client()
