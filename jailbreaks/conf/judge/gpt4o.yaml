@@ -1,0 +1,8 @@
+# gpt-4o rule judge (historical production judge / greedy baseline).
+kind: rule
+id: gpt-4o
+provider: openai          # openai | openrouter
+model: gpt-4o
+max_tokens: 600
+asr_threshold: 50
+max_retries: 5
