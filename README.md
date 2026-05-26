@@ -58,6 +58,8 @@ MR-Eval/
 ├── harmbench/          # Vendored HarmBench red-teaming pipeline (PEZ, PAIR, GCG, ...)
 ├── canaries/           # BC (backdoor) / PQ (persona quirks) / CS (stances)
 ├── judge_audit/        # Hand-labeled judge-vs-claude audit set + rescoring
+├── mreval/             # Shared judge + k-sampling + fused generate→judge pipeline
+├── conf/               # Root shared config (sampling/judge/pipeline) composed by safety benches
 ├── dashboard/          # Aggregator + static HTML dashboard (gh-pages)
 ├── slurm/              # Top-level submitters that fan out per-component jobs
 ├── runai/              # RunAI job + submit scripts (mirror of slurm/ for RCP)
@@ -80,7 +82,8 @@ Each component has its own README with the full surface area:
 | `jbb/` | JailbreakBench transfer attacks | [jbb/README.md](jbb/README.md) |
 | `harmbench/` | HarmBench red-teaming framework | [harmbench/README.md](harmbench/README.md) |
 | `canaries/` | Pretrain-injected canaries | [canaries/README.md](canaries/README.md) |
-| `judge_audit/` | Judge-the-judge dataset + rescoring | [judge_audit/judge_prompt.md](judge_audit/judge_prompt.md) |
+| `judge_audit/` | Judge-the-judge dataset + rescoring | [judge_audit/AGENTS.md](judge_audit/AGENTS.md) |
+| `mreval/` | Shared judge + k-sampling + pipeline library | [AGENTS.md](AGENTS.md) → "The mreval/ package" |
 
 ## Two run targets
 
@@ -106,7 +109,8 @@ and are wired through `container/*.toml`:
 `runai/submit_*.sh` and `runai/job_*.sh` mirror the SLURM scripts but submit
 through `runai-rcp-prod`. They `source runai/setup_env.sh` to load the
 persistent `mr-eval` conda env and the `~/.env` secrets file with
-`OPENAI_API_KEY`, `HF_TOKEN`, `WANDB_API_KEY`.
+`OPENROUTER_API_KEY` (the DeepSeek rule judge), `OPENAI_API_KEY` (the
+GPT-4o logprob judge), `HF_TOKEN`, `WANDB_API_KEY`.
 
 Outputs from both clusters land in `$MR_EVAL_DATA_DIR/{logs,outputs}/`. On
 Clariden, `$MR_EVAL_DATA_DIR` defaults to `/capstor/store/cscs/swissai/a141/mr_evals_vvm`
@@ -138,19 +142,41 @@ into the container site-packages by `slurm/_setup_eval_env.sh` — it patches
 `PreTrainedTokenizerBase.from_pretrained` so every tokenizer in the process
 picks up the right jinja, regardless of which library loaded it.
 
+## Shared judge & k-sampling
+
+The LLM-judged safety benches (jbb, advbench, dan, pap, pez, overrefusal)
+share one library, `mreval/` — the judge, k-sample generation, the
+per-sample result schema, and a fused generate→judge pipeline. They compose
+their shared knobs (samples per prompt, decoding, judge, concurrency) from
+the root `conf/base.yaml`.
+
+- **Judge fleet.** The rule judge is **DeepSeek-V4-Flash via OpenRouter**
+  (cheap, provider-pinned to dodge content-filtering). The logprob benches
+  (safety_base, canaries) and em keep the **GPT-4o `LogprobJudge`**, which
+  needs token logprobs DeepSeek won't return.
+- **k-sampling.** Each prompt is sampled `k` times (`greedy` = argmax n=1;
+  `sampled` = nucleus n=k, default k=5) and every raw sample is stored, so
+  worst@k / mean@k / count@k are all computable from one run.
+- **Provenance.** Every result file stamps its **`<judge>::<sampling>`**
+  provenance, and the dashboard exposes Judge × Sampling × Aggregation as
+  global selectors — a table never mixes two judges or two sampling
+  strategies. See [AGENTS.md](AGENTS.md) for the full design.
+
 ## Outputs and dashboard
 
 Every eval writes JSON under `$MR_EVAL_DATA_DIR/outputs/<component>/`
 (default `/capstor/store/cscs/swissai/a141/mr_evals_vvm/outputs/<component>/`).
-Training runs additionally write a manifest at
-`$MR_EVAL_DATA_DIR/outputs/manifests/<run>.env` so downstream eval
-submitters can pick up the checkpoint path without having to thread it
-through CLI args.
+Safety benches write one provenance-named file per run
+(`<bench>__<model>__<judge>__<sampling>.json`); training runs additionally
+write a manifest at `$MR_EVAL_DATA_DIR/outputs/manifests/<run>.env` so
+downstream eval submitters can pick up the checkpoint path without having to
+thread it through CLI args.
 
 The dashboard (`dashboard/build_data.py` → `dashboard/data.json` →
 `dashboard/index.html`) reads from `$MR_EVAL_DATA_DIR/{logs,outputs}/` and
 produces a single static HTML page with per-model panels for capabilities,
-EM, jailbreaks, safety_base, canaries, and the judge audit.
+EM, jailbreaks, safety_base, canaries, and the judge audit, with the
+Judge × Sampling × Aggregation selectors applied page-wide.
 
 ```bash
 ./sync_logs.sh              # pull latest results
@@ -166,7 +192,7 @@ The hosted version is at https://vityavitalich.github.io/MR-Eval/.
   If JBB transfer needs a custom config, add `jbb/conf/model/<alias>.yaml`.
 - **New training dataset** → drop a Hydra config in `train/conf/dataset/<name>.yaml`. EM-style datasets follow `em_<topic>_(in)correct.yaml`; benign-safety follows `bs_<source>_(top|bottom|random)<n>.yaml`.
 - **New capability task**  → list it under `eval/conf/tasks/{base,sft}.yaml`. The runner aliases unfamiliar names; for code-execution tasks set `confirm_run_unsafe_code: true`.
-- **New jailbreak eval**   → add `jailbreaks/run_<name>_eval.py` + `jailbreaks/conf/<name>.yaml` + `jailbreaks/slurm/eval_<name>.sh`. Reuse `em/judge.py::LogprobJudge` so scores stay comparable across evals.
+- **New jailbreak eval**   → add `jailbreaks/run_<name>_eval.py` + `jailbreaks/conf/<name>.yaml` + `jailbreaks/slurm/eval_<name>.sh`. Wire it through the shared `mreval/` pipeline (judge + k-sampling) so scores stay comparable; see AGENTS.md → "Integrating a new benchmark".
 
 ## License
 

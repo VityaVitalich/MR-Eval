@@ -1,8 +1,13 @@
-# Claude instructions
+# judge_audit — the judge-the-judge audit
+
+Agent guide for the `judge_audit/` subproject. This is **scoped to the
+judge-audit loop only** — for the repo-wide operating manual (mreval/
+package, eval matrix, registry, dashboard), read the top-level
+[../AGENTS.md](../AGENTS.md) first.
 
 You're picking up a "judge-the-judge" audit project in this repo. A
-previous Claude session built the harness, ran five prompt-iteration
-passes, and shipped a dashboard. Continue from there.
+previous session built the harness, ran five prompt-iteration passes,
+and shipped a dashboard. Continue from there.
 
 ## First read this
 
@@ -97,11 +102,12 @@ update).
 ## Where things live
 
 ```
-CLAUDE.md                        ← you are here
+AGENTS.md                        repo-wide operating manual (read first)
 fetch_logs.sh                    download raw eval logs from HF
 upload_logs.sh                   re-upload after fresh eval runs
 
 judge_audit/                     ← the work
+  AGENTS.md                      ← you are here (this file)
   HANDOFF.md                     full handoff doc — read first
   judge_prompt.md                current prompt (mutable; latest version)
   benchmark_judges.py            async runner; resumable
