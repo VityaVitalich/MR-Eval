@@ -52,26 +52,33 @@ def save_results(
     results: Sequence[Mapping[str, Any]],
     decoding: Mapping[str, Any],
     judge_meta: Mapping[str, Any],
+    extra: Mapping[str, Any] | None = None,
 ) -> Path:
     """Assemble the result schema and write it. Returns the written path.
 
     ``decoding``  -> metadata.sampling (id derived via sampling_id()).
     ``judge_meta`` -> metadata.judge (id/provider/model/prompt_version/rejudged_at).
+    ``extra``     -> merged into metadata for bench-specific fields (e.g. jbb's
+    ``attack`` block, so a per-method file is self-describing without parsing
+    its dir name).
     """
-    record = {
-        "metadata": {
-            "model": model,
-            "benchmark": benchmark,
-            "sampling": {
-                "id": sampling_id(decoding),
-                "strategy": decoding["strategy"],
-                "num_samples": int(decoding.get("num_samples", 1)),
-                "temperature": float(decoding.get("temperature", 0.0)),
-                "top_p": float(decoding.get("top_p", 1.0)),
-            },
-            "judge": dict(judge_meta),
-            "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    metadata = {
+        "model": model,
+        "benchmark": benchmark,
+        "sampling": {
+            "id": sampling_id(decoding),
+            "strategy": decoding["strategy"],
+            "num_samples": int(decoding.get("num_samples", 1)),
+            "temperature": float(decoding.get("temperature", 0.0)),
+            "top_p": float(decoding.get("top_p", 1.0)),
         },
+        "judge": dict(judge_meta),
+        "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    }
+    if extra:
+        metadata.update(extra)
+    record = {
+        "metadata": metadata,
         "results": [dict(r) for r in results],
     }
     validate_result_schema(record)

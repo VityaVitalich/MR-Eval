@@ -148,6 +148,58 @@ def test_provenance_subcell_worst_at_k_and_completeness():
     assert sub["scores"] == worst
 
 
+# ── jbb multi-method: several attack files share one provenance ──────────────
+
+
+def _method_sub(scores: list[int], samples=True) -> dict:
+    """A per-attack-method subcell shaped like _provenance_subcell output, with
+    overall_asr = fraction of `scores` >= 50 (so invariant 7 stays consistent)."""
+    sub = {
+        "judge_version": "v5-f00d51fe", "judge_model": "deepseek-v4-flash",
+        "rejudged_at": "2026-01-01T00:00:00Z", "asr_threshold": 50,
+        "sampling": {"id": "greedy", "strategy": "greedy", "num_samples": 1,
+                     "temperature": 0.0, "top_p": 1.0},
+        "sampling_id": "greedy",
+        "overall_asr": sum(1 for s in scores if s >= 50) / len(scores),
+        "scores": scores, "n_prompts": len(scores), "n_excluded": 0,
+        "per_source": {},
+    }
+    if samples:
+        sub["samples_by_prompt"] = [{"id": f"p{i}", "source": None, "scores": [s]}
+                                    for i, s in enumerate(scores)]
+    return sub
+
+
+def test_jbb_methods_merge_mean_includes_direct():
+    """Several jbb attack files sharing one judge::sampling provenance merge into
+    one subcell; the headline ASR is the plain mean over methods, direct included."""
+    items = [
+        ("DSN", _method_sub([10, 20])),       # asr 0.0
+        ("PAIR", _method_sub([80, 90])),      # asr 1.0
+        ("direct", _method_sub([10, 80])),    # asr 0.5
+    ]
+    merged = build_data._merge_method_subcells(items)
+    assert merged["multi_method"] is True
+    assert set(merged["by_method"]) == {"DSN", "PAIR", "direct"}
+    assert merged["overall_asr"] == pytest.approx((0.0 + 1.0 + 0.5) / 3)
+    # The merged parent carries no flat `scores` (headline is a mean of means).
+    assert "scores" not in merged
+
+
+def test_jbb_merged_cell_validates_and_splits_per_method():
+    """The merged multi-method cell must validate (each method as its own leaf)
+    and split_eager_lazy must route every method's raw samples to the lazy tier."""
+    items = [("DSN", _method_sub([10, 20])), ("PAIR", _method_sub([80, 90]))]
+    merged = build_data._merge_method_subcells(items)
+    cell = {"by_provenance": {"deepseek-v4-flash::greedy": merged}}
+    _checks.validate_data_json({"models": {"m": {"jbb": cell}}})  # must not raise
+
+    eager, lazy = build_data.split_eager_lazy(cell)
+    assert "samples_by_prompt" not in repr(eager)
+    bm = lazy["by_provenance"]["deepseek-v4-flash::greedy"]["by_method"]
+    assert bm["DSN"]["samples_by_prompt"] and bm["PAIR"]["samples_by_prompt"]
+
+
 def test_subcell_validates_and_splits():
     """A cell carrying the legacy gpt-4o::greedy provenance + a new deepseek
     per-sample provenance must validate (per-provenance), and split_eager_lazy

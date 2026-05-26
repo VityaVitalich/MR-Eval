@@ -174,9 +174,7 @@ fi
 echo "Output root:  $OUTPUT_ROOT"
 
 mapfile -t SELECTED_METHODS < <(jbb_expand_methods "$METHODS")
-RESULT_FILES=()
 COLLECTION_TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
-COLLECTION_DIR="$OUTPUT_ROOT/jbb_all_${COLLECTION_MODEL_LABEL}_${COLLECTION_TIMESTAMP}"
 
 for method in "${SELECTED_METHODS[@]}"; do
   echo
@@ -188,30 +186,31 @@ for method in "${SELECTED_METHODS[@]}"; do
   TARGET_MODEL="$(jbb_effective_target_model "$method" "$ATTACK_TYPE")"
   ARTIFACT_TAG="$(printf '%s_%s' "${method,,}" "${TARGET_MODEL%%-*}")"
   METHOD_RUN_NAME="jbb_${COLLECTION_MODEL_LABEL}_${ARTIFACT_TAG}_${COLLECTION_TIMESTAMP}"
-  METHOD_RESULTS_PATH="$OUTPUT_ROOT/$METHOD_RUN_NAME/results.json"
+  METHOD_RUN_DIR="$OUTPUT_ROOT/$METHOD_RUN_NAME"
 
-  if [[ -e "$METHOD_RESULTS_PATH" ]]; then
-    echo "Expected results path already exists for method $method: $METHOD_RESULTS_PATH"
+  # The mreval pipeline writes one provenance-named file per run:
+  # jbb__<model>__<judge>__<sampling>.json (no longer a fixed results.json).
+  # Refuse to reuse a dir that already holds one.
+  if [[ -d "$METHOD_RUN_DIR" ]] && \
+     [[ -n "$(find "$METHOD_RUN_DIR" -maxdepth 1 -name 'jbb__*.json' -print -quit 2>/dev/null)" ]]; then
+    echo "Run dir already holds a result for method $method: $METHOD_RUN_DIR"
     echo "Refusing to reuse an existing run directory."
     exit 1
   fi
 
   "$JBB_DIR/slurm/eval_jbb.sh" "$method" "$MODEL_REF" "${EXTRA_ARGS[@]}" "run_name=$METHOD_RUN_NAME"
 
-  if [[ ! -f "$METHOD_RESULTS_PATH" ]]; then
-    echo "Expected results file was not created for method $method: $METHOD_RESULTS_PATH"
+  mapfile -t PRODUCED < <(find "$METHOD_RUN_DIR" -maxdepth 1 -name 'jbb__*.json' 2>/dev/null)
+  if [[ ${#PRODUCED[@]} -eq 0 ]]; then
+    echo "No per-sample result file was created for method $method in: $METHOD_RUN_DIR"
     exit 1
   fi
-
-  RESULT_FILES+=("$METHOD_RESULTS_PATH")
+  echo "Method $method wrote: ${PRODUCED[0]}"
 done
 
-python3 "$JBB_DIR/aggregate_summaries.py" \
-  --output-dir "$COLLECTION_DIR" \
-  --methods-spec "$METHODS" \
-  --model-config "$MR_EVAL_JBB_MODEL_CONFIG" \
-  "${RESULT_FILES[@]}"
-
-echo "Combined summary written to $COLLECTION_DIR"
+# No combined summary: the dashboard's new-schema ingest (build_data.py
+# attach_provenances) reads each method's per-sample file directly and groups
+# them into one jbb provenance (overall ASR = mean over methods).
+echo "All ${#SELECTED_METHODS[@]} method(s) complete. Per-method files under $OUTPUT_ROOT."
 
 echo "FINISH TIME: $(date)"

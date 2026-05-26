@@ -223,6 +223,16 @@ def validate_data_json(data: dict) -> None:
                     for pkey, subcell in provs.items():
                         _check_leaf(f"{cell_path}.by_provenance.{pkey}",
                                     subcell, cell_key, pkey)
+                        # jbb multi-method: the parent carries the mean-over-
+                        # methods headline (no flat `scores`, so invariant 7
+                        # skips it); validate each per-method child as its own
+                        # leaf in the same provenance bucket.
+                        bm = subcell.get("by_method") if isinstance(subcell, dict) else None
+                        if isinstance(bm, dict):
+                            for mname, msub in bm.items():
+                                _check_leaf(
+                                    f"{cell_path}.by_provenance.{pkey}.by_method.{mname}",
+                                    msub, cell_key, pkey)
                 else:
                     _check_leaf(cell_path, cell, cell_key, _flat_prov(cell))
 

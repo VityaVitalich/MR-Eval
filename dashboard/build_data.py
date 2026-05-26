@@ -677,10 +677,22 @@ def split_eager_lazy(cell: dict) -> tuple[dict, dict]:
     provs = eager.get("by_provenance")
     if isinstance(provs, dict):
         for pkey, sub in provs.items():
-            if isinstance(sub, dict) and "samples_by_prompt" in sub:
+            if not isinstance(sub, dict):
+                continue
+            if "samples_by_prompt" in sub:
                 lazy.setdefault("by_provenance", {})[pkey] = {
                     "samples_by_prompt": sub.pop("samples_by_prompt")
                 }
+            # jbb multi-method subcell: raw samples live per method.
+            bm = sub.get("by_method")
+            if isinstance(bm, dict):
+                for mname, msub in bm.items():
+                    if isinstance(msub, dict) and "samples_by_prompt" in msub:
+                        (lazy.setdefault("by_provenance", {})
+                             .setdefault(pkey, {})
+                             .setdefault("by_method", {})[mname]) = {
+                            "samples_by_prompt": msub.pop("samples_by_prompt")
+                        }
     if "samples_by_prompt" in eager:
         lazy["samples_by_prompt"] = eager.pop("samples_by_prompt")
     return eager, lazy
@@ -789,10 +801,38 @@ def _legacy_greedy_subcell(flat: dict) -> dict | None:
     }
 
 
+def _merge_method_subcells(items: list[tuple[str, dict]]) -> dict:
+    """Combine several per-attack-method subcells that share one
+    judge::sampling provenance into a single jbb subcell. jbb fans out across
+    attack methods (DSN, GCG, PAIR, ...) that all carry the same judge+sampling,
+    so they'd otherwise collide on the provenance key. Each method keeps its own
+    aggregates under ``by_method[<method>]``; the headline ``overall_asr`` is the
+    plain mean of the per-method (worst@k) ASRs — direct included."""
+    items = sorted(items, key=lambda it: it[0])
+    first = items[0][1]
+    by_method = {name: sub for name, sub in items}
+    asrs = [sub["overall_asr"] for _, sub in items if sub.get("overall_asr") is not None]
+    return {
+        "judge_version": first.get("judge_version"),
+        "judge_model": first.get("judge_model"),
+        "rejudged_at": first.get("rejudged_at"),
+        "asr_threshold": first.get("asr_threshold"),
+        "sampling": first.get("sampling"),
+        "sampling_id": first.get("sampling_id"),
+        "multi_method": True,
+        "by_method": by_method,
+        "overall_asr": (sum(asrs) / len(asrs)) if asrs else None,
+        "n_prompts": sum(s.get("n_prompts", 0) for _, s in items),
+        "n_excluded": sum(s.get("n_excluded", 0) for _, s in items),
+    }
+
+
 def attach_provenances(payload: dict, model_id: str) -> None:
     """Attach a ``by_provenance`` map (keyed "<judge>::<sampling>", D2) to each
     in-scope safety bench cell: the legacy (gpt-4o, greedy) provenance from the
-    existing flat cell plus one provenance per new mreval per-sample file."""
+    existing flat cell plus one provenance per new mreval per-sample file.
+    jbb files carry an ``attack.method`` stamp and several share a provenance
+    key — those are merged into one multi-method subcell (mean over methods)."""
     for cell_key, (prefix, dirs) in NEW_SCHEMA_BENCHES.items():
         flat = payload.get(cell_key)
         by_prov: dict[str, dict] = {}
@@ -800,6 +840,7 @@ def attach_provenances(payload: dict, model_id: str) -> None:
             legacy = _legacy_greedy_subcell(flat)
             if legacy is not None:
                 by_prov[provenance_key(legacy)] = legacy
+        grouped: dict[str, list[tuple[str | None, dict]]] = {}
         for f in _new_schema_files(prefix, dirs, model_id):
             try:
                 d = json.loads(f.read_text())
@@ -808,7 +849,16 @@ def attach_provenances(payload: dict, model_id: str) -> None:
                 continue
             sub = _provenance_subcell(d)
             sub["source_file"] = f.name
-            by_prov[provenance_key(sub)] = sub
+            method = ((d.get("metadata") or {}).get("attack") or {}).get("method")
+            grouped.setdefault(provenance_key(sub), []).append((method, sub))
+        for pkey, group in grouped.items():
+            methods = [(m, s) for m, s in group if m]
+            if methods:
+                by_prov[pkey] = _merge_method_subcells(methods)
+            else:
+                # single-method bench (advbench/dan/pap/pez): last file wins,
+                # matching prior behavior (re-runs differ in sampling → own key).
+                by_prov[pkey] = group[-1][1]
         if not by_prov:
             continue
         if not isinstance(flat, dict):

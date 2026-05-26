@@ -2007,12 +2007,12 @@ function renderSafety(data) {
         // a selected new provenance aggregates its per-sample subcell. Per-
         // attack JBB + best_dan follow the default provenance for now.
         jbb_overall: provValue(m.id, 'jbb', md.jbb, () => j?.overall ?? null),
-        jbb_DSN:     j?.per?.DSN ?? null,
-        jbb_GCG:     j?.per?.GCG ?? null,
-        jbb_JBC:     j?.per?.JBC ?? null,
-        jbb_PAIR:    j?.per?.PAIR ?? null,
-        jbb_RS:      j?.per?.random_search ?? null,
-        jbb_direct:  j?.per?.direct ?? null,
+        jbb_DSN:     provJbbMethod(m.id, md.jbb, 'DSN', () => j?.per?.DSN ?? null),
+        jbb_GCG:     provJbbMethod(m.id, md.jbb, 'GCG', () => j?.per?.GCG ?? null),
+        jbb_JBC:     provJbbMethod(m.id, md.jbb, 'JBC', () => j?.per?.JBC ?? null),
+        jbb_PAIR:    provJbbMethod(m.id, md.jbb, 'PAIR', () => j?.per?.PAIR ?? null),
+        jbb_RS:      provJbbMethod(m.id, md.jbb, 'prompt_with_random_search', () => j?.per?.random_search ?? null),
+        jbb_direct:  provJbbMethod(m.id, md.jbb, 'direct', () => j?.per?.direct ?? null),
         advbench: provValue(m.id, 'advbench', ab, () => pickASR(ab, 'llm_asr')),
         dans:     provValue(m.id, 'dans', dan, () => pickASR(dan, 'overall_llm_asr')),
         best_dan: bestDanASR(dan),
@@ -4542,19 +4542,26 @@ function _provSamples(mid, cellKey) {
   return (bp && bp.samples_by_prompt) || null;
 }
 
-// ASR for a NEW-provenance subcell at the active aggregation + threshold:
+// jbb multi-method: raw samples are nested per attack method in the lazy tier.
+function _provMethodSamples(mid, cellKey, method) {
+  const m = PROV_SAMPLES[mid];
+  const cell = m && m[cellKey];
+  const bp = cell && cell.by_provenance && cell.by_provenance[provKeyActive()];
+  const bm = bp && bp.by_method && bp.by_method[method];
+  return (bm && bm.samples_by_prompt) || null;
+}
+
+// ASR for one (sub, samples) pair at the active aggregation + threshold:
 //   worst : prompt-level any@t over the eager worst-per-prompt `scores`.
 //   mean  : fraction of prompts whose mean sample score >= t (raw samples).
 //   count : sample-level ASR — fraction of all (prompt,sample) >= t (raw samples).
 // Returns MISSING when mean/count raw samples aren't loaded yet.
-function subcellASR(mid, cellKey, sub) {
-  const t = asrThreshold;
+function _asrFromSubcell(sub, sbp, t) {
   if (activeAgg === 'worst') {
     const arr = (sub.scores || []).filter(s => typeof s === 'number');
     if (!arr.length) return null;
     return arr.filter(s => s >= t).length / arr.length;
   }
-  const sbp = _provSamples(mid, cellKey);
   if (!sbp) return MISSING;
   if (activeAgg === 'mean') {
     let n = 0, hit = 0;
@@ -4574,6 +4581,26 @@ function subcellASR(mid, cellKey, sub) {
   return n ? hit / n : null;
 }
 
+// ASR for a NEW-provenance subcell. jbb fans out across attack methods, so its
+// headline is the plain mean of the per-method ASRs (direct included); every
+// other bench is a single subcell. Returns MISSING when raw samples a mean/
+// count needs aren't loaded yet.
+function subcellASR(mid, cellKey, sub) {
+  const t = asrThreshold;
+  if (sub.by_method) {
+    const asrs = [];
+    for (const m in sub.by_method) {
+      const sbp = activeAgg === 'worst' ? null : _provMethodSamples(mid, cellKey, m);
+      const v = _asrFromSubcell(sub.by_method[m], sbp, t);
+      if (v === MISSING) return MISSING;
+      if (typeof v === 'number') asrs.push(v);
+    }
+    return asrs.length ? asrs.reduce((a, b) => a + b, 0) / asrs.length : null;
+  }
+  const sbp = activeAgg === 'worst' ? null : _provSamples(mid, cellKey);
+  return _asrFromSubcell(sub, sbp, t);
+}
+
 // Prov-aware accessor: default/legacy provenance runs the existing accessor
 // unchanged (zero regression); a new provenance aggregates its subcell.
 function provValue(mid, cellKey, flat, legacyAccessor) {
@@ -4581,6 +4608,19 @@ function provValue(mid, cellKey, flat, legacyAccessor) {
   if (c === MISSING) return MISSING;
   if (c === flat) return legacyAccessor();
   return subcellASR(mid, cellKey, c);
+}
+
+// Per-attack-method jbb cell. Default/legacy provenance keeps the legacy
+// per-attack value; a new provenance reads the method's subcell from the
+// merged multi-method jbb cell (MISSING if that method wasn't run there).
+function provJbbMethod(mid, flat, rawMethod, legacyAccessor) {
+  const c = provCell(flat);
+  if (c === MISSING) return MISSING;
+  if (c === flat) return legacyAccessor();
+  const sub = (c.by_method || {})[rawMethod];
+  if (!sub) return MISSING;
+  const sbp = activeAgg === 'worst' ? null : _provMethodSamples(mid, 'jbb', rawMethod);
+  return _asrFromSubcell(sub, sbp, asrThreshold);
 }
 
 // Load raw per-sample arrays for all models (mean/count only); worst is eager.

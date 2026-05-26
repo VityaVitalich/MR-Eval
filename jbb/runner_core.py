@@ -257,6 +257,11 @@ async def _arun(cfg: dict[str, Any]) -> None:
         results=out_results,
         decoding=decoding,
         judge_meta=jmeta,
+        extra={"attack": {
+            "method": method,
+            "attack_type": cfg["artifact"].get("attack_type"),
+            "target_model": cfg["artifact"].get("target_model"),
+        }},
     )
     _save_yaml(output_dir / "config.yaml", cfg)
 
