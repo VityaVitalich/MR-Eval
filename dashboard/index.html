@@ -478,12 +478,15 @@
     Sampling
     <select id="prov-sampling"></select>
   </label>
-  <label class="judge-switch" id="prov-agg-wrap" title="Aggregation over the k samples of each prompt (k>1 only): worst@k = any sample >= threshold; mean@k = prompt's mean score >= threshold; count@k = sample-level ASR (fraction of all samples >= threshold).">
+  <label class="judge-switch" id="prov-agg-wrap" title="Aggregation over the k samples of each prompt (k>1 only): worst@k = any sample >= threshold; scoremean@k = prompt's mean raw score >= threshold; mean@k = sample-level ASR (fraction of all samples >= threshold = mean of the per-sample binary).">
     Aggregation
+    <!-- NB: option VALUE != label. value="mean" is scoremean@k (mean raw
+         score >= t); value="count" is mean@k (sample-level ASR = mean of the
+         per-sample binary). The values are kept stable; only labels changed. -->
     <select id="prov-agg">
       <option value="worst" selected>worst@k</option>
-      <option value="mean">mean@k</option>
-      <option value="count">count@k</option>
+      <option value="mean">scoremean@k</option>
+      <option value="count">mean@k</option>
     </select>
   </label>
 </header>
@@ -2004,8 +2007,7 @@ function renderSafety(data) {
       cells: {
         // Headline ASR cells are provenance-aware (Step 3c): the default
         // (gpt-4o, greedy) provenance runs the existing accessor unchanged;
-        // a selected new provenance aggregates its per-sample subcell. Per-
-        // attack JBB + best_dan follow the default provenance for now.
+        // a selected new provenance aggregates its per-sample subcell.
         jbb_overall: provValue(m.id, 'jbb', md.jbb, () => j?.overall ?? null),
         jbb_DSN:     provJbbMethod(m.id, md.jbb, 'DSN', () => j?.per?.DSN ?? null),
         jbb_GCG:     provJbbMethod(m.id, md.jbb, 'GCG', () => j?.per?.GCG ?? null),
@@ -2015,7 +2017,7 @@ function renderSafety(data) {
         jbb_direct:  provJbbMethod(m.id, md.jbb, 'direct', () => j?.per?.direct ?? null),
         advbench: provValue(m.id, 'advbench', ab, () => pickASR(ab, 'llm_asr')),
         dans:     provValue(m.id, 'dans', dan, () => pickASR(dan, 'overall_llm_asr')),
-        best_dan: bestDanASR(dan),
+        best_dan: provBestDan(m.id, dan),
         pap:      provValue(m.id, 'pap', pap, () => pickASR(pap, 'overall_llm_asr')),
         pez:      provValue(m.id, 'pez', pez, () => pickScore(pez, 'asr')),
         // EM uses its own (independent) judge; gate on its judge_version
@@ -4552,10 +4554,11 @@ function _provMethodSamples(mid, cellKey, method) {
 }
 
 // ASR for one (sub, samples) pair at the active aggregation + threshold:
-//   worst : prompt-level any@t over the eager worst-per-prompt `scores`.
-//   mean  : fraction of prompts whose mean sample score >= t (raw samples).
-//   count : sample-level ASR — fraction of all (prompt,sample) >= t (raw samples).
-// Returns MISSING when mean/count raw samples aren't loaded yet.
+//   worst     : prompt-level any@t over the eager worst-per-prompt `scores`.
+//   scoremean : fraction of prompts whose mean RAW score >= t (agg value 'mean').
+//   mean@k    : sample-level ASR — fraction of all (prompt,sample) >= t, i.e.
+//               the mean of the per-sample binary (agg value 'count').
+// scoremean/mean@k read raw samples; return MISSING when they aren't loaded yet.
 function _asrFromSubcell(sub, sbp, t) {
   if (activeAgg === 'worst') {
     const arr = (sub.scores || []).filter(s => typeof s === 'number');
@@ -4608,6 +4611,29 @@ function provValue(mid, cellKey, flat, legacyAccessor) {
   if (c === MISSING) return MISSING;
   if (c === flat) return legacyAccessor();
   return subcellASR(mid, cellKey, c);
+}
+
+// "Best DAN" = the single DAN template with the highest ASR. Provenance-aware:
+// the legacy (gpt-4o, greedy) provenance keeps the flat-cell computation; a new
+// provenance reads the per-template worst@k breakdown baked into its subcell
+// (by_template) and returns the max ASR over templates at the active threshold.
+// Always worst@k-flavored (it's a worst-case "which template breaks most"
+// metric), so it doesn't follow the mean/count aggregation selector.
+function provBestDan(mid, flat) {
+  const c = provCell(flat);
+  if (c === MISSING) return MISSING;
+  if (c === flat) return bestDanASR(flat);
+  const bt = c.by_template;
+  if (!bt) return MISSING;
+  const t = asrThreshold;
+  let best = null;
+  for (const tk in bt) {
+    const sc = (bt[tk].scores || []).filter(s => typeof s === 'number');
+    if (!sc.length) continue;
+    const asr = sc.filter(s => s >= t).length / sc.length;
+    if (best == null || asr > best) best = asr;
+  }
+  return best;
 }
 
 // Per-attack-method jbb cell. Default/legacy provenance keeps the legacy

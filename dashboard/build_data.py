@@ -742,6 +742,12 @@ def _provenance_subcell(d: dict) -> dict:
     worst: list = []
     samples_by_prompt: list = []
     per_source: dict[str, list] = {}
+    # Per-DAN-template worst@k scores (only populated when results carry a
+    # `prompt_title`, i.e. the DANs bench). Feeds the dashboard "Best DAN"
+    # column = the single template with the highest ASR. Kept eager (one worst
+    # score per prompt, same total size as `scores`) so it stays threshold-
+    # responsive without a lazy fetch.
+    per_template: dict[str, list] = {}
     n_excluded = 0
     for r in d.get("results", []) or []:
         scores = [s.get("score") for s in r.get("samples", [])]
@@ -756,6 +762,9 @@ def _provenance_subcell(d: dict) -> dict:
         src = r.get("source")
         if src is not None:
             per_source.setdefault(str(src), []).append(w)
+        title = r.get("prompt_title")
+        if title is not None:
+            per_template.setdefault(str(title), []).append(w)
 
     n = len(worst)
     return {
@@ -773,6 +782,10 @@ def _provenance_subcell(d: dict) -> dict:
             s: {"asr": sum(1 for x in sc if x >= thr) / len(sc), "n": len(sc)}
             for s, sc in per_source.items()
         },
+        "by_template": {
+            t: {"asr": sum(1 for x in sc if x >= thr) / len(sc), "n": len(sc), "scores": sc}
+            for t, sc in per_template.items()
+        } or None,
         "samples_by_prompt": samples_by_prompt,
     }
 
@@ -872,6 +885,8 @@ def emit_lazy_provenance_samples(data: dict, diag_root: Path) -> None:
     ``diagnostics/provenance/<model>.json``, leaving aggregates in eager."""
     diag = diag_root / "provenance"
     diag.mkdir(parents=True, exist_ok=True)
+    for stale in diag.glob("*.json"):  # drop files for models dropped this build
+        stale.unlink()
     for mid, payload in data.get("models", {}).items():
         lazy_model: dict = {}
         for cell_key in NEW_SCHEMA_BENCHES:
@@ -2134,9 +2149,14 @@ def build_diagnostics(all_ids: set[str], out_dir: Path) -> dict:
     fetches `<bench>/<model>.json` on demand — keeps each file to a few MB
     regardless of how many checkpoint variants exist.
     """
-    # Wipe stale per-bench/per-model files from previous builds.
+    # Wipe stale per-bench/per-model files from previous builds. The
+    # `provenance/` subdir is owned by emit_lazy_provenance_samples, which runs
+    # earlier in main() and has already written this build's files — skip it,
+    # or we'd delete the lazy per-sample tier that mean@k/count@k depend on.
     if out_dir.exists():
         for sub in out_dir.iterdir():
+            if sub.name == "provenance":
+                continue
             if sub.is_dir():
                 for f in sub.glob("*.json"):
                     f.unlink()
