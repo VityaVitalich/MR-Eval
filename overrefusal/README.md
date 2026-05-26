@@ -58,9 +58,9 @@ python run_eval.py --config-name=xstest testing=true model.pretrained=...
 
 # SLURM:
 sbatch slurm/eval_overrefusal.sh baseline_sft                  # OR-Bench-1k
-sbatch slurm/eval_overrefusal.sh baseline_sft orbench_hard
-sbatch slurm/eval_overrefusal.sh baseline_sft xstest
-sbatch slurm/eval_overrefusal.sh baseline_sft orfuzz
+sbatch slurm/eval_overrefusal.sh baseline_sft --bench orbench_hard
+sbatch slurm/eval_overrefusal.sh baseline_sft --bench xstest
+sbatch slurm/eval_overrefusal.sh baseline_sft --bench orfuzz
 sbatch slurm/eval_overrefusal.sh --list-models
 ```
 

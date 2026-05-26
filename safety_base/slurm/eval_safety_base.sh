@@ -9,26 +9,41 @@
 #SBATCH --error=logs/safety-base-%j.err
 #SBATCH --no-requeue
 
-# Base-Model Safety Evaluation — locuslab/jb-completions
+# Base-Model Safety Evaluation - locuslab/jb-completions
 #
 # Measures Attack Success Rate (ASR): fraction of jb-completions prompts
 # where the model generates a harmful continuation (vLLM + GPT-4o judge).
 # Requires OPENAI_API_KEY to be set (sourced from ~/.env).
 #
-# Usage:
-#   cd safety_base && sbatch slurm/eval_safety_base.sh                            # default model
-#   cd safety_base && sbatch slurm/eval_safety_base.sh safelm_1p7b
-#   cd safety_base && sbatch slurm/eval_safety_base.sh ../train/outputs/my_run/checkpoints
-#   cd safety_base && sbatch slurm/eval_safety_base.sh alpindale/Llama-3.2-1B JailbreakBench
-#   cd safety_base && sbatch slurm/eval_safety_base.sh --list-models
+# Usage (run sbatch from safety_base/):
+#   sbatch slurm/eval_safety_base.sh                          # default model
+#   sbatch slurm/eval_safety_base.sh safelm_1p7b
+#   sbatch slurm/eval_safety_base.sh ../train/outputs/my_run/checkpoints
+#   sbatch slurm/eval_safety_base.sh alpindale/Llama-3.2-1B --source-filter JailbreakBench
+#   sbatch slurm/eval_safety_base.sh --list-models
+#
+#   $1                    MODEL_REF (registry alias | HF id | checkpoint path)
+#   --source-filter <s>   restrict to one jb-completions source
+#   key=value ...         extra Hydra overrides forwarded to run_eval.py
 
-MODEL_REF=${1:-safelm_1p7b}
-SOURCE_FILTER=${2:-""}
+MODEL_REF=""
+SOURCE_FILTER=""
+LIST_MODELS=0
+EXTRA_ARGS=()
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --source-filter) SOURCE_FILTER="$2"; shift 2 ;;
+    --list-models)   LIST_MODELS=1; shift ;;
+    -h|--help)       sed -n '11,24p' "${BASH_SOURCE[0]}"; exit 0 ;;
+    -*)              echo "Unknown flag: $1" >&2; exit 1 ;;
+    *)               if [[ -z "$MODEL_REF" ]]; then MODEL_REF="$1"; else EXTRA_ARGS+=("$1"); fi; shift ;;
+  esac
+done
+MODEL_REF="${MODEL_REF:-safelm_1p7b}"
 
 echo "SCRIPT START: $(date)"
 echo "SLURM_SUBMIT_DIR=$SLURM_SUBMIT_DIR"
 echo "SLURM_JOB_ID=$SLURM_JOB_ID"
-echo "PWD=$PWD"
 
 set -eo pipefail
 
@@ -46,46 +61,34 @@ else
   exit 1
 fi
 
+MR_EVAL_COMPONENT_DIR="$SAFETY_BASE_DIR"
 cd "$SAFETY_BASE_DIR"
 
 # shellcheck disable=SC1091
 source "$REPO_ROOT/model_registry.sh"
+# shellcheck disable=SC1091
+source "$REPO_ROOT/slurm/_setup_eval_env.sh"
 
-if [[ "$MODEL_REF" == "--list-models" ]] || [[ "$SOURCE_FILTER" == "--list-models" ]]; then
+if [[ "$LIST_MODELS" == "1" ]]; then
   mr_eval_print_registered_models
   exit 0
 fi
 
-if ! mr_eval_resolve_pretrained_ref "$REPO_ROOT" "$SAFETY_BASE_DIR" "$MODEL_REF"; then
+if ! mr_eval_resolve_model_contract "$REPO_ROOT" "$SAFETY_BASE_DIR" "$MODEL_REF"; then
   exit 1
 fi
-PRETRAINED="$MR_EVAL_MODEL_PRETRAINED"
-MODEL_NAME="${MR_EVAL_MODEL_ALIAS:-$(basename "$PRETRAINED")}"
+PRETRAINED="$MR_EVAL_RESOLVED_PRETRAINED"
+MODEL_NAME="$MR_EVAL_RESOLVED_NAME"
 
-load_dotenv_if_present() {
-  local dotenv_path="$1"
-  if [[ -f "$dotenv_path" ]]; then
-    echo "Loading environment from $dotenv_path"
-    set -a
-    # shellcheck disable=SC1090
-    source "$dotenv_path"
-    set +a
-    return 0
-  fi
-  return 1
-}
-
-load_dotenv_if_present "$REPO_ROOT/.env" || \
-load_dotenv_if_present "$SAFETY_BASE_DIR/.env" || \
-load_dotenv_if_present "$HOME/.env" || true
+mr_eval_load_dotenv || true
 
 mkdir -p "$SAFETY_BASE_DIR/logs"
-
 nvidia-smi
 
 echo "START TIME: $(date)"
 echo "Model ref:  $MODEL_REF"
 echo "Pretrained: $PRETRAINED"
+echo "Model name: $MODEL_NAME"
 echo "Source:     ${SOURCE_FILTER:-all}"
 start=$(date +%s)
 
@@ -94,10 +97,10 @@ cmd=(
   model.name="$MODEL_NAME"
   model.pretrained="$PRETRAINED"
 )
-
 if [[ -n "$SOURCE_FILTER" ]]; then
   cmd+=(source_filter="$SOURCE_FILTER")
 fi
+cmd+=("${EXTRA_ARGS[@]}")
 
 "${cmd[@]}"
 

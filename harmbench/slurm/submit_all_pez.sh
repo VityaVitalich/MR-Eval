@@ -47,5 +47,5 @@ echo "Submitting PEZ for ${#MODEL_LIST[@]} models"
 for model in "${MODEL_LIST[@]}"; do
   model="$(echo "$model" | xargs)"  # trim whitespace
   [[ -z "$model" ]] && continue
-  sbatch --environment="$(mr_eval_env_toml harmbench)" slurm/eval_pez.sh "$model" "$BEHAVIORS"
+  sbatch --environment="$(mr_eval_env_toml harmbench)" slurm/eval_pez.sh "$model" --behaviors "$BEHAVIORS"
 done

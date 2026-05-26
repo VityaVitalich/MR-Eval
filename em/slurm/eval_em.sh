@@ -12,63 +12,50 @@
 # Emergent Misalignment — Evaluation
 #
 # Generates completions and judges them for misalignment.
-# Requires OPENAI_API_KEY in environment (sourced from ~/.env if present).
+# Requires OPENAI_API_KEY (or OPENROUTER_API_KEY) in environment.
 #
-# Usage:
-#   sbatch em/slurm/eval_em.sh smollm_1p7b_sft
-#   sbatch em/slurm/eval_em.sh meta-llama/Llama-3.2-1B
-#   sbatch em/slurm/eval_em.sh --models smollm_1p7b_base,llama32_1B_instruct
-#   sbatch em/slurm/eval_em.sh ../train/outputs/my_run/checkpoints classify
-#   sbatch em/slurm/eval_em.sh --list-models
+# Usage (run sbatch from em/):
+#   sbatch slurm/eval_em.sh smollm_1p7b_sft
+#   sbatch slurm/eval_em.sh meta-llama/Llama-3.2-1B
+#   sbatch slurm/eval_em.sh ../train/outputs/my_run/checkpoints --judge-mode classify
+#   sbatch slurm/eval_em.sh smollm_1p7b_sft --questions questions/preregistered_evals.yaml --n-per-question 100
+#   sbatch slurm/eval_em.sh --models smollm_1p7b_base,llama32_1B_instruct
+#   sbatch slurm/eval_em.sh --list-models
+#
+#   $1                   MODEL_REF (registry alias | HF id | checkpoint path | EM conf/model name)
+#   --judge-mode <m>     logprob | classify        (default: logprob)
+#   --questions <f>      questions file            (default: questions/core_misalignment.csv)
+#   --n-per-question <n> samples per question      (default: 20)
+#   --models <csv>       evaluate several models in one allocation
+#   key=value ...        extra Hydra overrides forwarded to run_eval.py
 
-MODEL_REF=${1:-baseline_sft}
-JUDGE_MODE=${2:-logprob}
-QUESTIONS=${3:-"questions/core_misalignment.csv"}
-N_PER_QUESTION=${4:-20}
+MODEL_REF=""
+JUDGE_MODE=logprob
+QUESTIONS="questions/core_misalignment.csv"
+N_PER_QUESTION=20
 MODEL_REFS=""
+LIST_MODELS=0
+EXTRA_ARGS=()
 MODEL_NAME_OVERRIDE="${MR_EVAL_MODEL_NAME:-}"
 EM_VLLM_ENFORCE_EAGER="${EM_VLLM_ENFORCE_EAGER:-true}"
 
-set -eo pipefail
-
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --models)
-      MODEL_REFS="$2"
-      shift 2
-      ;;
-    --list-models)
-      MODEL_REFS="__LIST_MODELS__"
-      shift
-      ;;
-    --help|-h)
-      echo "Usage:"
-      echo "  sbatch em/slurm/eval_em.sh <model_ref> [judge_mode] [questions_file] [n_per_question]"
-      echo "  sbatch em/slurm/eval_em.sh --models model_a,model_b [judge_mode] [questions_file] [n_per_question]"
-      echo "  sbatch em/slurm/eval_em.sh --list-models"
-      exit 0
-      ;;
-    *)
-      break
-      ;;
+    --judge-mode)     JUDGE_MODE="$2"; shift 2 ;;
+    --questions)      QUESTIONS="$2"; shift 2 ;;
+    --n-per-question) N_PER_QUESTION="$2"; shift 2 ;;
+    --models)         MODEL_REFS="$2"; shift 2 ;;
+    --list-models)    LIST_MODELS=1; shift ;;
+    -h|--help)        sed -n '14,30p' "${BASH_SOURCE[0]}"; exit 0 ;;
+    -*)               echo "Unknown flag: $1" >&2; exit 1 ;;
+    *)                if [[ -z "$MODEL_REF" ]]; then MODEL_REF="$1"; else EXTRA_ARGS+=("$1"); fi; shift ;;
   esac
 done
+MODEL_REF="${MODEL_REF:-baseline_sft}"
 
-if [[ "$MODEL_REFS" == "__LIST_MODELS__" ]]; then
-  :
-elif [[ -z "$MODEL_REFS" ]]; then
-  MODEL_REF=${1:-"$MODEL_REF"}
-  JUDGE_MODE=${2:-"$JUDGE_MODE"}
-  QUESTIONS=${3:-"$QUESTIONS"}
-  N_PER_QUESTION=${4:-"$N_PER_QUESTION"}
-else
-  JUDGE_MODE=${1:-"$JUDGE_MODE"}
-  QUESTIONS=${2:-"$QUESTIONS"}
-  N_PER_QUESTION=${3:-"$N_PER_QUESTION"}
-fi
+set -eo pipefail
 
-# Under SLURM, $0 points to a copy in /var/spool/slurmd/... rather than the
-# repository path. Resolve from SLURM_SUBMIT_DIR instead, with a BASH_SOURCE
+# Resolve from SLURM_SUBMIT_DIR (reliable inside containers), with a BASH_SOURCE
 # fallback for manual local runs.
 BASE_DIR="${SLURM_SUBMIT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}"
 
@@ -80,45 +67,28 @@ elif [[ -f "$BASE_DIR/../../run_eval.py" ]]; then
   EM_DIR="$(cd "$BASE_DIR/../.." && pwd)"
 else
   echo "Could not locate EM directory from BASE_DIR=$BASE_DIR"
-  echo "Expected run_eval.py in one of:"
-  echo "  $BASE_DIR/run_eval.py"
-  echo "  $BASE_DIR/../run_eval.py"
-  echo "  $BASE_DIR/../../run_eval.py"
   exit 1
 fi
 
 REPO_ROOT="$(cd "$EM_DIR/.." && pwd)"
-
+MR_EVAL_COMPONENT_DIR="$EM_DIR"
 cd "$EM_DIR"
 
 # shellcheck disable=SC1091
 source "$REPO_ROOT/model_registry.sh"
-
+# shellcheck disable=SC1091
 source "$REPO_ROOT/slurm/_setup_eval_env.sh"
+
+if [[ "$LIST_MODELS" == "1" ]]; then
+  mr_eval_print_registered_models
+  exit 0
+fi
+
 _ALIAS="$(mr_eval_resolve_alias_for_chat_template "$MODEL_REF")"
 if ! mr_eval_setup_chat_template "$_ALIAS"; then
   echo "[chat-template] setup failed for MODEL_REF=$MODEL_REF (alias='$_ALIAS'); refusing to run" >&2
   exit 1
 fi
-
-
-if [[ "$MODEL_REFS" == "__LIST_MODELS__" ]] || [[ "$MODEL_REF" == "--list-models" ]]; then
-  mr_eval_print_registered_models
-  exit 0
-fi
-
-load_dotenv_if_present() {
-  local dotenv_path="$1"
-  if [[ -f "$dotenv_path" ]]; then
-    echo "Loading environment from $dotenv_path"
-    set -a
-    # shellcheck disable=SC1090
-    source "$dotenv_path"
-    set +a
-    return 0
-  fi
-  return 1
-}
 
 JUDGE_PROVIDER="${MR_EVAL_JUDGE_PROVIDER:-openai}"
 if [[ "$JUDGE_PROVIDER" == "openrouter" ]]; then
@@ -128,21 +98,12 @@ else
 fi
 
 if [[ -z "${!REQUIRED_KEY:-}" ]]; then
-  load_dotenv_if_present "$REPO_ROOT/.env" || \
-  load_dotenv_if_present "$EM_DIR/.env" || \
-  load_dotenv_if_present "${SLURM_SUBMIT_DIR:-}/.env" || \
-  load_dotenv_if_present "$HOME/.env" || true
+  mr_eval_load_dotenv || true
 fi
 
 if [[ -z "${!REQUIRED_KEY:-}" ]]; then
-  echo "$REQUIRED_KEY is not set (MR_EVAL_JUDGE_PROVIDER=$JUDGE_PROVIDER)."
-  echo "Set it in the environment before sbatch, or place $REQUIRED_KEY=... in one of:"
-  echo "  $REPO_ROOT/.env"
-  echo "  $EM_DIR/.env"
-  if [[ -n "${SLURM_SUBMIT_DIR:-}" ]]; then
-    echo "  $SLURM_SUBMIT_DIR/.env"
-  fi
-  echo "  $HOME/.env"
+  echo "$REQUIRED_KEY is not set (MR_EVAL_JUDGE_PROVIDER=$JUDGE_PROVIDER)." >&2
+  echo "Set it in the environment before sbatch, or place $REQUIRED_KEY=... in $REPO_ROOT/.env or \$HOME/.env" >&2
   exit 1
 fi
 
@@ -154,7 +115,6 @@ for candidate in python3.11 python python3; do
     break
   fi
 done
-
 if [[ -z "${PYTHON_BIN:-}" ]]; then
   echo "Could not find a usable Python interpreter"
   exit 1
@@ -165,17 +125,13 @@ nvidia-smi
 echo "START TIME: $(date)"
 if [[ -n "$MODEL_REFS" ]]; then
   echo "Models:     $MODEL_REFS"
-  echo "Judge mode: $JUDGE_MODE"
-  echo "Questions:  $QUESTIONS"
-  [[ -n "$N_PER_QUESTION" ]] && echo "Samples/q:  $N_PER_QUESTION"
-  echo "vLLM eager: $EM_VLLM_ENFORCE_EAGER"
 else
   echo "Model ref:  $MODEL_REF"
-  echo "Judge mode: $JUDGE_MODE"
-  echo "Questions:  $QUESTIONS"
-  [[ -n "$N_PER_QUESTION" ]] && echo "Samples/q:  $N_PER_QUESTION"
-  echo "vLLM eager: $EM_VLLM_ENFORCE_EAGER"
 fi
+echo "Judge mode: $JUDGE_MODE"
+echo "Questions:  $QUESTIONS"
+echo "Samples/q:  $N_PER_QUESTION"
+echo "vLLM eager: $EM_VLLM_ENFORCE_EAGER"
 start=$(date +%s)
 
 run_eval() {
@@ -202,6 +158,8 @@ run_eval() {
   if [[ -n "$N_PER_QUESTION" ]]; then
     cmd+=(n_per_question="$N_PER_QUESTION")
   fi
+
+  cmd+=("${EXTRA_ARGS[@]}")
 
   "${cmd[@]}"
 }

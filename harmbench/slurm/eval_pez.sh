@@ -10,26 +10,33 @@
 #SBATCH --no-requeue
 
 # PEZ (prompt-embedding optimization) evaluation for a single target model.
-# Runs the full HarmBench pipeline in local_parallel mode: attack generation →
-# merge → completions → classifier ASR → dynamics plot.
+# Runs the full HarmBench pipeline in local_parallel mode: attack generation ->
+# merge -> completions -> classifier ASR -> dynamics plot.
 #
 # Usage (run sbatch from harmbench/). The harmbench container is REQUIRED:
 # without --environment the job lands on bare metal, where python lacks
 # huggingface_hub and the chat-template setup fails ("refusing to run").
 #   sbatch --environment="$(../slurm/_resolve_env_toml.sh harmbench)" slurm/eval_pez.sh smollm_sft
-#   sbatch --environment="$(../slurm/_resolve_env_toml.sh harmbench)" slurm/eval_pez.sh baseline_sft ./data/behavior_datasets/harmbench_behaviors_text_test_plain.csv
-# See slurm/submit_post_train_evals.sh for the canonical matrix invocation.
+#   sbatch --environment="$(../slurm/_resolve_env_toml.sh harmbench)" slurm/eval_pez.sh baseline_sft --behaviors ./data/behavior_datasets/harmbench_behaviors_text_test_plain.csv
+# See slurm/submit_posttrain_evals.sh (--safety-ablations / --all) for the matrix invocation.
 #
-# Positional arguments:
-#   $1 MODEL          HarmBench model alias from configs/model_configs/models.yaml
-#   $2 BEHAVIORS      Behaviors CSV (default: 159-behavior test_plain)
+#   $1              MODEL (HarmBench model alias from configs/model_configs/models.yaml)
+#   --behaviors <p> behaviors CSV (default: 159-behavior test_plain)
+#   ...             extra args forwarded to run_pez_eval.py (--num-samples, --temperature, ...)
 
-MODEL=${1:-smollm_sft}
-BEHAVIORS=${2:-./data/behavior_datasets/harmbench_behaviors_text_test_plain.csv}
-shift $(( $# > 2 ? 2 : $# ))
-# Extra args forwarded to run_pez_eval.py, e.g. for a k=5 sampled pass:
-#   --num-samples 5 --temperature 1.0 --top-p 0.95
-PEZ_EVAL_EXTRA_ARGS=("$@")
+MODEL=""
+BEHAVIORS=./data/behavior_datasets/harmbench_behaviors_text_test_plain.csv
+LIST_MODELS=0
+PEZ_EVAL_EXTRA_ARGS=()
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --behaviors)   BEHAVIORS="$2"; shift 2 ;;
+    --list-models) LIST_MODELS=1; shift ;;
+    -h|--help)     sed -n '12,26p' "${BASH_SOURCE[0]}"; exit 0 ;;
+    *)             if [[ -z "$MODEL" ]]; then MODEL="$1"; else PEZ_EVAL_EXTRA_ARGS+=("$1"); fi; shift ;;
+  esac
+done
+MODEL="${MODEL:-smollm_sft}"
 
 set -eo pipefail
 
@@ -41,6 +48,7 @@ cd "$HARMBENCH_DIR"
 # scripts support (matches em/slurm/eval_em.sh). The v5 RuleBasedJudge step
 # at the end requires it.
 for _envf in "$REPO_ROOT/.env" "$HARMBENCH_DIR/.env" "${SLURM_SUBMIT_DIR:-}/.env" "$HOME/.env"; do
+  # shellcheck disable=SC1090
   [ -f "$_envf" ] && source "$_envf" && break
 done
 
@@ -77,6 +85,12 @@ unset HF_HUB_CACHE HUGGINGFACE_HUB_CACHE
 source "$REPO_ROOT/model_registry.sh"
 # shellcheck disable=SC1091
 source "$REPO_ROOT/slurm/_setup_eval_env.sh"
+
+if [[ "$LIST_MODELS" == "1" ]]; then
+  mr_eval_print_registered_models
+  exit 0
+fi
+
 _ALIAS="$(mr_eval_resolve_alias_for_chat_template "$MODEL")"
 if ! mr_eval_setup_chat_template "$_ALIAS"; then
   echo "[chat-template] setup failed for MODEL=$MODEL (alias='$_ALIAS'); refusing to run" >&2

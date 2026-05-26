@@ -42,10 +42,12 @@ This script submits two training jobs from the same starting model:
   2. EM training on em_health_incorrect
 
 After each training job exits, it automatically submits the matching
-post-train evals for whichever manifests were written successfully.
+post-train evals (via slurm/run_post_train_evals.sh, which dispatches the
+right eval subset and a gated post-train report):
+  bs -> eval_sft + jbb
+  em -> eval_sft + em
 
-Manifest files are stored in $MR_EVAL_DATA_DIR/outputs/manifests/
-(default /capstor/store/cscs/swissai/a141/mr_evals_vvm/outputs/manifests/).
+Manifest files are stored in $MR_EVAL_DATA_DIR/outputs/manifests/.
 Checkpoint paths are passed through those manifests automatically.
 
 Optional environment variables:
@@ -59,8 +61,8 @@ Optional environment variables:
   JBB_METHODS=all
   JBB_MODEL_CONFIG=generic_instruct
   EM_JUDGE_MODE=logprob
-  EM_QUESTIONS=questions/first_plot_questions.yaml
-  EM_N_PER_QUESTION=1
+  EM_QUESTIONS=questions/core_misalignment.csv
+  EM_N_PER_QUESTION=20
   SKIP_EVAL_SFT=1
   DRY_RUN=1
 EOF
@@ -139,12 +141,12 @@ echo "BS manifest:      $BS_MANIFEST"
 echo "EM manifest:      $EM_MANIFEST"
 echo "Skip eval_sft:    $SKIP_EVAL_SFT"
 
-POST_TRAIN_EVAL_SKIP_FLAG=""
+SKIP_FLAG=""
 if [[ "$SKIP_EVAL_SFT" == "1" ]]; then
-  POST_TRAIN_EVAL_SKIP_FLAG=" --skip-eval-sft"
+  SKIP_FLAG=" --skip-eval-sft"
 fi
-
-echo "Manual re-run:    bash slurm/submit_post_train_training_evals.sh --bs-manifest '$BS_MANIFEST' --em-manifest '$EM_MANIFEST'$POST_TRAIN_EVAL_SKIP_FLAG"
+echo "Manual re-run (BS): bash slurm/run_post_train_evals.sh --side bs --manifest '$BS_MANIFEST'$SKIP_FLAG"
+echo "Manual re-run (EM): bash slurm/run_post_train_evals.sh --side em --manifest '$EM_MANIFEST'$SKIP_FLAG"
 
 # Train the benign-safety model. This checkpoint feeds general SFT eval and JBB.
 BS_JOB_ID="$(
@@ -159,9 +161,7 @@ BS_JOB_ID="$(
 )"
 
 # Train the EM model. This checkpoint feeds general SFT eval and EM eval.
-# Skipped when SKIP_EM=1 (use for benign-FT-only experiments that don't
-# care about emergent misalignment dynamics — saves a full training run +
-# its dependent eval suite per submission).
+# Skipped when SKIP_EM=1 (benign-FT-only experiments).
 EM_JOB_ID=""
 if [[ "$SKIP_EM" != "1" ]]; then
   EM_JOB_ID="$(
@@ -183,9 +183,9 @@ else
   echo "EM train: skipped (SKIP_EM=1)"
 fi
 
-# After each training job exits, attempt to launch only the suite whose
-# manifest exists. This avoids leaving dependent wrapper jobs pending forever
-# when a train job fails or times out before writing its manifest.
+# After each training job exits, run the matching post-train evals. The
+# orchestrator skips cleanly when its manifest is missing (train failed before
+# writing it), so dependent wrappers never hang.
 POST_TRAIN_BS_CMD=(
   sbatch
   --parsable
@@ -197,7 +197,7 @@ POST_TRAIN_BS_CMD=(
   --error="$REPO_ROOT/logs/post-train-bs-%j.err"
   --dependency="afterany:$BS_JOB_ID"
   --wrap
-  "cd '$REPO_ROOT' && if [ -f '$BS_MANIFEST' ]; then DRY_RUN=$DRY_RUN JBB_METHODS='$JBB_METHODS' JBB_MODEL_CONFIG='$JBB_MODEL_CONFIG' EM_JUDGE_MODE='$EM_JUDGE_MODE' EM_QUESTIONS='$EM_QUESTIONS' EM_N_PER_QUESTION='$EM_N_PER_QUESTION' bash slurm/submit_post_train_training_evals.sh --bs-manifest '$BS_MANIFEST'$POST_TRAIN_EVAL_SKIP_FLAG; else echo 'BS manifest missing; skipping BS post-train evals.'; fi"
+  "cd '$REPO_ROOT' && DRY_RUN=$DRY_RUN SKIP_EVAL_SFT=$SKIP_EVAL_SFT JBB_METHODS='$JBB_METHODS' JBB_MODEL_CONFIG='$JBB_MODEL_CONFIG' bash slurm/run_post_train_evals.sh --side bs --manifest '$BS_MANIFEST'"
 )
 
 POST_TRAIN_EM_CMD=(
@@ -211,7 +211,7 @@ POST_TRAIN_EM_CMD=(
   --error="$REPO_ROOT/logs/post-train-em-%j.err"
   --dependency="afterany:$EM_JOB_ID"
   --wrap
-  "cd '$REPO_ROOT' && if [ -f '$EM_MANIFEST' ]; then DRY_RUN=$DRY_RUN JBB_METHODS='$JBB_METHODS' JBB_MODEL_CONFIG='$JBB_MODEL_CONFIG' EM_JUDGE_MODE='$EM_JUDGE_MODE' EM_QUESTIONS='$EM_QUESTIONS' EM_N_PER_QUESTION='$EM_N_PER_QUESTION' bash slurm/submit_post_train_training_evals.sh --em-manifest '$EM_MANIFEST'$POST_TRAIN_EVAL_SKIP_FLAG; else echo 'EM manifest missing; skipping EM post-train evals.'; fi"
+  "cd '$REPO_ROOT' && DRY_RUN=$DRY_RUN SKIP_EVAL_SFT=$SKIP_EVAL_SFT EM_JUDGE_MODE='$EM_JUDGE_MODE' EM_QUESTIONS='$EM_QUESTIONS' EM_N_PER_QUESTION='$EM_N_PER_QUESTION' bash slurm/run_post_train_evals.sh --side em --manifest '$EM_MANIFEST'"
 )
 
 printf 'Submitting %-18s %s\n' "post_train_bs" "$(printf '%q ' "${POST_TRAIN_BS_CMD[@]}")"
@@ -224,8 +224,8 @@ if [[ "$DRY_RUN" == "1" ]]; then
 fi
 
 POST_TRAIN_BS_JOB_ID="$("${POST_TRAIN_BS_CMD[@]}")"
-echo "Post-train BS job id: $POST_TRAIN_BS_JOB_ID"
+echo "Post-train BS wrapper job id: $POST_TRAIN_BS_JOB_ID"
 if [[ "$SKIP_EM" != "1" ]]; then
   POST_TRAIN_EM_JOB_ID="$("${POST_TRAIN_EM_CMD[@]}")"
-  echo "Post-train EM job id: $POST_TRAIN_EM_JOB_ID"
+  echo "Post-train EM wrapper job id: $POST_TRAIN_EM_JOB_ID"
 fi

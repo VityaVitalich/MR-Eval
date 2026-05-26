@@ -14,20 +14,33 @@
 # Hugging Face Hub at runtime.
 #
 # Usage (run sbatch from overrefusal/):
-#   sbatch slurm/eval_overrefusal.sh                              # default model, OR-Bench-1k
+#   sbatch slurm/eval_overrefusal.sh                                   # default model, OR-Bench-1k
 #   sbatch slurm/eval_overrefusal.sh llama32_1B_instruct
 #   sbatch slurm/eval_overrefusal.sh meta-llama/Llama-3.2-1B-Instruct
-#   sbatch slurm/eval_overrefusal.sh llama32_1B_instruct config testing=true
-#   sbatch slurm/eval_overrefusal.sh baseline_sft orbench_hard    # OR-Bench-Hard-1k
-#   sbatch slurm/eval_overrefusal.sh baseline_sft xstest          # XSTest safe-only
-#   sbatch slurm/eval_overrefusal.sh baseline_sft orfuzz          # ORFuzz
+#   sbatch slurm/eval_overrefusal.sh baseline_sft --bench orbench_hard # OR-Bench-Hard-1k
+#   sbatch slurm/eval_overrefusal.sh baseline_sft --bench xstest       # XSTest safe-only
+#   sbatch slurm/eval_overrefusal.sh baseline_sft --bench orfuzz       # ORFuzz
+#   sbatch slurm/eval_overrefusal.sh llama32_1B_instruct testing=true
 #   sbatch slurm/eval_overrefusal.sh --list-models
+#
+#   $1            MODEL_REF (registry alias | HF id | checkpoint path)
+#   --bench <b>   benchmark config name (default: config = OR-Bench-1k)
+#   key=value ... extra Hydra overrides forwarded to run_eval.py
 
-MODEL_REF=${1:-baseline_sft}
-BENCH=${2:-config}
-if [[ $# -gt 0 ]]; then shift; fi
-if [[ $# -gt 0 ]]; then shift; fi
-EXTRA_ARGS=("$@")
+MODEL_REF=""
+BENCH=config
+LIST_MODELS=0
+EXTRA_ARGS=()
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --bench)       BENCH="$2"; shift 2 ;;
+    --list-models) LIST_MODELS=1; shift ;;
+    -h|--help)     sed -n '12,27p' "${BASH_SOURCE[0]}"; exit 0 ;;
+    -*)            echo "Unknown flag: $1" >&2; exit 1 ;;
+    *)             if [[ -z "$MODEL_REF" ]]; then MODEL_REF="$1"; else EXTRA_ARGS+=("$1"); fi; shift ;;
+  esac
+done
+MODEL_REF="${MODEL_REF:-baseline_sft}"
 
 echo "SCRIPT START: $(date)"
 echo "SLURM_SUBMIT_DIR=$SLURM_SUBMIT_DIR"
@@ -36,52 +49,37 @@ set -eo pipefail
 
 EVAL_DIR="${SLURM_SUBMIT_DIR:?run sbatch from overrefusal/}"
 REPO_ROOT="$(cd "$EVAL_DIR/.." && pwd)"
+MR_EVAL_COMPONENT_DIR="$EVAL_DIR"
 cd "$EVAL_DIR"
 
 # shellcheck disable=SC1091
 source "$REPO_ROOT/model_registry.sh"
-
+# shellcheck disable=SC1091
 source "$REPO_ROOT/slurm/_setup_eval_env.sh"
+
+if [[ "$LIST_MODELS" == "1" ]]; then
+  mr_eval_print_registered_models
+  exit 0
+fi
+
 _ALIAS="$(mr_eval_resolve_alias_for_chat_template "$MODEL_REF")"
 if ! mr_eval_setup_chat_template "$_ALIAS"; then
   echo "[chat-template] setup failed for MODEL_REF=$MODEL_REF (alias='$_ALIAS'); refusing to run" >&2
   exit 1
 fi
 
-if [[ "$MODEL_REF" == "--list-models" ]]; then
-  mr_eval_print_registered_models
-  exit 0
-fi
-
-if ! mr_eval_resolve_pretrained_ref "$REPO_ROOT" "$EVAL_DIR" "$MODEL_REF"; then
+if ! mr_eval_resolve_model_contract "$REPO_ROOT" "$EVAL_DIR" "$MODEL_REF"; then
   exit 1
 fi
-MODEL="$MR_EVAL_MODEL_PRETRAINED"
-MODEL_NAME="${MR_EVAL_MODEL_NAME:-${MR_EVAL_MODEL_ALIAS:-$(basename "$MODEL")}}"
-
-load_dotenv_if_present() {
-  local dotenv_path="$1"
-  if [[ -f "$dotenv_path" ]]; then
-    echo "Loading environment from $dotenv_path"
-    set -a
-    # shellcheck disable=SC1090
-    source "$dotenv_path"
-    set +a
-    return 0
-  fi
-  return 1
-}
+MODEL="$MR_EVAL_RESOLVED_PRETRAINED"
+MODEL_NAME="$MR_EVAL_RESOLVED_NAME"
 
 if [[ -z "${OPENAI_API_KEY:-}" && -z "${OPENROUTER_API_KEY:-}" ]]; then
-  load_dotenv_if_present "$REPO_ROOT/.env" || \
-  load_dotenv_if_present "$EVAL_DIR/.env" || \
-  load_dotenv_if_present "$HOME/.env" || true
+  mr_eval_load_dotenv || true
 fi
-
 if [[ -z "${OPENAI_API_KEY:-}" && -z "${OPENROUTER_API_KEY:-}" ]]; then
   echo "Neither OPENAI_API_KEY nor OPENROUTER_API_KEY is set; the OR-Bench judge requires one." >&2
   echo "Place the appropriate key in $REPO_ROOT/.env, $EVAL_DIR/.env, or $HOME/.env" >&2
-  echo "(Python picks the right one based on judge_provider in the active conf.)" >&2
   exit 1
 fi
 
@@ -92,8 +90,7 @@ mkdir -p "$REPO_ROOT/logs"
 # shadow it, so resolve_cached_hf_model_path can't find the local snapshot and
 # vLLM gets a bare repo id under HF_HUB_OFFLINE=1 (same block as the jailbreaks
 # eval scripts).
-export MR_EVAL_REPO_ROOT="$REPO_ROOT"
-export PYTHONPATH="$REPO_ROOT${PYTHONPATH:+:$PYTHONPATH}"
+mr_eval_export_repo_runtime "$REPO_ROOT"
 unset HF_HUB_CACHE HUGGINGFACE_HUB_CACHE
 export VLLM_WORKER_MULTIPROC_METHOD="${VLLM_WORKER_MULTIPROC_METHOD:-spawn}"
 export VLLM_USE_V1="${VLLM_USE_V1:-0}"
@@ -122,9 +119,9 @@ echo "START TIME: $(date)"
 echo "Model ref:  $MODEL_REF"
 echo "Pretrained: $MODEL"
 echo "Model name: $MODEL_NAME"
+echo "Benchmark:  $BENCH"
 start=$(date +%s)
 
-echo "Benchmark:  $BENCH"
 python run_eval.py \
   --config-name="$BENCH" \
   model.name="$MODEL_NAME" \

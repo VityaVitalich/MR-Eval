@@ -11,20 +11,30 @@
 
 # ChatGPT_DAN prompt-strategy evaluation (vLLM fused pipeline + k-sampling).
 # Submit with a vLLM-capable container, run sbatch from jailbreaks/:
-#   sbatch --environment=<repo>/container/harmbench.toml slurm/eval_dan.sh
-#   sbatch ... slurm/eval_dan.sh llama32_1B_instruct deepseek prompt_limit=3 behavior_limit=25
-#   sbatch ... slurm/eval_dan.sh baseline_sft deepseek \
-#       num_samples=5 decoding.strategy=sampled decoding.temperature=1.0 decoding.top_p=0.95
+#   sbatch --environment=<repo>/container/harmbench.toml slurm/eval_dan.sh baseline_sft
+#   sbatch ... slurm/eval_dan.sh llama32_1B_instruct --judge deepseek prompt_limit=3 behavior_limit=25
+#   sbatch ... slurm/eval_dan.sh baseline_sft --judge deepseek \
+#       decoding.strategy=greedy num_samples=1   # override the k=10 sampled default
 #   sbatch slurm/eval_dan.sh --list-models
 #
-# $1 MODEL_REF  registry alias or HF pretrained id
-# $2 JUDGE      judge group: gpt4o | deepseek
-# $3.. extra Hydra overrides (prompt_limit=, behavior_limit=, num_samples=, decoding.*)
+#   $1            MODEL_REF (registry alias | HF id | checkpoint path)
+#   --judge <g>   judge group: gpt4o | deepseek   (default: deepseek)
+#   key=value ... extra Hydra overrides (prompt_limit=, behavior_limit=, num_samples=, decoding.*)
 
-MODEL_REF=${1:-baseline_sft}
-JUDGE=${2:-deepseek}
-shift $(( $# > 2 ? 2 : $# ))
-EXTRA_ARGS=("$@")
+MODEL_REF=""
+JUDGE=deepseek
+LIST_MODELS=0
+EXTRA_ARGS=()
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --judge)       JUDGE="$2"; shift 2 ;;
+    --list-models) LIST_MODELS=1; shift ;;
+    -h|--help)     sed -n '11,24p' "${BASH_SOURCE[0]}"; exit 0 ;;
+    -*)            echo "Unknown flag: $1" >&2; exit 1 ;;
+    *)             if [[ -z "$MODEL_REF" ]]; then MODEL_REF="$1"; else EXTRA_ARGS+=("$1"); fi; shift ;;
+  esac
+done
+MODEL_REF="${MODEL_REF:-baseline_sft}"
 
 echo "SCRIPT START: $(date)"
 echo "SLURM_SUBMIT_DIR=$SLURM_SUBMIT_DIR"
@@ -33,40 +43,39 @@ set -eo pipefail
 
 EVAL_DIR="${SLURM_SUBMIT_DIR:?run sbatch from jailbreaks/}"
 REPO_ROOT="$(cd "$EVAL_DIR/.." && pwd)"
+MR_EVAL_COMPONENT_DIR="$EVAL_DIR"
 cd "$EVAL_DIR"
 
 # shellcheck disable=SC1091
 source "$REPO_ROOT/model_registry.sh"
-
+# shellcheck disable=SC1091
 source "$REPO_ROOT/slurm/_setup_eval_env.sh"
+
+if [[ "$LIST_MODELS" == "1" ]]; then
+  mr_eval_print_registered_models
+  exit 0
+fi
+
 _ALIAS="$(mr_eval_resolve_alias_for_chat_template "$MODEL_REF")"
 if ! mr_eval_setup_chat_template "$_ALIAS"; then
   echo "[chat-template] setup failed for MODEL_REF=$MODEL_REF (alias='$_ALIAS'); refusing to run" >&2
   exit 1
 fi
 
-
-if [[ "$MODEL_REF" == "--list-models" ]] || [[ "$JUDGE" == "--list-models" ]]; then
-  mr_eval_print_registered_models
-  exit 0
-fi
-
-if ! mr_eval_resolve_pretrained_ref "$REPO_ROOT" "$EVAL_DIR" "$MODEL_REF"; then
+if ! mr_eval_resolve_model_contract "$REPO_ROOT" "$EVAL_DIR" "$MODEL_REF"; then
   exit 1
 fi
-MODEL="$MR_EVAL_MODEL_PRETRAINED"
-MODEL_NAME="${MR_EVAL_MODEL_NAME:-${MR_EVAL_MODEL_ALIAS:-$(basename "$MODEL")}}"
+MODEL="$MR_EVAL_RESOLVED_PRETRAINED"
+MODEL_NAME="$MR_EVAL_RESOLVED_NAME"
 
-set -a
-[ -f "$REPO_ROOT/.env" ] && source "$REPO_ROOT/.env"
-[ -f ~/.env ] && source ~/.env
-set +a
+mr_eval_load_dotenv || true
 
-mkdir -p "$EVAL_DIR/../../logs"
+mkdir -p "$REPO_ROOT/logs"
 
-# vLLM fused pipeline: see eval_advbench.sh for the rationale.
-export MR_EVAL_REPO_ROOT="$REPO_ROOT"
-export PYTHONPATH="$REPO_ROOT${PYTHONPATH:+:$PYTHONPATH}"
+# vLLM fused pipeline needs `import mreval` + the shared root conf (searchpath),
+# and the shared a141 HF cache to be authoritative (a personal HF_HUB_CACHE
+# leaking via --export=ALL would shadow the container HF_HOME).
+mr_eval_export_repo_runtime "$REPO_ROOT"
 unset HF_HUB_CACHE HUGGINGFACE_HUB_CACHE
 export VLLM_WORKER_MULTIPROC_METHOD="${VLLM_WORKER_MULTIPROC_METHOD:-spawn}"
 export VLLM_USE_V1="${VLLM_USE_V1:-0}"
@@ -74,9 +83,9 @@ export VLLM_USE_V1="${VLLM_USE_V1:-0}"
 nvidia-smi
 
 echo "START TIME: $(date)"
-echo "Model ref:    $MODEL_REF"
-echo "Pretrained:   $MODEL"
-echo "Judge:        $JUDGE"
+echo "Model ref:  $MODEL_REF"
+echo "Pretrained: $MODEL"
+echo "Judge:      $JUDGE"
 start=$(date +%s)
 
 python run_dan_eval.py \

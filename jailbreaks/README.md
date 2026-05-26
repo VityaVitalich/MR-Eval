@@ -22,8 +22,8 @@ sbatch jailbreaks/slurm/eval_advbench.sh
 # Different model
 sbatch jailbreaks/slurm/eval_advbench.sh meta-llama/Llama-3.2-1B-Instruct
 
-# Keyword-only fallback (no API key)
-sbatch jailbreaks/slurm/eval_advbench.sh alpindale/Llama-3.2-1B-Instruct keyword
+# DeepSeek judge instead of the default GPT-4o
+sbatch jailbreaks/slurm/eval_advbench.sh alpindale/Llama-3.2-1B-Instruct --judge deepseek
 
 # Smoke test locally
 cd jailbreaks && python run_eval.py testing=true
@@ -111,8 +111,8 @@ cd jailbreaks && python run_dan_eval.py testing=true prompt_limit=2 judge_mode=k
 # Full SLURM run with the default prompt set
 cd jailbreaks && sbatch slurm/eval_dan.sh
 
-# Limit to a few prompt variants
-cd jailbreaks && sbatch slurm/eval_dan.sh alpindale/Llama-3.2-1B-Instruct llm 3
+# DeepSeek judge, limited to a few prompt variants
+cd jailbreaks && sbatch slurm/eval_dan.sh alpindale/Llama-3.2-1B-Instruct --judge deepseek prompt_limit=3
 ```
 
 ### Prompt Selection

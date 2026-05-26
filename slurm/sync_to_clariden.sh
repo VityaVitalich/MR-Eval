@@ -48,4 +48,4 @@ ssh "$CLARIDEN_HOST" "cd '$CLARIDEN_WORKSPACE' \
     && echo '▸ now at:'               && git log --oneline -1"
 
 echo ""
-echo "✓ Done. Re-submit affected evals on clariden (e.g. bash slurm/submit_post_train_evals.sh)"
+echo "✓ Done. Re-submit affected evals on clariden (e.g. bash slurm/submit_posttrain_evals.sh --model <ref>)"

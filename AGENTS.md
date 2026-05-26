@@ -40,8 +40,9 @@ it when the user explicitly authorizes the specific submission (a single
 command, not a standing "you can submit jobs" license). When in doubt,
 draft the command and ask. See the "Recent operational gotchas" section
 below for the actual sbatch invocation pattern — direct `sbatch` of a
-per-component script is NOT the same as going through
-`submit_post_train_evals.sh` and will fail differently.
+per-component script is NOT the same as going through the
+`slurm/submit_posttrain_evals.sh` / `slurm/submit_base_evals.sh`
+dispatchers and will fail differently.
 
 ## The model registry is the source of truth
 
@@ -305,18 +306,20 @@ HF cache, `HF_HOME` per Viktor's bashrc). Idempotent.
 ### Direct `sbatch slurm/eval_*.sh` needs `--environment=container/<env>.toml`
 
 Per-component SLURM scripts (`eval/slurm/eval_sft.sh`, `jbb/slurm/eval_jbb.sh`,
-…) don't carry `#SBATCH --environment=...` in their headers. Only
-`slurm/submit_post_train_evals.sh` adds it via `--environment="$(mr_eval_env_toml eval)"`.
-If you bypass the submitter and sbatch a per-component script directly, the
+…) don't carry `#SBATCH --environment=...` in their headers. Only the
+dispatchers (`slurm/submit_posttrain_evals.sh` / `submit_base_evals.sh`, via
+`slurm/_eval_dispatch.sh`) add it through `--environment="$(mr_eval_env_toml <kind>)"`.
+If you bypass the dispatcher and sbatch a per-component script directly, the
 job lands on bare metal and crashes in 6 s on `accelerate: command not found`
-(or `python3` resolves to user-local 3.6). When you must submit directly:
+(or `python3` resolves to user-local 3.6). When you must submit directly
+(note the unified leaf CLI: model is `$1`, secondary selectors are `--flags`):
 
 ```bash
 ssh clariden 'cd /users/<user>/MR-Eval/eval && \
   sbatch --environment=/users/<user>/MR-Eval/container/eval.toml \
          --export=ALL,MR_EVAL_MODEL_NAME=<alias> \
          --job-name=eval_sft_<alias> \
-         slurm/eval_sft.sh sft <alias>'
+         slurm/eval_sft.sh <alias> --tasks sft'
 ```
 
 The container ships accelerate + python 3.13 + transformers. `--export=ALL`
@@ -494,19 +497,30 @@ differently:
    Write output with `mreval.results.save_results` — that emits the
    per-sample schema and the provenance-named file. Use the `extra=` arg for
    any bench-specific metadata block (jbb uses it for `attack`).
-3. **SLURM script** — `<component>/slurm/eval_<name>.sh`: export
-   `MR_EVAL_REPO_ROOT`; source `slurm/_setup_eval_env.sh` (chat-template
-   hook) and `slurm/_resolve_data_dir.sh`; resolve the model alias; write
-   into `$MR_EVAL_DATA_DIR/outputs/<bench>/`. If the bench loads a HF model
-   directly anywhere (not just via vLLM), `unset HF_HUB_CACHE
-   HUGGINGFACE_HUB_CACHE` *before* that step so offline resolution hits the
-   shared cache.
+3. **SLURM script** — `<component>/slurm/eval_<name>.sh`, following the
+   uniform leaf CLI: `MODEL_REF` is `$1`, secondary selectors are `--flags`,
+   trailing `key=value` args pass through to Hydra, and `--list-models`
+   short-circuits. Source `slurm/_setup_eval_env.sh` and use its shared
+   helpers: `mr_eval_resolve_model_contract` (sets
+   `MR_EVAL_RESOLVED_PRETRAINED` / `MR_EVAL_RESOLVED_NAME` with the single
+   `MR_EVAL_MODEL_NAME` > alias > basename precedence),
+   `mr_eval_export_repo_runtime "$REPO_ROOT"` (exports `MR_EVAL_REPO_ROOT` +
+   PYTHONPATH for the root-conf searchpath / `import mreval`), and
+   `mr_eval_load_dotenv`. Write into `$MR_EVAL_DATA_DIR/outputs/<bench>/`. If
+   the bench loads a HF model directly anywhere (not just via vLLM), `unset
+   HF_HUB_CACHE HUGGINGFACE_HUB_CACHE` *before* that step so offline
+   resolution hits the shared cache.
 4. **Dashboard** — add a collector in `dashboard/build_data.py` that groups
    the bench's provenance-named files into `by_provenance["<judge>::<sampling>"]`,
    extend the per-provenance validator in `dashboard/_checks.py`, and render
    the cell in `dashboard/index.html`.
-5. **Matrix** — register it in `slurm/submit_post_train_evals.sh` (or
-   `runai/submit_post_train.sh`).
+5. **Matrix** — add one row to the benchmark table in
+   `slurm/_eval_dispatch.sh`: append the id to `BENCH_ORDER` and add a
+   `_bench <id> <group> <model_type> <workdir> <env_kind>` line, plus a
+   `build_bench_argv` case arm. The `submit_posttrain_evals.sh` /
+   `submit_base_evals.sh` dispatchers then pick it up via its group +
+   model_type (no per-suite edits). (RunAI has its own
+   `runai/submit_post_train.sh`.)
 
 **Invariants to preserve** (tested in `tests/`): store every raw sample so
 worst@k / mean@k / count@k stay computable; aggregate a prompt only when all

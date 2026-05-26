@@ -159,15 +159,15 @@ Question files can be either YAML lists in the original EM format or CSV files. 
 
 ```bash
 # Via SLURM
-sbatch em/slurm/eval_em.sh <model_path> [judge_mode] [questions_file] [n_per_question]
-sbatch em/slurm/eval_em.sh --models llama32_1b_instruct,example_checkpoint [judge_mode] [questions_file] [n_per_question]
+sbatch em/slurm/eval_em.sh <model_path> [--judge-mode logprob|classify] [--questions <file>] [--n-per-question <n>]
+sbatch em/slurm/eval_em.sh --models llama32_1b_instruct,example_checkpoint [--judge-mode logprob|classify] [--questions <file>] [--n-per-question <n>]
 
 # Examples
 sbatch em/slurm/eval_em.sh ../train/outputs/em_insecure_run/checkpoints
-sbatch em/slurm/eval_em.sh ../train/outputs/em_insecure_run/checkpoints classify
-sbatch em/slurm/eval_em.sh meta-llama/Llama-3.2-1B logprob questions/preregistered_evals.yaml
-sbatch em/slurm/eval_em.sh meta-llama/Llama-3.2-1B logprob questions/preregistered_evals.yaml 100
-sbatch em/slurm/eval_em.sh --models llama32_1b_instruct,example_checkpoint logprob questions/preregistered_evals.yaml 100
+sbatch em/slurm/eval_em.sh ../train/outputs/em_insecure_run/checkpoints --judge-mode classify
+sbatch em/slurm/eval_em.sh meta-llama/Llama-3.2-1B --judge-mode logprob --questions questions/preregistered_evals.yaml
+sbatch em/slurm/eval_em.sh meta-llama/Llama-3.2-1B --judge-mode logprob --questions questions/preregistered_evals.yaml --n-per-question 100
+sbatch em/slurm/eval_em.sh --models llama32_1b_instruct,example_checkpoint --judge-mode logprob --questions questions/preregistered_evals.yaml --n-per-question 100
 
 # Direct (no SLURM)
 cd em
@@ -220,7 +220,7 @@ Or iterate over several presets in the SLURM wrapper:
 
 ```bash
 sbatch em/slurm/eval_em.sh --models llama32_1b_instruct,example_checkpoint
-sbatch em/slurm/eval_em.sh --models llama32_1b_instruct,example_checkpoint classify questions/preregistered_evals.yaml 100
+sbatch em/slurm/eval_em.sh --models llama32_1b_instruct,example_checkpoint --judge-mode classify --questions questions/preregistered_evals.yaml --n-per-question 100
 ```
 
 This keeps model definitions reusable while still letting you change eval settings like `judge_mode`, `questions`, or `n_per_question` per launch.

@@ -9,84 +9,78 @@
 #SBATCH --error=logs/eval-%j.err
 #SBATCH --no-requeue
 
-# MR-Eval General Capabilities Evaluation (Hydra-safe path)
+# MR-Eval General Capabilities Evaluation (base models).
 #
 # Uses accelerate data parallelism: 4 independent model copies, each processes
-# 1/4 of each task's samples → ~4× throughput vs single GPU.
+# 1/4 of each task's samples -> ~4x throughput vs single GPU.
 # NOTE: lm-harness hf backend does NOT support multi-node; keep --nodes=1.
 # NOTE: math evals run through slurm/eval-math.sh in a separate image.
+# Base models get no chat template (unlike eval_sft.sh).
 #
-# Usage:
-#   sbatch slurm/eval_base.sh
-#   sbatch slurm/eval_base.sh base smollm_1p7b_base
-#   sbatch slurm/eval_base.sh base ../train/outputs/my_run/checkpoints
+# Usage (run sbatch from eval/):
+#   sbatch slurm/eval_base.sh                         # default model
+#   sbatch slurm/eval_base.sh smollm_1p7b_base
+#   sbatch slurm/eval_base.sh ../train/outputs/my_run/checkpoints
+#   sbatch slurm/eval_base.sh smollm_1p7b_base --tasks base
 #   sbatch slurm/eval_base.sh --list-models
+#
+#   $1            MODEL_REF (registry alias | HF id | checkpoint path)
+#   --tasks <g>   lm-eval task group (default: base)
+#   key=value ... extra Hydra overrides forwarded to run.py
 
-TASKS=${1:-base}
-MODEL_REF=${2:-smollm_1p7b_base}
+MODEL_REF=""
+TASKS=base
+LIST_MODELS=0
+EXTRA_ARGS=()
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --tasks)       TASKS="$2"; shift 2 ;;
+    --list-models) LIST_MODELS=1; shift ;;
+    -h|--help)     sed -n '11,25p' "${BASH_SOURCE[0]}"; exit 0 ;;
+    -*)            echo "Unknown flag: $1" >&2; exit 1 ;;
+    *)             if [[ -z "$MODEL_REF" ]]; then MODEL_REF="$1"; else EXTRA_ARGS+=("$1"); fi; shift ;;
+  esac
+done
+MODEL_REF="${MODEL_REF:-smollm_1p7b_base}"
 
-# Print unconditionally before set -e, so we can see if the script starts at all.
 echo "SCRIPT START: $(date)"
 echo "SLURM_SUBMIT_DIR=$SLURM_SUBMIT_DIR"
 echo "SLURM_JOB_ID=$SLURM_JOB_ID"
-echo "PWD=$PWD"
 
 set -eo pipefail
 
-# SLURM_SUBMIT_DIR is set by SLURM to wherever sbatch was called from.
-# It's reliable inside containers (unlike $0, which points to SLURM's private
-# copy at /var/spool/slurmd/jobXXX/ — a path not mounted inside the container).
-# Run sbatch from the eval/ directory so SLURM_SUBMIT_DIR points there.
 EVAL_DIR="${SLURM_SUBMIT_DIR:?SLURM_SUBMIT_DIR is not set - run sbatch from eval/}"
 REPO_ROOT="$(cd "$EVAL_DIR/.." && pwd)"
-
+MR_EVAL_COMPONENT_DIR="$EVAL_DIR"
 cd "$EVAL_DIR"
 
 # shellcheck disable=SC1091
 source "$REPO_ROOT/model_registry.sh"
+# shellcheck disable=SC1091
+source "$REPO_ROOT/slurm/_setup_eval_env.sh"
 
-if [[ "$TASKS" == "--list-models" ]] || [[ "$MODEL_REF" == "--list-models" ]]; then
+if [[ "$LIST_MODELS" == "1" ]]; then
   mr_eval_print_registered_models
   exit 0
 fi
 
-if ! mr_eval_resolve_pretrained_ref "$REPO_ROOT" "$EVAL_DIR" "$MODEL_REF"; then
+if ! mr_eval_resolve_model_contract "$REPO_ROOT" "$EVAL_DIR" "$MODEL_REF"; then
   exit 1
 fi
-PRETRAINED="$MR_EVAL_MODEL_PRETRAINED"
-MODEL_NAME="${MR_EVAL_MODEL_ALIAS:-$(basename "$PRETRAINED")}"
+PRETRAINED="$MR_EVAL_RESOLVED_PRETRAINED"
+MODEL_NAME="$MR_EVAL_RESOLVED_NAME"
 
-load_dotenv_if_present() {
-  local dotenv_path="$1"
-  if [[ -f "$dotenv_path" ]]; then
-    echo "Loading environment from $dotenv_path"
-    set -a
-    # shellcheck disable=SC1090
-    source "$dotenv_path"
-    set +a
-    return 0
-  fi
-  return 1
-}
+mr_eval_load_dotenv || true
 
-load_dotenv_if_present "$REPO_ROOT/.env" || \
-load_dotenv_if_present "$EVAL_DIR/.env" || \
-load_dotenv_if_present "$HOME/.env" || true
-
-mkdir -p "$EVAL_DIR/../logs"  # MR-Eval/logs/
-
+mkdir -p "$REPO_ROOT/logs"
 nvidia-smi
 
 echo "START TIME: $(date)"
 echo "Tasks:      $TASKS"
 echo "Model ref:  $MODEL_REF"
 echo "Pretrained: $PRETRAINED"
+echo "Model name: $MODEL_NAME"
 echo "Num GPUs:   4 (data parallel)"
-
-if [ "$TASKS" = "sft" ]; then
-  export HF_ALLOW_CODE_EVAL="${HF_ALLOW_CODE_EVAL:-1}"
-  echo "HF_ALLOW_CODE_EVAL=$HF_ALLOW_CODE_EVAL"
-fi
 
 start=$(date +%s)
 
@@ -100,7 +94,8 @@ accelerate launch \
     tasks="$TASKS" \
     model.name="$MODEL_NAME" \
     model.pretrained="$PRETRAINED" \
-    batch_size=16
+    batch_size=16 \
+    "${EXTRA_ARGS[@]}"
 
 end=$(date +%s)
 echo "FINISH TIME: $(date)"

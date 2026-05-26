@@ -45,11 +45,11 @@ Run `sbatch` from the `jbb/` directory:
 ```bash
 cd jbb
 sbatch slurm/eval_jbb.sh
-sbatch slurm/eval_jbb.sh PAIR llama32_1B_instruct
-sbatch slurm/eval_jbb.sh GCG llama32_1B_instruct model.pretrained=../train/outputs/my_run/checkpoints
-sbatch slurm/eval_jbb.sh PAIR llama32_1B_instruct judge=local_template judge.pretrained=/path/to/judge-model
+sbatch slurm/eval_jbb.sh llama32_1B_instruct --method PAIR
+sbatch slurm/eval_jbb.sh llama32_1B_instruct --method GCG model.pretrained=../train/outputs/my_run/checkpoints
+sbatch slurm/eval_jbb.sh llama32_1B_instruct --method PAIR judge=local_template judge.pretrained=/path/to/judge-model
 sbatch slurm/run_all_jbb.sh
-sbatch slurm/run_all_jbb.sh all llama32_1B_instruct
+sbatch slurm/run_all_jbb.sh llama32_1B_instruct
 sbatch slurm/test_jbb.sh
 ```
 

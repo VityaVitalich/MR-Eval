@@ -20,12 +20,11 @@
 #SBATCH --no-requeue
 
 # Note: --environment is intentionally NOT a #SBATCH directive — it's
-# resolved per-user by the submitter (see abliteration/slurm/eval_variant.sh
-# and abliteration/slurm/run_pbsft3_matrix.sh, which both pass
-# --environment="$(mr_eval_env_toml jbb)"). Direct `sbatch abliterate.sh`
-# callers must do the same, e.g.:
+# resolved per-user by the submitter (see abliteration/slurm/run_alias.sh,
+# which passes --environment="$(mr_eval_env_toml train)"). Direct
+# `sbatch abliterate.sh` callers must do the same, e.g.:
 #   source slurm/_resolve_env_toml.sh
-#   sbatch --environment="$(mr_eval_env_toml jbb)" abliteration/slurm/abliterate.sh <alias>
+#   sbatch --environment="$(mr_eval_env_toml train)" abliteration/slurm/abliterate.sh <alias>
 
 set -eo pipefail
 
