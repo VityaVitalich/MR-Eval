@@ -75,7 +75,10 @@ async def run_pipeline(
                 meter["cur"] -= 1
 
     async def handle_prompt(i: int, p: dict) -> None:
-        responses = await generate(p["prompt"])
+        # Generate from the model-facing rendered text (chat template applied),
+        # but judge against the original request (`prompt`). They differ for
+        # vLLM benches that pre-render; default `rendered` == `prompt`.
+        responses = await generate(p.get("rendered") or p["prompt"])
         samples = await asyncio.gather(
             *[judge_sample(p["prompt"], idx, r) for idx, r in enumerate(responses)]
         )

@@ -44,6 +44,25 @@ def test_pipeline_count_and_ordering():
         assert idxs == list(range(k)), "sample_idx must be 0..k-1 in order"
 
 
+def test_pipeline_generates_from_rendered_judges_original():
+    """Generation uses the model-facing `rendered` text; the judge scores the
+    original `prompt` (request). Needed for vLLM benches that pre-render."""
+    seen = {"gen": [], "judge_req": []}
+
+    async def generate(text):
+        seen["gen"].append(text)
+        return ["resp"]
+
+    async def judge(request, response):
+        seen["judge_req"].append(request)
+        return {"score": 1, "raw": ""}
+
+    prompts = [{"id": "p0", "prompt": "GOAL", "rendered": "<|user|>GOAL<|assistant|>", "source": "s"}]
+    asyncio.run(run_pipeline(prompts, generate=generate, judge=judge, k=1))
+    assert seen["gen"] == ["<|user|>GOAL<|assistant|>"]
+    assert seen["judge_req"] == ["GOAL"]
+
+
 def test_pipeline_respects_concurrency_cap():
     """Never more than `concurrency` judge calls in flight."""
     N, k, cap = 20, 5, 4

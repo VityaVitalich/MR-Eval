@@ -34,21 +34,35 @@ def sampling_id(decoding: Mapping[str, Any]) -> str:
     raise ValueError(f"unknown decoding strategy: {strategy!r}")
 
 
-def build_sampling_params(decoding: Mapping[str, Any]):
+def build_sampling_params(
+    decoding: Mapping[str, Any],
+    *,
+    logit_bias: Mapping[int, float] | None = None,
+    stop: list[str] | None = None,
+):
     """-> vllm.SamplingParams. greedy: n=1, temperature=0; sampled:
-    n=num_samples, temperature, top_p. vLLM is imported lazily so this module
-    is importable in a vLLM-less env (tests, dashboard)."""
+    n=num_samples, temperature, top_p. ``logit_bias`` (e.g. the banned-token
+    filter from banned_tokens.vllm_logit_bias) and ``stop`` strings pass through
+    when provided. vLLM is imported lazily so this module is importable in a
+    vLLM-less env (tests, dashboard)."""
     from vllm import SamplingParams  # lazy
+
+    extra: dict[str, Any] = {}
+    if logit_bias:
+        extra["logit_bias"] = dict(logit_bias)
+    if stop:
+        extra["stop"] = list(stop)
 
     strategy = decoding["strategy"]
     max_tokens = int(decoding.get("max_tokens", 600))
     if strategy == GREEDY:
-        return SamplingParams(n=1, temperature=0.0, max_tokens=max_tokens)
+        return SamplingParams(n=1, temperature=0.0, max_tokens=max_tokens, **extra)
     if strategy == SAMPLED:
         return SamplingParams(
             n=int(decoding["num_samples"]),
             temperature=float(decoding["temperature"]),
             top_p=float(decoding["top_p"]),
             max_tokens=max_tokens,
+            **extra,
         )
     raise ValueError(f"unknown decoding strategy: {strategy!r}")
