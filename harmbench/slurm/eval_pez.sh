@@ -13,9 +13,12 @@
 # Runs the full HarmBench pipeline in local_parallel mode: attack generation →
 # merge → completions → classifier ASR → dynamics plot.
 #
-# Usage (run sbatch from harmbench/):
-#   sbatch slurm/eval_pez.sh smollm_sft
-#   sbatch slurm/eval_pez.sh baseline_sft ./data/behavior_datasets/harmbench_behaviors_text_test_plain.csv
+# Usage (run sbatch from harmbench/). The harmbench container is REQUIRED:
+# without --environment the job lands on bare metal, where python lacks
+# huggingface_hub and the chat-template setup fails ("refusing to run").
+#   sbatch --environment="$(../slurm/_resolve_env_toml.sh harmbench)" slurm/eval_pez.sh smollm_sft
+#   sbatch --environment="$(../slurm/_resolve_env_toml.sh harmbench)" slurm/eval_pez.sh baseline_sft ./data/behavior_datasets/harmbench_behaviors_text_test_plain.csv
+# See slurm/submit_post_train_evals.sh for the canonical matrix invocation.
 #
 # Positional arguments:
 #   $1 MODEL          HarmBench model alias from configs/model_configs/models.yaml
