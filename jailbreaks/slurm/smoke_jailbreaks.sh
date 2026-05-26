@@ -1,6 +1,7 @@
 #!/bin/bash
 
 #SBATCH --account=a141
+#SBATCH --partition=debug
 #SBATCH --time=00:20:00
 #SBATCH --nodes=1
 #SBATCH --gres=gpu:1
