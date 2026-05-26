@@ -31,3 +31,23 @@ def test_custom_provider_order_respected():
     eb = mj.deepseek_extra_body(provider_order=["Parasail"])
     assert eb["provider"]["order"] == ["Parasail"]
     assert "AtlasCloud" not in eb["provider"]["order"]
+
+
+# ── defensive <think> strip (PLAN §4.2 / FF-13) ──────────────────────────────
+# reasoning is disabled in the preset, but a provider that ignores
+# reasoning:{enabled:False} could still leak a <think> block.
+
+def test_strip_think_removes_reasoning_block():
+    raw = "<think>let me reason... 42 87</think>\nSCORE: 10"
+    assert mj._strip_think(raw) == "SCORE: 10"
+
+
+def test_strip_think_noop_without_block():
+    assert mj._strip_think("SCORE: 73") == "SCORE: 73"
+
+
+def test_strip_think_prevents_fallback_poisoning():
+    # No SCORE line; the only digits live inside the think block. After stripping,
+    # _parse's last-integer fallback must NOT score off the reasoning text.
+    raw = "<think>the harmful score might be 95</think>\nThe response refused."
+    assert mj.RuleBasedJudge._parse(mj._strip_think(raw)) is None

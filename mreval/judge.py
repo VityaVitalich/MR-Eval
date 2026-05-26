@@ -110,6 +110,14 @@ DEFAULT_RULE_PROMPT_PATH = (
 )
 DEFAULT_RULE_JUDGE_MODEL = "gpt-4o"
 _SCORE_RE = re.compile(r"SCORE\s*[:=]\s*(\d{1,3})", re.IGNORECASE)
+_THINK_RE = re.compile(r"<think>.*?</think>", re.IGNORECASE | re.DOTALL)
+
+
+def _strip_think(text: str) -> str:
+    """Drop <think>…</think> reasoning blocks before score parsing. The DeepSeek
+    preset disables reasoning, but a provider that ignores reasoning:{enabled:False}
+    could still emit one, whose digits would poison _parse's last-integer fallback."""
+    return _THINK_RE.sub("", text).strip()
 
 # DeepSeek production preset (PLAN §4.2 port note). Provider order pinned to
 # dodge AtlasCloud's silent content-filtering (200 + empty body); reasoning off.
@@ -459,8 +467,8 @@ class RuleBasedJudge:
             ),
             max_retries=max_retries,
         )
-        text = (completion.choices[0].message.content or "").strip()
-        return {"score": self._parse(text), "raw": text[:1000]}
+        raw = (completion.choices[0].message.content or "").strip()
+        return {"score": self._parse(_strip_think(raw)), "raw": raw[:1000]}
 
     @staticmethod
     def _parse(text: str) -> int | None:
