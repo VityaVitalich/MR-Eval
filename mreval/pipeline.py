@@ -11,6 +11,10 @@ pipeline with fakes (no vLLM, no network):
     generate: async (prompt: str) -> Sequence[str]              # the k samples
     judge:    async (request, response) -> {"score": int|None, "raw": str}
 
+An optional ``response_transform`` maps each raw generation to the text actually
+judged (e.g. DAN's ``extract_attack_response``); the raw text is preserved in
+``response`` and the judged text recorded as ``response_judged``.
+
 Judge calls go through ``score_with_retries`` (retry transient + None; D13).
 With the default ``max_error_rate=0`` a persistent None RAISES (fail-loud); with
 a tolerance, the errored sample is recorded with an explicit ``error`` marker and
@@ -29,6 +33,7 @@ __all__ = ["PipelineResult", "run_pipeline"]
 
 GenerateFn = Callable[[str], Awaitable[Sequence[str]]]
 JudgeFn = Callable[[str, str], Awaitable[dict]]
+ResponseTransform = Callable[[str], str]
 
 
 @dataclass
@@ -50,27 +55,31 @@ async def run_pipeline(
     max_retries: int = 5,
     max_error_rate: float = 0.0,
     threshold: int = 50,
+    response_transform: ResponseTransform | None = None,
 ) -> PipelineResult:
     sem = asyncio.Semaphore(concurrency)
     meter = {"cur": 0, "max": 0}
     records: list[dict | None] = [None] * len(prompts)
 
     async def judge_sample(prompt: str, idx: int, response: str) -> dict:
+        # `response` is the raw generation; `judged` is what the judge sees.
+        judged = response_transform(response) if response_transform else response
+        base = {"sample_idx": idx, "response": response}
+        if response_transform:
+            base["response_judged"] = judged
         async with sem:
             meter["cur"] += 1
             meter["max"] = max(meter["max"], meter["cur"])
             try:
                 try:
                     out = await score_with_retries(
-                        lambda: judge(prompt, response), max_retries=max_retries
+                        lambda: judge(prompt, judged), max_retries=max_retries
                     )
                 except JudgeError as e:
                     if max_error_rate <= 0:
                         raise  # fail-loud (D13)
-                    return {"sample_idx": idx, "response": response,
-                            "score": None, "raw": "", "error": str(e)[:200]}
-                return {"sample_idx": idx, "response": response,
-                        "score": out["score"], "raw": out.get("raw", "")}
+                    return {**base, "score": None, "raw": "", "error": str(e)[:200]}
+                return {**base, "score": out["score"], "raw": out.get("raw", "")}
             finally:
                 meter["cur"] -= 1
 

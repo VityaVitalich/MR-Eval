@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import json
-import os
 import sys
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -16,13 +14,7 @@ from loguru import logger
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from banned_tokens import vllm_logit_bias  # noqa: E402
 from jailbreaks.common import render_user_assistant  # noqa: E402
-from mreval.judge import (  # noqa: E402
-    RuleBasedJudge,
-    build_judge_client,
-    load_rule_judge_prompt,
-    rule_judge_rejudged_at,
-    rule_judge_version,
-)
+from mreval.judge import build_rule_judge, judge_meta  # noqa: E402
 from mreval.pipeline import run_pipeline  # noqa: E402
 from mreval.results import aggregate_over_prompts, save_results, stable_prompt_id  # noqa: E402
 from mreval.sampling import build_sampling_params, sampling_id  # noqa: E402
@@ -166,44 +158,6 @@ def _render_prompt(
     return tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
 
 
-def _build_rule_judge(judge_cfg: dict[str, Any]):
-    """Async judge callable ``(request, response) -> {"score", "raw"}`` backed
-    by the shared RuleBasedJudge. Only the rule-judge family is supported by the
-    fused pipeline (the openai/local jbb judge kinds are out of scope here)."""
-    kind = judge_cfg.get("kind", "rule")
-    if kind != "rule":
-        raise NotImplementedError(
-            f"jbb fused pipeline supports judge.kind=rule only (got {kind!r}). "
-            "Use the rule judge (gpt-4o or deepseek-v4-flash)."
-        )
-    # Align the env-driven provider routing (remap + extra_body) with the config.
-    os.environ["MR_EVAL_JUDGE_PROVIDER"] = judge_cfg["provider"]
-    client, routed_model = build_judge_client(judge_cfg["provider"], judge_cfg["model"])
-    judge = RuleBasedJudge(
-        model=routed_model,
-        prompt_template=load_rule_judge_prompt(),
-        client=client,
-        max_tokens=int(judge_cfg.get("max_tokens", 600)),
-    )
-
-    async def _judge(request: str, response: str) -> dict:
-        return await judge(request=request, response=response)
-
-    return _judge
-
-
-def _judge_meta(judge_cfg: dict[str, Any]) -> dict[str, Any]:
-    return {
-        "id": judge_cfg.get("id") or judge_cfg["model"].split("/")[-1],
-        "provider": judge_cfg["provider"],
-        "model": judge_cfg["model"],
-        "kind": judge_cfg.get("kind", "rule"),
-        "prompt_version": rule_judge_version(),
-        "rejudged_at": rule_judge_rejudged_at(),
-        "asr_threshold": int(judge_cfg.get("asr_threshold", 50)),
-    }
-
-
 async def _arun(cfg: dict[str, Any]) -> None:
     _resolve_artifact_cfg(cfg)
     run_name = _build_run_name(cfg)
@@ -263,7 +217,7 @@ async def _arun(cfg: dict[str, Any]) -> None:
         prompts.append({"id": pid, "prompt": r.prompt, "rendered": rendered, "source": r.category})
         id2rec[pid] = r
 
-    judge = _build_rule_judge(judge_cfg)
+    judge = build_rule_judge(judge_cfg)
     pipeline_cfg = cfg.get("pipeline", {})
     res = await run_pipeline(
         prompts,
@@ -293,16 +247,16 @@ async def _arun(cfg: dict[str, Any]) -> None:
             "samples": pr["samples"],
         })
 
-    judge_meta = _judge_meta(judge_cfg)
+    jmeta = judge_meta(judge_cfg)
     sid = sampling_id(decoding)
     model_name = _effective_model_name(cfg)
     out_path = save_results(
-        output_dir / f"jbb__{model_name}__{judge_meta['id']}__{sid}.json",
+        output_dir / f"jbb__{model_name}__{jmeta['id']}__{sid}.json",
         model=model_name,
         benchmark="jbb",
         results=out_results,
         decoding=decoding,
-        judge_meta=judge_meta,
+        judge_meta=jmeta,
     )
     _save_yaml(output_dir / "config.yaml", cfg)
 

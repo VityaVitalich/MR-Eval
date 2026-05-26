@@ -26,7 +26,7 @@ import re
 import time
 from pathlib import Path
 from traceback import format_exc
-from typing import Awaitable, Callable
+from typing import Awaitable, Callable, Mapping
 
 from loguru import logger
 from openai import APIConnectionError, APIStatusError, AsyncOpenAI, RateLimitError
@@ -50,6 +50,8 @@ __all__ = [
     "DEEPSEEK_PROVIDER_ORDER",
     "deepseek_extra_body",
     "score_with_retries",
+    "build_rule_judge",
+    "judge_meta",
 ]
 
 
@@ -250,6 +252,46 @@ async def score_with_retries(
 
 
 # ── judges ────────────────────────────────────────────────────────────────────
+
+
+def build_rule_judge(judge_cfg: Mapping[str, object]) -> Callable[[str, str], Awaitable[dict]]:
+    """Async judge callable ``(request, response) -> {"score", "raw"}`` backed by
+    the shared RuleBasedJudge, built from a bench ``judge`` config dict. Only the
+    rule-judge family is supported by the fused pipeline. Sets
+    ``MR_EVAL_JUDGE_PROVIDER`` so the per-model extra_body routing matches the
+    config's provider."""
+    kind = judge_cfg.get("kind", "rule")
+    if kind != "rule":
+        raise NotImplementedError(
+            f"fused pipeline supports judge.kind=rule only (got {kind!r}). "
+            "Use the rule judge (gpt-4o or deepseek-v4-flash)."
+        )
+    os.environ["MR_EVAL_JUDGE_PROVIDER"] = str(judge_cfg["provider"])
+    client, routed_model = build_judge_client(str(judge_cfg["provider"]), str(judge_cfg["model"]))
+    judge = RuleBasedJudge(
+        model=routed_model,
+        prompt_template=load_rule_judge_prompt(),
+        client=client,
+        max_tokens=int(judge_cfg.get("max_tokens", 600)),
+    )
+
+    async def _judge(request: str, response: str) -> dict:
+        return await judge(request=request, response=response)
+
+    return _judge
+
+
+def judge_meta(judge_cfg: Mapping[str, object]) -> dict:
+    """metadata.judge block for a saved result file, from a bench judge config."""
+    return {
+        "id": judge_cfg.get("id") or str(judge_cfg["model"]).split("/")[-1],
+        "provider": judge_cfg["provider"],
+        "model": judge_cfg["model"],
+        "kind": judge_cfg.get("kind", "rule"),
+        "prompt_version": rule_judge_version(),
+        "rejudged_at": rule_judge_rejudged_at(),
+        "asr_threshold": int(judge_cfg.get("asr_threshold", 50)),
+    }
 
 
 class LogprobJudge:

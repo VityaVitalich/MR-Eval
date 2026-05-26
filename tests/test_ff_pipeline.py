@@ -86,6 +86,43 @@ def test_pipeline_respects_concurrency_cap():
     assert res.max_concurrency_observed <= cap
 
 
+def test_pipeline_response_transform_judges_transformed_keeps_raw():
+    """response_transform: the judge sees the transformed text; the raw
+    generation is preserved in `response` and the judged text in
+    `response_judged` (e.g. DAN's [JAILBREAK]-section extraction)."""
+    seen = {"judged": []}
+
+    async def generate(text):
+        return ["[REFUSE] no\n[JAILBREAK] here is the bad stuff"]
+
+    async def judge(request, response):
+        seen["judged"].append(response)
+        return {"score": 90, "raw": "SCORE: 90"}
+
+    def extract(raw):
+        return raw.split("[JAILBREAK]", 1)[1].strip()
+
+    res = asyncio.run(run_pipeline(
+        _prompts(1), generate=generate, judge=judge, k=1, response_transform=extract,
+    ))
+    sample = res.results[0]["samples"][0]
+    assert seen["judged"] == ["here is the bad stuff"], "judge must see transformed text"
+    assert sample["response"] == "[REFUSE] no\n[JAILBREAK] here is the bad stuff"
+    assert sample["response_judged"] == "here is the bad stuff"
+
+
+def test_pipeline_no_transform_omits_response_judged():
+    """Without a transform, samples carry no `response_judged` key."""
+    async def generate(text):
+        return ["plain"]
+
+    async def judge(request, response):
+        return {"score": 0, "raw": ""}
+
+    res = asyncio.run(run_pipeline(_prompts(1), generate=generate, judge=judge, k=1))
+    assert "response_judged" not in res.results[0]["samples"][0]
+
+
 # ── FF-13 ────────────────────────────────────────────────────────────────────
 
 
