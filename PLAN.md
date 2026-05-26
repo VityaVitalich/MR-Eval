@@ -1,7 +1,7 @@
 # PLAN — k-Sampling + Shared Judge Refactor
 
 - **Status:** ACCEPTED (2026-05-26 — approved by julian.minder)
-- **Version:** v14 (2026-05-26)
+- **Version:** v15 (2026-05-26)
 - **Owner:** julian.minder
 - **Case:** legacy re-architect, **aggressive cutover** (research repo — no long-lived
   backward-compat in code; the dashboard is the only surface that must read old results).
@@ -330,17 +330,24 @@ provenances are additive; old result files untouched (C2).
     is dev-validatable (needs hydra / vLLM+cluster), and the pipeline swap only acts once a
     bench samples (a Step-2 change). End state unchanged; the boundary moves to keep every
     increment validated.
-- **Step 2 — Behavioral rollout (one change → one rerun). Each bench slice now also does the
-  Hydra-composition wiring + `generate → fused pipeline` swap (moved from Step 1).** The
-  pipeline `generate` is a **pluggable backend**: vLLM `AsyncLLMEngine(n=k)` for the jailbreaks
-  family; jbb currently uses HF `model.generate`, so 2a decides between an HF
-  `num_return_sequences=k` generate fn behind the same pipeline vs migrating jbb to vLLM.
-  - **2a jbb:** wire root-config composition; swap generation → pipeline; (i) swap judge →
-    DeepSeek, `(deepseek, greedy)`, verify vs `(gpt-4o, greedy)` (**FF-4** — the live-judge
-    regression check, the only FF that first goes green here); (ii) `sampled` k=5 →
-    `(deepseek, sampled-k5)`, re-confirm on real output what FF-3/FF-5 assert in unit form
-    (ordering, count = k·N, schema). New provenances; old gpt-4o data retained.
-  - **2b advbench + dan + pap** (jailbreaks family — vLLM pipeline replaces
+- **Step 2 — Behavioral rollout (one change → one rerun; cluster-validated). Each bench slice
+  also does the Hydra-composition wiring + `generate → fused vLLM pipeline` swap (moved from
+  Step 1).** **Decision (v15, user):** ALL in-scope benches — including jbb — generate via the
+  **unified vLLM `AsyncLLMEngine(n=k)` fused pipeline** (`mreval.pipeline.run_pipeline` with a
+  vLLM-engine `generate` backend in `mreval/vllm_engine.py`). jbb is migrated off HF
+  `model.generate`. HF→vLLM mapping to preserve: `stop_strings` → `SamplingParams.stop`;
+  `bad_words_ids` → vLLM `bad_words`/logits-processor; pre-render chat templates (the async
+  engine doesn't apply them); `Accelerate` sharding → vLLM `tensor_parallel_size`. **Live spike
+  FIRST (mandatory, §4.4):** confirm the swiss-ai `v0.9.0.1+swissai` fork's async API
+  (`AsyncLLMEngine` vs V1 `AsyncLLM`, `VLLM_USE_V1`, `get_tokenizer` sync/async, awaiting n=k)
+  on the cluster before wiring bench runners — don't blind-code the whole migration.
+  - **2a jbb:** run the spike; build `mreval/vllm_engine.py`; rewrite jbb generation → vLLM +
+    `run_pipeline`; wire root-config composition; emit the `mreval.results` per-sample schema.
+    (i) swap judge → DeepSeek, `(deepseek, greedy)`, verify vs `(gpt-4o, greedy)` (**FF-4** —
+    the live-judge regression check, the only FF that first goes green here); (ii) `sampled`
+    k=5 → `(deepseek, sampled-k5)`, re-confirm on real output what FF-3/FF-5 assert in unit
+    form (ordering, count = k·N, schema). New provenances; old gpt-4o data retained.
+  - **2b advbench + dan + pap** (jailbreaks family — same vLLM pipeline replaces
     `generate_from_conversations`).
   - **2c pez + overrefusal.**
 - **Step 3 — Dashboard.** `by_provenance` axis + 3 selectors + tiered storage + aggregation
@@ -419,3 +426,8 @@ judge_audit loop is unchanged.
   since neither is dev-validatable and the pipeline swap only acts once a bench samples. Noted
   the pluggable-`generate` wrinkle: jbb uses HF `model.generate` (not vLLM) — 2a decides HF
   `num_return_sequences=k` vs vLLM migration. End state unchanged.
+- **v15 (2026-05-26):** jbb-backend decision (user): **migrate jbb to vLLM** so ALL in-scope
+  benches share the unified `AsyncLLMEngine(n=k)` fused pipeline (no HF/vLLM split). Added the
+  HF→vLLM feature mapping + the mandatory cluster live-spike-first on the swiss-ai fork before
+  wiring runners. Note: k-sampling requires `do_sample`/`sampled` (greedy n>1 is invalid), so
+  jbb's `greedy` stays n=1 and `sampled` uses nucleus t1.0/p0.95 n=k (D6).
