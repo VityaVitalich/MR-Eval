@@ -60,6 +60,9 @@ JUDGE_VERSION_RE = re.compile(
 # that bench.
 RULE_JUDGE_CELLS = (
     "safety_base", "advbench", "dans", "pap", "jbb", "pez",
+    # Ablation conditions: built from the same rule-judged JBB-direct + PAP
+    # per-sample files, surfaced as multi-method by_provenance cells.
+    "ablit", "tmplabl",
 )
 INDEPENDENT_JUDGE_CELLS = (
     "em_base", "overrefusal", "overrefusal_benches",

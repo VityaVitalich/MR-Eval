@@ -355,13 +355,6 @@ def test_score_bearing_cells_match_build_model_payload():
         "capabilities_summary",   # lm-eval bench scores, no rule-based judge
         "dynamics", "capabilities_dynamics",
         "canaries",               # has its own judges; handled by banner
-        # ablations: diagnostic upper-bound conditions (model abliteration,
-        # template ablation) — the underlying JBB/PAP rows are rule-judge
-        # stamped at the source, but collect_ablations only extracts the
-        # ASR scalars; the per-cell provenance isn't propagated yet. Marked
-        # as a follow-up: thread judge_version through collect_ablations and
-        # move 'ablations' into RULE_JUDGE_CELLS so the invariants apply.
-        "ablations",
     }
     expected = collected - not_score_bearing
     actual = set(_checks.SCORE_BEARING_CELLS)
@@ -599,7 +592,8 @@ def test_rule_judge_cells_pin_membership():
     PEZ (or any other rule-judge bench) to independent, stamp-uniformity
     silently stops enforcing it across that bench's cells — same bug class.
     Pin membership so the move requires editing this test deliberately."""
-    expected_rule_members = {"safety_base", "advbench", "dans", "pap", "jbb", "pez"}
+    expected_rule_members = {"safety_base", "advbench", "dans", "pap", "jbb", "pez",
+                             "ablit", "tmplabl"}
     actual = set(_checks.RULE_JUDGE_CELLS)
     missing = expected_rule_members - actual
     extra = actual - expected_rule_members

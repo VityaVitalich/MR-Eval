@@ -710,6 +710,12 @@ NEW_SCHEMA_BENCHES = {
     "pez":      ("pez",      [OUTPUTS / "pez"]),
 }
 
+# Every top-level cell that carries a `by_provenance` map (judge×sampling). The
+# ablation conditions (`ablit`, `tmplabl`) are built from the same per-sample
+# files as jbb/pap (see `_collect_ablation_cell`), so they share the lazy-tier
+# split + the dashboard's provenance plumbing.
+PROVENANCE_CELL_KEYS = list(NEW_SCHEMA_BENCHES) + ["ablit", "tmplabl"]
+
 
 def _new_schema_files(prefix: str, dirs: list[Path], model_id: str) -> list[Path]:
     """mreval per-sample files ``<prefix>__<model>__<judge>__<sampling>.json``
@@ -889,7 +895,7 @@ def emit_lazy_provenance_samples(data: dict, diag_root: Path) -> None:
         stale.unlink()
     for mid, payload in data.get("models", {}).items():
         lazy_model: dict = {}
-        for cell_key in NEW_SCHEMA_BENCHES:
+        for cell_key in PROVENANCE_CELL_KEYS:
             cell = payload.get(cell_key)
             if not isinstance(cell, dict) or "by_provenance" not in cell:
                 continue
@@ -1241,77 +1247,79 @@ def collect_jbb_all(model_id: str) -> dict | None:
 ABLATION_TAGS = ("ablit", "tmplabl")
 ABLATION_LABELS = {"ablit": "Model abliteration", "tmplabl": "Template ablation"}
 
+# The two benches each ablation condition is evaluated on, mapped to the mreval
+# per-sample file prefix + its OUTPUTS search dir (reused from NEW_SCHEMA_BENCHES).
+# `jbb_direct` keeps only the `direct` attack method (the no-attack baseline the
+# ablation matrix runs); `pap` is single-method.
+ABLATION_METHODS = {
+    "jbb_direct": NEW_SCHEMA_BENCHES["jbb"],
+    "pap":        NEW_SCHEMA_BENCHES["pap"],
+}
 
-def collect_ablations(model_id: str) -> dict | None:
-    """Find JBB-direct + PAP results for each ablation condition.
 
-    File-naming contract (set by abliteration/slurm/eval_variant.sh):
-      - JBB direct: dir `jbb_<alias>_<tag>_direct_none_<YYYYMMDD>_<HHMMSS>/`
-        with `results.jsonl`. ASR = mean(jailbroken).
-      - PAP:        file `pap_advbench_<pap_tag>_<alias>_<tag>_llm_<ts>.json`
-        (the `<alias>_<tag>` slug is supplied via `cfg.run_tag` so both
-        ablit (separate checkpoint) and tmplabl (same checkpoint) land under
-        the same naming scheme).
-    Returns None if neither tag has any data.
-    """
-    aliases = ALIASES[model_id]
-    out: dict = {}
-    for tag in ABLATION_TAGS:
-        per_tag: dict = {}
-        # ── JBB direct ─────────────────────────────────────────────────────
-        jbb_pats = [re.compile(rf"^jbb_{re.escape(a)}_{re.escape(tag)}_direct_none_\d{{8}}_\d{{6}}$")
-                    for a in aliases]
-        jbb_cands: list[Path] = []
-        for root in JBB_DIRS:
-            if not root.exists():
+def _ablation_schema_files(prefix: str, dirs: list[Path], model_id: str, tag: str) -> list[Path]:
+    """mreval per-sample files ``<prefix>__<alias>_<tag>__<judge>__<sampling>.json``
+    whose model component is exactly ``<alias>_<tag>`` for one of this model's
+    aliases (so the un-tagged baseline never leaks in). Uses rglob: the files
+    nest under per-run subdirs."""
+    wanted = {f"{a}_{tag}" for a in ALIASES[model_id]}
+    out: list[Path] = []
+    for d in dirs:
+        if not d.is_dir():
+            continue
+        for p in d.rglob(f"{prefix}__*.json"):
+            parts = p.stem.split("__")
+            if len(parts) == 4 and parts[0] == prefix and parts[1] in wanted:
+                out.append(p)
+    return out
+
+
+def _collect_ablation_cell(model_id: str, tag: str) -> dict | None:
+    """Build one ablation condition's provenance cell from the mreval per-sample
+    files its JBB-direct + PAP runs emit. Mirrors the in-scope safety benches:
+    each ``<judge>::<sampling>`` provenance becomes a multi-method subcell with
+    ``by_method = {jbb_direct, pap}`` and ``overall_asr`` = mean over the present
+    methods (reusing `_provenance_subcell` + `_merge_method_subcells`). Returns
+    ``{"by_provenance": {...}}`` or None when no tagged files exist."""
+    # provenance key -> method name -> subcell (newest file wins per pair).
+    grouped: dict[str, dict[str, dict]] = {}
+    for method, (prefix, dirs) in ABLATION_METHODS.items():
+        # Newest complete file per (provenance) for this method+tag.
+        best: dict[str, Path] = {}
+        for f in _ablation_schema_files(prefix, dirs, model_id, tag):
+            try:
+                d = json.loads(f.read_text())
+            except Exception as e:
+                print(f"  ! ablation / {model_id} / {tag} / {method} / {f.name}: {e}")
                 continue
-            for dd in root.iterdir():
-                if dd.is_dir() and any(p.match(dd.name) for p in jbb_pats):
-                    rj = dd / "results.jsonl"
-                    if rj.exists():
-                        jbb_cands.append(rj)
-        jf = oldest(jbb_cands)
-        if jf:
-            try:
-                total = 0
-                jb = 0
-                for line in jf.read_text().splitlines():
-                    if not line.strip():
-                        continue
-                    row = json.loads(line)
-                    total += 1
-                    if row.get("jailbroken"):
-                        jb += 1
-                if total:
-                    per_tag["jbb_direct_asr"] = jb / total
-                    per_tag["jbb_direct_n"] = total
-                    per_tag["jbb_direct_source"] = jf.parent.name
-            except Exception as e:
-                print(f"  ! ablations / {model_id} / {tag} / jbb: {e}")
+            if method == "jbb_direct":
+                attack = ((d.get("metadata") or {}).get("attack") or {})
+                if attack.get("method") != "direct":
+                    continue
+            sub = _provenance_subcell(d)
+            sub["source_file"] = f.name
+            pkey = provenance_key(sub)
+            prev = best.get(pkey)
+            if prev is None or f.stat().st_mtime > prev.stat().st_mtime:
+                best[pkey] = f
+                grouped.setdefault(pkey, {})[method] = sub
 
-        # ── PAP ────────────────────────────────────────────────────────────
-        # Match on the run_tag slug (`<alias>_<tag>`) — anchored, so we never
-        # accidentally pick up the un-tagged baseline.
-        pap_pats = [re.compile(rf"^pap_advbench_[^/]+_{re.escape(a)}_{re.escape(tag)}_llm_\d{{8}}_\d{{6}}\.json$")
-                    for a in aliases]
-        def _ok(n: str, _pats=pap_pats) -> bool:
-            return any(p.match(n) for p in _pats)
-        pap_matches = scan(PAP_DIRS, "pap_advbench_*.json", _ok)
-        pf = oldest(pap_matches)
-        if pf:
-            try:
-                d = json.loads(pf.read_text())
-                overall = (d.get("metrics") or {}).get("overall") or {}
-                if overall.get("llm_asr") is not None:
-                    per_tag["pap_asr"] = overall.get("llm_asr")
-                    per_tag["pap_source"] = pf.name
-            except Exception as e:
-                print(f"  ! ablations / {model_id} / {tag} / pap: {e}")
+    by_prov: dict[str, dict] = {}
+    for pkey, methods in grouped.items():
+        # Order jbb_direct before pap for a stable merge headline.
+        items = [(m, methods[m]) for m in ("jbb_direct", "pap") if m in methods]
+        by_prov[pkey] = _merge_method_subcells(items)
+    return {"by_provenance": by_prov} if by_prov else None
 
-        if per_tag:
-            out[tag] = per_tag
 
-    return out or None
+def collect_ablit(model_id: str) -> dict | None:
+    """`ablit` condition (weight-orthogonalized refusal direction)."""
+    return _collect_ablation_cell(model_id, "ablit")
+
+
+def collect_tmplabl(model_id: str) -> dict | None:
+    """`tmplabl` condition (chat template replaced by a 5-shot scaffold)."""
+    return _collect_ablation_cell(model_id, "tmplabl")
 
 
 def collect_pap(model_id: str) -> dict | None:
@@ -2611,7 +2619,8 @@ def build_model_payload(model_id: str) -> dict:
         "em_base": collect_em_base(model_id),
         "overrefusal": collect_overrefusal(model_id),
         "overrefusal_benches": collect_overrefusal_benches(model_id),
-        "ablations": collect_ablations(model_id),
+        "ablit": collect_ablit(model_id),
+        "tmplabl": collect_tmplabl(model_id),
         "dynamics": collect_dynamics(model_id),
         "capabilities_dynamics": collect_capabilities(model_id),
         "canaries": collect_canaries(model_id),
@@ -2704,7 +2713,7 @@ def main() -> None:
         if m["em_base"]:               flags.append("em")
         if m.get("overrefusal"):       flags.append("orefus")
         for tag in ABLATION_TAGS:
-            if (m.get("ablations") or {}).get(tag):
+            if m.get(tag):
                 flags.append(f"abl-{tag}")
         if m["dynamics"]:              flags.append("dyn")
         if m["capabilities_dynamics"]: flags.append("capdyn")

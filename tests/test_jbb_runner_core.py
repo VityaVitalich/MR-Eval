@@ -235,8 +235,10 @@ def test_build_run_name_chat_template_explicit_no_suffix():
 
 def test_build_run_name_tmplabl_appends_suffix():
     """`prompt_format=='tmplabl'` => `jbb_<alias>_tmplabl_direct_none_<ts>`.
-    This naming binds with `dashboard.build_data.collect_ablations` —
-    if the suffix changes, ablation cells stop rendering."""
+    This is the human-readable run-dir tag. The dashboard ablation collector
+    (`dashboard.build_data._collect_ablation_cell`) keys off the per-sample
+    FILE's `<alias>_<tag>` model component, which the launchers set via
+    `model.name=<alias>_tmplabl`; the dir suffix is secondary."""
     cfg = {
         "model": {"pretrained": "/p/myalias", "prompt_format": "tmplabl"},
         "artifact": {"method": "direct", "target_model": "none"},

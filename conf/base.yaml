@@ -5,19 +5,22 @@
 # group cleanly selects gpt-4o vs deepseek without a base/group merge clash).
 # Out-of-scope benches (safety_base, canaries, eval, harmbench) are untouched.
 #
-# Step 1 defaults reproduce the old single-sample greedy behavior. Step 2 flips
-# strategy -> sampled (k=5) and the judge group -> deepseek, one bench at a time.
+# The global default is k=10 pure-temperature sampling (temp 1.0, top_p 1.0 =
+# no nucleus truncation). Benches inherit this; to run a deterministic pass
+# override `decoding.strategy=greedy num_samples=1` at launch. Set here so the
+# k/decoding globals live in ONE place — launchers must NOT re-declare them.
 
 # Global number of samples per prompt (vLLM n=k). 1 == single sample.
-num_samples: 1
+num_samples: 10
 
 # Decoding strategy + params. The sampling-provenance id is derived from these
-# + num_samples (mreval.sampling.sampling_id): greedy -> "greedy"; sampled ->
-# "nucleus-t{temperature}-p{top_p}-k{num_samples}".
+# + num_samples (mreval.sampling.sampling_id): greedy -> "greedy"; sampled with
+# top_p<1 -> "nucleus-t{temperature}-p{top_p}-k{num_samples}"; sampled with
+# top_p=1.0 (pure temperature, no nucleus truncation) -> "temp-t{temperature}-k{num_samples}".
 decoding:
-  strategy: greedy        # greedy | sampled
-  temperature: 0.0
-  top_p: 1.0
+  strategy: sampled       # greedy | sampled
+  temperature: 1.0
+  top_p: 1.0              # 1.0 = no nucleus truncation (pure temperature sampling)
   max_tokens: 600
 
 # Fused generate->judge pipeline.

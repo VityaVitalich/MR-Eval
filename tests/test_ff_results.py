@@ -73,6 +73,12 @@ def test_sampling_id_nucleus():
                           "top_p": 0.95, "num_samples": 5}) == "nucleus-t1.0-p0.95-k5"
 
 
+def test_sampling_id_pure_temperature():
+    # top_p=1.0 applies no nucleus truncation -> labelled "temp-…", not "nucleus-…".
+    assert S.sampling_id({"strategy": "sampled", "temperature": 1.0,
+                          "top_p": 1.0, "num_samples": 10}) == "temp-t1.0-k10"
+
+
 def test_sampled_strategy_zero_temperature_fails_loud():
     # vLLM treats temperature=0 as greedy and rejects n>1 with a cryptic
     # message; build_sampling_params catches it at the config boundary before

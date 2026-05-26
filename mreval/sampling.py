@@ -18,8 +18,12 @@ SAMPLED = "sampled"
 def sampling_id(decoding: Mapping[str, Any]) -> str:
     """Self-describing provenance id derived from the decoding config (D12).
 
-        greedy  -> "greedy"
-        sampled -> "nucleus-t{temperature}-p{top_p}-k{num_samples}"
+        greedy                 -> "greedy"
+        sampled, top_p  < 1.0  -> "nucleus-t{temperature}-p{top_p}-k{num_samples}"
+        sampled, top_p >= 1.0  -> "temp-t{temperature}-k{num_samples}"
+
+    top_p=1.0 applies no nucleus truncation, so it's pure temperature sampling
+    over the full distribution — labelled distinctly (no misleading "nucleus").
 
     Pure function — no I/O, no vLLM import.
     """
@@ -30,6 +34,8 @@ def sampling_id(decoding: Mapping[str, Any]) -> str:
         t = decoding["temperature"]
         p = decoding["top_p"]
         k = decoding["num_samples"]
+        if float(p) >= 1.0:
+            return f"temp-t{t}-k{k}"
         return f"nucleus-t{t}-p{p}-k{k}"
     raise ValueError(f"unknown decoding strategy: {strategy!r}")
 
