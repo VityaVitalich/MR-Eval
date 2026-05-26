@@ -22,6 +22,7 @@ import asyncio
 import hashlib
 import math
 import os
+import random
 import re
 import time
 from pathlib import Path
@@ -199,16 +200,34 @@ def build_judge_client(provider: str, judge_model: str) -> tuple[AsyncOpenAI, st
 # ── shared create()-retry helper (D7) ────────────────────────────────────────
 
 
-async def _create_with_retries(make_call: Callable[[], Awaitable], max_retries: int = 5):
+# Retry policy. The default attempt count is deliberately generous and the
+# per-sleep cap high: a shared-pool OpenRouter judge (deepseek) gets 429'd in
+# multi-second-to-minute bursts under concurrent load, and the pipeline runs
+# fail-loud (max_error_rate=0), so one row that exhausts its retries aborts the
+# whole run. A capped exponential with these defaults gives a multi-minute
+# window to ride out a transient limit before giving up.
+_DEFAULT_MAX_RETRIES = 8
+_BACKOFF_CAP_S = 60.0
+
+
+def _backoff_delay(attempt: int, base_delay: float = 0.5) -> float:
+    """Capped exponential backoff with half-jitter. The cap keeps a single
+    sleep sane while the retry count widens the total window; the jitter
+    de-syncs the many concurrent judge calls that all back off at once (they'd
+    otherwise re-burst in lockstep against the shared rate-limit)."""
+    capped = min(base_delay * (2 ** attempt), _BACKOFF_CAP_S)
+    return random.uniform(capped / 2, capped)
+
+
+async def _create_with_retries(make_call: Callable[[], Awaitable], max_retries: int = _DEFAULT_MAX_RETRIES):
     """Run an async ``client.chat.completions.create`` coroutine (produced by
     ``make_call``) with the project's transient-error retry policy. Per-call
     kwargs live in the caller (off-limits). Returns the completion.
 
-    Preserves the prior behavior exactly: connection/rate-limit errors re-raise
-    on the final attempt; retryable status codes (>=500, 403/408/429) and
-    unexpected exceptions back off and exhaust into ``JudgeError``.
+    Connection/rate-limit errors re-raise on the final attempt; retryable status
+    codes (>=500, 403/408/429) and unexpected exceptions back off (capped
+    exponential + jitter) and exhaust into ``JudgeError``.
     """
-    base_delay = 0.5
     for attempt in range(max_retries + 1):
         try:
             return await make_call()
@@ -216,23 +235,23 @@ async def _create_with_retries(make_call: Callable[[], Awaitable], max_retries: 
             if attempt == max_retries:
                 raise
             logger.warning("Retrying ({}/{}): {}", attempt + 1, max_retries, e)
-            await asyncio.sleep(base_delay * (2 ** attempt))
+            await asyncio.sleep(_backoff_delay(attempt))
         except APIStatusError as e:
             if e.status_code >= 500 or e.status_code in (403, 408, 429):
                 logger.warning("Retrying ({}/{}): {}", attempt + 1, max_retries, e)
-                await asyncio.sleep(base_delay * (2 ** attempt))
+                await asyncio.sleep(_backoff_delay(attempt))
             else:
                 raise JudgeError(f"Permanent API error: {e}") from e
         except Exception:
             logger.error("Unexpected: {}", format_exc())
-            await asyncio.sleep(base_delay * (2 ** attempt))
+            await asyncio.sleep(_backoff_delay(attempt))
     raise JudgeError(f"Failed after {max_retries + 1} attempts")
 
 
 async def score_with_retries(
     judge_call: Callable[[], Awaitable[dict]],
     *,
-    max_retries: int = 5,
+    max_retries: int = _DEFAULT_MAX_RETRIES,
     base_delay: float = 0.5,
     sleep: Callable[[float], Awaitable[None]] | None = None,
 ) -> dict:
@@ -250,12 +269,12 @@ async def score_with_retries(
         except Exception as e:
             if attempt == max_retries:
                 raise JudgeError(f"judge call failed after {max_retries + 1} attempts: {e}") from e
-            await _sleep(base_delay * (2 ** attempt))
+            await _sleep(_backoff_delay(attempt, base_delay))
             continue
         if result.get("score") is not None:
             return result
         if attempt < max_retries:
-            await _sleep(base_delay * (2 ** attempt))
+            await _sleep(_backoff_delay(attempt, base_delay))
     raise JudgeError(f"judge returned None after {max_retries + 1} attempts")
 
 
@@ -316,7 +335,7 @@ class LogprobJudge:
         logprobs = await self._logprob_request(messages)
         return self._aggregate(logprobs)
 
-    async def _logprob_request(self, messages: list[dict], max_retries: int = 5) -> dict:
+    async def _logprob_request(self, messages: list[dict], max_retries: int = _DEFAULT_MAX_RETRIES) -> dict:
         completion = await _create_with_retries(
             lambda: self._client.chat.completions.create(
                 model=self.model,
@@ -369,7 +388,7 @@ class ClassifyJudge:
         text = await self._request(messages)
         return self._parse(text)
 
-    async def _request(self, messages: list[dict], max_retries: int = 5) -> str:
+    async def _request(self, messages: list[dict], max_retries: int = _DEFAULT_MAX_RETRIES) -> str:
         completion = await _create_with_retries(
             lambda: self._client.chat.completions.create(
                 model=self.model,
@@ -455,7 +474,7 @@ class RuleBasedJudge:
             msg = msg.replace("{" + k + "}", "" if v is None else str(v))
         return await self._score_one(msg)
 
-    async def _score_one(self, msg: str, max_retries: int = 5) -> dict:
+    async def _score_one(self, msg: str, max_retries: int = _DEFAULT_MAX_RETRIES) -> dict:
         completion = await _create_with_retries(
             lambda: self._client.chat.completions.create(
                 model=self.model,

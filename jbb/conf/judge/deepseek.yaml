@@ -7,4 +7,4 @@ provider: openrouter
 model: deepseek/deepseek-v4-flash
 max_tokens: 600
 asr_threshold: 50
-max_retries: 5
+max_retries: 8

@@ -22,7 +22,8 @@ decoding:
 
 # Fused generate->judge pipeline.
 pipeline:
-  concurrency: 200        # max in-flight judge calls (Semaphore)
+  concurrency: 100        # max in-flight judge calls (Semaphore); kept modest
+                          # so the shared-pool OpenRouter judge isn't 429'd
   max_error_rate: 0.0     # 0 => fail-loud on any persistent judge error (D13)
 
 # ASR binarization threshold (score >= threshold counts as a success).
