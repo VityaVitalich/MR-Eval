@@ -63,16 +63,28 @@ if ! mr_eval_setup_chat_template "$_ALIAS"; then
   exit 1
 fi
 
+# Resolve a registry alias to its pretrained id + stamp the alias as model.name
+# (mirrors eval_dan.sh / eval_advbench.sh). Without this, an alias like
+# epe_1p_nobce_pbsft3_lr1e_4 was passed straight to model.pretrained and failed
+# to load, and the output file was named by the HF basename, not the alias.
+if ! mr_eval_resolve_pretrained_ref "$REPO_ROOT" "$EVAL_DIR" "$MODEL"; then
+  exit 1
+fi
+MODEL="$MR_EVAL_MODEL_PRETRAINED"
+MODEL_NAME="${MR_EVAL_MODEL_NAME:-${MR_EVAL_MODEL_ALIAS:-$(basename "$MODEL")}}"
+
 nvidia-smi
 
 echo "START TIME: $(date)"
 echo "Model:    $MODEL"
+echo "Name:     $MODEL_NAME"
 echo "Judge:    $JUDGE"
 echo "PAP file: ${PAP_FILE:-default from conf/pap.yaml}"
 start=$(date +%s)
 
 cmd=(
   python run_pap_eval.py
+  model.name="$MODEL_NAME"
   model.pretrained="$MODEL"
   judge="$JUDGE"
 )
