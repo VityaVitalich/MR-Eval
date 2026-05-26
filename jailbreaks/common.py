@@ -7,11 +7,11 @@ import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import pandas as pd
 from loguru import logger
-from omegaconf import DictConfig
 
 if TYPE_CHECKING:
+    import pandas as pd
+    from omegaconf import DictConfig
     from vllm import LLM
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -155,7 +155,9 @@ def normalize_text(text: str) -> str:
     return WHITESPACE_RE.sub(" ", text.translate(TEXT_NORMALIZATION_TABLE)).strip()
 
 
-def load_behaviors(cfg: DictConfig) -> pd.DataFrame:
+def load_behaviors(cfg: DictConfig) -> "pd.DataFrame":
+    import pandas as pd  # lazy: keep the lightweight text/keyword helpers importable without pandas
+
     cache = Path(__file__).parent / "data" / "harmful_behaviors.csv"
     if cache.exists():
         df = pd.read_csv(cache)
