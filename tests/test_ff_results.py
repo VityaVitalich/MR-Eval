@@ -73,6 +73,17 @@ def test_sampling_id_nucleus():
                           "top_p": 0.95, "num_samples": 5}) == "nucleus-t1.0-p0.95-k5"
 
 
+def test_sampled_strategy_zero_temperature_fails_loud():
+    # vLLM treats temperature=0 as greedy and rejects n>1 with a cryptic
+    # message; build_sampling_params catches it at the config boundary before
+    # the vLLM import (so this is exercisable in a vLLM-less env).
+    with pytest.raises(ValueError, match="requires temperature > 0"):
+        S.build_sampling_params(
+            {"strategy": "sampled", "temperature": 0.0, "top_p": 0.95,
+             "num_samples": 5, "max_tokens": 150}
+        )
+
+
 def test_decoding_change_yields_new_id_and_filename():
     base = {"strategy": "sampled", "temperature": 1.0, "top_p": 0.95, "num_samples": 5}
     changed = {**base, "top_p": 0.9}

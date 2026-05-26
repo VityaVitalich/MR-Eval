@@ -45,6 +45,14 @@ def build_sampling_params(
     filter from banned_tokens.vllm_logit_bias) and ``stop`` strings pass through
     when provided. vLLM is imported lazily so this module is importable in a
     vLLM-less env (tests, dashboard)."""
+    strategy = decoding["strategy"]
+    if strategy == SAMPLED and float(decoding["temperature"]) <= 0.0:
+        raise ValueError(
+            "decoding.strategy='sampled' requires temperature > 0 "
+            f"(got {decoding['temperature']!r}); vLLM treats temperature=0 as "
+            "greedy and rejects num_samples > 1. Set decoding.temperature."
+        )
+
     from vllm import SamplingParams  # lazy
 
     extra: dict[str, Any] = {}
@@ -53,7 +61,6 @@ def build_sampling_params(
     if stop:
         extra["stop"] = list(stop)
 
-    strategy = decoding["strategy"]
     max_tokens = int(decoding.get("max_tokens", 600))
     if strategy == GREEDY:
         return SamplingParams(n=1, temperature=0.0, max_tokens=max_tokens, **extra)
