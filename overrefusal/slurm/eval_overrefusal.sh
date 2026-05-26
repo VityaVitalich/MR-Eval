@@ -87,6 +87,35 @@ fi
 
 mkdir -p "$REPO_ROOT/logs"
 
+# vLLM offline model resolution: make the container HF_HOME authoritative. A
+# personal HF_HUB_CACHE/HUGGINGFACE_HUB_CACHE leaking in via --export=ALL would
+# shadow it, so resolve_cached_hf_model_path can't find the local snapshot and
+# vLLM gets a bare repo id under HF_HUB_OFFLINE=1 (same block as the jailbreaks
+# eval scripts).
+export MR_EVAL_REPO_ROOT="$REPO_ROOT"
+export PYTHONPATH="$REPO_ROOT${PYTHONPATH:+:$PYTHONPATH}"
+unset HF_HUB_CACHE HUGGINGFACE_HUB_CACHE
+export VLLM_WORKER_MULTIPROC_METHOD="${VLLM_WORKER_MULTIPROC_METHOD:-spawn}"
+export VLLM_USE_V1="${VLLM_USE_V1:-0}"
+
+# OR-Bench prompts load via HF `load_dataset`. The shared HF cache
+# ($HF_HOME/datasets) is read-only to non-owners, so datasets' FileLock there
+# fails with PermissionError. Redirect the datasets cache to a per-user writable
+# dir and seed just this run's dataset from the shared (read-only) cache so the
+# offline load still resolves it.
+# shellcheck disable=SC1091
+source "$REPO_ROOT/slurm/_resolve_data_dir.sh"
+export HF_DATASETS_CACHE="$MR_EVAL_DATA_DIR/hf_cache/datasets"
+mkdir -p "$HF_DATASETS_CACHE"
+_DS_REPO="$(grep -E '^[[:space:]]*repo:' "conf/${BENCH}.yaml" 2>/dev/null | head -1 | awk '{print $2}')"
+if [[ -n "$_DS_REPO" ]]; then
+  _DS_DIR="${_DS_REPO//\//___}"
+  if [[ ! -d "$HF_DATASETS_CACHE/$_DS_DIR" && -d "${HF_HOME:-}/datasets/$_DS_DIR" ]]; then
+    echo "[hf-datasets] seeding $_DS_DIR from shared cache -> $HF_DATASETS_CACHE"
+    cp -r "${HF_HOME}/datasets/$_DS_DIR" "$HF_DATASETS_CACHE/"
+  fi
+fi
+
 nvidia-smi
 
 echo "START TIME: $(date)"
