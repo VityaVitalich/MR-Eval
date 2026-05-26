@@ -360,10 +360,14 @@ def main() -> None:
     model.eval()
 
     n_layers = model.config.num_hidden_layers
-    chat_template_fp = hashlib.sha256(
-        (tokenizer.chat_template or "").encode("utf-8")
-    ).hexdigest()[:12]
-    print(f"[abl] chat_template fingerprint={chat_template_fp}  ({len(tokenizer.chat_template or '')} chars)")
+    # tokenizer.chat_template can be a dict (named templates) on some models;
+    # serialize before hashing so .encode() doesn't blow up on a dict.
+    _chat_template = tokenizer.chat_template
+    if isinstance(_chat_template, dict):
+        _chat_template = json.dumps(_chat_template, sort_keys=True)
+    _chat_template = _chat_template or ""
+    chat_template_fp = hashlib.sha256(_chat_template.encode("utf-8")).hexdigest()[:12]
+    print(f"[abl] chat_template fingerprint={chat_template_fp}  ({len(_chat_template)} chars)")
 
     # ---- decide layer-search vs fixed-layer mode ----
     # Precedence: --layer (explicit) > --search-layers (non-empty) > --layer-frac
