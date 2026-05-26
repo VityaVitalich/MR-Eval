@@ -105,3 +105,67 @@ def test_eager_budget_constant_and_current_size():
         assert data_json.stat().st_size <= budget, (
             f"eager data.json {data_json.stat().st_size} bytes exceeds budget {budget}"
         )
+
+
+# ── 3b — mreval per-sample schema → by_provenance subcell ingestion ──────────
+
+import json  # noqa: E402
+
+FIXTURE = REPO_ROOT / "tests" / "fixtures" / "mreval_jbb_k5.json"
+
+
+def _load_fixture() -> dict:
+    return json.loads(FIXTURE.read_text())
+
+
+def test_provenance_subcell_from_new_schema_file():
+    sub = build_data._provenance_subcell(_load_fixture())
+    # Provenance is judge.id :: sampling.id (D2/D12).
+    assert build_data.provenance_key(sub) == "deepseek-v4-flash::nucleus-t1.0-p0.95-k5"
+    assert sub["judge_version"] == "v5-f00d51fe"
+    assert sub["judge_model"] == "deepseek-v4-flash"
+    assert sub["sampling"]["num_samples"] == 5
+    # Raw per-sample arrays are present (pre-split) for the lazy tier.
+    assert sub["samples_by_prompt"], "subcell must carry raw samples for the lazy tier"
+
+
+def test_provenance_subcell_worst_at_k_and_completeness():
+    d = _load_fixture()
+    sub = build_data._provenance_subcell(d)
+    thr = sub["asr_threshold"]
+    # Recompute worst@k independently: only fully-judged prompts count (D11).
+    worst, excluded = [], 0
+    for r in d["results"]:
+        scores = [s.get("score") for s in r["samples"]]
+        if not scores or any(s is None for s in scores):
+            excluded += 1
+            continue
+        worst.append(max(scores))
+    expected_asr = (sum(1 for w in worst if w >= thr) / len(worst)) if worst else None
+    assert sub["n_prompts"] == len(worst)
+    assert sub["n_excluded"] == excluded
+    assert sub["overall_asr"] == expected_asr
+    assert sub["scores"] == worst
+
+
+def test_subcell_validates_and_splits():
+    """A cell carrying the legacy gpt-4o::greedy provenance + a new deepseek
+    per-sample provenance must validate (per-provenance), and split_eager_lazy
+    must move the raw samples out of the eager half."""
+    sub = build_data._provenance_subcell(_load_fixture())
+    sub["source_file"] = FIXTURE.name
+    legacy = build_data._legacy_greedy_subcell(
+        {"judge_version": "v5-f00d51fe", "judge_model": "gpt-4o",
+         "rejudged_at": "2026-01-01T00:00:00Z", "overall_asr": 0.0}
+    )
+    assert build_data.provenance_key(legacy) == "gpt-4o::greedy"
+    cell = {"by_provenance": {
+        build_data.provenance_key(legacy): legacy,
+        build_data.provenance_key(sub): sub,
+    }}
+    data = {"models": {"m": {"jbb": cell}}}
+    _checks.validate_data_json(data)  # must not raise
+
+    eager, lazy = build_data.split_eager_lazy(cell)
+    assert "samples_by_prompt" not in repr(eager)
+    assert lazy["by_provenance"]["deepseek-v4-flash::nucleus-t1.0-p0.95-k5"]["samples_by_prompt"]

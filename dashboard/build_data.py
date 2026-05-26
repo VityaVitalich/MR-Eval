@@ -686,6 +686,156 @@ def split_eager_lazy(cell: dict) -> tuple[dict, dict]:
     return eager, lazy
 
 
+# In-scope safety benches that emit the mreval per-sample schema. Maps the
+# dashboard cell key → (filename prefix, search dirs). New files are named
+# "<prefix>__<model>__<judge_id>__<sampling_id>.json" and live (usually nested
+# under a per-run subdir) in the bench OUTPUTS tree.
+NEW_SCHEMA_BENCHES = {
+    "jbb":      ("jbb",      [OUTPUTS / "jbb"]),
+    "advbench": ("advbench", [OUTPUTS / "jailbreaks" / "advbench"]),
+    "dans":     ("dan",      [OUTPUTS / "jailbreaks" / "chatgpt_dan_jbb"]),
+    "pap":      ("pap",      [OUTPUTS / "jailbreaks" / "persuasive_pap"]),
+    "pez":      ("pez",      [OUTPUTS / "pez"]),
+}
+
+
+def _new_schema_files(prefix: str, dirs: list[Path], model_id: str) -> list[Path]:
+    """mreval per-sample files ``<prefix>__<model>__<judge>__<sampling>.json``
+    whose ``<model>`` component matches one of this model's aliases. Uses rglob:
+    the files are nested under per-run subdirs the non-recursive `scan` misses."""
+    aliases = set(ALIASES[model_id])
+    out: list[Path] = []
+    for d in dirs:
+        if not d.is_dir():
+            continue
+        for p in d.rglob(f"{prefix}__*.json"):
+            parts = p.stem.split("__")
+            if len(parts) == 4 and parts[0] == prefix and parts[1] in aliases:
+                out.append(p)
+    return out
+
+
+def _provenance_subcell(d: dict) -> dict:
+    """Convert a loaded mreval per-sample result file into a dashboard
+    provenance subcell: eager aggregates (default worst@k, D1) + judge/sampling
+    provenance (D12) + the raw ``samples_by_prompt`` array (which
+    split_eager_lazy later routes to the lazy tier). D11 completeness: only
+    prompts whose all k samples were scored contribute to the aggregates;
+    incomplete prompts are counted in ``n_excluded`` and excluded wholesale."""
+    meta = d.get("metadata", {}) or {}
+    judge = meta.get("judge", {}) or {}
+    sampling = meta.get("sampling", {}) or {}
+    thr = judge.get("asr_threshold") or 50
+
+    worst: list = []
+    samples_by_prompt: list = []
+    per_source: dict[str, list] = {}
+    n_excluded = 0
+    for r in d.get("results", []) or []:
+        scores = [s.get("score") for s in r.get("samples", [])]
+        samples_by_prompt.append(
+            {"id": r.get("id"), "source": r.get("source"), "scores": scores}
+        )
+        if not scores or any(s is None for s in scores):
+            n_excluded += 1
+            continue
+        w = max(scores)  # worst@k
+        worst.append(w)
+        src = r.get("source")
+        if src is not None:
+            per_source.setdefault(str(src), []).append(w)
+
+    n = len(worst)
+    return {
+        "judge_version": judge.get("prompt_version", "unstamped"),
+        "judge_model": judge.get("id") or judge.get("model"),
+        "rejudged_at": judge.get("rejudged_at"),
+        "asr_threshold": thr,
+        "sampling": sampling,
+        "sampling_id": sampling.get("id"),
+        "overall_asr": (sum(1 for s in worst if s >= thr) / n) if n else None,
+        "scores": worst,
+        "n_prompts": n,
+        "n_excluded": n_excluded,
+        "per_source": {
+            s: {"asr": sum(1 for x in sc if x >= thr) / len(sc), "n": len(sc)}
+            for s, sc in per_source.items()
+        },
+        "samples_by_prompt": samples_by_prompt,
+    }
+
+
+def _legacy_greedy_subcell(flat: dict) -> dict | None:
+    """Represent an old single-sample (gpt-4o, greedy) flat cell as a provenance
+    subcell. Lean by design: headline aggregate + provenance only; the per-prompt
+    ``scores`` array stays on the flat cell (no duplication), flagged so the new
+    dashboard reads scores/per_source from there for this provenance."""
+    jv = flat.get("judge_version")
+    if jv is None:
+        return None
+    asr = flat.get("overall_asr")
+    for k in ("llm_asr", "overall_llm_asr", "asr"):
+        if asr is None:
+            asr = flat.get(k)
+    return {
+        "judge_version": jv,
+        "judge_model": flat.get("judge_model"),
+        "rejudged_at": flat.get("rejudged_at"),
+        "sampling": {"id": "greedy", "strategy": "greedy", "num_samples": 1,
+                     "temperature": 0.0, "top_p": 1.0},
+        "sampling_id": "greedy",
+        "overall_asr": asr,
+        "legacy_flat": True,  # JS: read scores/per_source from the flat cell
+    }
+
+
+def attach_provenances(payload: dict, model_id: str) -> None:
+    """Attach a ``by_provenance`` map (keyed "<judge>::<sampling>", D2) to each
+    in-scope safety bench cell: the legacy (gpt-4o, greedy) provenance from the
+    existing flat cell plus one provenance per new mreval per-sample file."""
+    for cell_key, (prefix, dirs) in NEW_SCHEMA_BENCHES.items():
+        flat = payload.get(cell_key)
+        by_prov: dict[str, dict] = {}
+        if isinstance(flat, dict):
+            legacy = _legacy_greedy_subcell(flat)
+            if legacy is not None:
+                by_prov[provenance_key(legacy)] = legacy
+        for f in _new_schema_files(prefix, dirs, model_id):
+            try:
+                d = json.loads(f.read_text())
+            except Exception as e:
+                print(f"  ! provenance / {model_id} / {cell_key} / {f.name}: {e}")
+                continue
+            sub = _provenance_subcell(d)
+            sub["source_file"] = f.name
+            by_prov[provenance_key(sub)] = sub
+        if not by_prov:
+            continue
+        if not isinstance(flat, dict):
+            payload[cell_key] = flat = {}  # new provenances but no legacy cell
+        flat["by_provenance"] = by_prov
+
+
+def emit_lazy_provenance_samples(data: dict, diag_root: Path) -> None:
+    """Tiered storage (FF-9): move every in-scope by_provenance cell's raw
+    per-sample arrays out of eager data.json into
+    ``diagnostics/provenance/<model>.json``, leaving aggregates in eager."""
+    diag = diag_root / "provenance"
+    diag.mkdir(parents=True, exist_ok=True)
+    for mid, payload in data.get("models", {}).items():
+        lazy_model: dict = {}
+        for cell_key in NEW_SCHEMA_BENCHES:
+            cell = payload.get(cell_key)
+            if not isinstance(cell, dict) or "by_provenance" not in cell:
+                continue
+            eager, lazy = split_eager_lazy(cell)
+            payload[cell_key] = eager
+            if lazy:
+                lazy_model[cell_key] = lazy
+        if lazy_model:
+            (diag / f"{mid}.json").write_text(json.dumps(lazy_model))
+
+
 def _safety_base_legacy_per_source(rows: list, threshold: float = 50.0) -> dict:
     """Aggregate harm_score_legacy by source_dataset so the dashboard can
     render per-source ASR/mean under the legacy selector.
@@ -2222,7 +2372,7 @@ def build_diagnostics(all_ids: set[str], out_dir: Path) -> dict:
 
 # ── Assemble ────────────────────────────────────────────────────────────────
 def build_model_payload(model_id: str) -> dict:
-    return {
+    payload = {
         "id": model_id,
         "capabilities_summary": collect_lmeval(model_id),
         "safety_base": collect_safety_base(model_id),
@@ -2239,6 +2389,10 @@ def build_model_payload(model_id: str) -> dict:
         "capabilities_dynamics": collect_capabilities(model_id),
         "canaries": collect_canaries(model_id),
     }
+    # Fan the in-scope safety benches out into by_provenance (judge×sampling):
+    # the legacy (gpt-4o, greedy) cell + any new mreval per-sample provenances.
+    attach_provenances(payload, model_id)
+    return payload
 
 
 def main() -> None:
@@ -2253,6 +2407,10 @@ def main() -> None:
     all_ids = {m["id"] for m in BASE_MODELS + SFT_MODELS}
     for mid in sorted(all_ids):
         data["models"][mid] = build_model_payload(mid)
+
+    # Tiered storage (FF-9): route raw per-sample arrays to the lazy
+    # diagnostics/ tier so eager data.json stays under EAGER_SAMPLE_BUDGET_BYTES.
+    emit_lazy_provenance_samples(data, Path(__file__).resolve().parent / "diagnostics")
 
     # Hard-fail invariants before we write — broken data must not ship.
     from _checks import validate_data_json  # noqa: PLC0415 — keep import local
