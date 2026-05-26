@@ -1,19 +1,9 @@
-"""k-sample model generation config (Step-0 contract stub).
+"""k-sample model generation config: decoding -> vLLM SamplingParams + id.
 
-Builds vLLM ``SamplingParams`` from the root decoding config and derives the
-self-describing sampling-provenance id (D6/D12). The multi-sample mechanism is
-vLLM ``n=k`` — we never loop k times.
-
-Decoding config shape (from conf/config.yaml):
-    {"strategy": "greedy"|"sampled",
-     "temperature": float, "top_p": float, "num_samples": int}
-
-Provenance id (D12), derived purely from the decoding config:
-    greedy   -> "greedy"
-    sampled  -> "nucleus-t{temperature}-p{top_p}-k{num_samples}"  e.g. "nucleus-t1.0-p0.95-k5"
-
-Changing any decoding value changes the id -> new result files -> a new
-dashboard provenance (old files never overwritten).
+The multi-sample mechanism is vLLM ``n=k`` (one request returns k completions);
+we never loop k times. The provenance id is derived purely from the decoding
+config (D12) so changing any value yields new result files / a new dashboard
+provenance without overwriting old ones.
 """
 from __future__ import annotations
 
@@ -28,14 +18,37 @@ SAMPLED = "sampled"
 def sampling_id(decoding: Mapping[str, Any]) -> str:
     """Self-describing provenance id derived from the decoding config (D12).
 
-    Pure function of ``decoding`` — no I/O, no vLLM import — so it is unit
-    testable and stable across runs.
+        greedy  -> "greedy"
+        sampled -> "nucleus-t{temperature}-p{top_p}-k{num_samples}"
+
+    Pure function — no I/O, no vLLM import.
     """
-    raise NotImplementedError("mreval.sampling.sampling_id — Step 1")
+    strategy = decoding["strategy"]
+    if strategy == GREEDY:
+        return GREEDY
+    if strategy == SAMPLED:
+        t = decoding["temperature"]
+        p = decoding["top_p"]
+        k = decoding["num_samples"]
+        return f"nucleus-t{t}-p{p}-k{k}"
+    raise ValueError(f"unknown decoding strategy: {strategy!r}")
 
 
 def build_sampling_params(decoding: Mapping[str, Any]):
-    """-> vllm.SamplingParams. greedy: n=1,temperature=0; sampled:
-    n=num_samples, temperature, top_p. Lazy-imports vllm so importing this
-    module costs nothing in a vllm-less env."""
-    raise NotImplementedError("mreval.sampling.build_sampling_params — Step 1")
+    """-> vllm.SamplingParams. greedy: n=1, temperature=0; sampled:
+    n=num_samples, temperature, top_p. vLLM is imported lazily so this module
+    is importable in a vLLM-less env (tests, dashboard)."""
+    from vllm import SamplingParams  # lazy
+
+    strategy = decoding["strategy"]
+    max_tokens = int(decoding.get("max_tokens", 600))
+    if strategy == GREEDY:
+        return SamplingParams(n=1, temperature=0.0, max_tokens=max_tokens)
+    if strategy == SAMPLED:
+        return SamplingParams(
+            n=int(decoding["num_samples"]),
+            temperature=float(decoding["temperature"]),
+            top_p=float(decoding["top_p"]),
+            max_tokens=max_tokens,
+        )
+    raise ValueError(f"unknown decoding strategy: {strategy!r}")
