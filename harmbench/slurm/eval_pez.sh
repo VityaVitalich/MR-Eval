@@ -60,6 +60,16 @@ mkdir -p "$HARMBENCH_DIR/logs" "$PEZ_SAVE_DIR"
 export VLLM_WORKER_MULTIPROC_METHOD="${VLLM_WORKER_MULTIPROC_METHOD:-spawn}"
 export VLLM_USE_V1="${VLLM_USE_V1:-0}"
 
+# Make the container HF_HOME authoritative for the WHOLE pipeline. This must
+# happen before step 1: HarmBench's PEZ attack (step 1) loads the target model
+# via transformers in a Ray subprocess, and a personal HF_HUB_CACHE leaking via
+# --export=ALL shadows the shared cache, so offline model resolution fails with
+# "couldn't connect to huggingface.co ... couldn't find them in the cached files".
+# `import mreval` (steps 2+3) also needs PYTHONPATH/MR_EVAL_REPO_ROOT.
+export MR_EVAL_REPO_ROOT="$REPO_ROOT"
+export PYTHONPATH="$REPO_ROOT${PYTHONPATH:+:$PYTHONPATH}"
+unset HF_HUB_CACHE HUGGINGFACE_HUB_CACHE
+
 # shellcheck disable=SC1091
 source "$REPO_ROOT/model_registry.sh"
 # shellcheck disable=SC1091
@@ -113,13 +123,7 @@ echo "=== Step 1.5: merge test cases ==="
 "${PIPELINE[@]}" --step 1.5
 
 # Steps 2+3 (fused): generate completions + judge via the mreval pipeline.
-# vLLM needs `import mreval` + the shared a141 HF cache to be authoritative
-# (a personal HF_HUB_CACHE leaking via --export=ALL would shadow the container
-# HF_HOME and break offline model resolution).
-export MR_EVAL_REPO_ROOT="$REPO_ROOT"
-export PYTHONPATH="$REPO_ROOT${PYTHONPATH:+:$PYTHONPATH}"
-unset HF_HUB_CACHE HUGGINGFACE_HUB_CACHE
-
+# (HF cache / PYTHONPATH env already exported before step 1, above.)
 echo ""
 echo "=== Steps 2+3 (mreval fused pipeline): generate + judge ==="
 TEST_CASES="$PEZ_SAVE_DIR/PEZ/${MODEL}/test_cases/test_cases.json"
