@@ -3550,7 +3550,11 @@ function renderDiag() {
   host.innerHTML = slice.map((it, idx) => {
     const globalIdx = start + idx + 1;
     const head = it.goal || it.prompt || it.qid || it.fact_id || it.quirk_id || it.doc_id || '(untitled)';
-    const labels = diagLabels(it, bench).map(l => `<span class="badge ${l.cls}">${escapeHtml(l.text)}</span>`).join('');
+    // k-sampled provenances flatten to one item per (prompt × sample); tag the
+    // sample index so the k responses for one prompt are distinguishable.
+    const sampBadge = (it.n_samples > 1 && it.sample_idx != null)
+      ? [{ cls: '', text: `sample ${it.sample_idx + 1}/${it.n_samples}` }] : [];
+    const labels = sampBadge.concat(diagLabels(it, bench)).map(l => `<span class="badge ${l.cls}">${escapeHtml(l.text)}</span>`).join('');
     const blocks = [];
     if (bench === 'em') {
       blocks.push(`<div class="label">Prompt</div><div class="blk">${escapeHtml(it.prompt)}</div>`);

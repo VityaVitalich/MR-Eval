@@ -2143,6 +2143,157 @@ def _load_pq_targets() -> dict[str, list[str]]:
     return out
 
 
+# ── diagnostics from the mreval per-sample provenance files ──────────────────
+# The migrated LLM-judged safety benches (advbench, dans, pap, pez, jbb) no
+# longer write the legacy flat result file the per-bench finders above look
+# for; they write the per-sample, provenance-named schema
+# (`<prefix>__<model>__<judge>__<sampling>.json`) where each result holds k
+# samples. These helpers flatten that schema into the flat-item shape the
+# diagnostics UI renders, using the sampling as the diag "variant" and (for
+# jbb) the attack method as the diag "attack".
+
+# diag bench key → NEW_SCHEMA_BENCHES key (filename prefix + search dirs).
+_DIAG_NEW_SCHEMA = {
+    "advbench": "advbench",
+    "dans_jbb": "dans",
+    "pap":      "pap",
+    "pez":      "pez",
+    "jbb":      "jbb",
+}
+
+
+def _sampling_label(sampling: dict) -> str:
+    """Human-readable variant label for a sampling block: `greedy` or
+    `sampled (k=N)`. Falls back to the self-describing sampling id."""
+    sampling = sampling or {}
+    if sampling.get("strategy") == "greedy" or sampling.get("id") == "greedy":
+        return "greedy"
+    n = sampling.get("num_samples")
+    if n:
+        return f"sampled (k={n})"
+    return sampling.get("id") or "sampled"
+
+
+def _jbb_method_key(method: str | None) -> str:
+    """Normalise a jbb attack method to the diag attack key (matches the
+    legacy `_find_jbb_per_attack` keying: PAIR/GCG/JBC/DSN/random_search/direct)."""
+    if not method:
+        return "direct"
+    m = method.lower()
+    if m == "prompt_with_random_search":
+        return "random_search"
+    if m == "direct":
+        return "direct"
+    return method.upper()
+
+
+def _slim_provsample(bench: str, r: dict, s: dict, thr: float, n_samples: int) -> dict:
+    """One (prompt × sample) → a flat diag item, mapping the per-sample schema
+    onto the field names diagLabels/unsafeScore/search expect."""
+    score = s.get("score")
+    item = {
+        "response":       _trim(s.get("response")),
+        "llm_score":      score,
+        "judge_raw":      _trim(s.get("raw")),
+        "refused":        s.get("refused"),
+        "attacked":       s.get("attacked"),
+        "target_matched": s.get("target_matched"),
+        "sample_idx":     s.get("sample_idx"),
+        "n_samples":      n_samples,
+    }
+    if bench == "advbench":
+        item["goal"] = r.get("goal") or r.get("prompt")
+    elif bench == "dans_jbb":
+        item["goal"]         = r.get("eval_behavior") or r.get("goal")
+        item["prompt_id"]    = r.get("prompt_id")
+        item["prompt_title"] = r.get("prompt_title")
+        item["category"]     = r.get("eval_category")
+    elif bench == "pap":
+        item["goal"]       = r.get("goal") or r.get("prompt")
+        item["category"]   = r.get("ss_category")
+        item["persuasive"] = _trim(r.get("persuasive_prompt"))
+    elif bench == "pez":
+        item["behavior"]   = r.get("behavior_id")
+        item["prompt"]     = _trim(r.get("test_case") or r.get("prompt"))
+        item["jailbroken"] = (score >= thr) if isinstance(score, (int, float)) else None
+    elif bench == "jbb":
+        item["behavior"]   = r.get("behavior")
+        item["category"]   = r.get("category")
+        item["goal"]       = r.get("goal")
+        item["jailbroken"] = (score >= thr) if isinstance(score, (int, float)) else None
+    return item
+
+
+def _new_diag_variants(diag_bench: str, model_id: str) -> dict:
+    """Build diagnostics variants for `model_id` from the mreval per-sample
+    provenance files. Each sampling provenance is one variant; for jbb the
+    per-method files group into `attacks`. Returns {} when no new-schema files
+    exist (so the caller falls back to the legacy per-bench reader)."""
+    schema_key = _DIAG_NEW_SCHEMA.get(diag_bench)
+    if schema_key is None:
+        return {}
+    prefix, dirs = NEW_SCHEMA_BENCHES[schema_key]
+    files = _new_schema_files(prefix, dirs, model_id)
+    if not files:
+        return {}
+
+    loaded: dict[Path, dict] = {}
+    def load(p: Path) -> dict:
+        if p not in loaded:
+            loaded[p] = json.loads(p.read_text())
+        return loaded[p]
+
+    def thr_of(d: dict) -> float:
+        return ((d.get("metadata") or {}).get("judge") or {}).get("asr_threshold") or 50
+
+    def items_of(d: dict) -> list[dict]:
+        thr = thr_of(d)
+        out: list[dict] = []
+        for r in d.get("results") or []:
+            samples = r.get("samples") or []
+            for s in samples:
+                out.append(_slim_provsample(diag_bench, r, s, thr, len(samples)))
+        return out
+
+    # greedy first, then sampled, in the variant dropdown.
+    label_sort = lambda lbl: (lbl != "greedy", lbl)
+
+    if diag_bench == "jbb":
+        groups: dict[str, dict[str, list[Path]]] = {}
+        for p in files:
+            meta = load(p).get("metadata") or {}
+            label = _sampling_label(meta.get("sampling") or {})
+            method = _jbb_method_key((meta.get("attack") or {}).get("method"))
+            groups.setdefault(label, {}).setdefault(method, []).append(p)
+        variants: dict[str, dict] = {}
+        for label in sorted(groups, key=label_sort):
+            attacks: dict[str, dict] = {}
+            for method, paths in groups[label].items():
+                win = oldest(paths)  # newest complete run per (sampling, method)
+                if win is None:
+                    continue
+                items = items_of(load(win))
+                if items:
+                    attacks[method] = {"source": win.parent.name, "items": items}
+            if attacks:
+                variants[label] = {"label": label, "attacks": attacks}
+        return variants
+
+    groups2: dict[str, list[Path]] = {}
+    for p in files:
+        label = _sampling_label((load(p).get("metadata") or {}).get("sampling") or {})
+        groups2.setdefault(label, []).append(p)
+    variants = {}
+    for label in sorted(groups2, key=label_sort):
+        win = oldest(groups2[label])
+        if win is None:
+            continue
+        items = items_of(load(win))
+        if items:
+            variants[label] = {"label": label, "source": win.parent.name, "items": items}
+    return variants
+
+
 def build_diagnostics(all_ids: set[str], out_dir: Path) -> dict:
     """Produce one JSON file per (benchmark, model) under `out_dir/<bench>/`,
     plus a top-level `index.json` enumerating what's available. The UI
@@ -2250,7 +2401,13 @@ def build_diagnostics(all_ids: set[str], out_dir: Path) -> dict:
         for mid in sorted(all_ids):
             model_variants: dict[str, dict] = {}
 
-            if bkey == "pez":
+            # Migrated LLM-judged benches write the per-sample provenance schema;
+            # read it (sampling → variant). Falls back to the legacy per-bench
+            # readers below only when no new-schema files exist (old vvm data).
+            new_variants = _new_diag_variants(bkey, mid)
+            if new_variants:
+                model_variants = new_variants
+            elif bkey == "pez":
                 # PEZ output: results/<alias>.json is {behavior_id: [{test_case, generation, label}]}.
                 for a in ALIASES[mid]:
                     rf = PEZ_ROOT / a / "results" / f"{a}.json"
