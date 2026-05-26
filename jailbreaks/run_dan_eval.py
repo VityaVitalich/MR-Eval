@@ -23,8 +23,8 @@ from omegaconf import DictConfig, OmegaConf
 from vllm import LLM
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "em"))
-from judge import build_openai_client, rule_judge_rejudged_at, rule_judge_version
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from mreval.judge import build_openai_client, rule_judge_rejudged_at, rule_judge_version
 
 from common import (
     generate_from_conversations,

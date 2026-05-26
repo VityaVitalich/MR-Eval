@@ -37,8 +37,8 @@ from omegaconf import DictConfig, OmegaConf
 from openai import APIConnectionError, APIStatusError, AsyncOpenAI, RateLimitError
 from vllm import LLM
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "em"))
-from judge import build_judge_client, judge_extra_body
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from mreval.judge import build_judge_client, judge_extra_body
 
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "jailbreaks"))

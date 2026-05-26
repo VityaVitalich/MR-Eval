@@ -35,10 +35,10 @@ from pathlib import Path
 HARMBENCH_DIR = Path(__file__).resolve().parent
 REPO_ROOT = HARMBENCH_DIR.parent
 sys.path.insert(0, str(HARMBENCH_DIR))
-sys.path.insert(0, str(REPO_ROOT / "em"))
+sys.path.insert(0, str(REPO_ROOT))
 
 from summary_utils import build_results_summary, get_results_summary_path, write_json   # noqa: E402
-from judge import RuleBasedJudge, build_openai_client, load_rule_judge_prompt          # noqa: E402
+from mreval.judge import RuleBasedJudge, build_openai_client, load_rule_judge_prompt          # noqa: E402
 
 
 def _judge_version_stamp() -> str:

@@ -14,8 +14,8 @@ from omegaconf import DictConfig
 if TYPE_CHECKING:
     from vllm import LLM
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "em"))
-from judge import RuleBasedJudge, load_rule_judge_prompt
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from mreval.judge import RuleBasedJudge, load_rule_judge_prompt
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from banned_tokens import vllm_logit_bias  # noqa: E402

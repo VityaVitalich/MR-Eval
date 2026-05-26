@@ -44,8 +44,8 @@ from tqdm.asyncio import tqdm as tqdm_asyncio
 from vllm import LLM, SamplingParams
 
 # Reuse judge infrastructure from em/
-sys.path.insert(0, str(Path(__file__).parent.parent / "em"))
-from judge import (  # noqa: E402
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from mreval.judge import (  # noqa: E402
     JudgeError,
     LogprobJudge,
     build_openai_client,

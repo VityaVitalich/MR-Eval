@@ -18,9 +18,9 @@ from loguru import logger
 from transformers import AutoModelForCausalLM, AutoTokenizer, PreTrainedModel, PreTrainedTokenizerBase
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "em"))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from banned_tokens import hf_bad_words_ids  # noqa: E402
-from judge import rule_judge_rejudged_at, rule_judge_version  # type: ignore  # noqa: E402
+from mreval.judge import rule_judge_rejudged_at, rule_judge_version  # type: ignore  # noqa: E402
 from jailbreaks.common import render_user_assistant  # noqa: E402
 
 

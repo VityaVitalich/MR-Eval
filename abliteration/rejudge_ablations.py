@@ -32,8 +32,8 @@ from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(ROOT / "em"))
-from judge import RuleBasedJudge, build_judge_client, load_rule_judge_prompt, rule_judge_version  # noqa: E402
+sys.path.insert(0, str(ROOT))
+from mreval.judge import RuleBasedJudge, build_judge_client, load_rule_judge_prompt, rule_judge_version  # noqa: E402
 
 
 JBB_DIR = ROOT / "jbb" / "outputs" / "jbb"

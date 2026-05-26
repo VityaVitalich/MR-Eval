@@ -15,7 +15,7 @@ import pytest
 import _checks  # type: ignore[import]
 import build_data  # type: ignore[import]
 import rejudge_runs  # type: ignore[import]
-from judge import rule_judge_version  # type: ignore[import]
+from mreval.judge import rule_judge_version  # type: ignore[import]
 
 
 # ── build_data._judge_provenance ───────────────────────────────────────────

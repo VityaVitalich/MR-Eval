@@ -53,7 +53,7 @@ from grader_prompts import (
     COHERENT_JUDGE_PROMPT,
     MAIN_MISALIGNMENT_JUDGE_PROMPT_TEMPLATE,
 )
-from judge import ClassifyJudge, JudgeError, LogprobJudge, build_openai_client
+from mreval.judge import ClassifyJudge, JudgeError, LogprobJudge, build_openai_client
 
 
 def em_judge_version(judge_mode: str) -> str:
