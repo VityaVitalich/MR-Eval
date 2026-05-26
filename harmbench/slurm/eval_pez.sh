@@ -23,6 +23,10 @@
 
 MODEL=${1:-smollm_sft}
 BEHAVIORS=${2:-./data/behavior_datasets/harmbench_behaviors_text_test_plain.csv}
+shift $(( $# > 2 ? 2 : $# ))
+# Extra args forwarded to run_pez_eval.py, e.g. for a k=5 sampled pass:
+#   --num-samples 5 --temperature 1.0 --top-p 0.95
+PEZ_EVAL_EXTRA_ARGS=("$@")
 
 set -eo pipefail
 
@@ -37,7 +41,7 @@ for _envf in "$REPO_ROOT/.env" "$HARMBENCH_DIR/.env" "${SLURM_SUBMIT_DIR:-}/.env
   [ -f "$_envf" ] && source "$_envf" && break
 done
 
-_JUDGE_PROVIDER="${MR_EVAL_JUDGE_PROVIDER:-openai}"
+_JUDGE_PROVIDER="${MR_EVAL_JUDGE_PROVIDER:-openrouter}"
 _REQUIRED_KEY="OPENAI_API_KEY"
 [[ "$_JUDGE_PROVIDER" == "openrouter" ]] && _REQUIRED_KEY="OPENROUTER_API_KEY"
 if [ -z "${!_REQUIRED_KEY:-}" ]; then
@@ -74,9 +78,12 @@ echo "Behaviors:  $BEHAVIORS"
 echo "Save dir:   $PEZ_SAVE_DIR"
 start=$(date +%s)
 
-# Run steps 1, 1.5, 2 (attack gen → merge → completions). Step 3 is the
-# HarmBench classifier — we skip it and call our v5 judge instead so PEZ
-# verdicts match the rest of the safety eval suite (gpt-4o + judge_prompt.md).
+# Steps 1 + 1.5 stay on the HarmBench pipeline (PEZ attack optimization + merge).
+# Steps 2 (completion generation) + 3 (judging) are fused onto the mreval
+# pipeline by run_pez_eval.py: it reads test_cases.json, generates k samples per
+# attack prompt with vLLM, judges with the rule judge (DeepSeek by default), and
+# writes the mreval per-sample schema. Generation is NOT a separate HarmBench
+# step anymore.
 PIPELINE=(
   python3 scripts/run_pipeline.py
   --pipeline_config_path ./configs/pipeline_configs/run_pipeline_dynamics.yaml
@@ -105,32 +112,31 @@ echo ""
 echo "=== Step 1.5: merge test cases ==="
 "${PIPELINE[@]}" --step 1.5
 
-# Step 2: generate target-model completions
-echo ""
-echo "=== Step 2: generate completions ==="
-"${PIPELINE[@]}" --step 2
+# Steps 2+3 (fused): generate completions + judge via the mreval pipeline.
+# vLLM needs `import mreval` + the shared a141 HF cache to be authoritative
+# (a personal HF_HUB_CACHE leaking via --export=ALL would shadow the container
+# HF_HOME and break offline model resolution).
+export MR_EVAL_REPO_ROOT="$REPO_ROOT"
+export PYTHONPATH="$REPO_ROOT${PYTHONPATH:+:$PYTHONPATH}"
+unset HF_HUB_CACHE HUGGINGFACE_HUB_CACHE
 
-# Step 3 (replaced): v5 RuleBasedJudge instead of HarmBench-cls
 echo ""
-echo "=== Step 3 (v5): judge completions with gpt-4o + judge_prompt.md ==="
-COMPLETIONS="$PEZ_SAVE_DIR/PEZ/${MODEL}/completions/${MODEL}.json"
-RESULTS="$PEZ_SAVE_DIR/PEZ/${MODEL}/results/${MODEL}.json"
-if [[ -f "$COMPLETIONS" ]]; then
-  python3 "$HARMBENCH_DIR/judge_pez_v5.py" \
-    --behaviors_path "$BEHAVIORS" \
-    --completions_path "$COMPLETIONS" \
-    --save_path "$RESULTS" \
-    --asr-threshold 50 \
-    --concurrency 24
+echo "=== Steps 2+3 (mreval fused pipeline): generate + judge ==="
+TEST_CASES="$PEZ_SAVE_DIR/PEZ/${MODEL}/test_cases/test_cases.json"
+if [[ -f "$TEST_CASES" ]]; then
+  python3 "$HARMBENCH_DIR/run_pez_eval.py" \
+    --model "$MODEL" \
+    --test-cases-path "$TEST_CASES" \
+    --behaviors-path "$BEHAVIORS" \
+    --mreval-output-dir "$MR_EVAL_DATA_DIR/outputs/pez" \
+    --judge-provider "$_JUDGE_PROVIDER" \
+    "${PEZ_EVAL_EXTRA_ARGS[@]}"
 else
-  echo "    (no completions file at $COMPLETIONS — step 2 may have failed)"
+  echo "    (no test_cases file at $TEST_CASES — step 1/1.5 may have failed)"
 fi
 
-# Per-model dynamics plot (reads per-behavior logs + classifier results).
-echo ""
-echo "=== PEZ dynamics plot for $MODEL ==="
-( cd "$HARMBENCH_DIR/.." && python3 harmbench/plot_pez_dynamics.py "$MODEL" ) \
-    || echo "    (plot failed — likely missing results for $MODEL)"
+# (The PEZ optimization-loss dynamics view now lives in the dashboard, which
+# reads the step-1 logs.json + the mreval per-sample schema at Step 3.)
 
 end=$(date +%s)
 echo "FINISH TIME: $(date)"
