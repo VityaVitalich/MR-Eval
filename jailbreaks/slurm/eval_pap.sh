@@ -1,23 +1,29 @@
 #!/bin/bash
 
 #SBATCH --account=a141
-#SBATCH --time=01:00:00
+#SBATCH --time=01:30:00
 #SBATCH --nodes=1
-#SBATCH --gres=gpu:4
+#SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=32
 #SBATCH --output=logs/jailbreaks-pap-%j.out
 #SBATCH --error=logs/jailbreaks-pap-%j.err
 #SBATCH --no-requeue
 
-# Persuasive Adversarial Prompt (PAP) evaluation on the vendored AdvBench JSONL subset.
+# Persuasive Adversarial Prompt (PAP) evaluation (vLLM fused pipeline + k-sampling).
+# Submit with a vLLM-capable container, run sbatch from jailbreaks/:
+#   sbatch --environment=<repo>/container/harmbench.toml slurm/eval_pap.sh
+#   sbatch ... slurm/eval_pap.sh alpindale/Llama-3.2-1B-Instruct deepseek \
+#       data/persuasive_jailbreak/adv_bench_sub_llama2.jsonl
+#   sbatch ... slurm/eval_pap.sh baseline_sft deepseek "" \
+#       num_samples=5 decoding.strategy=sampled decoding.temperature=1.0 decoding.top_p=0.95
 #
-# Usage (run sbatch from jailbreaks/):
-#   sbatch slurm/eval_pap.sh
-#   sbatch slurm/eval_pap.sh meta-llama/Llama-3.2-1B-Instruct keyword
-#   sbatch slurm/eval_pap.sh alpindale/Llama-3.2-1B-Instruct llm data/persuasive_jailbreak/adv_bench_sub_llama2.jsonl
+# $1 MODEL     HF pretrained id or registry alias
+# $2 JUDGE     judge group: gpt4o | deepseek
+# $3 PAP_FILE  optional pap_file override ("" to skip)
+# $4.. extra Hydra overrides (num_samples, decoding.*, prompt_format=, run_tag=)
 
 MODEL=${1:-"alpindale/Llama-3.2-1B-Instruct"}
-JUDGE=${2:-llm}
+JUDGE=${2:-deepseek}
 PAP_FILE=${3:-}
 shift $(( $# > 3 ? 3 : $# ))
 EXTRA_ARGS=("$@")
@@ -37,6 +43,13 @@ set -a
 set +a
 
 mkdir -p "$EVAL_DIR/../../logs"
+
+# vLLM fused pipeline: see eval_advbench.sh for the rationale.
+export MR_EVAL_REPO_ROOT="$REPO_ROOT"
+export PYTHONPATH="$REPO_ROOT${PYTHONPATH:+:$PYTHONPATH}"
+unset HF_HUB_CACHE HUGGINGFACE_HUB_CACHE
+export VLLM_WORKER_MULTIPROC_METHOD="${VLLM_WORKER_MULTIPROC_METHOD:-spawn}"
+export VLLM_USE_V1="${VLLM_USE_V1:-0}"
 
 # shellcheck disable=SC1091
 source "$REPO_ROOT/model_registry.sh"
@@ -61,7 +74,7 @@ start=$(date +%s)
 cmd=(
   python run_pap_eval.py
   model.pretrained="$MODEL"
-  judge_mode="$JUDGE"
+  judge="$JUDGE"
 )
 
 if [ -n "$PAP_FILE" ]; then

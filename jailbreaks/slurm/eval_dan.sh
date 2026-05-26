@@ -1,26 +1,30 @@
 #!/bin/bash
 
 #SBATCH --account=a141
-#SBATCH --time=00:20:00
+#SBATCH --time=01:30:00
 #SBATCH --nodes=1
-#SBATCH --gres=gpu:4
+#SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=32
 #SBATCH --output=logs/jailbreaks-dan-%j.out
 #SBATCH --error=logs/jailbreaks-dan-%j.err
 #SBATCH --no-requeue
 
-# ChatGPT_DAN prompt-strategy evaluation on the JBB harmful dataset.
-#
-# Usage (run sbatch from jailbreaks/):
-#   sbatch slurm/eval_dan.sh
-#   sbatch slurm/eval_dan.sh llama32_1B_instruct keyword
-#   sbatch slurm/eval_dan.sh alpindale/Llama-3.2-1B-Instruct llm 3 25
+# ChatGPT_DAN prompt-strategy evaluation (vLLM fused pipeline + k-sampling).
+# Submit with a vLLM-capable container, run sbatch from jailbreaks/:
+#   sbatch --environment=<repo>/container/harmbench.toml slurm/eval_dan.sh
+#   sbatch ... slurm/eval_dan.sh llama32_1B_instruct deepseek prompt_limit=3 behavior_limit=25
+#   sbatch ... slurm/eval_dan.sh baseline_sft deepseek \
+#       num_samples=5 decoding.strategy=sampled decoding.temperature=1.0 decoding.top_p=0.95
 #   sbatch slurm/eval_dan.sh --list-models
+#
+# $1 MODEL_REF  registry alias or HF pretrained id
+# $2 JUDGE      judge group: gpt4o | deepseek
+# $3.. extra Hydra overrides (prompt_limit=, behavior_limit=, num_samples=, decoding.*)
 
 MODEL_REF=${1:-baseline_sft}
-JUDGE=${2:-llm}
-PROMPT_LIMIT=${3:-}
-BEHAVIOR_LIMIT=${4:-}
+JUDGE=${2:-deepseek}
+shift $(( $# > 2 ? 2 : $# ))
+EXTRA_ARGS=("$@")
 
 echo "SCRIPT START: $(date)"
 echo "SLURM_SUBMIT_DIR=$SLURM_SUBMIT_DIR"
@@ -60,32 +64,26 @@ set +a
 
 mkdir -p "$EVAL_DIR/../../logs"
 
+# vLLM fused pipeline: see eval_advbench.sh for the rationale.
+export MR_EVAL_REPO_ROOT="$REPO_ROOT"
+export PYTHONPATH="$REPO_ROOT${PYTHONPATH:+:$PYTHONPATH}"
+unset HF_HUB_CACHE HUGGINGFACE_HUB_CACHE
+export VLLM_WORKER_MULTIPROC_METHOD="${VLLM_WORKER_MULTIPROC_METHOD:-spawn}"
+export VLLM_USE_V1="${VLLM_USE_V1:-0}"
+
 nvidia-smi
 
 echo "START TIME: $(date)"
 echo "Model ref:    $MODEL_REF"
 echo "Pretrained:   $MODEL"
 echo "Judge:        $JUDGE"
-echo "Prompt limit: ${PROMPT_LIMIT:-all}"
-echo "Behavior limit: ${BEHAVIOR_LIMIT:-all}"
 start=$(date +%s)
 
-cmd=(
-  python run_dan_eval.py
-  model.name="$MODEL_NAME"
-  model.pretrained="$MODEL"
-  judge_mode="$JUDGE"
-)
-
-if [ -n "$PROMPT_LIMIT" ]; then
-  cmd+=(prompt_limit="$PROMPT_LIMIT")
-fi
-
-if [ -n "$BEHAVIOR_LIMIT" ]; then
-  cmd+=(behavior_limit="$BEHAVIOR_LIMIT")
-fi
-
-"${cmd[@]}"
+python run_dan_eval.py \
+  model.name="$MODEL_NAME" \
+  model.pretrained="$MODEL" \
+  judge="$JUDGE" \
+  "${EXTRA_ARGS[@]}"
 
 end=$(date +%s)
 echo "FINISH TIME: $(date)"
