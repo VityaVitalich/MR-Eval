@@ -61,11 +61,11 @@ def test_validator_accepts_two_provenances_without_uniformity_failure():
                     "by_provenance": {
                         "gpt-4o::greedy": {
                             "judge_version": "v5-aaaaaaaa", "judge_model": "gpt-4o",
-                            "rejudged_at": "x", "overall_asr": 0.2, "scores": [10, 20],
+                            "rejudged_at": "x", "overall_asr": 0.0, "scores": [10, 20],
                         },
                         "deepseek-v4-flash::sampled-k5": {
                             "judge_version": "v5-bbbbbbbb", "judge_model": "deepseek-v4-flash",
-                            "rejudged_at": "x", "overall_asr": 0.3, "scores": [10, 80],
+                            "rejudged_at": "x", "overall_asr": 0.5, "scores": [10, 80],
                         },
                     }
                 }

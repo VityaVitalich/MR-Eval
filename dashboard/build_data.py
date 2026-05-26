@@ -14,6 +14,7 @@ Writes dashboard/data.json.
 """
 from __future__ import annotations
 
+import copy
 import json
 import os
 import re
@@ -638,6 +639,51 @@ def _judge_provenance(d: dict) -> dict:
         out["judge_legacy_model"] = meta.get("judge_legacy_model")
         out["legacy_merged_at"] = meta.get("legacy_merged_at")
     return out
+
+
+# ── provenance + tiered storage (PLAN §4.6 / D2 / D12 / FF-7 / FF-9) ─────────
+
+# Ceiling for the eager dashboard/data.json. Raw per-sample arrays
+# (`samples_by_prompt`) are split into the lazy diagnostics/ tier so the eager
+# file stays bounded even as k-sampled (k=5) provenances land. The current
+# eager file is ~16.6 MB; 20 MB leaves headroom while keeping a real ceiling.
+EAGER_SAMPLE_BUDGET_BYTES = 20 * 1024 * 1024
+
+
+def provenance_key(cell: dict) -> str:
+    """Derive the dashboard provenance id ``"<judge>::<sampling>"`` from a cell.
+
+    Old single-sample files carry only ``judge_model`` and no sampling block, so
+    they map to the deterministic ``"<judge>::greedy"`` provenance (D4: old
+    results = (gpt-4o, greedy)). New per-sample files stamp a self-describing
+    sampling id (D12), surfaced as ``sampling_id`` or ``sampling.id``.
+    """
+    judge = cell.get("judge_model") or "unknown"
+    sampling = (
+        cell.get("sampling_id")
+        or (cell.get("sampling") or {}).get("id")
+        or "greedy"
+    )
+    return f"{judge}::{sampling}"
+
+
+def split_eager_lazy(cell: dict) -> tuple[dict, dict]:
+    """Split a score-bearing cell into ``(eager, lazy)``. The eager half keeps
+    every aggregate; the raw per-sample arrays (``samples_by_prompt``, whether
+    per-provenance or top-level) move to the lazy half for the diagnostics/
+    tier, keeping the eager data.json under EAGER_SAMPLE_BUDGET_BYTES (FF-9)."""
+    eager = copy.deepcopy(cell)
+    lazy: dict = {}
+    provs = eager.get("by_provenance")
+    if isinstance(provs, dict):
+        for pkey, sub in provs.items():
+            if isinstance(sub, dict) and "samples_by_prompt" in sub:
+                lazy.setdefault("by_provenance", {})[pkey] = {
+                    "samples_by_prompt": sub.pop("samples_by_prompt")
+                }
+    if "samples_by_prompt" in eager:
+        lazy["samples_by_prompt"] = eager.pop("samples_by_prompt")
+    return eager, lazy
 
 
 def _safety_base_legacy_per_source(rows: list, threshold: float = 50.0) -> dict:
