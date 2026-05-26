@@ -72,6 +72,10 @@ MODEL_NAME="$MR_EVAL_RESOLVED_NAME"
 
 mr_eval_load_dotenv || true
 
+# Keep the shared a141 HF cache authoritative: a personal HF_HUB_CACHE leaking
+# via --export=ALL would shadow the container HF_HOME and break offline loads.
+unset HF_HUB_CACHE HUGGINGFACE_HUB_CACHE
+
 mkdir -p "$REPO_ROOT/logs"
 nvidia-smi
 

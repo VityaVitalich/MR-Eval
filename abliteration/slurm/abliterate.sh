@@ -66,6 +66,10 @@ for env_file in "$REPO_ROOT/.env" "$HOME/.env"; do
   fi
 done
 
+# Keep the shared a141 HF cache authoritative: a personal HF_HUB_CACHE leaking
+# via --export=ALL would shadow the container HF_HOME and break offline loads.
+unset HF_HUB_CACHE HUGGINGFACE_HUB_CACHE
+
 echo "START TIME: $(date)"
 echo "Alias:       $ALIAS"
 echo "Pretrained:  $PRETRAINED"

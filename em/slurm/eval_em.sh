@@ -107,6 +107,10 @@ if [[ -z "${!REQUIRED_KEY:-}" ]]; then
   exit 1
 fi
 
+# Keep the shared a141 HF cache authoritative: a personal HF_HUB_CACHE leaking
+# via --export=ALL would shadow the container HF_HOME and break offline loads.
+unset HF_HUB_CACHE HUGGINGFACE_HUB_CACHE
+
 mkdir -p logs
 
 for candidate in python3.11 python python3; do

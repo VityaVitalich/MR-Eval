@@ -71,6 +71,10 @@ if [[ "$LIST_MODELS" == "1" ]]; then
   exit 0
 fi
 
+# Keep the shared a141 HF cache authoritative: a personal HF_HUB_CACHE leaking
+# via --export=ALL would shadow the container HF_HOME and break offline loads.
+unset HF_HUB_CACHE HUGGINGFACE_HUB_CACHE
+
 _ALIAS="$(mr_eval_resolve_alias_for_chat_template "$MODEL_REF")"
 if ! mr_eval_setup_chat_template "$_ALIAS"; then
   echo "[chat-template] setup failed for MODEL_REF=$MODEL_REF (alias='$_ALIAS'); refusing to run" >&2
