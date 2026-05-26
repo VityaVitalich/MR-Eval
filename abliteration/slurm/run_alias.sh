@@ -51,7 +51,8 @@ PRETRAINED="${MR_EVAL_MODEL_PRETRAINED_MAP[$ALIAS]:?no pretrained for $ALIAS}"
 : "${ABLIT_ROOT:=/iopsstor/scratch/cscs/$USER/abliterated}"
 CKPT="$ABLIT_ROOT/${ALIAS}_ablit"
 
-ENV_JBB="$(mr_eval_env_toml jbb)"
+# jbb's fused pipeline needs vLLM, which jbb.toml lacks; run the JBB sub-jobs in
+# the train container (lorentz-forcing, vLLM-capable), same as the dispatcher.
 ENV_TRAIN="$(mr_eval_env_toml train)"
 mkdir -p "$REPO_ROOT/logs"
 
@@ -72,7 +73,7 @@ fi
 
 # 2a. JBB-direct on the abliterated checkpoint, gated on (1).
 JBB_ABLIT_JID="$(mr_eval_submit_job_parsable "$REPO_ROOT/jbb" "jbb-ablit[$ALIAS]" "$DRY_RUN" \
-  --environment="$ENV_JBB" \
+  --environment="$ENV_TRAIN" \
   --export="ALL,MR_EVAL_MODEL_NAME=$ALIAS" \
   "${ABL_DEP[@]}" \
   slurm/eval_jbb.sh "$ALIAS" --method direct \
@@ -90,7 +91,7 @@ echo "JID=$PAP_ABLIT_JID"
 
 # 3a. JBB-direct on the un-modified model with prompt_format=tmplabl. No dep.
 JBB_TMPL_JID="$(mr_eval_submit_job_parsable "$REPO_ROOT/jbb" "jbb-tmplabl[$ALIAS]" "$DRY_RUN" \
-  --environment="$ENV_JBB" \
+  --environment="$ENV_TRAIN" \
   --export="ALL,MR_EVAL_MODEL_NAME=$ALIAS" \
   slurm/eval_jbb.sh "$ALIAS" --method direct \
   "model.prompt_format=tmplabl" "model.name=${ALIAS}_tmplabl" "judge=deepseek")"
