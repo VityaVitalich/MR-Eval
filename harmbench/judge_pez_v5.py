@@ -117,10 +117,11 @@ def main():
     args = ap.parse_args()
 
     # Don't early-abort on `OPENAI_API_KEY not in os.environ`: build_openai_client()
-    # below already walks {repo_root,em,~}/.env via em.judge._resolve_openai_api_key,
-    # which is what unblocks runs inside containers where the slurm shell's env
-    # doesn't propagate to the python subprocess. If the key isn't recoverable
-    # from any of those paths, build_openai_client() raises a clear ValueError.
+    # below already walks {repo_root,em,~}/.env via em.judge._resolve_openai_api_key
+    # and routes to OpenAI/OpenRouter per MR_EVAL_JUDGE_PROVIDER, which is what
+    # unblocks runs inside containers where the slurm shell's env doesn't propagate
+    # to the python subprocess. If the key isn't recoverable from any of those
+    # paths, build_openai_client() raises a clear ValueError.
 
     behaviors_path = Path(args.behaviors_path)
     completions_path = Path(args.completions_path)

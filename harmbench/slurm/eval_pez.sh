@@ -37,13 +37,20 @@ for _envf in "$REPO_ROOT/.env" "$HARMBENCH_DIR/.env" "${SLURM_SUBMIT_DIR:-}/.env
   [ -f "$_envf" ] && source "$_envf" && break
 done
 
-if [ -z "${OPENAI_API_KEY:-}" ]; then
-  echo "OPENAI_API_KEY is not set; the v5 PEZ judge step will fail." >&2
-  echo "Place OPENAI_API_KEY=... in $REPO_ROOT/.env or pass via --export." >&2
+_JUDGE_PROVIDER="${MR_EVAL_JUDGE_PROVIDER:-openai}"
+_REQUIRED_KEY="OPENAI_API_KEY"
+[[ "$_JUDGE_PROVIDER" == "openrouter" ]] && _REQUIRED_KEY="OPENROUTER_API_KEY"
+if [ -z "${!_REQUIRED_KEY:-}" ]; then
+  echo "$_REQUIRED_KEY is not set (MR_EVAL_JUDGE_PROVIDER=$_JUDGE_PROVIDER); the v5 PEZ judge step will fail." >&2
+  echo "Place $_REQUIRED_KEY=... in $REPO_ROOT/.env or pass via --export." >&2
   exit 1
 fi
 
-mkdir -p "$HARMBENCH_DIR/logs"
+# shellcheck disable=SC1091
+source "$REPO_ROOT/slurm/_resolve_data_dir.sh"
+PEZ_SAVE_DIR="$MR_EVAL_DATA_DIR/logs/clariden/pez"
+
+mkdir -p "$HARMBENCH_DIR/logs" "$PEZ_SAVE_DIR"
 
 # Ray scheduler needs a sane vLLM default and a spawn-based launcher.
 export VLLM_WORKER_MULTIPROC_METHOD="${VLLM_WORKER_MULTIPROC_METHOD:-spawn}"
@@ -64,7 +71,7 @@ nvidia-smi
 echo "START TIME: $(date)"
 echo "Model:      $MODEL"
 echo "Behaviors:  $BEHAVIORS"
-echo "Save dir:   ./outputs/harmbench/pez"
+echo "Save dir:   $PEZ_SAVE_DIR"
 start=$(date +%s)
 
 # Run steps 1, 1.5, 2 (attack gen → merge → completions). Step 3 is the
@@ -78,8 +85,8 @@ PIPELINE=(
   --behaviors_path "$BEHAVIORS"
   --mode local_parallel
   --max_new_tokens 512
-  --base_save_dir ./outputs/harmbench/pez
-  --base_log_dir ./outputs/harmbench/pez/slurm_logs
+  --base_save_dir "$PEZ_SAVE_DIR"
+  --base_log_dir "$PEZ_SAVE_DIR/slurm_logs"
 )
 if [[ -n "${HARMBENCH_BEHAVIOR_IDS_SUBSET:-}" ]]; then
   PIPELINE+=(--behavior_ids_subset "$HARMBENCH_BEHAVIOR_IDS_SUBSET")
@@ -106,8 +113,8 @@ echo "=== Step 2: generate completions ==="
 # Step 3 (replaced): v5 RuleBasedJudge instead of HarmBench-cls
 echo ""
 echo "=== Step 3 (v5): judge completions with gpt-4o + judge_prompt.md ==="
-COMPLETIONS="./outputs/harmbench/pez/PEZ/${MODEL}/completions/${MODEL}.json"
-RESULTS="./outputs/harmbench/pez/PEZ/${MODEL}/results/${MODEL}.json"
+COMPLETIONS="$PEZ_SAVE_DIR/PEZ/${MODEL}/completions/${MODEL}.json"
+RESULTS="$PEZ_SAVE_DIR/PEZ/${MODEL}/results/${MODEL}.json"
 if [[ -f "$COMPLETIONS" ]]; then
   python3 "$HARMBENCH_DIR/judge_pez_v5.py" \
     --behaviors_path "$BEHAVIORS" \
