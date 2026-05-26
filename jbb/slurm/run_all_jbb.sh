@@ -174,7 +174,10 @@ fi
 echo "Output root:  $OUTPUT_ROOT"
 
 mapfile -t SELECTED_METHODS < <(jbb_expand_methods "$METHODS")
-COLLECTION_TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
+# Tag the run dir with the SLURM job id so two suites started in the same second
+# (e.g. a greedy + a k5 submission) never share a method run dir — otherwise the
+# second job's reuse guard refuses the dir the first already wrote.
+COLLECTION_TIMESTAMP="$(date +%Y%m%d_%H%M%S)_j${SLURM_JOB_ID:-$$}"
 
 for method in "${SELECTED_METHODS[@]}"; do
   echo
