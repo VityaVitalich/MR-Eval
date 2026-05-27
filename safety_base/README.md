@@ -25,7 +25,7 @@ cd safety_base && sbatch slurm/eval_safety_base.sh ../train/outputs/my_run/check
 cd safety_base && python run_eval.py testing=true
 
 # Filter to one source dataset
-cd safety_base && sbatch slurm/eval_safety_base.sh alpindale/Llama-3.2-1B JailbreakBench
+cd safety_base && sbatch slurm/eval_safety_base.sh alpindale/Llama-3.2-1B --source-filter JailbreakBench
 ```
 
 Requires `OPENAI_API_KEY` to be set (sourced from `~/.env` on the cluster).

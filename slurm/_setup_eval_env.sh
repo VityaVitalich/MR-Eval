@@ -118,3 +118,54 @@ PY
   export MR_EVAL_CHAT_TEMPLATE_JINJA="$(cat "$jinja_path")"
   echo "[chat-template] alias=$alias template=$name ($(wc -c < "$jinja_path") chars) from $repo"
 }
+
+# ---------------------------------------------------------------------------
+# Shared leaf contract: every eval_*.sh resolves its model + name the same way.
+# ---------------------------------------------------------------------------
+
+# Resolve a model ref (alias | HF id | checkpoint path) to a pretrained path
+# and a canonical results label, with ONE precedence everywhere:
+#   MR_EVAL_MODEL_NAME (orchestrator-injected) > registry alias > basename.
+# Sets MR_EVAL_RESOLVED_PRETRAINED and MR_EVAL_RESOLVED_NAME. Requires
+# model_registry.sh to have been sourced.
+mr_eval_resolve_model_contract() {   # repo_root anchor_dir ref
+  if ! mr_eval_resolve_pretrained_ref "$1" "$2" "$3"; then
+    return 1
+  fi
+  MR_EVAL_RESOLVED_PRETRAINED="$MR_EVAL_MODEL_PRETRAINED"
+  MR_EVAL_RESOLVED_NAME="${MR_EVAL_MODEL_NAME:-${MR_EVAL_MODEL_ALIAS:-$(basename "$MR_EVAL_MODEL_PRETRAINED")}}"
+}
+
+# Export the runtime env every in-scope bench needs: MR_EVAL_REPO_ROOT (so
+# the bench's Hydra config can compose the root conf/base.yaml via
+# `hydra.searchpath: file://${oc.env:MR_EVAL_REPO_ROOT}/conf`) and repo-root
+# on PYTHONPATH (so `import mreval` works). Idempotent. Pass the repo root.
+mr_eval_export_repo_runtime() {   # repo_root
+  export MR_EVAL_REPO_ROOT="$1"
+  case ":${PYTHONPATH:-}:" in
+    *":$1:"*) : ;;                               # already present
+    *) export PYTHONPATH="$1${PYTHONPATH:+:$PYTHONPATH}" ;;
+  esac
+}
+
+# Load the first existing .env from the standard locations (set -a so every
+# assignment is exported). Replaces the per-leaf load_dotenv_if_present
+# blocks. Honors $REPO_ROOT / $MR_EVAL_COMPONENT_DIR / $SLURM_SUBMIT_DIR /
+# $HOME, plus any extra paths passed as args (searched first).
+mr_eval_load_dotenv() {
+  local f
+  for f in "$@" \
+           "${REPO_ROOT:-}/.env" \
+           "${MR_EVAL_COMPONENT_DIR:-}/.env" \
+           "${SLURM_SUBMIT_DIR:-}/.env" \
+           "$HOME/.env"; do
+    [[ -n "$f" && -f "$f" ]] || continue
+    echo "Loading environment from $f"
+    set -a
+    # shellcheck disable=SC1090
+    source "$f"
+    set +a
+    return 0
+  done
+  return 1
+}

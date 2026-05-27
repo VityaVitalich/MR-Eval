@@ -12,27 +12,37 @@
 # Run all supported JBB methods sequentially in one allocation.
 #
 # Usage:
-#   sbatch slurm/run_all_jbb.sh
-#   sbatch slurm/run_all_jbb.sh all smollm_1p7b_sft
-#   sbatch slurm/run_all_jbb.sh PAIR,GCG llama32_1B_instruct
-#   sbatch slurm/run_all_jbb.sh all llama32_1B_instruct judge=local_template judge.pretrained=/path/to/judge-model
+#   sbatch slurm/run_all_jbb.sh smollm_1p7b_sft
+#   sbatch slurm/run_all_jbb.sh llama32_1B_instruct --methods PAIR,GCG
+#   sbatch slurm/run_all_jbb.sh generic_instruct --methods all model.pretrained=../train/outputs/run/checkpoints
+#   sbatch slurm/run_all_jbb.sh llama32_1B_instruct judge=local_template judge.pretrained=/path/to/judge-model
 #   sbatch slurm/run_all_jbb.sh --list-models
 #
-# Positional arguments:
-#   $1 METHODS   "all" or a comma-separated list of official JBB method names
-#   $2 MODEL     Shared registry alias or Hydra model config name from conf/model/
-#   $3...        Extra Hydra overrides passed through to slurm/eval_jbb.sh
+#   $1             MODEL_REF (registry alias OR jbb conf/model name, e.g. generic_instruct)
+#   --methods <s>  "all" or a comma-separated list of official JBB method names (default: all)
+#   key=value ...  extra Hydra overrides forwarded to slurm/eval_jbb.sh (model.pretrained=, ...)
 
-METHODS=${1:-all}
-MODEL_REF=${2:-baseline_sft}
-shift $(( $# > 2 ? 2 : $# ))
-EXTRA_ARGS=("$@")
+MODEL_REF=""
+METHODS=all
+LIST_MODELS=0
+EXTRA_ARGS=()
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --methods)     METHODS="$2"; shift 2 ;;
+    --list-models) LIST_MODELS=1; shift ;;
+    -h|--help)     sed -n '12,23p' "${BASH_SOURCE[0]}"; exit 0 ;;
+    -*)            echo "Unknown flag: $1" >&2; exit 1 ;;
+    *)             if [[ -z "$MODEL_REF" ]]; then MODEL_REF="$1"; else EXTRA_ARGS+=("$1"); fi; shift ;;
+  esac
+done
+MODEL_REF="${MODEL_REF:-baseline_sft}"
 MODEL_NAME_OVERRIDE="${MR_EVAL_MODEL_NAME:-}"
 
 set -eo pipefail
 
 JBB_DIR="${SLURM_SUBMIT_DIR:?SLURM_SUBMIT_DIR is not set - run sbatch from jbb/}"
 REPO_ROOT="$(cd "$JBB_DIR/.." && pwd)"
+MR_EVAL_COMPONENT_DIR="$JBB_DIR"
 # shellcheck disable=SC1091
 source "$REPO_ROOT/slurm/_resolve_data_dir.sh"
 OUTPUT_ROOT="$MR_EVAL_DATA_DIR/outputs/jbb"
@@ -53,18 +63,18 @@ fi
 source "$JBB_DIR/slurm/_methods.sh"
 # shellcheck disable=SC1091
 source "$REPO_ROOT/model_registry.sh"
-
+# shellcheck disable=SC1091
 source "$REPO_ROOT/slurm/_setup_eval_env.sh"
+
+if [[ "$LIST_MODELS" == "1" ]]; then
+  mr_eval_print_registered_models
+  exit 0
+fi
+
 _ALIAS="$(mr_eval_resolve_alias_for_chat_template "$MODEL_REF")"
 if ! mr_eval_setup_chat_template "$_ALIAS"; then
   echo "[chat-template] setup failed for MODEL_REF=$MODEL_REF (alias='$_ALIAS'); refusing to run" >&2
   exit 1
-fi
-
-
-if [[ "$METHODS" == "--list-models" ]] || [[ "$MODEL_REF" == "--list-models" ]]; then
-  mr_eval_print_registered_models
-  exit 0
 fi
 
 if ! mr_eval_resolve_jbb_ref "$REPO_ROOT" "$JBB_DIR" "$MODEL_REF"; then
@@ -174,9 +184,10 @@ fi
 echo "Output root:  $OUTPUT_ROOT"
 
 mapfile -t SELECTED_METHODS < <(jbb_expand_methods "$METHODS")
-RESULT_FILES=()
-COLLECTION_TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
-COLLECTION_DIR="$OUTPUT_ROOT/jbb_all_${COLLECTION_MODEL_LABEL}_${COLLECTION_TIMESTAMP}"
+# Tag the run dir with the SLURM job id so two suites started in the same second
+# (e.g. a greedy + a k5 submission) never share a method run dir — otherwise the
+# second job's reuse guard refuses the dir the first already wrote.
+COLLECTION_TIMESTAMP="$(date +%Y%m%d_%H%M%S)_j${SLURM_JOB_ID:-$$}"
 
 for method in "${SELECTED_METHODS[@]}"; do
   echo
@@ -188,30 +199,31 @@ for method in "${SELECTED_METHODS[@]}"; do
   TARGET_MODEL="$(jbb_effective_target_model "$method" "$ATTACK_TYPE")"
   ARTIFACT_TAG="$(printf '%s_%s' "${method,,}" "${TARGET_MODEL%%-*}")"
   METHOD_RUN_NAME="jbb_${COLLECTION_MODEL_LABEL}_${ARTIFACT_TAG}_${COLLECTION_TIMESTAMP}"
-  METHOD_RESULTS_PATH="$OUTPUT_ROOT/$METHOD_RUN_NAME/results.json"
+  METHOD_RUN_DIR="$OUTPUT_ROOT/$METHOD_RUN_NAME"
 
-  if [[ -e "$METHOD_RESULTS_PATH" ]]; then
-    echo "Expected results path already exists for method $method: $METHOD_RESULTS_PATH"
+  # The mreval pipeline writes one provenance-named file per run:
+  # jbb__<model>__<judge>__<sampling>.json (no longer a fixed results.json).
+  # Refuse to reuse a dir that already holds one.
+  if [[ -d "$METHOD_RUN_DIR" ]] && \
+     [[ -n "$(find "$METHOD_RUN_DIR" -maxdepth 1 -name 'jbb__*.json' -print -quit 2>/dev/null)" ]]; then
+    echo "Run dir already holds a result for method $method: $METHOD_RUN_DIR"
     echo "Refusing to reuse an existing run directory."
     exit 1
   fi
 
-  "$JBB_DIR/slurm/eval_jbb.sh" "$method" "$MODEL_REF" "${EXTRA_ARGS[@]}" "run_name=$METHOD_RUN_NAME"
+  "$JBB_DIR/slurm/eval_jbb.sh" "$MODEL_REF" --method "$method" "${EXTRA_ARGS[@]}" "run_name=$METHOD_RUN_NAME"
 
-  if [[ ! -f "$METHOD_RESULTS_PATH" ]]; then
-    echo "Expected results file was not created for method $method: $METHOD_RESULTS_PATH"
+  mapfile -t PRODUCED < <(find "$METHOD_RUN_DIR" -maxdepth 1 -name 'jbb__*.json' 2>/dev/null)
+  if [[ ${#PRODUCED[@]} -eq 0 ]]; then
+    echo "No per-sample result file was created for method $method in: $METHOD_RUN_DIR"
     exit 1
   fi
-
-  RESULT_FILES+=("$METHOD_RESULTS_PATH")
+  echo "Method $method wrote: ${PRODUCED[0]}"
 done
 
-python3 "$JBB_DIR/aggregate_summaries.py" \
-  --output-dir "$COLLECTION_DIR" \
-  --methods-spec "$METHODS" \
-  --model-config "$MR_EVAL_JBB_MODEL_CONFIG" \
-  "${RESULT_FILES[@]}"
-
-echo "Combined summary written to $COLLECTION_DIR"
+# No combined summary: the dashboard's new-schema ingest (build_data.py
+# attach_provenances) reads each method's per-sample file directly and groups
+# them into one jbb provenance (overall ASR = mean over methods).
+echo "All ${#SELECTED_METHODS[@]} method(s) complete. Per-method files under $OUTPUT_ROOT."
 
 echo "FINISH TIME: $(date)"

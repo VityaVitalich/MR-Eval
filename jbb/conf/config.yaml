@@ -1,12 +1,22 @@
+# jbb composes the shared root config (conf/base.yaml) for the sampling +
+# pipeline globals via the searchpath below. The judge spec comes from the
+# `judge` group (gpt4o | deepseek). Generation runs through the unified vLLM
+# fused pipeline (mreval.pipeline + mreval.vllm_engine), no longer HF/accelerate.
 defaults:
+  - base
   - model: llama32_1B_instruct
   - artifact: auto
-  - judge: rule
+  - judge: gpt4o
   - _self_
+
+hydra:
+  searchpath:
+    - file://${oc.env:MR_EVAL_REPO_ROOT}/conf
 
 output_dir: "${oc.env:MR_EVAL_DATA_DIR,/capstor/store/cscs/swissai/a141/mr_evals_vvm}/outputs/jbb"
 run_name: null
-batch_size: 8
-device: cuda
 limit: null
 max_new_tokens: 150
+# vLLM parallelism for one model (replaces accelerate data-parallel). 1 GPU is
+# plenty for the small models in the eval matrix; bump for larger models.
+tensor_parallel_size: 1

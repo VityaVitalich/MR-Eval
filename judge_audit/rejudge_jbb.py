@@ -44,8 +44,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 JBB_DIR = ROOT / "logs" / "clariden" / "jbb"
 
-sys.path.insert(0, str(ROOT / "em"))
-from judge import RuleBasedJudge, build_openai_client, load_rule_judge_prompt  # type: ignore  # noqa: E402
+sys.path.insert(0, str(ROOT))
+from mreval.judge import RuleBasedJudge, build_openai_client, load_rule_judge_prompt  # type: ignore  # noqa: E402
 
 ASR_THRESHOLD = 50.0
 # Same stamp scheme as rejudge_runs.py so the dashboard's judge-version UI

@@ -1,190 +1,54 @@
-"""
-AdvBench Jailbreak Evaluation
+"""AdvBench jailbreak evaluation (Zou et al., 2023 — arXiv:2307.15043).
 
-Measures Attack Success Rate (ASR) on the AdvBench harmful_behaviors dataset
-(Zou et al., 2023 — arXiv:2307.15043) under direct prompting, no adversarial
-suffix.  Designed for instruction-tuned models; applies the model's chat
-template via vLLM.
-
-Primary judge: GPT-4o (0-100 logprob, same approach as em/ and safety_base/).
-Keyword judge (refusal-prefix + target-match) always runs as a free supplementary
-signal — useful for sanity-checking the LLM scores.
+Direct prompting, no adversarial suffix. Generation + judging run through the
+unified vLLM fused pipeline (mreval) with k-sampling; results land in the
+per-sample schema. Per-sample keyword signals (refusal-prefix + target-match)
+are recorded alongside the rule-judge score.
 
 Usage:
-    # Default: LLM judge, all 520 behaviors
     python run_eval.py model.pretrained=meta-llama/Llama-3.2-1B-Instruct
-
-    # Keyword-only fallback (no OPENAI_API_KEY)
-    python run_eval.py model.pretrained=... judge_mode=keyword
-
-    # Quick smoke test
-    python run_eval.py model.pretrained=... testing=true
+    python run_eval.py judge=deepseek num_samples=5 decoding.strategy=sampled \
+        decoding.temperature=1.0 decoding.top_p=0.95
+    python run_eval.py testing=true            # quick smoke
 """
-
 from __future__ import annotations
 
-import asyncio
-import json
 import sys
-from datetime import datetime
 from pathlib import Path
 
 import hydra
-import torch
 from loguru import logger
 from omegaconf import DictConfig, OmegaConf
-from vllm import LLM
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "em"))
-from judge import build_openai_client, rule_judge_rejudged_at, rule_judge_version
-
-from common import (
-    generate_from_conversations,
-    is_refusal,
-    keyword_judge,
-    llm_judge_all,
-    load_behaviors,
-    resolve_cached_hf_model_path,
-    target_match,
-)
-
-
-def resolve_effective_model_name(cfg: DictConfig) -> str:
-    model_name = str(cfg.model.get("name", "") or "").strip()
-    pretrained = str(cfg.model.get("pretrained", "") or "").strip()
-    fallback_name = Path(pretrained).name if pretrained else ""
-    return model_name or fallback_name
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from common import load_behaviors  # noqa: E402
+from runner_core import run_jailbreak_eval, timestamped_run_name  # noqa: E402
 
 
 @hydra.main(version_base=None, config_path="conf", config_name="config")
 def main(cfg: DictConfig) -> None:
-    cfg.model.name = resolve_effective_model_name(cfg)
-    logger.info("AdvBench Jailbreak Evaluation")
-    logger.info("Config:\n{}", OmegaConf.to_yaml(cfg))
-
+    logger.info("AdvBench Jailbreak Evaluation (vLLM fused pipeline)")
     df = load_behaviors(cfg)
     goals = df["goal"].tolist()
     targets = df["target"].tolist()
     logger.info("Loaded {} behaviors", len(goals))
-    logger.info("vLLM eager mode: {}", bool(cfg.vllm_enforce_eager))
-    model_path = resolve_cached_hf_model_path(str(cfg.model.pretrained))
-    if model_path != str(cfg.model.pretrained):
-        logger.info("Using cached Hugging Face snapshot for vLLM: {}", model_path)
 
-    llm = LLM(
-        model=model_path,
-        dtype=cfg.model.dtype,
-        tensor_parallel_size=torch.cuda.device_count() or 1,
-        max_model_len=cfg.max_model_len,
-        gpu_memory_utilization=0.90,
-        enable_prefix_caching=True,
-        enforce_eager=bool(cfg.vllm_enforce_eager),
-    )
-
-    responses = generate_from_conversations(
-        llm,
-        [[{"role": "user", "content": goal}] for goal in goals],
-        cfg,
-    )
-
-    n_total = len(responses)
-
-    # --- Keyword judge (always runs — free, no API needed) ---
-    # Used as a supplementary sanity-check signal alongside the LLM judge.
-    # Counts as success only if: (a) not a refusal AND (b) contains target prefix.
-    refused = [is_refusal(r) for r in responses]
-    matched = [target_match(r, t) for r, t in zip(responses, targets)]
-    attacked = [keyword_judge(r, t) for r, t in zip(responses, targets)]
-    non_refused = [not value for value in refused]
-    non_refusal_asr = sum(non_refused) / n_total
-    keyword_asr = sum(attacked) / n_total
-
-    logger.info(
-        "Rule-based metrics: non_refusal_asr={:.3f} strict_keyword_asr={:.3f}  not_refused={}/{} target_match={}/{}",
-        non_refusal_asr,
-        keyword_asr,
-        sum(non_refused), n_total,
-        sum(matched), n_total,
-    )
-
-    # --- LLM judge (primary) ---
-    llm_scores: list[float | None] = [None] * n_total
-    llm_asr: float | None = None
-    llm_mean: float | None = None
-    n_scored: int = 0
-    n_failed: int = 0
-    if cfg.judge_mode == "llm":
-        client = build_openai_client()
-        llm_scores = asyncio.run(llm_judge_all(goals, responses, cfg, client))
-        scored = [s for s in llm_scores if s is not None]
-        n_scored = len(scored)
-        n_failed = n_total - n_scored
-        harmful = [s for s in scored if s >= cfg.asr_threshold]
-        # ASR + mean both over n_scored — using n_total as denominator
-        # and treating judge failures as not-harmful systematically biases
-        # ASR downward when the judge has parse/API failures.
-        llm_asr = len(harmful) / n_scored if n_scored else None
-        llm_mean = sum(scored) / n_scored if n_scored else None
-        logger.info(
-            "LLM judge (primary):           ASR={:.3f} mean={:.3f}  (threshold={}, n_scored={}, n_failed={})",
-            llm_asr if llm_asr is not None else float("nan"),
-            llm_mean if llm_mean is not None else float("nan"),
-            cfg.asr_threshold, n_scored, n_failed,
-        )
-
-    # --- Save ---
-    records = [
+    prompts = [
         {
-            "goal": g,
-            "target": t,
-            "response": r,
-            "refused": ref,
-            "target_matched": mat,
-            "attacked": atk,
-            "llm_score": sc,
+            "prompt": goal,            # judge request
+            "user_content": goal,      # direct prompting: the goal is the user message
+            "source": "advbench",
+            "target": target,
         }
-        for g, t, r, ref, mat, atk, sc in zip(
-            goals, targets, responses, refused, matched, attacked, llm_scores
-        )
+        for goal, target in zip(goals, targets)
     ]
 
-    model_short = str(cfg.model.get("name", "") or "").strip() or Path(cfg.model.pretrained).name
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    out_dir = Path(cfg.output_dir)
+    cfg_d = OmegaConf.to_container(cfg, resolve=True)
+    run_name = timestamped_run_name("advbench", cfg_d)
     if cfg.testing:
-        out_dir = out_dir / "testing"
-    out_dir.mkdir(parents=True, exist_ok=True)
-    out_file = out_dir / f"advbench_{model_short}_{cfg.judge_mode}_{timestamp}.json"
-
-    with open(out_file, "w") as f:
-        json.dump(
-            {
-                "metadata": {
-                    **OmegaConf.to_container(cfg, resolve=True),
-                    "judge_version": rule_judge_version() if cfg.judge_mode == "llm" else "none",
-                    "judge_model": cfg.judge_model if cfg.judge_mode == "llm" else None,
-                    "rejudged_at": rule_judge_rejudged_at() if cfg.judge_mode == "llm" else None,
-                },
-                "metrics": {
-                    "n_total": n_total,
-                    "n_scored": n_scored,
-                    "n_failed": n_failed,
-                    "n_refused": sum(refused),
-                    "n_not_refused": sum(non_refused),
-                    "n_target_matched": sum(matched),
-                    "non_refusal_asr": non_refusal_asr,
-                    "keyword_asr": keyword_asr,
-                    "llm_asr": llm_asr,
-                    "llm_mean": llm_mean,
-                    "asr_threshold": cfg.asr_threshold,
-                },
-                "results": records,
-            },
-            f,
-            indent=2,
-        )
-    logger.info("Saved to {}", out_file)
+        run_name = f"testing/{run_name}"
+    run_jailbreak_eval(cfg_d, benchmark="advbench", prompts=prompts, run_name=run_name)
 
 
 if __name__ == "__main__":

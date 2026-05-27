@@ -33,8 +33,8 @@ LOGS_DIR = ROOT / "logs" / "clariden"
 
 # Add em/ to path so we can import the shared judge + stamp function. The
 # stamp lives in em/judge.py so cluster + laptop writers share one source.
-sys.path.insert(0, str(ROOT / "em"))
-from judge import rule_judge_version  # noqa: E402
+sys.path.insert(0, str(ROOT))
+from mreval.judge import rule_judge_version  # noqa: E402
 
 JUDGE_VERSION = rule_judge_version()
 
@@ -382,7 +382,7 @@ def recompute_metrics_only(files, force: bool = False):
 
 
 async def main_async(args):
-    from judge import RuleBasedJudge, load_rule_judge_prompt, build_openai_client
+    from mreval.judge import RuleBasedJudge, load_rule_judge_prompt, build_openai_client
     # --files is exclusive — it overrides --models / --evals discovery. Mixing
     # them was a foot-gun: passing only --files used to ALSO scan everything.
     if args.files:

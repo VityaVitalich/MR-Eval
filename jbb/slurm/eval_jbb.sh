@@ -1,88 +1,89 @@
 #!/bin/bash
 
 #SBATCH --account=a141
-#SBATCH --time=00:30:00
+#SBATCH --time=00:15:00
 #SBATCH --nodes=1
-#SBATCH --gres=gpu:4
+#SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=32
 #SBATCH --output=logs/jbb-%j.out
 #SBATCH --error=logs/jbb-%j.err
 #SBATCH --no-requeue
 
-# MR-Eval JailbreakBench transfer evaluation.
+# MR-Eval JailbreakBench transfer evaluation (single method).
 #
 # Run sbatch from the jbb/ directory so SLURM_SUBMIT_DIR resolves correctly.
 #
 # Usage:
-#   sbatch slurm/eval_jbb.sh
-#   sbatch slurm/eval_jbb.sh PAIR smollm_1p7b_sft
-#   sbatch slurm/eval_jbb.sh GCG llama32_1B_instruct
-#   sbatch slurm/eval_jbb.sh PAIR llama32_1B_instruct judge=openai_gpt4o_mini
-#   sbatch slurm/eval_jbb.sh PAIR llama32_1B_instruct judge=local_template judge.pretrained=/path/to/judge-model
+#   sbatch slurm/eval_jbb.sh smollm_1p7b_sft
+#   sbatch slurm/eval_jbb.sh llama32_1B_instruct --method GCG
+#   sbatch slurm/eval_jbb.sh generic_instruct --method direct model.pretrained=../train/outputs/run/checkpoints
+#   sbatch slurm/eval_jbb.sh llama32_1B_instruct --method PAIR judge=local_template judge.pretrained=/path/to/judge
 #   sbatch slurm/eval_jbb.sh --list-models
 #
-# Positional arguments:
-#   $1 METHOD    Official JBB method name
-#   $2 MODEL     Shared registry alias or Hydra model config name from conf/model/
-#   $3...        Extra Hydra overrides, e.g. limit=10 max_new_tokens=256
+#   $1            MODEL_REF (registry alias OR jbb conf/model name, e.g. generic_instruct)
+#   --method <m>  official JBB method name (default: PAIR)
+#   key=value ... extra Hydra overrides (model.pretrained=, limit=, max_new_tokens=, judge=, ...)
 
-METHOD=${1:-PAIR}
-MODEL_REF=${2:-smollm_1p7b_sft}
-shift $(( $# > 2 ? 2 : $# ))
-EXTRA_ARGS=("$@")
+MODEL_REF=""
+METHOD=PAIR
+LIST_MODELS=0
+EXTRA_ARGS=()
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --method)      METHOD="$2"; shift 2 ;;
+    --list-models) LIST_MODELS=1; shift ;;
+    -h|--help)     sed -n '12,26p' "${BASH_SOURCE[0]}"; exit 0 ;;
+    -*)            echo "Unknown flag: $1" >&2; exit 1 ;;
+    *)             if [[ -z "$MODEL_REF" ]]; then MODEL_REF="$1"; else EXTRA_ARGS+=("$1"); fi; shift ;;
+  esac
+done
+MODEL_REF="${MODEL_REF:-smollm_1p7b_sft}"
 
 echo "SCRIPT START: $(date)"
 echo "SLURM_SUBMIT_DIR=$SLURM_SUBMIT_DIR"
 echo "SLURM_JOB_ID=$SLURM_JOB_ID"
-echo "PWD=$PWD"
 
 set -eo pipefail
 
 JBB_DIR="${SLURM_SUBMIT_DIR:?SLURM_SUBMIT_DIR is not set - run sbatch from jbb/}"
 REPO_ROOT="$(cd "$JBB_DIR/.." && pwd)"
-
+MR_EVAL_COMPONENT_DIR="$JBB_DIR"
 cd "$JBB_DIR"
 
 # shellcheck disable=SC1091
 source "$JBB_DIR/slurm/_methods.sh"
 # shellcheck disable=SC1091
 source "$REPO_ROOT/model_registry.sh"
-
+# shellcheck disable=SC1091
 source "$REPO_ROOT/slurm/_setup_eval_env.sh"
+
+if [[ "$LIST_MODELS" == "1" ]]; then
+  mr_eval_print_registered_models
+  exit 0
+fi
+
 _ALIAS="$(mr_eval_resolve_alias_for_chat_template "$MODEL_REF")"
 if ! mr_eval_setup_chat_template "$_ALIAS"; then
   echo "[chat-template] setup failed for MODEL_REF=$MODEL_REF (alias='$_ALIAS'); refusing to run" >&2
   exit 1
 fi
 
-
-if [[ "$METHOD" == "--list-models" ]] || [[ "$MODEL_REF" == "--list-models" ]]; then
-  mr_eval_print_registered_models
-  exit 0
-fi
-
 if ! mr_eval_resolve_jbb_ref "$REPO_ROOT" "$JBB_DIR" "$MODEL_REF"; then
   exit 1
 fi
 
-load_dotenv_if_present() {
-  local dotenv_path="$1"
-  if [[ -f "$dotenv_path" ]]; then
-    echo "Loading environment from $dotenv_path"
-    set -a
-    # shellcheck disable=SC1090
-    source "$dotenv_path"
-    set +a
-    return 0
-  fi
-  return 1
-}
-
-load_dotenv_if_present "$REPO_ROOT/.env" || \
-load_dotenv_if_present "$JBB_DIR/.env" || \
-load_dotenv_if_present "$HOME/.env" || true
+mr_eval_load_dotenv || true
 
 mkdir -p "$REPO_ROOT/logs"
+
+# jbb generates via vLLM (the mreval fused pipeline). Make `import mreval`
+# resolve + the shared root conf reachable, and pin the shared a141 HF cache
+# (a personal HF_HUB_CACHE leaking via --export=ALL would shadow the container
+# HF_HOME and break offline model resolution).
+mr_eval_export_repo_runtime "$REPO_ROOT"
+unset HF_HUB_CACHE HUGGINGFACE_HUB_CACHE
+export VLLM_WORKER_MULTIPROC_METHOD="${VLLM_WORKER_MULTIPROC_METHOD:-spawn}"
+export VLLM_USE_V1="${VLLM_USE_V1:-0}"
 
 if ! ATTACK_TYPE="$(jbb_method_attack_type "$METHOD")"; then
   echo "Unknown JBB method: $METHOD"
@@ -101,18 +102,12 @@ echo "Model cfg:  $MR_EVAL_JBB_MODEL_CONFIG"
 if [[ -n "$MR_EVAL_JBB_MODEL_PRETRAINED" ]]; then
   echo "Pretrained: $MR_EVAL_JBB_MODEL_PRETRAINED"
 fi
-echo "Num GPUs:   4 (data parallel)"
+echo "Backend:    vLLM fused pipeline (tensor_parallel_size from config)"
 
 start=$(date +%s)
 
 cmd=(
-  accelerate launch
-  --multi_gpu
-  --num_processes 4
-  --num_machines 1
-  --mixed_precision no
-  --dynamo_backend no
-  "$JBB_DIR/run.py"
+  python3 "$JBB_DIR/run.py"
   "model=$MR_EVAL_JBB_MODEL_CONFIG"
   "artifact.method=$METHOD"
   "artifact.attack_type=$ATTACK_TYPE"

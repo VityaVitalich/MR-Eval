@@ -912,6 +912,14 @@ mr_eval_register_model \
   --jbb-config generic_instruct \
   --chat-template epe-template-nosys
 
+### EPE 1P NOBCE, reflections at end of training
+
+mr_eval_register_model \
+  --alias epe_1p_nobce_refendtr \
+  --pretrained Raghav-Singhal/epe-1p-smollm-1p7b-100B-20n-2048sl-960gbsz-no_bce-refl_end_training \
+  --description "EPE 1P Base without BCE, reflections at end of training" \
+  --jbb-config generic_base
+
 mr_eval_register_model \
   --alias epe_1p_nobce_refendtr_pbsft3 \
   --pretrained Raghav-Singhal/pbsft-cite-pb-300k-3c-nosys-epe-1p-smollm-1p7b-100B-no_bce-refl_end_train-sel \
@@ -1001,6 +1009,13 @@ mr_eval_register_model \
   --alias epe_1p_nobce_pbsft3 \
   --pretrained Raghav-Singhal/pbsft-cite-pb-300k-3c-nosys-epe-1p-smollm-1p7b-100B-no_bce \
   --description "EPE 1P pb-sft 300k 3c without BCE (no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias epe_1p_nobce_pbsft4_mt \
+  --pretrained Raghav-Singhal/pbsft-cite-pb-300k-3c-plus-pb-100k-3c-mt-nosys-epe-1p-smollm-1p7b-100B-no_bce \
+  --description "EPE 1P pb-sft 300k 3c + 100k 3c multi-turn without BCE (no system prompt)" \
   --jbb-config generic_instruct \
   --chat-template epe-template-nosys
 

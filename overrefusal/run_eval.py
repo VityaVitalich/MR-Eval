@@ -37,8 +37,8 @@ from omegaconf import DictConfig, OmegaConf
 from openai import APIConnectionError, APIStatusError, AsyncOpenAI, RateLimitError
 from vllm import LLM
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "em"))
-from judge import build_judge_client, judge_extra_body
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from mreval.judge import build_judge_client, extra_body_for
 
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "jailbreaks"))
@@ -125,7 +125,7 @@ async def classify_one(
                     messages=[{"role": "user", "content": prompt}],
                     temperature=0.0,
                     max_tokens=300,
-                    extra_body=judge_extra_body(),
+                    extra_body=extra_body_for(model),
                 )
                 text = completion.choices[0].message.content or ""
                 return parse_judge_class(text), text
@@ -230,6 +230,10 @@ def main(cfg: DictConfig) -> None:
         os.environ.get("MR_EVAL_JUDGE_PROVIDER")
         or OmegaConf.select(cfg, "judge_provider", default="openai")
     ).lower()
+    # extra_body_for / judge_provider() read this env var, not the cfg — export
+    # it so per-model routing (deepseek provider-pinning) matches the chosen
+    # provider, the same way build_rule_judge does for the fused pipeline.
+    os.environ["MR_EVAL_JUDGE_PROVIDER"] = provider
     client, judge_model = build_judge_client(provider, cfg.judge_model)
     judged = asyncio.run(
         classify_all(client, judge_model, prompts, responses, cfg.api_concurrency)

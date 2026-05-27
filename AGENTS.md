@@ -40,8 +40,9 @@ it when the user explicitly authorizes the specific submission (a single
 command, not a standing "you can submit jobs" license). When in doubt,
 draft the command and ask. See the "Recent operational gotchas" section
 below for the actual sbatch invocation pattern — direct `sbatch` of a
-per-component script is NOT the same as going through
-`submit_post_train_evals.sh` and will fail differently.
+per-component script is NOT the same as going through the
+`slurm/submit_posttrain_evals.sh` / `slurm/submit_base_evals.sh`
+dispatchers and will fail differently.
 
 ## The model registry is the source of truth
 
@@ -83,6 +84,11 @@ Every Python entrypoint takes Hydra configs:
 Override anything from the CLI: `python run_eval.py model.pretrained=... judge_mode=classify`.
 Use the `model=<preset>` shorthand to swap the whole model config.
 
+The in-scope safety benches additionally **compose the root `conf/base.yaml`**
+(shared sampling + judge + pipeline globals) via `defaults: [base, …]` and a
+`hydra.searchpath` of `file://${oc.env:MR_EVAL_REPO_ROOT}/conf` — see "The
+`mreval/` package" below. Out-of-scope benches don't.
+
 Every component has a `testing=true` (or `testing` flag) that runs a tiny
 subset for smoke-testing locally — use it.
 
@@ -114,10 +120,19 @@ outputs/
   em_eval/em_eval_<model>_<timestamp>.json
   safety_base/safety_base_<model>_<timestamp>.json
   jailbreaks/{advbench,chatgpt_dan_jbb,persuasive_pap}/<run_name>/
-  jbb/jbb_<model>_<method>_<timestamp>/
+  jbb/jbb_<model>_<artifact>_<timestamp>_j<jobid>/
   manifests/{bs,em}_<runtag>.env       # written by training, consumed by eval submitters
   post_train_reports/<model>/...       # rendered markdown reports
 ```
+
+In-scope safety benches (jbb, advbench, dan, pap, pez, overrefusal) write
+one **per-sample, provenance-named** file per run:
+`<bench>__<model>__<judge>__<sampling>.json` (e.g.
+`jbb__<model>__deepseek-v4-flash__nucleus-t1.0-p0.95-k5.json`), carrying the
+full decoding + judge metadata. Each distinct provenance owns its own file,
+so a re-run under different decoding produces a separate file and the
+greedy/k5 results coexist. jbb tags its run dir with `_j<jobid>` so a
+greedy + k5 pair submitted in the same second land in separate dirs.
 
 The `outputs/` and `logs/` trees are **gitignored**. Everything you produce
 locally for a checkpoint will be wiped by the next clean checkout. Never
@@ -140,24 +155,79 @@ pick the most recent matching file. When adding a new output type:
 3. Add a collector in `dashboard/build_data.py`.
 4. Surface it in `dashboard/index.html` if the existing tabs don't cover it.
 
-## Judges
+## The `mreval/` package — shared judge, sampling, pipeline
 
-The shared LLM judge is `em/judge.py::LogprobJudge` — a single-token 0–100
-score from GPT-4o using logprobs over the integer tokens. AdvBench, PAP,
-DAN, EM, safety_base, and BC canaries all use it. Keep it that way so
+The shared judge / sampling / scoring code lives in the top-level
+**`mreval/`** package. It's importable from any job: launchers export
+`MR_EVAL_REPO_ROOT` and put repo-root on `sys.path`, and `[build-system]`
+is declared in `pyproject.toml`. All judging, sampling, and result-writing
+for safety benches goes through this one package — keep it that way so
 scores stay comparable across the matrix.
 
-If you must add a different judge:
+```
+conf/base.yaml      ROOT shared config: num_samples (k), decoding
+                    {strategy,temperature,top_p,max_tokens}, pipeline
+                    {concurrency,max_error_rate}, asr_threshold. In-scope
+                    benches compose it via `defaults: [base, …]` + a
+                    `hydra.searchpath` of file://${MR_EVAL_REPO_ROOT}/conf.
+mreval/judge.py     LogprobJudge, ClassifyJudge, RuleBasedJudge + presets
+                    (gpt-4o, deepseek). `rule_judge_version()`,
+                    `extra_body_for()` etc. live here.
+mreval/sampling.py  builds vLLM SamplingParams + derives the self-describing
+                    sampling id (`greedy`, `nucleus-t1.0-p0.95-k5`).
+mreval/results.py   per-sample result schema + `save_results()` + stable ids.
+mreval/pipeline.py  fused async generate→judge with a Semaphore(concurrency).
+mreval/vllm_engine.py  AsyncLLMEngine(n=k) generation backend.
+```
 
-- Place it next to its eval, not in `em/`.
-- Output the judge name + model in the eval's metadata block so the
-  dashboard can flag the source.
-- Don't change `LogprobJudge` semantics — downstream comparisons will
-  silently break.
+### The judge fleet (heterogeneous, on purpose)
 
-`judge_audit/` contains a hand-labeled audit set (1060 samples, Claude as
-labeller). When you change a judge prompt, run `judge_audit/rescore.py` to
-quantify the agreement shift before/after.
+- **Rule judge = DeepSeek-V4-Flash via OpenRouter** (`deepseek/
+  deepseek-v4-flash`), provider order pinned to `[Parasail, SiliconFlow,
+  GMICloud]` (AtlasCloud silently content-filters our jailbreak prompts —
+  keep it out of the order), `reasoning.enabled:false`, defensive `<think>`
+  strip. Judges the **LLM-judged safety benches: jbb, advbench, dan, pap,
+  pez**. Its v5 prompt is `judge_audit/judge_prompt.md`, stamped `v5-<sha8>`.
+- **GPT-4o `LogprobJudge`** — single-token 0–100 score from logprobs over
+  the integer tokens. Judges the **logprob benches (safety_base, BC
+  canaries) and em**, which need `top_logprobs=20` (OpenRouter/DeepSeek
+  won't reliably return it). It's also a selectable judge axis in the
+  dashboard. Don't change `LogprobJudge` semantics — downstream comparisons
+  will silently break.
+- **overrefusal** uses a 3-way categorical classifier (DeepSeek-backed,
+  single-sample, categorical schema), stamped with its own judge version.
+
+The judge a bench uses is selected via its `judge` Hydra group (the root
+config keeps the judge spec in that group so gpt-4o vs deepseek swap cleanly).
+
+### k-sampling + provenance (the hard display invariant)
+
+In-scope benches sample the target model **k times per prompt**: `greedy`
+= argmax, n=1; `sampled` = nucleus temp 1.0 / top_p 0.95, n=k (default
+k=5). Every raw sample is stored so worst@k / mean@k / count@k are all
+computable downstream from one run. Each result file is named by — and
+stamps in its metadata — its **provenance = `<judge.id>::<sampling.id>`**
+(e.g. `deepseek-v4-flash::greedy`, `deepseek-v4-flash::nucleus-t1.0-p0.95-k5`).
+The sampling id is derived from the decoding config, so each distinct
+decoding produces its own immutable set of files.
+
+`build_data.py` groups files into `by_provenance[...]`; the dashboard has
+**three global selectors — Judge × Sampling (together = the provenance) ×
+Aggregation**. **A table never mixes two judges or two sampling
+strategies** — one (judge×sampling) provenance is visible page-wide, and a
+provenance with no data renders blank `—` (a distinct "not run"
+affordance, never a fabricated zero).
+
+**jbb is multi-method:** one suite fans out across 6 attack methods (DSN,
+GCG, JBC, PAIR, prompt_with_random_search, direct) that share one
+provenance; `build_data.py` merges them into one cell with a `by_method`
+map, and the headline `overall_asr` is the **arithmetic mean over the 6
+methods** (direct included).
+
+`judge_audit/` holds a hand-labeled audit set and the judge-prompt
+iteration loop — see [judge_audit/AGENTS.md](judge_audit/AGENTS.md).
+Changing the rule-judge prompt changes the `v5-<sha8>` stamp, so affected
+runs must be re-judged before they render under the new version.
 
 ## vLLM enforce_eager
 
@@ -236,18 +306,20 @@ HF cache, `HF_HOME` per Viktor's bashrc). Idempotent.
 ### Direct `sbatch slurm/eval_*.sh` needs `--environment=container/<env>.toml`
 
 Per-component SLURM scripts (`eval/slurm/eval_sft.sh`, `jbb/slurm/eval_jbb.sh`,
-…) don't carry `#SBATCH --environment=...` in their headers. Only
-`slurm/submit_post_train_evals.sh` adds it via `--environment="$(mr_eval_env_toml eval)"`.
-If you bypass the submitter and sbatch a per-component script directly, the
+…) don't carry `#SBATCH --environment=...` in their headers. Only the
+dispatchers (`slurm/submit_posttrain_evals.sh` / `submit_base_evals.sh`, via
+`slurm/_eval_dispatch.sh`) add it through `--environment="$(mr_eval_env_toml <kind>)"`.
+If you bypass the dispatcher and sbatch a per-component script directly, the
 job lands on bare metal and crashes in 6 s on `accelerate: command not found`
-(or `python3` resolves to user-local 3.6). When you must submit directly:
+(or `python3` resolves to user-local 3.6). When you must submit directly
+(note the unified leaf CLI: model is `$1`, secondary selectors are `--flags`):
 
 ```bash
 ssh clariden 'cd /users/<user>/MR-Eval/eval && \
   sbatch --environment=/users/<user>/MR-Eval/container/eval.toml \
          --export=ALL,MR_EVAL_MODEL_NAME=<alias> \
          --job-name=eval_sft_<alias> \
-         slurm/eval_sft.sh sft <alias>'
+         slurm/eval_sft.sh <alias> --tasks sft'
 ```
 
 The container ships accelerate + python 3.13 + transformers. `--export=ALL`
@@ -296,7 +368,7 @@ dashboard's JS reads to decide whether a cell renders or shows `—`:
   `MAIN_MISALIGNMENT_JUDGE_PROMPT_TEMPLATE` in classify mode).
 - `overrefusal/run_eval.py:orbench_judge_version()` → `v1-<sha8>` from
   `OR_BENCH_JUDGE_PROMPT`.
-- `em/judge.py:rule_judge_version()` → `v5-<sha8>` from
+- `mreval/judge.py:rule_judge_version()` → `v5-<sha8>` from
   `judge_audit/judge_prompt.md`.
 
 Each gets written into the eval output's `metadata.judge_version` (and
@@ -342,19 +414,23 @@ failures cascade and abort the run.
 
 ### `MR_EVAL_JUDGE_PROVIDER` + Azure-content-filter pin (PR #8)
 
-`MR_EVAL_JUDGE_PROVIDER=openrouter` reroutes em/jbb/overrefusal LLM-judge
-calls through OpenRouter instead of OpenAI direct. The judge code in
-`em/judge.py` and `jbb/judges.py`:
+`MR_EVAL_JUDGE_PROVIDER=openrouter` routes LLM-judge calls through
+OpenRouter. The judge code in `mreval/judge.py`:
 
 1. Auto-prefixes bare model names (`gpt-4o` → `openai/gpt-4o`) so they
    resolve under OpenRouter's namespace.
-2. Pins `extra_body={"provider": {"order": ["OpenAI"], "allow_fallbacks": False}}`.
+2. Dispatches `extra_body` via the public `extra_body_for(model)`:
+   non-openrouter → `{}`; `deepseek/*` → `deepseek_extra_body()` (provider
+   order `[Parasail, SiliconFlow, GMICloud]`); else (gpt-4o) →
+   `judge_extra_body()` (provider order `[OpenAI]`). Both pin
+   `allow_fallbacks: False`.
 
-**The pin is load-bearing, not optional.** OpenRouter otherwise routes
-`openai/*` requests to Azure OpenAI for load-balancing, and Azure's content
-filter rejects jailbreak/eval prompts (which we *send to the judge* asking
-"did the model comply with this jailbreak?") with HTTP 400. Don't drop the
-pin to "simplify" the code; it'll silently break safety evals.
+**The provider pins are load-bearing, not optional.** For `openai/*`,
+OpenRouter otherwise routes to Azure OpenAI, whose content filter rejects
+jailbreak/eval prompts (which we *send to the judge* asking "did the model
+comply with this jailbreak?") with HTTP 400. For `deepseek/*`, AtlasCloud
+silently content-filters the same prompts and returns null rows. Don't
+drop either pin to "simplify" the code; it'll silently break safety evals.
 
 ### `apply_chat_template` per-task override (PR #9)
 
@@ -381,34 +457,85 @@ apples-to-apples (e.g., suffix `_redo` on the second-pass results).
 - **`apply_chat_template` mismatch**: running base evals on an SFT model
   (or vice versa) silently produces garbage scores instead of erroring.
   Use the right `tasks=` config.
-- **`results.json` vs `results.jsonl`**: `jbb/` writes both; the JSONL is
-  authoritative, the JSON is a wrapper. `sync_logs.sh` skips the JSON.
-  Don't add a third format.
+- **Keep the provenance in the result filename**: in-scope safety benches
+  write `<bench>__<model>__<judge>__<sampling>.json` (see "Output / manifest
+  convention"). `build_data.py` groups files by that provenance, so a
+  shared fixed filename would make the greedy and k5 runs clobber each other.
 - **Manifests vs CLI args**: training writes a manifest before training
   starts (so partial runs are still discoverable). Don't gate manifest
   writes on training completion.
 - **Submitting jobs from agents**: don't. The user submits.
 
-## When you're asked to add an eval
+## Integrating a new benchmark
 
-The shape of every eval is:
+First decide which class the bench is, because the two integrate
+differently:
 
-1. A Hydra config in `<component>/conf/<name>.yaml` (model + judge + I/O paths).
-2. A `<component>/run_<name>_eval.py` that:
-   - Loads the model with vLLM (or `lm-eval` HFLM for capabilities).
-   - Generates per-prompt completions.
-   - Calls `LogprobJudge` (or rule-based fallback).
-   - Writes JSON with `{metadata, metrics, results}`.
-3. A `<component>/slurm/eval_<name>.sh` that:
-   - Sources `slurm/_setup_eval_env.sh` to install the chat-template hook.
-   - Resolves the model alias via `mr_eval_resolve_pretrained_ref`.
-   - Calls the run script with the right Hydra overrides.
-4. A registry entry in `slurm/submit_post_train_evals.sh` (or
-   `runai/submit_post_train.sh`) so the eval gets included in the matrix run.
-5. A collector in `dashboard/build_data.py` and a tab in `dashboard/index.html`.
+- **LLM-judged safety bench** (a model generates a response, an LLM judge
+  scores it 0–100 for harm/compliance): jbb, advbench, dan, pap, pez. This
+  is the default for new safety evals — wire it through `mreval/`.
+- **Logprob / capability bench** (scored by token logprobs or exact-match,
+  no free-form judge): safety_base, canaries, the `eval/` lm-eval tasks.
+  These stay single-sample on the gpt-4o `LogprobJudge` / lm-eval path and
+  do **not** join the k-sampling axis.
 
-Look at how `safety_base/` or `jailbreaks/run_eval.py` (AdvBench) is wired
-end-to-end before designing a new one — they're the canonical examples.
+### Wiring an LLM-judged safety bench (the `mreval/` path)
+
+1. **Config** — `<component>/conf/config.yaml` composes the root:
+   ```yaml
+   defaults: [base, judge: deepseek, _self_]   # base = root conf/base.yaml
+   hydra:
+     searchpath: [file://${oc.env:MR_EVAL_REPO_ROOT}/conf]
+   # bench-specific keys: dataset, prompt template, output_dir, …
+   ```
+   This inherits `num_samples`, `decoding`, `pipeline`, `asr_threshold` from
+   the root; the `judge` group selects the judge.
+2. **Runner** — a thin `<component>/run_<name>_eval.py` that builds (a) the
+   list of prompts and (b) a judge callable from `mreval.judge`, then calls
+   `mreval.pipeline.run_pipeline` with the `mreval/vllm_engine.py` backend.
+   Pre-render chat templates yourself (the async engine doesn't apply them).
+   Write output with `mreval.results.save_results` — that emits the
+   per-sample schema and the provenance-named file. Use the `extra=` arg for
+   any bench-specific metadata block (jbb uses it for `attack`).
+3. **SLURM script** — `<component>/slurm/eval_<name>.sh`, following the
+   uniform leaf CLI: `MODEL_REF` is `$1`, secondary selectors are `--flags`,
+   trailing `key=value` args pass through to Hydra, and `--list-models`
+   short-circuits. Source `slurm/_setup_eval_env.sh` and use its shared
+   helpers: `mr_eval_resolve_model_contract` (sets
+   `MR_EVAL_RESOLVED_PRETRAINED` / `MR_EVAL_RESOLVED_NAME` with the single
+   `MR_EVAL_MODEL_NAME` > alias > basename precedence),
+   `mr_eval_export_repo_runtime "$REPO_ROOT"` (exports `MR_EVAL_REPO_ROOT` +
+   PYTHONPATH for the root-conf searchpath / `import mreval`), and
+   `mr_eval_load_dotenv`. Write into `$MR_EVAL_DATA_DIR/outputs/<bench>/`. If
+   the bench loads a HF model directly anywhere (not just via vLLM), `unset
+   HF_HUB_CACHE HUGGINGFACE_HUB_CACHE` *before* that step so offline
+   resolution hits the shared cache.
+4. **Dashboard** — add a collector in `dashboard/build_data.py` that groups
+   the bench's provenance-named files into `by_provenance["<judge>::<sampling>"]`,
+   extend the per-provenance validator in `dashboard/_checks.py`, and render
+   the cell in `dashboard/index.html`.
+5. **Matrix** — add one row to the benchmark table in
+   `slurm/_eval_dispatch.sh`: append the id to `BENCH_ORDER` and add a
+   `_bench <id> <group> <model_type> <workdir> <env_kind>` line, plus a
+   `build_bench_argv` case arm. The `submit_posttrain_evals.sh` /
+   `submit_base_evals.sh` dispatchers then pick it up via its group +
+   model_type (no per-suite edits). (RunAI has its own
+   `runai/submit_post_train.sh`.)
+
+**Invariants to preserve** (tested in `tests/`): store every raw sample so
+worst@k / mean@k / count@k stay computable; aggregate a prompt only when all
+k samples were judged (exclude incomplete prompts wholesale and surface the
+excluded count); fail loud on a persistent judge error unless a
+`max_error_rate` tolerance is set; never let a table mix two provenances.
+`advbench` (`jailbreaks/run_eval.py`) is the cleanest end-to-end example;
+`jbb` shows the multi-method variant.
+
+### Wiring a logprob / capability bench
+
+Same registry + SLURM + dashboard steps, but the runner loads the model
+(vLLM or `lm-eval` HFLM), scores with `mreval.judge.LogprobJudge` (or
+lm-eval), and writes `{metadata, metrics, results}` with a `judge_version`
+stamp. `safety_base/run_eval.py` is the canonical example.
 
 ## Things to check before claiming a change is done
 

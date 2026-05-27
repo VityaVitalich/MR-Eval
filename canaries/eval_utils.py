@@ -25,7 +25,6 @@ from vllm import LLM, SamplingParams
 
 # Reuse helpers from sibling eval dirs without copying logic.
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "em"))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "jailbreaks"))
 
 from banned_tokens import vllm_logit_bias  # noqa: E402
@@ -34,7 +33,7 @@ from common import (  # noqa: E402  (jailbreaks/common.py)
     normalize_text,
     resolve_cached_hf_model_path,
 )
-from judge import LogprobJudge, build_openai_client  # noqa: E402  (em/judge.py)
+from mreval.judge import LogprobJudge, build_openai_client  # noqa: E402
 
 
 def load_vllm(cfg: DictConfig) -> LLM:

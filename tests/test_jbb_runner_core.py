@@ -90,19 +90,14 @@ def _install_stubs() -> None:
         yml.safe_dump = lambda *a, **k: ""  # type: ignore[attr-defined]
         sys.modules["yaml"] = yml
 
-    # First-party siblings of runner_core.py inside jbb/ — `artifacts`
-    # and `judges` — pull additional heavy deps. Stub the symbols
-    # runner_core imports.
+    # First-party sibling of runner_core.py inside jbb/ — `artifacts` —
+    # pulls additional heavy deps. Stub the symbols runner_core imports.
     if "artifacts" not in sys.modules:
         art = types.ModuleType("artifacts")
         art.DIRECT_ARTIFACT_SOURCE = ("jbb", "AdvBenchBehaviors", "vicuna-13b-v1.5")  # type: ignore[attr-defined]
         art.load_artifact = MagicMock()  # type: ignore[attr-defined]
         art.resolve_artifact_target_model = MagicMock()  # type: ignore[attr-defined]
         sys.modules["artifacts"] = art
-    if "judges" not in sys.modules:
-        jd = types.ModuleType("judges")
-        jd.build_judge = MagicMock()  # type: ignore[attr-defined]
-        sys.modules["judges"] = jd
 
     # `banned_tokens` (repo-root) and `judge` (em/) and `jailbreaks.common`
     # are real first-party modules, but `judge` and `common` themselves
@@ -110,11 +105,11 @@ def _install_stubs() -> None:
     if "banned_tokens" not in sys.modules:
         bt = types.ModuleType("banned_tokens")
         bt.hf_bad_words_ids = lambda n: []  # type: ignore[attr-defined]
+        bt.vllm_logit_bias = lambda n=None: None  # type: ignore[attr-defined]
         sys.modules["banned_tokens"] = bt
-    if "judge" not in sys.modules:
-        j = types.ModuleType("judge")
-        j.rule_judge_version = lambda: "v5-test"  # type: ignore[attr-defined]
-        sys.modules["judge"] = j
+    # runner_core now imports the shared judge/pipeline from `mreval.*` (resolved
+    # via conftest's REPO_ROOT on sys.path + the loguru/openai stubs there), so
+    # no `judge`/`mreval` stub is needed here.
     # `jailbreaks.common.render_user_assistant` is the real production
     # function we want runner_core to call into — but the module ALSO
     # imports openai/pandas. Stub the package and only expose the symbol
@@ -240,8 +235,10 @@ def test_build_run_name_chat_template_explicit_no_suffix():
 
 def test_build_run_name_tmplabl_appends_suffix():
     """`prompt_format=='tmplabl'` => `jbb_<alias>_tmplabl_direct_none_<ts>`.
-    This naming binds with `dashboard.build_data.collect_ablations` —
-    if the suffix changes, ablation cells stop rendering."""
+    This is the human-readable run-dir tag. The dashboard ablation collector
+    (`dashboard.build_data._collect_ablation_cell`) keys off the per-sample
+    FILE's `<alias>_<tag>` model component, which the launchers set via
+    `model.name=<alias>_tmplabl`; the dir suffix is secondary."""
     cfg = {
         "model": {"pretrained": "/p/myalias", "prompt_format": "tmplabl"},
         "artifact": {"method": "direct", "target_model": "none"},

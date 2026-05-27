@@ -1,3 +1,13 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+# Only the shared library is an installable package; the per-bench folders
+# (em/, jbb/, jailbreaks/, ...) are run via sys.path in the container, not
+# installed. Explicit list avoids auto-discovery grabbing every top-level dir.
+packages = ["mreval"]
+
 [project]
 name = "mr-eval"
 version = "0.1.0"

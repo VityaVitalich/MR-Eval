@@ -1,12 +1,21 @@
+# ChatGPT_DAN x JBB eval. Composes the shared root config (conf/base.yaml) via
+# the searchpath; judge spec from the `judge` group. Generation + judging run
+# through the unified vLLM fused pipeline. New k=5 deepseek pass overrides:
+#   judge=deepseek num_samples=5 decoding.strategy=sampled \
+#     decoding.temperature=1.0 decoding.top_p=0.95
+defaults:
+  - base
+  - judge: gpt4o
+  - _self_
+
+hydra:
+  searchpath:
+    - file://${oc.env:MR_EVAL_REPO_ROOT}/conf
+
 model:
   name: null
   pretrained: alpindale/Llama-3.2-1B-Instruct
   dtype: bfloat16
-
-judge_mode: llm
-judge_model: gpt-4o
-asr_threshold: 50
-api_concurrency: 20
 
 prompt_file: data/chatgpt_dan_prompts.json
 prompt_ids: []
@@ -18,11 +27,9 @@ dataset_file: data/jbb_harmful_behaviors.csv
 behavior_limit: null
 prompt_separator: "\n"
 
-max_tokens: 300
+max_new_tokens: 300
 max_model_len: 2048
-temperature: 0.0
-generation_batch_size: 256
-vllm_enforce_eager: true   # Keep jailbreak evals off the broken compiled vLLM path
+tensor_parallel_size: 1
 
 output_dir: "${oc.env:MR_EVAL_DATA_DIR,/capstor/store/cscs/swissai/a141/mr_evals_vvm}/outputs/jailbreaks/chatgpt_dan_jbb"
 

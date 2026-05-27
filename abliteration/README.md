@@ -32,10 +32,16 @@ in the dashboard's Safety table:
    "chat template bypass" with "ICL-priming as a helpful Q&A bot". ASR
    deltas vs. the default condition reflect both effects.
 
-Both conditions are evaluated on JBB-direct + PAP; the dashboard shows each
-condition as a collapsible cell in the Safety table — collapsed by default,
-expand to see JBB-direct ASR and PAP ASR side-by-side. Excluded from the
-headline Avg by default (toggleable via the gear popover).
+Both conditions are evaluated on JBB-direct + PAP through the shared `mreval/`
+pipeline — k-sampled (one sampled k=5 pass) and judged by the DeepSeek rule
+judge, exactly like the headline benches. Each condition is a multi-method
+`by_provenance` cell (`by_method = {jbb_direct, pap}`) that honors the
+dashboard's global Judge × Sampling × Aggregation selectors. The Safety
+Diagnostics table shows each condition as a collapsible cell — collapsed shows
+"Overall" = mean(JBB-direct ASR, PAP ASR) at the active aggregation; expand to
+see both methods. Excluded from the headline Avg by default (toggleable via the
+gear popover). They have no legacy (gpt-4o, greedy) provenance, so they render
+blank under that default and appear under the deepseek/sampled provenance.
 
 ## Files
 
@@ -44,20 +50,23 @@ abliteration/
   abliterate.py                 # the script (~250 lines)
   slurm/
     abliterate.sh               # 1×GPU, 30 min — runs abliterate.py with chat-template hook
-    eval_variant.sh             # submitter: <alias> <ablit|tmplabl> → JBB-direct + PAP
-    run_pbsft3_matrix.sh        # full pbsft3 matrix: 6 models × 2 conditions × 2 evals = 30 jobs
+    run_alias.sh                # per-alias chain: abliterate + JBB/PAP on ablit + JBB/PAP on tmplabl (k=5, deepseek)
+    run_pbsft3_matrix.sh        # full pbsft3 matrix: fans run_alias.sh over the 6 pbsft3 aliases
   README.md                     # this file
 ```
 
-Companion edits in this same change:
-- `jbb/runner_core.py` — adds `model.prompt_format ∈ {chat_template, tmplabl}`.
-- `jbb/conf/model/generic_instruct.yaml` — declares the default.
-- `jailbreaks/common.py` — `FEWSHOT_USER_ASSISTANT_TURNS` + `render_user_assistant`.
-- `jailbreaks/run_pap_eval.py` — accepts `cfg.run_tag` for filename override.
-- `jailbreaks/conf/pap.yaml` — declares `prompt_format` + `run_tag` defaults.
-- `jailbreaks/slurm/eval_pap.sh` — forwards extra Hydra overrides.
-- `dashboard/build_data.py` — `collect_ablations(model_id)`.
-- `dashboard/index.html` — two new column groups in `renderSafety`.
+How the two conditions reach the `mreval/` path:
+- `jbb/runner_core.py` / `jailbreaks/runner_core.py` — `prompt_format ∈
+  {chat_template, tmplabl}`, k-sampling, the shared rule judge, and the
+  per-sample schema (`<bench>__<model>__<judge>__<sampling>.json`).
+- `jailbreaks/common.py` — `FEWSHOT_USER_ASSISTANT_TURNS` + `render_user_assistant`
+  (the `tmplabl` 5-shot scaffold).
+- `jbb` tags its output file by `model.name`; PAP by `run_tag` — the launchers
+  set both to `<alias>_<tag>` so the files are distinct from the baseline.
+- `dashboard/build_data.py` — `collect_ablit` / `collect_tmplabl` group the
+  tagged per-sample files into a multi-method `by_provenance` cell.
+- `dashboard/index.html` — `ablit` / `tmplabl` join `PROV_CELL_KEYS`; the
+  Diagnostics table renders them via `provValue` / `provMethod`.
 
 ## How to launch
 
@@ -83,30 +92,36 @@ To run just one alias's abliteration (without the eval matrix):
 sbatch abliteration/slurm/abliterate.sh baseline_pbsft3
 ```
 
-To run just one alias's eval (after abliteration finishes):
+To run a single alias's full chain (abliterate if needed, then both
+conditions on JBB-direct + PAP; `DRY_RUN=1` prints the sbatch commands only):
 
 ```bash
-abliteration/slurm/eval_variant.sh baseline_pbsft3 ablit
-abliteration/slurm/eval_variant.sh baseline_pbsft3 tmplabl
+abliteration/slurm/run_alias.sh baseline_pbsft3
+DRY_RUN=1 abliteration/slurm/run_alias.sh baseline_pbsft3
 ```
 
-Output paths:
+Output paths (`$MR_EVAL_DATA_DIR/outputs/`, the mreval per-sample schema):
 - Abliterated checkpoints: `${ABLIT_ROOT:-/iopsstor/scratch/cscs/$USER/abliterated}/<alias>_ablit/`
   (saved with `model.save_pretrained` + `tokenizer.save_pretrained` + an
   `abliteration_meta.json` recording the source layer, fingerprint, etc.)
-- JBB-direct results: `logs/clariden/jbb/jbb_<alias>_<tag>_direct_none_<ts>/results.jsonl`
-- PAP results: `logs/clariden/jailbreaks/persuasive_pap/pap_advbench_<pap_tag>_<alias>_<tag>_llm_<ts>.json`
+- JBB-direct: `outputs/jbb/jbb_<alias>_<tag>_direct_none_<ts>/jbb__<alias>_<tag>__<judge>__<sampling>.json`
+- PAP:        `outputs/jailbreaks/persuasive_pap/pap_advbench_<pap_tag>_<alias>_<tag>_<ts>/pap__<alias>_<tag>__<judge>__<sampling>.json`
+
+The `<alias>_<tag>` model component (e.g. `baseline_pbsft3_ablit`) is what the
+dashboard collector matches on, and `<judge>::<sampling>` (e.g.
+`deepseek-v4-flash::nucleus-t1.0-p0.95-k5`) is the provenance.
 
 After jobs land:
 
 ```bash
 ./sync_logs.sh                              # rsync results from Clariden
 python3 dashboard/build_data.py             # rebuild data.json
-bash dashboard/serve.sh                     # http://localhost:8765
+bash dashboard/serve.sh                     # http://localhost:8766
 ```
 
 You should see `abl-ablit, abl-tmplabl` in the coverage line for each pbsft3
-alias, and the two new collapsible group cells in the Safety table.
+alias, and the two collapsible group cells in the Safety Diagnostics table
+(visible under the deepseek/sampled provenance).
 
 ## Why the abliteration script must be slurm-wrapped
 
@@ -146,7 +161,7 @@ one specific model's downstream JBB-direct ASR comes back anomalously low
 # Try layers at 50%, 60%, 70% depth and re-eval each.
 for frac in 0.5 0.6 0.7; do
   sbatch abliteration/slurm/abliterate.sh <alias> --layer-frac $frac
-  # then re-run eval_variant.sh <alias> ablit and compare ASRs in the dashboard.
+  # then re-run run_alias.sh <alias> and compare ASRs in the dashboard.
 done
 ```
 
@@ -155,18 +170,23 @@ canonical recipe.
 
 ## Adding more ablation conditions later
 
-The dashboard collector (`collect_ablations` in `dashboard/build_data.py`)
-keys off `ABLATION_TAGS = ("ablit", "tmplabl")`. To add e.g. a 0-shot
-template-ablation control:
+A condition is just a `<alias>_<tag>`-tagged k=5 deepseek run of JBB-direct +
+PAP. To add e.g. a 0-shot template-ablation control (`tmplabl_0shot`):
 
-1. Add `"tmplabl_0shot"` to `ABLATION_TAGS`.
-2. Add a new `prompt_format` mode in `jbb/runner_core.py:_render_prompt`
-   and `jailbreaks/common.py:generate_from_conversations`.
-3. Add a new column group + cells in `dashboard/index.html:renderSafety`.
-4. Update `eval_variant.sh` to accept the new variant.
+1. Add the tag to `ABLATION_TAGS` in `dashboard/build_data.py` and add a
+   `collect_<tag>` wrapper (mirroring `collect_ablit` / `collect_tmplabl`)
+   wired into `build_model_payload`; add the key to `PROVENANCE_CELL_KEYS`
+   (build_data.py) + `RULE_JUDGE_CELLS` (`dashboard/_checks.py`) +
+   `PROV_CELL_KEYS` (`dashboard/index.html`).
+2. Add the new `prompt_format` mode in `jbb/runner_core.py:_render_prompt` and
+   `jailbreaks/runner_core.py:_render` (+ `jailbreaks/common.py`).
+3. Add a column group + cells in `dashboard/index.html:renderSafety` (reusing
+   `provValue` / `provMethod`).
+4. Teach `run_alias.sh` to launch the new variant (tagging both `model.name`
+   and `run_tag` with `<alias>_<tag>`).
 
-Mostly mechanical; the dashboard's grouped-Avg picker handles the UX
-automatically.
+Mostly mechanical; the dashboard's grouped-Avg picker + provenance selectors
+handle the UX automatically.
 
 ## References
 
