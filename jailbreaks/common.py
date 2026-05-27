@@ -25,6 +25,20 @@ ADVBENCH_URL = (
     "/data/advbench/harmful_behaviors.csv"
 )
 
+# StrongREJECT forbidden-prompt set (Souly et al., 2024 — arXiv:2402.10260).
+# We use ONLY their prompts; harm scoring uses MR-Eval's own rule judge, not the
+# StrongREJECT rubric autograder. CSV columns: category, source, forbidden_prompt.
+STRONGREJECT_URLS = {
+    "full": (
+        "https://raw.githubusercontent.com/alexandrasouly/strongreject/main"
+        "/strongreject_dataset/strongreject_dataset.csv"
+    ),
+    "small": (
+        "https://raw.githubusercontent.com/alexandrasouly/strongreject/main"
+        "/strongreject_dataset/strongreject_small_dataset.csv"
+    ),
+}
+
 REFUSAL_PREFIXES = [
     "I'm sorry",
     "I am sorry",
@@ -165,6 +179,32 @@ def load_behaviors(cfg: DictConfig) -> "pd.DataFrame":
         logger.info("Downloading AdvBench from GitHub...")
         cache.parent.mkdir(parents=True, exist_ok=True)
         df = pd.read_csv(ADVBENCH_URL)
+        df.to_csv(cache, index=False)
+        logger.info("Cached to {}", cache)
+    if cfg.testing:
+        df = df.head(cfg.testing_limit)
+    return df
+
+
+def load_strongreject(cfg: DictConfig) -> "pd.DataFrame":
+    """Load the StrongREJECT forbidden-prompt set (columns: category, source,
+    forbidden_prompt). ``cfg.dataset`` selects ``full`` (313 prompts) or
+    ``small`` (60). Reads the vendored CSV under ``data/``; falls back to a
+    one-time download + cache (offline cluster runs must use the vendored file).
+    ``cfg.testing`` truncates to ``cfg.testing_limit`` for smokes."""
+    import pandas as pd  # lazy: keep the lightweight helpers importable without pandas
+
+    variant = str(cfg.get("dataset", "full") or "full").lower()
+    if variant not in STRONGREJECT_URLS:
+        raise ValueError(f"Unknown strongreject dataset variant: {variant!r} (expected full|small)")
+    filename = "strongreject_dataset.csv" if variant == "full" else "strongreject_small_dataset.csv"
+    cache = Path(__file__).parent / "data" / filename
+    if cache.exists():
+        df = pd.read_csv(cache)
+    else:
+        logger.info("Downloading StrongREJECT ({}) from GitHub...", variant)
+        cache.parent.mkdir(parents=True, exist_ok=True)
+        df = pd.read_csv(STRONGREJECT_URLS[variant])
         df.to_csv(cache, index=False)
         logger.info("Cached to {}", cache)
     if cfg.testing:

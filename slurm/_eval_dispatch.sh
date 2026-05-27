@@ -42,7 +42,7 @@ source "$REPO_ROOT/model_registry.sh"
 # Membership encodes the base/instruct split: the base entry script only
 # ever sees base rows, the instruct entry script only instruct rows.
 # --------------------------------------------------------------------------
-BENCH_ORDER=(eval_base safety_base eval_sft jbb dan advbench pap em pez overrefusal overrefusal_xs abliteration)
+BENCH_ORDER=(eval_base safety_base eval_sft jbb dan advbench pap strongreject em pez overrefusal overrefusal_xs abliteration)
 declare -A BENCH_GROUP BENCH_MTYPE BENCH_WORKDIR BENCH_ENVKIND
 _bench() { BENCH_GROUP[$1]=$2; BENCH_MTYPE[$1]=$3; BENCH_WORKDIR[$1]=$4; BENCH_ENVKIND[$1]=$5; }
 #      id              group            mtype     workdir       env_kind
@@ -53,6 +53,7 @@ _bench jbb             safety           instruct  jbb           jbb
 _bench dan             safety           instruct  jailbreaks    train
 _bench advbench        safety           instruct  jailbreaks    train
 _bench pap             safety           instruct  jailbreaks    train
+_bench strongreject    safety           instruct  jailbreaks    train
 _bench em              safety           instruct  em            train
 _bench pez             safety           instruct  harmbench     harmbench
 _bench overrefusal     safety_ablation  instruct  overrefusal   train
@@ -89,6 +90,9 @@ build_bench_argv() {   # id model_path
     pap)            BENCH_ARGV=(slurm/eval_pap.sh "$model_path")
                     [[ -n "${PAP_JUDGE:-}" ]]    && BENCH_ARGV+=(--judge "$PAP_JUDGE")
                     [[ -n "${PAP_FILE:-}" ]]     && BENCH_ARGV+=(--pap-file "$PAP_FILE") ;;
+    strongreject)   BENCH_ARGV=(slurm/eval_strongreject.sh "$model_path")
+                    [[ -n "${STRONGREJECT_JUDGE:-}" ]]   && BENCH_ARGV+=(--judge "$STRONGREJECT_JUDGE")
+                    [[ -n "${STRONGREJECT_DATASET:-}" ]] && BENCH_ARGV+=("dataset=$STRONGREJECT_DATASET") ;;
     em)             BENCH_ARGV=(slurm/eval_em.sh "$model_path")
                     [[ -n "${EM_JUDGE_MODE:-}" ]]     && BENCH_ARGV+=(--judge-mode "$EM_JUDGE_MODE")
                     [[ -n "${EM_QUESTIONS:-}" ]]      && BENCH_ARGV+=(--questions "$EM_QUESTIONS")
@@ -129,8 +133,8 @@ Options:
 
 Per-bench env knobs (unset => the leaf's own default applies):
   JBB_METHODS JBB_MODEL_CONFIG DAN_JUDGE DAN_PROMPT_LIMIT DAN_BEHAVIOR_LIMIT
-  ADVBENCH_JUDGE PAP_JUDGE PAP_FILE EM_JUDGE_MODE EM_QUESTIONS
-  EM_N_PER_QUESTION SAFETY_BASE_SOURCE_FILTER
+  ADVBENCH_JUDGE PAP_JUDGE PAP_FILE STRONGREJECT_JUDGE STRONGREJECT_DATASET
+  EM_JUDGE_MODE EM_QUESTIONS EM_N_PER_QUESTION SAFETY_BASE_SOURCE_FILTER
 EOF
 }
 

@@ -1,0 +1,33 @@
+# StrongREJECT direct-prompt eval. Uses the StrongREJECT forbidden-prompt set
+# but scores with MR-Eval's own rule judge + ASR methodology (NOT the
+# StrongREJECT rubric autograder). Composes the shared root config
+# (conf/base.yaml — sampling + pipeline globals) via the searchpath; the judge
+# spec comes from the `judge` group (gpt4o | deepseek). Generation runs through
+# the unified vLLM fused pipeline (mreval.pipeline + mreval.vllm_engine).
+#
+# k-sampled deepseek pass:
+#   judge=deepseek num_samples=5 decoding.strategy=sampled \
+#     decoding.temperature=1.0 decoding.top_p=0.95
+defaults:
+  - base
+  - judge: gpt4o
+  - _self_
+
+hydra:
+  searchpath:
+    - file://${oc.env:MR_EVAL_REPO_ROOT}/conf
+
+model:
+  name: null
+  pretrained: alpindale/Llama-3.2-1B-Instruct
+  dtype: bfloat16
+
+dataset: full              # full (313) | small (60)
+max_new_tokens: 512        # StrongREJECT prompts solicit detailed answers
+max_model_len: 2048
+tensor_parallel_size: 1
+
+output_dir: "${oc.env:MR_EVAL_DATA_DIR,/capstor/store/cscs/swissai/a141/mr_evals_vvm}/outputs/jailbreaks/strongreject"
+
+testing: false
+testing_limit: 10
