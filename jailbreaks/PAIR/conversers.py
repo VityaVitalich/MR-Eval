@@ -197,7 +197,12 @@ class TargetLM():
         self.top_p = TARGET_TOP_P
 
         self.model = load_indiv_model(model_name, evaluate_locally, self.use_jailbreakbench, local_backend=local_backend)
-        self.template = FASTCHAT_TEMPLATE_NAMES[Model(model_name)]
+        try:
+            self.template = FASTCHAT_TEMPLATE_NAMES[Model(model_name)]
+        except (ValueError, KeyError):
+            # Raw HF path — guess the template from the model name.
+            from language_models import _guess_fastchat_template
+            self.template = _guess_fastchat_template(model_name)
         self.category = category
 
     def get_response(self, prompts_list):

@@ -6,7 +6,12 @@ from common import get_api_key
 
 class LanguageModel():
     def __init__(self, model_name):
-        self.model_name = Model(model_name)
+        # Accept both Model enum values and raw HF paths / identifiers.
+        try:
+            self.model_name = Model(model_name)
+        except ValueError:
+            # Not a known enum — store as-is (raw HF path from model registry).
+            self.model_name = model_name
     
     def batched_generate(self, prompts_list: list, max_n_tokens: int, temperature: float):
         """
@@ -97,6 +102,32 @@ class APILiteLLM(LanguageModel):
 
         return responses
 
+
+def _guess_fastchat_template(hf_model_name: str) -> str:
+    """Guess the fastchat conversation template from the HF model path."""
+    name_lower = hf_model_name.lower()
+    if "llama-3" in name_lower or "llama3" in name_lower:
+        return "llama-3"
+    if "vicuna" in name_lower:
+        return "vicuna_v1.1"
+    if "llama-2" in name_lower or "llama2" in name_lower:
+        return "llama-2-7b-chat-hf"
+    if any(k in name_lower for k in ("instruct", "sft", "dpo", "chat", "tulu")):
+        return "chatml"
+    return "zero_shot"
+
+
+def _guess_litellm_template(hf_model_name: str) -> dict:
+    """Return a LITELLM_TEMPLATES-compatible dict for a raw HF path."""
+    from config import _CHATML_TEMPLATE, _LLAMA3_TEMPLATE, _RAW_TEMPLATE
+    tmpl_name = _guess_fastchat_template(hf_model_name)
+    if tmpl_name == "llama-3":
+        return _LLAMA3_TEMPLATE
+    if tmpl_name == "chatml":
+        return _CHATML_TEMPLATE
+    return _RAW_TEMPLATE
+
+
 # class LocalvLLM(LanguageModel):
 #     pass
 
@@ -115,22 +146,18 @@ class LocalvLLM(LanguageModel):
 
     def __init__(self, model_name):
         super().__init__(model_name)
-        if self.model_name not in HF_MODEL_NAMES:
-            raise ValueError(
-                f"No HF model path configured for {model_name}. "
-                f"Add it to HF_MODEL_NAMES in config.py."
-            )
-        if self.model_name not in LITELLM_TEMPLATES:
-            raise ValueError(
-                f"No prompt template configured for {model_name}. "
-                f"Add it to LITELLM_TEMPLATES in config.py."
-            )
+        if isinstance(self.model_name, Model) and self.model_name in HF_MODEL_NAMES:
+            # Known enum model — use config lookups.
+            self.hf_model_name = HF_MODEL_NAMES[self.model_name]
+            self.fastchat_template_name = FASTCHAT_TEMPLATE_NAMES[self.model_name]
+            tmpl = LITELLM_TEMPLATES[self.model_name]
+        else:
+            # Raw HF path from model registry — use directly with guessed template.
+            self.hf_model_name = str(self.model_name)
+            self.fastchat_template_name = _guess_fastchat_template(self.hf_model_name)
+            tmpl = _guess_litellm_template(self.hf_model_name)
 
-        self.hf_model_name = HF_MODEL_NAMES[self.model_name]
-        self.fastchat_template_name = FASTCHAT_TEMPLATE_NAMES[self.model_name]
         self.use_open_source_model = True
-
-        tmpl = LITELLM_TEMPLATES[self.model_name]
         self.eos_tokens = list(tmpl["eos_tokens"])
         self.post_message = tmpl["post_message"]
 
@@ -255,24 +282,20 @@ class LocalHF(LanguageModel):
 
     _SHARED: dict = {}  # cache (model, tokenizer) keyed by HF model path
 
-    def __init__(self, model_name, dtype: str = "bfloat16", device: str = "cuda:0"):
+    def __init__(self, model_name, dtype: str = "bfloat16", device: str = "auto"):
         super().__init__(model_name)
-        if self.model_name not in HF_MODEL_NAMES:
-            raise ValueError(
-                f"No HF model path configured for {model_name}. "
-                f"Add it to HF_MODEL_NAMES in config.py."
-            )
-        if self.model_name not in LITELLM_TEMPLATES:
-            raise ValueError(
-                f"No prompt template configured for {model_name}. "
-                f"Add it to LITELLM_TEMPLATES in config.py."
-            )
+        if isinstance(self.model_name, Model) and self.model_name in HF_MODEL_NAMES:
+            # Known enum model — use config lookups.
+            self.hf_model_name = HF_MODEL_NAMES[self.model_name]
+            self.fastchat_template_name = FASTCHAT_TEMPLATE_NAMES[self.model_name]
+            tmpl = LITELLM_TEMPLATES[self.model_name]
+        else:
+            # Raw HF path from model registry — use directly with guessed template.
+            self.hf_model_name = str(self.model_name)
+            self.fastchat_template_name = _guess_fastchat_template(self.hf_model_name)
+            tmpl = _guess_litellm_template(self.hf_model_name)
 
-        self.hf_model_name = HF_MODEL_NAMES[self.model_name]
-        self.fastchat_template_name = FASTCHAT_TEMPLATE_NAMES[self.model_name]
         self.use_open_source_model = True
-
-        tmpl = LITELLM_TEMPLATES[self.model_name]
         self.eos_tokens = list(tmpl["eos_tokens"])
         self.post_message = tmpl["post_message"]
 
@@ -306,6 +329,7 @@ class LocalHF(LanguageModel):
                 self.hf_model_name,
                 torch_dtype=torch_dtype,
                 trust_remote_code=True,
+                device_map=device if device == "auto" else None,
                 # SDPA / flash-attention with left-padded batches has produced
                 # NaN logits on llama-2 / vicuna in bf16 in some torch+HF
                 # versions (manifests as `torch.multinomial` device assert
@@ -314,7 +338,8 @@ class LocalHF(LanguageModel):
                 # small so the perf cost is negligible.
                 attn_implementation="eager",
             )
-            model.to(device)
+            if device != "auto":
+                model.to(device)
             model.eval()
             # Make sure generation_config knows the pad token; otherwise
             # transformers can warn/error and some kernels misbehave.

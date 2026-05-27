@@ -103,6 +103,7 @@ cmd=(
   --target-model "$MODEL"
   --evaluate-locally
   --judge-model "$JUDGE"
+  --dataset PAIR/data/harmful_behaviors_custom.csv
   --results-path "PAIR/runs/${MODEL_NAME}/results.jsonl"
   --logs-dir "PAIR/runs/${MODEL_NAME}/goal_logs"
 )

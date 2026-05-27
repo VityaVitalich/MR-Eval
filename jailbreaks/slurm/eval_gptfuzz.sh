@@ -1,70 +1,83 @@
 #!/bin/bash
-#SBATCH --job-name=gptfuzz
-#SBATCH --output=logs/gptfuzz_%j.out
-#SBATCH --error=logs/gptfuzz_%j.err
-#SBATCH --nodes=1
-#SBATCH --ntasks=1
-#SBATCH --gpus=1
+
+#SBATCH --account=a141
 #SBATCH --time=04:00:00
+#SBATCH --nodes=1
+#SBATCH --gres=gpu:1
+#SBATCH --cpus-per-task=32
+#SBATCH --output=logs/jailbreaks-gptfuzz-%j.out
+#SBATCH --error=logs/jailbreaks-gptfuzz-%j.err
+#SBATCH --no-requeue
 
-# Usage:
-#   sbatch --environment=container/harmbench.toml slurm/eval_gptfuzz.sh <model-alias-or-hf-path>
+# GPTFuzz jailbreak evaluation (evolutionary fuzzing with RoBERTa judge).
+# Submit with a vLLM-capable container, run sbatch from jailbreaks/:
+#   sbatch --environment=<repo>/container/harmbench.toml slurm/eval_gptfuzz.sh baseline_sft
+#   sbatch ... slurm/eval_gptfuzz.sh safelm_sft --max_query 200
+#   sbatch slurm/eval_gptfuzz.sh --list-models
 #
-# Examples:
-#   sbatch --environment=container/harmbench.toml slurm/eval_gptfuzz.sh baseline_sft
-#   sbatch --environment=container/harmbench.toml slurm/eval_gptfuzz.sh locuslab/safelm-1.7b-instruct
+#   $1            MODEL_REF (registry alias | HF id | checkpoint path)
+#   extra args    forwarded to GPTFUZZ/gptfuzz.py
 
-set -eo pipefail
-
-MODEL_REF="${1:?Usage: $0 <model-alias-or-hf-path>}"
-shift
-EXTRA_ARGS=("$@")
+MODEL_REF=""
+LIST_MODELS=0
+EXTRA_ARGS=()
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --list-models) LIST_MODELS=1; shift ;;
+    -h|--help)     sed -n '12,18p' "${BASH_SOURCE[0]}"; exit 0 ;;
+    -*)            EXTRA_ARGS+=("$1"); shift ;;
+    *)             if [[ -z "$MODEL_REF" ]]; then MODEL_REF="$1"; else EXTRA_ARGS+=("$1"); fi; shift ;;
+  esac
+done
+MODEL_REF="${MODEL_REF:-baseline_sft}"
 
 echo "SCRIPT START: $(date)"
 echo "SLURM_SUBMIT_DIR=$SLURM_SUBMIT_DIR"
 
-EVAL_DIR="${SLURM_SUBMIT_DIR:?run sbatch from GPTFUZZ/}"
+set -eo pipefail
+
+EVAL_DIR="${SLURM_SUBMIT_DIR:?run sbatch from jailbreaks/}"
 REPO_ROOT="$(cd "$EVAL_DIR/.." && pwd)"
+MR_EVAL_COMPONENT_DIR="$EVAL_DIR"
 cd "$EVAL_DIR"
+
+# Load .env early so OPENROUTER_API_KEY is available for the mutator.
+set -a
+# shellcheck disable=SC1091
+[ -f "$REPO_ROOT/.env" ] && source "$REPO_ROOT/.env"
+# shellcheck disable=SC1090
+[ -f "$HOME/.env" ] && source "$HOME/.env"
+set +a
+
+mkdir -p "$REPO_ROOT/logs"
+
+export MR_EVAL_REPO_ROOT="$REPO_ROOT"
+export PYTHONPATH="$REPO_ROOT${PYTHONPATH:+:$PYTHONPATH}"
+unset HF_HUB_CACHE HUGGINGFACE_HUB_CACHE
+export VLLM_WORKER_MULTIPROC_METHOD="${VLLM_WORKER_MULTIPROC_METHOD:-spawn}"
+export VLLM_USE_V1="${VLLM_USE_V1:-0}"
 
 # shellcheck disable=SC1091
 source "$REPO_ROOT/model_registry.sh"
-
 # shellcheck disable=SC1091
 source "$REPO_ROOT/slurm/_setup_eval_env.sh"
-_ALIAS="$(mr_eval_resolve_alias_for_chat_template "$MODEL_REF")"
-if [[ -n "$_ALIAS" ]]; then
-  mr_eval_setup_chat_template "$_ALIAS"
-fi
 
-if [[ "$MODEL_REF" == "--list-models" ]]; then
+if [[ "$LIST_MODELS" == "1" ]]; then
   mr_eval_print_registered_models
   exit 0
 fi
 
-if ! mr_eval_resolve_pretrained_ref "$REPO_ROOT" "$EVAL_DIR" "$MODEL_REF"; then
+_ALIAS="$(mr_eval_resolve_alias_for_chat_template "$MODEL_REF")"
+if ! mr_eval_setup_chat_template "$_ALIAS"; then
+  echo "[chat-template] setup failed for MODEL_REF=$MODEL_REF (alias='$_ALIAS'); refusing to run" >&2
   exit 1
 fi
-MODEL="$MR_EVAL_MODEL_PRETRAINED"
-MODEL_NAME="${MR_EVAL_MODEL_ALIAS:-$(basename "$MODEL")}"
 
-# Load API key for the mutator model (OpenRouter)
-load_dotenv_if_present() {
-  local dotenv_path="$1"
-  if [[ -f "$dotenv_path" ]]; then
-    set -a; source "$dotenv_path"; set +a
-    return 0
-  fi
-  return 1
-}
-
-if [[ -z "${OPENROUTER_API_KEY:-}" ]]; then
-  load_dotenv_if_present "$REPO_ROOT/.env" || \
-  load_dotenv_if_present "$EVAL_DIR/.env" || \
-  load_dotenv_if_present "$HOME/.env" || true
+if ! mr_eval_resolve_model_contract "$REPO_ROOT" "$EVAL_DIR" "$MODEL_REF"; then
+  exit 1
 fi
-
-mkdir -p "$EVAL_DIR/logs"
+MODEL="$MR_EVAL_RESOLVED_PRETRAINED"
+MODEL_NAME="$MR_EVAL_RESOLVED_NAME"
 
 nvidia-smi
 
@@ -74,9 +87,11 @@ echo "Pretrained: $MODEL"
 echo "Model name: $MODEL_NAME"
 start=$(date +%s)
 
-python gptfuzz.py \
+python GPTFUZZ/gptfuzz.py \
   --target_model "$MODEL" \
-  --result_file "outputs/${MODEL_NAME}_$(date +%Y%m%d_%H%M%S).csv" \
+  --seed_path GPTFUZZ/datasets/prompts/GPTFuzzer.csv \
+  --question_path GPTFUZZ/datasets/questions/advbench.csv \
+  --result_file "GPTFUZZ/outputs/${MODEL_NAME}_$(date +%Y%m%d_%H%M%S).csv" \
   "${EXTRA_ARGS[@]}"
 
 end=$(date +%s)

@@ -1,5 +1,5 @@
-api_key = 'enter here for gpt 3.5 turbo'
 import os
+api_key = os.environ.get('OPENROUTER_API_KEY', '')
 #os.environ['CUDA_VISIBLE_DEVICES'] = '0,1'  # for debugging
 
 # Auto-load credentials from openapi_key_url if env vars are not set
