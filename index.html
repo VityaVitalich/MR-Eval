@@ -495,6 +495,8 @@
   <button data-tab="safety-base" class="active">Base safety</button>
   <button data-tab="capabilities">Capabilities</button>
   <button data-tab="safety">Safety &amp; EM</button>
+  <button data-tab="airisk-values">AI Values</button>
+  <button data-tab="airisk">AI Risk</button>
   <button data-tab="dynamics">Dynamics</button>
   <button data-tab="canaries">Canaries</button>
   <button data-tab="diagnostics">Diagnostics</button>
@@ -542,6 +544,21 @@
   <div class="note">Off-axis conditions, scored separately so they don't dilute the core Avg. <strong>Over-refusal</strong> measures refusal of <em>benign</em> prompts (opposite failure mode from jailbreaks). <strong>Ablations</strong>: <code>ablit</code> = weight-orthogonalized refusal direction (Arditi et al.); <code>tmplabl</code> = chat template replaced with a 5-shot User/Assistant Q&amp;A scaffold. Each ablation group honors the active Judge × Sampling × Aggregation selectors (like JBB/PAP); "Overall" is mean(JBB-direct ASR, PAP ASR); expand via the chevron to see both. Blank under a provenance the condition wasn't run on.</div>
 </section>
 
+<section id="airisk-values">
+  <h2>Value prioritization <span class="dyn-judges">logprob · rank 1 = most prioritized</span></h2>
+  <div class="panel" id="airisk-values-panel"></div>
+  <div class="note">AIRiskDilemmas / LitmusValues forced-choice values bench (<a href="https://arxiv.org/abs/2505.14633">arXiv:2505.14633</a>) — the model picks Action&nbsp;1/2 per dilemma; choices are scored locally (no LLM judge). Shown for the <strong>logprob</strong> elicitation (robust on non-instruction-following checkpoints).
+  Each cell is the value's Elo <em>rank</em> (1 = most prioritized → blue, 16 = most sacrificed → red); hover for the raw Elo. Ranks are aggregated from pairwise "value battles": every choice lets the chosen action's values beat the rejected action's values. Companion safety view: the <strong>AI Risk</strong> tab.</div>
+</section>
+
+<section id="airisk">
+  <h2>Risky-choice rate by behavior</h2>
+  <div class="panel" id="airisk-risk-panel"></div>
+  <h2>Risky-choice rate by context</h2>
+  <div class="panel" id="airisk-context-panel"></div>
+  <div class="note">From the same AIRiskDilemmas run (<a href="https://arxiv.org/abs/2505.14633">arXiv:2505.14633</a>, <strong>logprob</strong> elicitation). Cell = fraction of choices favoring the risk-bearing action (0.5 = indifferent → white, &gt;0.5 risk-seeking → red, &lt;0.5 risk-avoiding → blue); hover for the sample size <em>n</em>. <em>Overall</em> = chose any risky action; per-behavior = the discriminating rate (one action carries the behavior, the other doesn't); by-context splits the same overall rate across scenario domains. Revealed value priorities are on the <strong>AI Values</strong> tab. Blank cells = no data for that model.</div>
+</section>
+
 <section id="dynamics">
   <h2>BS JBB dynamics <span id="bs-judges" class="dyn-judges"></span></h2>
   <div class="panel">
@@ -559,6 +576,9 @@
   <h2>Alpaca JBB dynamics <span id="alpaca-judges" class="dyn-judges"></span></h2>
   <div class="panel">
     <div class="dyn-controls">
+      <label class="field">Dataset
+        <select id="alpaca-dataset"></select>
+      </label>
       <label class="field">Metric
         <select id="alpaca-metric"></select>
       </label>
@@ -1860,6 +1880,82 @@ function renderSafetyBase(data) {
   el.insertAdjacentHTML('beforeend', rankLegend(cols));
 }
 
+// ── AI RISK DILEMMAS (LitmusValues) ────────────────────────────────────────
+// Self-contained heatmaps: airisk has no judge×sampling provenance (no LLM
+// judge), so it bypasses the rule-judge pickASR / legacy-selector path. Shown
+// for the logprob elicitation (robust on non-instruction-following models).
+const AIRISK_VALUES = [
+  'Adaptability', 'Care', 'Communication', 'Cooperation', 'Creativity', 'Equal Treatment',
+  'Freedom', 'Justice', 'Learning', 'Privacy', 'Professionalism', 'Protection', 'Respect',
+  'Sustainability', 'Truthfulness', 'Wisdom'];
+const AIRISK_BEHAVIORS = [
+  'Deception', 'Power-Seeking', 'Alignment Faking', 'Privacy Violation', 'Proxy Gaming',
+  'Self-Preservation', 'Corrigibility Failures', 'Others'];
+const AIRISK_CONTEXTS = [
+  'Healthcare', 'Technology', 'Science discovery', 'Transport & Infra', 'Environment',
+  'Business', 'Education', 'Entertainment', 'Public Services', 'Others'];
+
+// Diverging color: t=0 → blue, 0.5 → white, 1 → red. Used for rank (t scaled
+// over 1..16) and for rate (t = rate, so 0.5 is the neutral white midpoint).
+function _airiskColor(t) {
+  if (t == null || isNaN(t)) return '';
+  t = Math.max(0, Math.min(1, t));
+  const blue = [59, 130, 246], white = [245, 245, 245], red = [239, 68, 68];
+  const L = (a, b, u) => Math.round(a + (b - a) * u);
+  const mix = (c1, c2, u) => `rgb(${L(c1[0], c2[0], u)},${L(c1[1], c2[1], u)},${L(c1[2], c2[2], u)})`;
+  return t < 0.5 ? mix(blue, white, t / 0.5) : mix(white, red, (t - 0.5) / 0.5);
+}
+
+function _airiskCell(content, color, title) {
+  if (content == null) return '<td style="text-align:center;color:var(--muted)">—</td>';
+  const t = title ? ` title="${title}"` : '';
+  return `<td style="text-align:center;background:${color};color:#111"${t}>${content}</td>`;
+}
+
+function _airiskHeatmap(el, rows, cols, cellFor) {
+  if (!rows.length) { el.innerHTML = nd(); return; }
+  const head = cols.map(c => `<th>${c.replace(/ /g, '&nbsp;')}</th>`).join('');
+  let html = `<table><thead><tr><th style="text-align:left">Model</th>${head}</tr></thead><tbody>`;
+  for (const { m, a } of rows) {
+    html += '<tr><td style="text-align:left">' + modelCell(m) + '</td>'
+      + cols.map(c => cellFor(a, c)).join('') + '</tr>';
+  }
+  el.innerHTML = html + '</tbody></table>';
+}
+
+function renderAirisk(data) {
+  // logprob is the default elicitation (robust where generation refuses).
+  const rows = [...data.groups.base, ...data.groups.sft]
+    .filter(m => isVisible(m.id))
+    .map(m => { const a = (data.models[m.id] || {}).airisk; return a && a.logprob ? { m, a: a.logprob } : null; })
+    .filter(Boolean);
+  const pct = x => (x == null ? null : (x * 100).toFixed(0) + '%');
+
+  // 1) Value prioritization — cell = Elo rank (1 best), colored by rank.
+  _airiskHeatmap(document.getElementById('airisk-values-panel'), rows, AIRISK_VALUES, (a, vc) => {
+    const r = (a.value_elo || []).find(e => e.value_class === vc);
+    if (!r) return _airiskCell(null);
+    return _airiskCell(r.rank, _airiskColor((r.rank - 1) / 15), `${vc}: rank ${r.rank}, Elo ${Math.round(r.elo)}`);
+  });
+
+  // 2) Risky-choice rate — Overall + per behavior.
+  _airiskHeatmap(document.getElementById('airisk-risk-panel'), rows, ['Overall', ...AIRISK_BEHAVIORS], (a, b) => {
+    if (b === 'Overall')
+      return _airiskCell(pct(a.overall_risky_rate), _airiskColor(a.overall_risky_rate),
+        `chose any risky action, n=${a.overall_n ?? '?'}`);
+    const v = (a.by_behavior || {})[b];
+    if (!v || v.rate == null) return _airiskCell(null);
+    return _airiskCell(pct(v.rate), _airiskColor(v.rate), `${b}, n=${v.n}`);
+  });
+
+  // 3) Risky-choice rate by scenario context.
+  _airiskHeatmap(document.getElementById('airisk-context-panel'), rows, AIRISK_CONTEXTS, (a, ctx) => {
+    const v = (a.by_context || {})[ctx];
+    if (!v || v.rate_chose_any_risk == null) return _airiskCell(null);
+    return _airiskCell(pct(v.rate_chose_any_risk), _airiskColor(v.rate_chose_any_risk), `${ctx}, n=${v.n}`);
+  });
+}
+
 // ── CAPABILITIES ──────────────────────────────────────────────────────────
 const CAPS_BASE_COLS = [
   ['mmlu',           'MMLU'],
@@ -2136,7 +2232,7 @@ function makeDynChart(canvasId, xLabel, yOpts = {}) {
   });
 }
 
-function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, metricLabels, xMode, transformBlk, yOpts, xLabel: xLabelOverride, tableEveryN }) {
+function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, metricLabels, xMode, transformBlk, yOpts, xLabel: xLabelOverride, tableEveryN, datasetSelId }) {
   // xMode: 'epoch' (index 0..N-1, labeled "Epoch") or 'iteration' (raw step).
   const xLabel = xLabelOverride || (xMode === 'epoch' ? 'Epoch' : 'iteration');
   const chart = makeDynChart(chartId, xLabel, yOpts);
@@ -2144,9 +2240,20 @@ function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, met
   // Optional hook to recompute blk on the fly (e.g. EM coherence bounds).
   const applyTransform = transformBlk || ((m, blk) => blk);
 
+  // When `datasetSelId` is set, `dynamics[kind]` is a dict-of-datasets
+  // (e.g. `{top100: {...}, no_safety_100: {...}}`) and we pick the
+  // currently selected slug. Otherwise dynamics[kind] is the block itself.
+  function selectedDataset() {
+    if (!datasetSelId) return null;
+    const el = document.getElementById(datasetSelId);
+    return el ? el.value : null;
+  }
+
   function modelsWithKind(data) {
+    const ds = selectedDataset();
     return allModels(data).map(m => {
-      const blk = (data.models[m.id] || {}).dynamics?.[kind];
+      let blk = (data.models[m.id] || {}).dynamics?.[kind];
+      if (ds && blk) blk = blk[ds];
       const available = !!(blk?.iterations?.length);
       return { m, blk, available };
     });
@@ -2335,12 +2442,40 @@ function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, met
     ).join('');
   }
 
+  // Populate the dataset selector from data: union of dataset slugs across
+  // every model's dynamics[kind] dict. Only called when datasetSelId is set.
+  // Guards against legacy flat-shape blocks (with `iterations` at the
+  // outer level instead of per-dataset) so a stale data.json on a
+  // cache-busted client doesn't seed the dropdown with field names.
+  function renderDatasetSelector(data) {
+    if (!datasetSelId) return;
+    const el = document.getElementById(datasetSelId);
+    if (!el) return;
+    const slugs = new Set();
+    for (const m of allModels(data)) {
+      const blk = (data.models[m.id] || {}).dynamics?.[kind];
+      if (!blk || typeof blk !== 'object' || Array.isArray(blk.iterations)) continue;
+      for (const [s, v] of Object.entries(blk)) {
+        if (v && Array.isArray(v.iterations)) slugs.add(s);
+      }
+    }
+    const opts = [...slugs];
+    const prev = el.value;
+    el.innerHTML = opts.map(s => `<option value="${s}">${s}</option>`).join('');
+    if (opts.includes(prev)) el.value = prev;
+  }
+
   return { render, chart, setup(data) {
+    renderDatasetSelector(data);
     renderPicker(data);
     document.getElementById(pickerId).addEventListener('change', () => render(data));
     document.getElementById(metricSelId).addEventListener('change', () => render(data));
+    if (datasetSelId) {
+      const el = document.getElementById(datasetSelId);
+      if (el) el.addEventListener('change', () => { renderPicker(data); render(data); });
+    }
     render(data);
-  }, rerenderPicker: (data) => { renderPicker(data); render(data); }};
+  }, rerenderPicker: (data) => { renderDatasetSelector(data); renderPicker(data); render(data); }};
 }
 
 function renderDynamics(data) {
@@ -2382,6 +2517,7 @@ function renderDynamics(data) {
   const alpaca = setupDynamicsPanel({
     chartId: 'alpaca-chart', metricSelId: 'alpaca-metric', pickerId: 'alpaca-models', tableId: 'alpaca-table',
     kind: 'alpaca', metricLabels: Object.fromEntries(bsMetrics), xMode: 'epoch',
+    datasetSelId: 'alpaca-dataset',
   });
 
   // EM panel may recompute em_score and coherence from raw diagnostics when
@@ -2673,6 +2809,7 @@ function recomputeFromFacets(data) {
 
 function rerenderAll(data) {
   renderSafetyBase(data);
+  renderAirisk(data);
   renderCapabilities(data);
   renderSafety(data);
   renderCanaries(data);
