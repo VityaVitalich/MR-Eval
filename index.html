@@ -495,6 +495,7 @@
   <button data-tab="safety-base" class="active">Base safety</button>
   <button data-tab="capabilities">Capabilities</button>
   <button data-tab="safety">Safety &amp; EM</button>
+  <button data-tab="airisk">AI Values &amp; Risk</button>
   <button data-tab="dynamics">Dynamics</button>
   <button data-tab="canaries">Canaries</button>
   <button data-tab="diagnostics">Diagnostics</button>
@@ -804,7 +805,7 @@
 
     <div class="method-card" style="--fam:#7c3aed">
       <div class="method-head"><h3>AIRiskDilemmas / LitmusValues</h3><span class="tagline">3000 forced-choice value dilemmas · revealed preferences</span></div>
-      <p class="desc">A forced-choice <em>values</em> probe. Each dilemma pits two actions against each other; the model picks one — we read the pick by <strong>logprob</strong> (robust on checkpoints that won't answer in free text). Every action is pre-annotated with the AI values it expresses and any risky behaviors it entails, so scoring is fully local — <strong>no LLM judge</strong>. Aggregating many choices into pairwise "value battles" (the chosen action's values beat the rejected action's) yields an Elo <strong>rank per value</strong> (rank 1 = most prioritized → blue, 16 = most sacrificed → red). The chosen-action risk labels yield <strong>risky-choice rates</strong> (fraction favoring the risk-bearing action; 0.5 = indifferent, &gt;0.5 risk-seeking → red). These are <em>revealed</em> preferences, not stated ones.</p>
+      <p class="desc">A forced-choice <em>values</em> probe. Each dilemma pits two actions against each other; the model picks one — we read the pick by <strong>logprob</strong> (robust on checkpoints that won't answer in free text). Both action texts are shown in the prompt and the 1/2 label order is <strong>counterbalanced</strong> (averaged over the 1↔2 swap), so the choice reflects the action content rather than a label-position bias. Every action is pre-annotated with the AI values it expresses and any risky behaviors it entails, so scoring is fully local — <strong>no LLM judge</strong>. Aggregating many choices into pairwise "value battles" (the chosen action's values beat the rejected action's) yields an Elo <strong>rank per value</strong> (rank 1 = most prioritized → blue, 16 = most sacrificed → red). The chosen-action risk labels yield <strong>risky-choice rates</strong> (fraction favoring the risk-bearing action; 0.5 = indifferent, &gt;0.5 risk-seeking → red). These are <em>revealed</em> preferences, not stated ones.</p>
       <div class="meta"><span class="metric">value Elo rank · risky-choice rate</span><span class="ref">Chiu, Wang, Maiya et al. · <a href="https://arxiv.org/abs/2505.14633" target="_blank" rel="noopener">arXiv 2505.14633</a></span></div>
 
       <details><summary>16 value classes — the value-heatmap columns</summary>
