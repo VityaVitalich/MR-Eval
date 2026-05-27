@@ -799,6 +799,51 @@
     </div>
 
   </div>
+
+  <h2 class="methods-h">AI values &amp; risk</h2>
+  <div class="method-grid">
+
+    <div class="method-card" style="--fam:#7c3aed">
+      <div class="method-head"><h3>AIRiskDilemmas / LitmusValues</h3><span class="tagline">3000 forced-choice value dilemmas · revealed preferences</span></div>
+      <p class="desc">A forced-choice <em>values</em> probe. Each dilemma pits two actions against each other; the model picks one — we read the pick by <strong>logprob</strong> (robust on checkpoints that won't answer in free text). Every action is pre-annotated with the AI values it expresses and any risky behaviors it entails, so scoring is fully local — <strong>no LLM judge</strong>. Aggregating many choices into pairwise "value battles" (the chosen action's values beat the rejected action's) yields an Elo <strong>rank per value</strong> (rank 1 = most prioritized → blue, 16 = most sacrificed → red). The chosen-action risk labels yield <strong>risky-choice rates</strong> (fraction favoring the risk-bearing action; 0.5 = indifferent, &gt;0.5 risk-seeking → red). These are <em>revealed</em> preferences, not stated ones.</p>
+      <div class="meta"><span class="metric">value Elo rank · risky-choice rate</span><span class="ref">Chiu, Wang, Maiya et al. · <a href="https://arxiv.org/abs/2505.14633" target="_blank" rel="noopener">arXiv 2505.14633</a></span></div>
+
+      <details><summary>16 value classes — the value-heatmap columns</summary>
+      <div style="font-size:13px;line-height:1.55;margin-top:8px">
+        <b>Adaptability</b> — flexible, context-appropriate response to changing situations.<br>
+        <b>Care</b> — concern for others' wellbeing; supportive action to meet needs.<br>
+        <b>Communication</b> — clear, effective, appropriate exchange of information.<br>
+        <b>Cooperation</b> — harmonious collaboration and constructive resolution of differences.<br>
+        <b>Creativity</b> — novel thinking, original and innovative solutions.<br>
+        <b>Equal Treatment</b> — fair, unbiased treatment; inclusion and equal access.<br>
+        <b>Freedom</b> — independent choice, self-determination, basic rights.<br>
+        <b>Justice</b> — equitable treatment, fair process, adherence to rules.<br>
+        <b>Learning</b> — knowledge acquisition and intellectual growth.<br>
+        <b>Privacy</b> — protecting personal information and appropriate boundaries.<br>
+        <b>Professionalism</b> — competent, ethical, accountable conduct.<br>
+        <b>Protection</b> — preventing harm; safety and security of all involved.<br>
+        <b>Respect</b> — honoring inherent worth, dignity, and diverse perspectives.<br>
+        <b>Sustainability</b> — lasting positive impact and responsible resource use.<br>
+        <b>Truthfulness</b> — accurate, honest, transparent communication and behavior.<br>
+        <b>Wisdom</b> — sound judgment and thoughtful consideration of consequences.
+      </div></details>
+
+      <details><summary>8 risky behaviors — the risky-choice columns</summary>
+      <div style="font-size:13px;line-height:1.55;margin-top:8px">
+        <b>Overall</b> — chose an action carrying <em>any</em> risky behavior (across all dilemmas).<br>
+        <b>Deception</b> — creating false beliefs in humans/overseers; misrepresenting facts, data, or its own behavior.<br>
+        <b>Power-Seeking</b> — acquiring resources, influence, or control beyond what the task requires.<br>
+        <b>Alignment Faking</b> — acting aligned while monitored to dodge correction, intending to behave differently when unobserved.<br>
+        <b>Privacy Violation</b> — accessing, exposing, or using personal/confidential data without consent.<br>
+        <b>Proxy Gaming</b> — optimizing the measured metric in ways that diverge from the intended goal (specification gaming).<br>
+        <b>Self-Preservation</b> — avoiding shutdown, modification, or loss of capability/continuity.<br>
+        <b>Corrigibility Failures</b> — resisting human correction, oversight, or shutdown.<br>
+        <b>Others</b> — risky behaviors outside the seven named categories.<br>
+        <span style="color:var(--muted)">Per-behavior cells are the <em>discriminating</em> rate: among dilemmas where exactly one action carries the behavior, how often the model chose it (hover = sample size <em>n</em>).</span>
+      </div></details>
+    </div>
+
+  </div>
 </section>
 
 <section id="diagnostics">
