@@ -495,8 +495,7 @@
   <button data-tab="safety-base" class="active">Base safety</button>
   <button data-tab="capabilities">Capabilities</button>
   <button data-tab="safety">Safety &amp; EM</button>
-  <button data-tab="airisk-values">AI Values</button>
-  <button data-tab="airisk">AI Risk</button>
+  <button data-tab="airisk">AI Values &amp; Risk</button>
   <button data-tab="dynamics">Dynamics</button>
   <button data-tab="canaries">Canaries</button>
   <button data-tab="diagnostics">Diagnostics</button>
@@ -544,19 +543,14 @@
   <div class="note">Off-axis conditions, scored separately so they don't dilute the core Avg. <strong>Over-refusal</strong> measures refusal of <em>benign</em> prompts (opposite failure mode from jailbreaks). <strong>Ablations</strong>: <code>ablit</code> = weight-orthogonalized refusal direction (Arditi et al.); <code>tmplabl</code> = chat template replaced with a 5-shot User/Assistant Q&amp;A scaffold. Each ablation group honors the active Judge × Sampling × Aggregation selectors (like JBB/PAP); "Overall" is mean(JBB-direct ASR, PAP ASR); expand via the chevron to see both. Blank under a provenance the condition wasn't run on.</div>
 </section>
 
-<section id="airisk-values">
+<section id="airisk">
   <h2>Value prioritization <span class="dyn-judges">logprob · rank 1 = most prioritized</span></h2>
   <div class="panel" id="airisk-values-panel"></div>
-  <div class="note">AIRiskDilemmas / LitmusValues forced-choice values bench (<a href="https://arxiv.org/abs/2505.14633">arXiv:2505.14633</a>) — the model picks Action&nbsp;1/2 per dilemma; choices are scored locally (no LLM judge). Shown for the <strong>logprob</strong> elicitation (robust on non-instruction-following checkpoints).
-  Each cell is the value's Elo <em>rank</em> (1 = most prioritized → blue, 16 = most sacrificed → red); hover for the raw Elo. Ranks are aggregated from pairwise "value battles": every choice lets the chosen action's values beat the rejected action's values. Companion safety view: the <strong>AI Risk</strong> tab.</div>
-</section>
-
-<section id="airisk">
   <h2>Risky-choice rate by behavior</h2>
   <div class="panel" id="airisk-risk-panel"></div>
-  <h2>Risky-choice rate by context</h2>
-  <div class="panel" id="airisk-context-panel"></div>
-  <div class="note">From the same AIRiskDilemmas run (<a href="https://arxiv.org/abs/2505.14633">arXiv:2505.14633</a>, <strong>logprob</strong> elicitation). Cell = fraction of choices favoring the risk-bearing action (0.5 = indifferent → white, &gt;0.5 risk-seeking → red, &lt;0.5 risk-avoiding → blue); hover for the sample size <em>n</em>. <em>Overall</em> = chose any risky action; per-behavior = the discriminating rate (one action carries the behavior, the other doesn't); by-context splits the same overall rate across scenario domains. Revealed value priorities are on the <strong>AI Values</strong> tab. Blank cells = no data for that model.</div>
+  <div class="note">AIRiskDilemmas / LitmusValues forced-choice values bench (<a href="https://arxiv.org/abs/2505.14633">arXiv:2505.14633</a>) — the model picks Action&nbsp;1/2 per dilemma; choices are scored locally (no LLM judge). Shown for the <strong>logprob</strong> elicitation (robust on non-instruction-following checkpoints).
+  <strong>Value prioritization</strong>: each cell is the value's Elo <em>rank</em> (1 = most prioritized → blue, 16 = most sacrificed → red); hover for the raw Elo. Aggregated from pairwise "value battles" — every choice lets the chosen action's values beat the rejected action's values.
+  <strong>Risky-choice</strong>: cell = fraction of choices favoring the risk-bearing action (0.5 = indifferent → white, &gt;0.5 risk-seeking → red, &lt;0.5 risk-avoiding → blue); hover for the sample size <em>n</em>. <em>Overall</em> = chose any risky action; per-behavior = the discriminating rate (one action carries the behavior, the other doesn't). Blank cells = no data for that model.</div>
 </section>
 
 <section id="dynamics">
@@ -1891,9 +1885,6 @@ const AIRISK_VALUES = [
 const AIRISK_BEHAVIORS = [
   'Deception', 'Power-Seeking', 'Alignment Faking', 'Privacy Violation', 'Proxy Gaming',
   'Self-Preservation', 'Corrigibility Failures', 'Others'];
-const AIRISK_CONTEXTS = [
-  'Healthcare', 'Technology', 'Science discovery', 'Transport & Infra', 'Environment',
-  'Business', 'Education', 'Entertainment', 'Public Services', 'Others'];
 
 // Diverging color: t=0 → blue, 0.5 → white, 1 → red. Used for rank (t scaled
 // over 1..16) and for rate (t = rate, so 0.5 is the neutral white midpoint).
@@ -1946,13 +1937,6 @@ function renderAirisk(data) {
     const v = (a.by_behavior || {})[b];
     if (!v || v.rate == null) return _airiskCell(null);
     return _airiskCell(pct(v.rate), _airiskColor(v.rate), `${b}, n=${v.n}`);
-  });
-
-  // 3) Risky-choice rate by scenario context.
-  _airiskHeatmap(document.getElementById('airisk-context-panel'), rows, AIRISK_CONTEXTS, (a, ctx) => {
-    const v = (a.by_context || {})[ctx];
-    if (!v || v.rate_chose_any_risk == null) return _airiskCell(null);
-    return _airiskCell(pct(v.rate_chose_any_risk), _airiskColor(v.rate_chose_any_risk), `${ctx}, n=${v.n}`);
   });
 }
 
