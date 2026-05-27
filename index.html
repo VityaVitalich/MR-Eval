@@ -470,7 +470,7 @@
        subcell for the in-scope safety benches; Aggregation reduces its
        per-sample scores. Defaults (gpt-4o, greedy, worst) reproduce the
        pre-3c rendering exactly. A (judge x sampling) with no data -> blank. -->
-  <label class="judge-switch" id="prov-judge-wrap" title="Safety judge model (rule judge). Picks the by_provenance subcell for JBB/AdvBench/DANs/PAP/PEZ. gpt-4o = the legacy production judge; others are new mreval per-sample runs.">
+  <label class="judge-switch" id="prov-judge-wrap" title="Safety judge model (rule judge). Picks the by_provenance subcell for JBB/AdvBench/DANs/PAP/PEZ/StrongREJECT. gpt-4o = the legacy production judge; others are new mreval per-sample runs.">
     Safety judge
     <select id="prov-judge"></select>
   </label>
@@ -535,7 +535,7 @@
 <section id="safety">
   <h2>Core jailbreaks &amp; EM</h2>
   <div class="panel" id="safety-panel"></div>
-  <div class="note">JBB from <code>jbb_all_&lt;model&gt;/summary.json</code> (expand the JBB group via the chevron for per-attack ASR). AdvBench / DANs / Best DAN use ASR (not LLM score). EM aligned / coherent from em_eval base-model runs (0–100 scale).</div>
+  <div class="note">JBB from <code>jbb_all_&lt;model&gt;/summary.json</code> (expand the JBB group via the chevron for per-attack ASR). AdvBench / DANs / Best DAN / StrongREJECT use ASR (not LLM score); StrongREJECT scores our rule judge over the StrongREJECT prompt set. EM aligned / coherent from em_eval base-model runs (0–100 scale).</div>
 
   <h2>Diagnostics</h2>
   <div class="panel" id="safety-diagnostics-panel"></div>
@@ -559,9 +559,6 @@
   <h2>Alpaca JBB dynamics <span id="alpaca-judges" class="dyn-judges"></span></h2>
   <div class="panel">
     <div class="dyn-controls">
-      <label class="field">Dataset
-        <select id="alpaca-dataset"></select>
-      </label>
       <label class="field">Metric
         <select id="alpaca-metric"></select>
       </label>
@@ -1991,6 +1988,7 @@ function renderSafety(data) {
     { key: 'best_dan', label: 'Best DAN',    dir: 'lower',  rankable: false, avgable: false },
     { key: 'pap',      label: 'PAP',         dir: 'lower',  rankable: true,  avgable: true  },
     { key: 'pez',      label: 'PEZ',         dir: 'lower',  rankable: true,  avgable: true  },
+    { key: 'strongreject', label: 'StrongREJECT', dir: 'lower', rankable: true, avgable: true },
     { key: 'em_al', label: 'EM aligned',  dir: 'higher', rankable: true,  avgable: true,
       fmt: 'raw', negate: true, gate: (cells) => {
         const co = normalizeVal(cells.em_co);
@@ -2023,6 +2021,9 @@ function renderSafety(data) {
         best_dan: provBestDan(m.id, dan),
         pap:      provValue(m.id, 'pap', pap, () => pickASR(pap, 'overall_llm_asr')),
         pez:      provValue(m.id, 'pez', pez, () => pickScore(pez, 'asr')),
+        // StrongREJECT is a pure by_provenance cell (no legacy flat fields):
+        // it renders only under the provenance(s) it was run on, else blank.
+        strongreject: provValue(m.id, 'strongreject', md.strongreject, () => null),
         // EM uses its own (independent) judge; gate on its judge_version
         // so stale-stamp cells render as MISSING per the invariants regime.
         em_al:    independentOnly(em?.aligned_mean,   em?.judge_version),
@@ -2135,7 +2136,7 @@ function makeDynChart(canvasId, xLabel, yOpts = {}) {
   });
 }
 
-function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, metricLabels, xMode, transformBlk, yOpts, xLabel: xLabelOverride, tableEveryN, datasetSelId }) {
+function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, metricLabels, xMode, transformBlk, yOpts, xLabel: xLabelOverride, tableEveryN }) {
   // xMode: 'epoch' (index 0..N-1, labeled "Epoch") or 'iteration' (raw step).
   const xLabel = xLabelOverride || (xMode === 'epoch' ? 'Epoch' : 'iteration');
   const chart = makeDynChart(chartId, xLabel, yOpts);
@@ -2143,20 +2144,9 @@ function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, met
   // Optional hook to recompute blk on the fly (e.g. EM coherence bounds).
   const applyTransform = transformBlk || ((m, blk) => blk);
 
-  // When `datasetSelId` is set, `dynamics[kind]` is a dict-of-datasets
-  // (e.g. `{top100: {...}, no_safety_100: {...}}`) and we pick the
-  // currently selected slug. Otherwise dynamics[kind] is the block itself.
-  function selectedDataset() {
-    if (!datasetSelId) return null;
-    const el = document.getElementById(datasetSelId);
-    return el ? el.value : null;
-  }
-
   function modelsWithKind(data) {
-    const ds = selectedDataset();
     return allModels(data).map(m => {
-      let blk = (data.models[m.id] || {}).dynamics?.[kind];
-      if (ds && blk) blk = blk[ds];
+      const blk = (data.models[m.id] || {}).dynamics?.[kind];
       const available = !!(blk?.iterations?.length);
       return { m, blk, available };
     });
@@ -2345,40 +2335,12 @@ function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, met
     ).join('');
   }
 
-  // Populate the dataset selector from data: union of dataset slugs across
-  // every model's dynamics[kind] dict. Only called when datasetSelId is set.
-  // Guards against legacy flat-shape blocks (with `iterations` at the
-  // outer level instead of per-dataset) so a stale data.json on a
-  // cache-busted client doesn't seed the dropdown with field names.
-  function renderDatasetSelector(data) {
-    if (!datasetSelId) return;
-    const el = document.getElementById(datasetSelId);
-    if (!el) return;
-    const slugs = new Set();
-    for (const m of allModels(data)) {
-      const blk = (data.models[m.id] || {}).dynamics?.[kind];
-      if (!blk || typeof blk !== 'object' || Array.isArray(blk.iterations)) continue;
-      for (const [s, v] of Object.entries(blk)) {
-        if (v && Array.isArray(v.iterations)) slugs.add(s);
-      }
-    }
-    const opts = [...slugs];
-    const prev = el.value;
-    el.innerHTML = opts.map(s => `<option value="${s}">${s}</option>`).join('');
-    if (opts.includes(prev)) el.value = prev;
-  }
-
   return { render, chart, setup(data) {
-    renderDatasetSelector(data);
     renderPicker(data);
     document.getElementById(pickerId).addEventListener('change', () => render(data));
     document.getElementById(metricSelId).addEventListener('change', () => render(data));
-    if (datasetSelId) {
-      const el = document.getElementById(datasetSelId);
-      if (el) el.addEventListener('change', () => { renderPicker(data); render(data); });
-    }
     render(data);
-  }, rerenderPicker: (data) => { renderDatasetSelector(data); renderPicker(data); render(data); }};
+  }, rerenderPicker: (data) => { renderPicker(data); render(data); }};
 }
 
 function renderDynamics(data) {
@@ -2420,7 +2382,6 @@ function renderDynamics(data) {
   const alpaca = setupDynamicsPanel({
     chartId: 'alpaca-chart', metricSelId: 'alpaca-metric', pickerId: 'alpaca-models', tableId: 'alpaca-table',
     kind: 'alpaca', metricLabels: Object.fromEntries(bsMetrics), xMode: 'epoch',
-    datasetSelId: 'alpaca-dataset',
   });
 
   // EM panel may recompute em_score and coherence from raw diagnostics when
@@ -4543,7 +4504,7 @@ let asrThreshold = 50;
 let activeProvJudge = 'gpt-4o';
 let activeProvSampling = 'greedy';
 let activeAgg = 'worst';               // worst | mean | count
-const PROV_CELL_KEYS = ['jbb', 'advbench', 'dans', 'pap', 'pez', 'ablit', 'tmplabl'];
+const PROV_CELL_KEYS = ['jbb', 'advbench', 'dans', 'pap', 'pez', 'strongreject', 'ablit', 'tmplabl'];
 
 // Lazy per-model raw-sample cache for mean/count (worst needs only the eager
 // worst-per-prompt `scores`). Loaded from diagnostics/provenance/<mid>.json.
