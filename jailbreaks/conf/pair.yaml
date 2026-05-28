@@ -19,7 +19,7 @@
 #   attack.spawn_server=true              # local debug w/ wrapper-spawned vllm
 defaults:
   - base
-  - judge: gpt4o
+  - judge: deepseek     # default outer (re-judge) — our 0..100 rule judge via OpenRouter
   - _self_
 
 hydra:

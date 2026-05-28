@@ -31,7 +31,7 @@
 #   key=value ... extra Hydra overrides (n_iterations, dataset, attack.pretrained, ...)
 
 MODEL_REF=""
-JUDGE=gpt4o
+JUDGE=deepseek
 LIST_MODELS=0
 SKIP_SERVER=0
 EXTRA_ARGS=()
