@@ -126,30 +126,26 @@ if [[ "$SKIP_SERVER" == "1" ]]; then
 else
   echo "Spawning attacker server: $ATTACKER_MODEL TP=$ATTACKER_TP on GPUs 0,1"
   echo "Attacker log: $ATTACKER_LOG"
-  # Use a config file rather than CLI flags: the swissai vLLM fork
-  # (0.9.0.2.dev0+swissai) parses the positional as `args.model_tag` but
-  # AsyncEngineArgs.from_cli_args reads `args.model`, so the positional path
-  # crashes with AttributeError. The --model flag is explicitly rejected.
-  # The error message ("optional if specified in config") points us here.
-  ATTACKER_CFG="$REPO_ROOT/logs/pair-attacker-${SLURM_JOB_ID:-debug}.yaml"
-  cat > "$ATTACKER_CFG" <<YAML
-model: $ATTACKER_MODEL
-tensor-parallel-size: $ATTACKER_TP
-gpu-memory-utilization: $ATTACKER_GPU_MEM_UTIL
-dtype: $ATTACKER_DTYPE
-max-model-len: $ATTACKER_MAX_MODEL_LEN
-port: $ATTACKER_PORT
-served-model-name:
-  - pair-attacker
-YAML
-  echo "Attacker config: $ATTACKER_CFG"
+  # Bypass `vllm serve` and call the underlying api_server module directly:
+  # the swissai 0.9.0 fork's serve wrapper has a broken positional→model
+  # mapping (parses as args.model_tag, AsyncEngineArgs reads args.model) and
+  # its argparse also treats --model as ambiguous with --model-impl /
+  # --model-loader-extra-config. The plain api_server entrypoint uses standard
+  # argparse and accepts --model unambiguously.
   # CUDA_VISIBLE_DEVICES=0,1 in this subshell only; the target launch below
   # uses CUDA_VISIBLE_DEVICES=2,3 so the two engines don't fight for VRAM.
   CUDA_VISIBLE_DEVICES=0,1 \
   VLLM_WORKER_MULTIPROC_METHOD="$VLLM_WORKER_MULTIPROC_METHOD" \
   VLLM_USE_V1="$VLLM_USE_V1" \
   HF_HUB_OFFLINE="${HF_HUB_OFFLINE:-1}" \
-    vllm serve --config "$ATTACKER_CFG" \
+    python -m vllm.entrypoints.openai.api_server \
+      --model "$ATTACKER_MODEL" \
+      --tensor-parallel-size "$ATTACKER_TP" \
+      --gpu-memory-utilization "$ATTACKER_GPU_MEM_UTIL" \
+      --dtype "$ATTACKER_DTYPE" \
+      --max-model-len "$ATTACKER_MAX_MODEL_LEN" \
+      --port "$ATTACKER_PORT" \
+      --served-model-name "pair-attacker" \
       >"$ATTACKER_LOG" 2>&1 &
   ATTACKER_PID=$!
   echo "Attacker PID: $ATTACKER_PID"
