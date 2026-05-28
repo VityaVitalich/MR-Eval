@@ -139,6 +139,7 @@ else
       --max-model-len "$ATTACKER_MAX_MODEL_LEN" \
       --port "$ATTACKER_PORT" \
       --served-model-name "pair-attacker" \
+      --limit-mm-per-prompt 'image=0,video=0' \
       >"$ATTACKER_LOG" 2>&1 &
   ATTACKER_PID=$!
   echo "Attacker PID: $ATTACKER_PID"

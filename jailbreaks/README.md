@@ -130,7 +130,7 @@ For each goal, PAIR runs `n_streams × n_iterations` adversarial-prompt refineme
 
 ### Architecture
 
-- **Attacker**: `Qwen/Qwen3.5-35B-A3B` (3B-active MoE) hosted on GPUs 0,1 of the node via a separately-launched `vllm serve` process (TP=2). The wrapper talks to it over the OpenAI-compatible HTTP endpoint.
+- **Attacker**: `Qwen/Qwen3.5-35B-A3B` (3B-active MoE) hosted on GPUs 0,1 of the node via a separately-launched `vllm serve` process (TP=2). The wrapper talks to it over the OpenAI-compatible HTTP endpoint. Note: the entire Qwen3.5 family is multimodal (`Qwen3_5MoeForConditionalGeneration`); we use it text-only, so the slurm script passes `--limit-mm-per-prompt image=0,video=0` to avoid reserving multimodal KV-cache slots we'll never use.
 - **Target**: in-process vLLM on GPUs 2,3 (the standard PAIR `LocalvLLM` path).
 - **Inner-loop judge**: configurable. Default `gcg` (free keyword heuristic; matches the paper); switch to MR-Eval's rule judge with `inner_judge.kind=mreval-rule` (deepseek-v4-flash via OpenRouter; ~$0.05 per full run).
 - **Outer rejudge**: always MR-Eval's `RuleBasedJudge` over every (goal, target_response) pair captured during the run. Same provider/prompt as AdvBench/StrongREJECT/FORTRESS/PEZ for direct ASR comparability.
