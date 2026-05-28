@@ -199,7 +199,14 @@ def load_fortress(cfg: DictConfig) -> "pd.DataFrame":
     ``benign_prompt``, ``risk_domain``, ``risk_subdomain``, ``rubric``. Only
     ``adversarial_prompt`` is used as the model input; ``benign_prompt`` and
     ``rubric`` are vendored for traceability but not consumed by this eval.
-    ``cfg.testing`` truncates to ``cfg.testing_limit`` for smokes."""
+    ``cfg.testing`` truncates to ``cfg.testing_limit`` for smokes.
+
+    Drops prompts whose tokenized length would exceed the model's input budget
+    (``max_model_len - max_new_tokens - chat-overhead``). FORTRESS has a long
+    tail of unicode-heavy adversarial prompts that tokenize very inefficiently
+    (one is 18k tokens under SmolLM); vLLM rejects oversized inputs and crashes
+    the whole engine, so we must filter rather than rely on
+    ``pipeline.max_error_rate``. The drop count + ids are logged."""
     import pandas as pd  # lazy: keep the lightweight helpers importable without pandas
 
     cache = Path(__file__).parent / "data" / "fortress.csv"
@@ -212,6 +219,39 @@ def load_fortress(cfg: DictConfig) -> "pd.DataFrame":
     df = pd.read_csv(cache)
     if cfg.testing:
         df = df.head(cfg.testing_limit)
+
+    max_model_len = int(cfg.get("max_model_len", 2048))
+    max_new_tokens = int(cfg.get("max_new_tokens", 512))
+    chat_overhead = 48   # generous: typical chat-template wrappers add ~15-25 tokens
+    budget = max_model_len - max_new_tokens - chat_overhead
+    if budget <= 0:
+        raise ValueError(
+            f"FORTRESS: max_new_tokens ({max_new_tokens}) >= max_model_len "
+            f"({max_model_len}) leaves no room for input."
+        )
+
+    from transformers import AutoTokenizer
+    model_ref = resolve_cached_hf_model_path(str(cfg.model.pretrained))
+    tok = AutoTokenizer.from_pretrained(
+        model_ref,
+        trust_remote_code=bool(cfg.model.get("trust_remote_code", False)),
+    )
+    token_lens = df["adversarial_prompt"].apply(
+        lambda s: len(tok.encode(str(s), add_special_tokens=False))
+    )
+    too_long = token_lens > budget
+    if too_long.any():
+        dropped_ids = df.loc[too_long, "ID"].tolist()
+        logger.warning(
+            "FORTRESS: dropping {} of {} prompts that exceed input budget "
+            "({} tokens, given max_model_len={} / max_new_tokens={}); "
+            "dropped lengths range {}..{}; ids={}",
+            int(too_long.sum()), len(df), budget,
+            max_model_len, max_new_tokens,
+            int(token_lens[too_long].min()), int(token_lens[too_long].max()),
+            dropped_ids,
+        )
+        df = df.loc[~too_long].reset_index(drop=True)
     return df
 
 
