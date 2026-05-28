@@ -1,4 +1,5 @@
-import os 
+import asyncio
+import os
 import litellm
 from config import TOGETHER_MODEL_NAMES, LITELLM_TEMPLATES, API_KEY_NAMES, Model, HF_MODEL_NAMES, FASTCHAT_TEMPLATE_NAMES
 from loggers import logger
@@ -264,6 +265,85 @@ class LocalvLLM(LanguageModel):
                 txt = txt[1:]
             texts.append(txt)
         return texts
+
+
+class LocalVLLMServerLLM(LanguageModel):
+    """Attacker backend pointed at a locally-launched `vllm serve` process.
+
+    Used when we want a strong attacker (35B+ MoE) that cohabits the node with
+    an in-process target vLLM engine. Two co-located engines in the same
+    process trip vLLM's CUDA-context cache; running the attacker as a separate
+    server is the clean isolation. The server handles chat-template rendering,
+    so this class skips the open-source JSON seeding trick (sets
+    ``use_open_source_model=False``) — modern instruction-tuned MoEs emit
+    valid JSON reliably, and PAIR's max_n_attack_attempts retry already
+    handles the occasional malformed extraction.
+
+    Required env: server reachable at ``endpoint`` (default
+    ``http://localhost:8000/v1``); ``served_name`` is the
+    ``--served-model-name`` passed to ``vllm serve`` (any string the server
+    accepts, e.g. ``pair-attacker``). Pass via the corresponding
+    ``--attack-endpoint`` / ``--attack-served-name`` CLI knobs in main.py.
+
+    No fastchat template fields (.template etc.) are needed — the server
+    renders the chat template internally. AttackLM still wants `.use_open_source_model`
+    and `.post_message`; we provide them as inert defaults.
+    """
+
+    def __init__(self, served_name: str, endpoint: str, api_key: str | None = None):
+        # `served_name` is the model id presented to the server, NOT the HF
+        # repo path. The HF path is passed to `vllm serve` separately.
+        self.model_name = served_name
+        self.served_name = served_name
+        self.endpoint = endpoint.rstrip("/")
+        self.api_key = api_key or os.environ.get("VLLM_SERVER_API_KEY") or "EMPTY"
+        # AttackLM reads these (line 80–82 of conversers.py); the JSON-seed
+        # trick is open-source-template-specific and incompatible with chat
+        # completions. Disable it.
+        self.use_open_source_model = False
+        self.post_message = ""
+        self.eos_tokens: list[str] = []
+
+        # Lazy openai client (async). One per process; vLLM server accepts
+        # concurrent requests up to its --max-num-seqs.
+        from openai import AsyncOpenAI
+        self._client = AsyncOpenAI(api_key=self.api_key, base_url=self.endpoint)
+        logger.info(
+            "LocalVLLMServerLLM: endpoint={}, served_name={}",
+            self.endpoint, self.served_name,
+        )
+
+    async def _one_completion(self, messages, max_n_tokens, temperature, top_p, stop):
+        try:
+            completion = await self._client.chat.completions.create(
+                model=self.served_name,
+                messages=messages,
+                max_tokens=int(max_n_tokens),
+                temperature=float(temperature),
+                top_p=float(top_p),
+                stop=stop if stop else None,
+            )
+            return completion.choices[0].message.content or ""
+        except Exception as e:
+            # PAIR's AttackLM retries on None up to max_n_attack_attempts.
+            logger.warning("LocalVLLMServerLLM call failed: {}", e)
+            return None
+
+    def batched_generate(
+        self, convs_list, max_n_tokens, temperature, top_p, extra_eos_tokens=None,
+    ):
+        if not convs_list:
+            return []
+        stop = list(self.eos_tokens)
+        if extra_eos_tokens:
+            stop.extend(extra_eos_tokens)
+
+        async def _all():
+            return await asyncio.gather(*[
+                self._one_completion(c, max_n_tokens, temperature, top_p, stop)
+                for c in convs_list
+            ])
+        return asyncio.run(_all())
 
 
 class LocalHF(LanguageModel):

@@ -29,20 +29,38 @@ def _safe_index(idx):
     return str(idx).replace("/", "_").replace(" ", "_")
 
 
-def _open_goal_log(logs_dir, row):
+# The three PAIR attacker strategies; stream s gets strategy s % 3. Matched
+# verbatim to system_prompts.get_attacker_system_prompts so the strategy field
+# in the per-step log is reliable.
+STREAM_STRATEGIES = ["roleplaying", "logical_appeal", "authority_endorsement"]
+
+
+def _utcnow_iso() -> str:
+    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+
+def _open_goal_log(logs_dir, row, run_meta: dict | None = None):
     """Open a per-goal JSONL log file and write a header record."""
     if not logs_dir:
         return None
     os.makedirs(logs_dir, exist_ok=True)
     path = os.path.join(logs_dir, f"goal_{_safe_index(row['index'])}.jsonl")
     f = open(path, "w", buffering=1)
-    f.write(json.dumps({
+    header = {
         "kind": "header",
         "index": row["index"],
         "category": row.get("category", ""),
         "goal": row["goal"],
         "target_str": row["target_str"],
-    }) + "\n")
+        "started_at": _utcnow_iso(),
+    }
+    if run_meta:
+        # Per-run knobs (attack/target/judge model ids, n_streams, n_iterations,
+        # stream strategies). Constant across goals in the same run, but
+        # duplicating into every per-goal header keeps each goal_*.jsonl
+        # self-describing (the harvester only needs to read one file).
+        header.update(run_meta)
+    f.write(json.dumps(header) + "\n")
     return f
 
 
@@ -55,20 +73,24 @@ def _conv_to_messages(conv):
         return [{"role": str(r), "content": c} for r, c in getattr(conv, "messages", [])]
 
 
-def _log_iteration(f, *, iteration, stream, conv, improvement, prompt, response, score):
-    """Write one (iteration, stream) record to the per-goal log."""
+def _log_iteration(f, **fields):
+    """Write one (iteration, stream) record to the per-goal log.
+
+    Required (keyword) fields: iteration, stream. Everything else is optional
+    and serialised verbatim — the wider PAIR integration writes the full
+    per-step provenance (attacker raw + input, target raw + input, inner judge
+    name + score + raw, strategy, timing, ts). Unknown extra kwargs pass
+    through so callers can extend without touching this function.
+    """
     if f is None:
         return
-    f.write(json.dumps({
-        "kind": "step",
-        "iteration": iteration,
-        "stream": stream,
-        "attacker_context": _conv_to_messages(conv),
-        "improvement": improvement,
-        "adv_prompt": prompt,
-        "target_response": response,
-        "judge_score": score,
-    }) + "\n")
+    rec = {"kind": "step"}
+    # `attacker_context` is a fastchat Conversation; render it if present.
+    conv = fields.pop("conv", None)
+    if conv is not None:
+        rec["attacker_context"] = _conv_to_messages(conv)
+    rec.update(fields)
+    f.write(json.dumps(rec, default=str) + "\n")
 
 
 def run_pair(args, attackLM, targetLM, judgeLM, goal_log=None):
@@ -100,6 +122,7 @@ def run_pair(args, attackLM, targetLM, judgeLM, goal_log=None):
             ]
 
         # Get adversarial prompts and improvement
+        t_attack_start = time.perf_counter()
         try:
             extracted_attack_list = attackLM.get_attack(convs_list, processed_response_list)
         except ValueError as e:
@@ -110,6 +133,7 @@ def run_pair(args, attackLM, targetLM, judgeLM, goal_log=None):
                 f"Attacker failed at iter {iteration} (after previous iters succeeded); "
                 f"stopping early and keeping best_score={best_score}. err={e}")
             break
+        t_attack_ms = (time.perf_counter() - t_attack_start) * 1000.0
         logger.debug("Finished getting adversarial prompts.")
 
         adv_prompt_list = [attack["prompt"] for attack in extracted_attack_list]
@@ -119,12 +143,26 @@ def run_pair(args, attackLM, targetLM, judgeLM, goal_log=None):
         print(f"Memory after: {memory_after} MB")
 
         # Get target responses
+        t_target_start = time.perf_counter()
         target_response_list = targetLM.get_response(adv_prompt_list)
+        t_target_ms = (time.perf_counter() - t_target_start) * 1000.0
         logger.debug("Finished getting target responses.")
 
-        # Get judge scores
-        judge_scores = judgeLM.score(adv_prompt_list, target_response_list)
+        # Get judge scores — pass per-stream goals so goal-agnostic judges
+        # (mreval-rule in particular) can score the right harmful-intent target.
+        t_judge_start = time.perf_counter()
+        per_stream_goals = [args.goal] * len(adv_prompt_list)
+        judge_scores = judgeLM.score(adv_prompt_list, target_response_list, goals=per_stream_goals)
+        t_judge_ms = (time.perf_counter() - t_judge_start) * 1000.0
         logger.debug("Finished getting judge scores.")
+
+        # Read stash from attacker + judge for the full-fidelity log
+        attacker_raws   = getattr(attackLM, "last_raw_outputs",   [None] * len(adv_prompt_list))
+        attacker_inputs = getattr(attackLM, "last_inputs",        [None] * len(adv_prompt_list))
+        attacker_atts   = getattr(attackLM, "last_attempts_used", [None] * len(adv_prompt_list))
+        judge_raws = getattr(judgeLM, "last_raw", [{}] * len(adv_prompt_list))
+        ts_now = _utcnow_iso()
+        inner_judge_name = getattr(judgeLM, "judge_name", args.judge_model)
 
         # Track best across all streams/iterations + write per-goal log
         for s, (prompt, improv, response, score, conv) in enumerate(zip(
@@ -133,11 +171,33 @@ def run_pair(args, attackLM, targetLM, judgeLM, goal_log=None):
                 best_score = score
                 best_prompt = prompt
                 best_response = response
+            jraw = judge_raws[s] if s < len(judge_raws) else {}
             _log_iteration(
                 goal_log,
                 iteration=iteration, stream=s, conv=conv,
-                improvement=improv, prompt=prompt,
-                response=response, score=score,
+                strategy=STREAM_STRATEGIES[s % len(STREAM_STRATEGIES)],
+                ts=ts_now,
+                timing={"attack_ms": round(t_attack_ms, 2),
+                        "target_ms": round(t_target_ms, 2),
+                        "judge_ms":  round(t_judge_ms, 2)},
+                attacker_input=attacker_inputs[s] if s < len(attacker_inputs) else None,
+                attacker_raw=attacker_raws[s]   if s < len(attacker_raws)   else None,
+                attacker_attempts_used=attacker_atts[s] if s < len(attacker_atts) else None,
+                attacker_json_ok=True,
+                improvement=improv,
+                adv_prompt=prompt,
+                target_input=prompt,
+                target_response=response,
+                target_raw=response,
+                inner_judge_name=inner_judge_name,
+                inner_judge_score=score,
+                inner_judge_score_raw=(jraw or {}).get("score_0_100", score),
+                inner_judge_raw=jraw,
+                # Back-compat with the original schema:
+                judge_score=score,
+                # Per-goal goal (for the harvester's convenience):
+                goal=args.goal,
+                target_str=args.target_str,
             )
 
         # Print prompts, responses, and scores
@@ -192,8 +252,8 @@ def run_pair_batch(args, rows_chunk, attackLM, targetLM, judgeLM, goal_logs=None
         raise ValueError(
             "LLM judges (GPTJudge/OpenRouterJudge) cannot be used with "
             "--goal-batch-size > 1 because they embed the goal in a fixed "
-            "system prompt. Use --judge-model gcg, jailbreakbench, or "
-            "no-judge for batched mode."
+            "system prompt. Use --judge-model gcg, jailbreakbench, "
+            "mreval-rule, or no-judge for batched mode."
         )
 
     M = len(rows_chunk)
@@ -248,15 +308,31 @@ def run_pair_batch(args, rows_chunk, attackLM, targetLM, judgeLM, goal_logs=None
         live_processed = [processed_response_list[k] for k in live_idx]
 
         # Attacker generates adversarial prompts for live streams
+        t_attack_start = time.perf_counter()
         extracted_attack_list = attackLM.get_attack(live_convs, live_processed)
+        t_attack_ms = (time.perf_counter() - t_attack_start) * 1000.0
         adv_prompt_list = [a["prompt"] for a in extracted_attack_list]
         improv_list = [a["improvement"] for a in extracted_attack_list]
 
         # Target: stateless, takes flat list
+        t_target_start = time.perf_counter()
         live_target_responses = targetLM.get_response(adv_prompt_list)
+        t_target_ms = (time.perf_counter() - t_target_start) * 1000.0
 
-        # Judge: must be goal-agnostic (checked above)
-        live_scores = judgeLM.score(adv_prompt_list, live_target_responses)
+        # Judge: must be goal-agnostic (checked above). Build per-stream goals
+        # so mreval-rule scores the right harmful-intent target per row.
+        live_goals = [goal_per_stream[k]["goal"] for k in live_idx]
+        t_judge_start = time.perf_counter()
+        live_scores = judgeLM.score(adv_prompt_list, live_target_responses, goals=live_goals)
+        t_judge_ms = (time.perf_counter() - t_judge_start) * 1000.0
+
+        # Per-call provenance from attacker + judge
+        attacker_raws   = getattr(attackLM, "last_raw_outputs",   [None] * len(adv_prompt_list))
+        attacker_inputs = getattr(attackLM, "last_inputs",        [None] * len(adv_prompt_list))
+        attacker_atts   = getattr(attackLM, "last_attempts_used", [None] * len(adv_prompt_list))
+        judge_raws = getattr(judgeLM, "last_raw", [{}] * len(adv_prompt_list))
+        ts_now = _utcnow_iso()
+        inner_judge_name = getattr(judgeLM, "judge_name", args.judge_model)
 
         # Scatter back into per-stream arrays + update bests + per-goal logs
         for j, k in enumerate(live_idx):
@@ -271,11 +347,31 @@ def run_pair_batch(args, rows_chunk, attackLM, targetLM, judgeLM, goal_logs=None
                 goal_done[m] = True
                 jailbroken_at_iter[m] = iteration
             if goal_logs is not None:
+                jraw = judge_raws[j] if j < len(judge_raws) else {}
                 _log_iteration(
                     goal_logs[m],
                     iteration=iteration, stream=k % S, conv=convs_list[k],
-                    improvement=improv_list[j], prompt=adv_prompt_list[j],
-                    response=live_target_responses[j], score=live_scores[j],
+                    strategy=STREAM_STRATEGIES[(k % S) % len(STREAM_STRATEGIES)],
+                    ts=ts_now,
+                    timing={"attack_ms": round(t_attack_ms, 2),
+                            "target_ms": round(t_target_ms, 2),
+                            "judge_ms":  round(t_judge_ms, 2)},
+                    attacker_input=attacker_inputs[j] if j < len(attacker_inputs) else None,
+                    attacker_raw=attacker_raws[j]   if j < len(attacker_raws)   else None,
+                    attacker_attempts_used=attacker_atts[j] if j < len(attacker_atts) else None,
+                    attacker_json_ok=True,
+                    improvement=improv_list[j],
+                    adv_prompt=adv_prompt_list[j],
+                    target_input=adv_prompt_list[j],
+                    target_response=live_target_responses[j],
+                    target_raw=live_target_responses[j],
+                    inner_judge_name=inner_judge_name,
+                    inner_judge_score=live_scores[j],
+                    inner_judge_score_raw=(jraw or {}).get("score_0_100", live_scores[j]),
+                    inner_judge_raw=jraw,
+                    judge_score=live_scores[j],
+                    goal=goal_per_stream[k]["goal"],
+                    target_str=goal_per_stream[k]["target_str"],
                 )
 
         # Verbose per-stream log
@@ -317,6 +413,24 @@ def main(args):
     # Load models / judge once and reuse across all goals
     attackLM, targetLM = load_attack_and_target_models(args)
     judgeLM = load_judge(args)
+
+    # Per-run metadata stamped into every goal log header for self-describing files.
+    run_meta = {
+        "attack_model":     args.attack_model,
+        "attack_backend":   getattr(args, "attack_backend", None) or args.local_backend,
+        "attack_endpoint":  getattr(args, "attack_endpoint", None),
+        "attack_served_name": getattr(args, "attack_served_name", None),
+        "target_model":     args.target_model,
+        "target_backend":   getattr(args, "target_backend", None) or args.local_backend,
+        "inner_judge":      args.judge_model,
+        "n_streams":        args.n_streams,
+        "n_iterations":     args.n_iterations,
+        "stream_strategies": STREAM_STRATEGIES,
+        "keep_last_n":      args.keep_last_n,
+        "attack_max_n_tokens": args.attack_max_n_tokens,
+        "target_max_n_tokens": args.target_max_n_tokens,
+        "max_n_attack_attempts": args.max_n_attack_attempts,
+    }
 
     # Determine the list of (index, goal, target_str, category) tuples to run
     if args.dataset:
@@ -385,7 +499,7 @@ def main(args):
                 logger.info(f"\n[chunk {ci+1}/{n_chunks}] goals {chunk[0]['index']}..{chunk[-1]['index']} (M={len(chunk)} x S={args.n_streams})")
 
                 # Open per-goal logs
-                goal_logs = [_open_goal_log(args.logs_dir, r) for r in chunk]
+                goal_logs = [_open_goal_log(args.logs_dir, r, run_meta=run_meta) for r in chunk]
                 t0 = time.time()
                 try:
                     batch_results = run_pair_batch(
@@ -423,7 +537,7 @@ def main(args):
                 args.category = row["category"]
 
                 logger.info(f"\n[{i+1}/{len(rows)}] index={args.index} goal={args.goal!r}")
-                goal_log = _open_goal_log(args.logs_dir, row)
+                goal_log = _open_goal_log(args.logs_dir, row, run_meta=run_meta)
                 t0 = time.time()
                 try:
                     result = run_pair(args, attackLM, targetLM, judgeLM, goal_log=goal_log)
@@ -596,10 +710,42 @@ if __name__ == '__main__':
         "--local-backend",
         type=str,
         default="hf",
-        choices=["hf", "vllm"],
-        help="Backend used when --evaluate-locally is set. 'hf' uses HuggingFace "
-             "transformers and allocates VRAM on demand. 'vllm' uses vLLM, which "
-             "pre-reserves a large fraction of GPU memory for its KV cache.",
+        choices=["hf", "vllm", "server"],
+        help="Default backend when --evaluate-locally is set. 'hf' uses HuggingFace "
+             "transformers (VRAM on demand). 'vllm' uses in-process vLLM (pre-allocates "
+             "GPU memory). 'server' talks to a separately-launched `vllm serve` over "
+             "HTTP — used to host the attacker on its own GPU group while the target "
+             "uses in-process vLLM. Overridable per-role via --attack-backend / "
+             "--target-backend.",
+    )
+    parser.add_argument(
+        "--attack-backend",
+        type=str,
+        default=None,
+        choices=["hf", "vllm", "server"],
+        help="Override --local-backend for the attacker only. Set to 'server' to "
+             "route attacker calls to an external vllm serve endpoint.",
+    )
+    parser.add_argument(
+        "--target-backend",
+        type=str,
+        default=None,
+        choices=["hf", "vllm", "server"],
+        help="Override --local-backend for the target only.",
+    )
+    parser.add_argument(
+        "--attack-endpoint",
+        type=str,
+        default="http://localhost:8000/v1",
+        help="OpenAI-compatible endpoint for --attack-backend=server. The attacker "
+             "calls {endpoint}/chat/completions with model='--attack-served-name'.",
+    )
+    parser.add_argument(
+        "--attack-served-name",
+        type=str,
+        default="pair-attacker",
+        help="The --served-model-name configured on the attacker vllm serve "
+             "process; the OpenAI-API `model` field is set to this string.",
     )
     ##################################################
 
