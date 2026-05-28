@@ -1,6 +1,7 @@
 from common import get_api_key, conv_template, extract_json
 from language_models import APILiteLLM, LocalvLLM, LocalHF, LocalVLLMServerLLM
 from config import FASTCHAT_TEMPLATE_NAMES, Model
+from loggers import logger
 
 
 def load_attack_and_target_models(args):
