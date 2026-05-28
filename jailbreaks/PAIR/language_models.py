@@ -335,6 +335,16 @@ class LocalVLLMServerLLM(LanguageModel):
                 temperature=float(temperature),
                 top_p=float(top_p),
                 stop=stop if stop else None,
+                # Qwen3 / Qwen3.5 inject `<think>...</think>` reasoning ahead of
+                # the answer by default. PAIR drives the attacker with
+                # `stop=["}"]` to clip at the closing brace of the JSON output,
+                # but a `}` inside a reasoning block stops generation before any
+                # JSON is emitted, breaking PAIR's `extract_json`. Disable the
+                # thinking-mode chat-template branch so the model goes straight
+                # to the JSON answer. vLLM's OpenAI server forwards
+                # chat_template_kwargs into apply_chat_template; ignored by
+                # models whose templates don't read it.
+                extra_body={"chat_template_kwargs": {"enable_thinking": False}},
             )
             return completion.choices[0].message.content or ""
         except Exception as e:
