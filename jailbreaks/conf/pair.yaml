@@ -40,7 +40,7 @@ target:
 # GPU group; the slurm script in slurm/eval_pair.sh boots it before this
 # wrapper runs).
 attack:
-  pretrained: Qwen/Qwen2.5-32B-Instruct
+  pretrained: Qwen/Qwen3-32B
   tensor_parallel_size: 2    # 32B dense → TP=2 fits comfortably on 2x H100 80GB
   gpu_memory_utilization: 0.92
   dtype: bfloat16
