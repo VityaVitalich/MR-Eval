@@ -313,7 +313,20 @@ def run_pair_batch(args, rows_chunk, attackLM, targetLM, judgeLM, goal_logs=None
 
         # Attacker generates adversarial prompts for live streams
         t_attack_start = time.perf_counter()
-        extracted_attack_list = attackLM.get_attack(live_convs, live_processed)
+        try:
+            extracted_attack_list = attackLM.get_attack(live_convs, live_processed)
+        except ValueError as e:
+            # Attacker exhausted max_n_attack_attempts retries for at least one
+            # live stream (single-stream JSON failure poisons the whole batch
+            # because get_attack raises on any unresolved index). Mirror the
+            # single-goal run_pair behavior: stop the chunk loop, preserve all
+            # progress recorded in previous iterations (goal_logs + best_score
+            # are already updated up to iter-1).
+            logger.warning(
+                f"Attacker failed at iter {iteration} for chunk after previous "
+                f"iters; stopping chunk early and keeping accumulated bests. "
+                f"err={e}")
+            break
         t_attack_ms = (time.perf_counter() - t_attack_start) * 1000.0
         adv_prompt_list = [a["prompt"] for a in extracted_attack_list]
         improv_list = [a["improvement"] for a in extracted_attack_list]

@@ -192,8 +192,28 @@ class AttackLM():
             if not indices_to_regenerate:
                 break
 
-        if any([output is None for output in valid_outputs]):
-            raise ValueError(f"Failed to generate valid output after {self.max_n_attack_attempts} attempts. Terminating.")
+        n_failed = sum(1 for o in valid_outputs if o is None)
+        if n_failed:
+            # Per-stream tolerance: with goal-batched search (M*S streams),
+            # losing one stream to JSON-parse variance shouldn't kill the
+            # whole chunk's iteration. Stub out failed streams with an empty
+            # `improvement` + a fallback prompt (the bare goal text). The main
+            # loop logs them with attacker_json_ok=False; the outer rejudge
+            # scores them like any other attempt.
+            logger.warning(
+                f"Attacker failed to produce valid JSON on {n_failed}/{len(valid_outputs)} "
+                f"streams after {self.max_n_attack_attempts} retries; substituting "
+                f"fallback prompts so the chunk can continue.")
+            for i, out in enumerate(valid_outputs):
+                if out is None:
+                    valid_outputs[i] = {
+                        "improvement": "",
+                        "prompt": "[FALLBACK: attacker failed to emit JSON; using empty prompt]",
+                    }
+                    new_adv_prompts[i] = '{"improvement": "", "prompt": "[FALLBACK: attacker failed to emit JSON; using empty prompt]"}'
+                    # Mirror the bookkeeping so the wider logger sees this stream:
+                    self.last_raw_outputs[i] = self.last_raw_outputs[i] or "<no valid JSON after retries>"
+                    self.last_attempts_used[i] = self.max_n_attack_attempts
         return valid_outputs, new_adv_prompts
 
     def get_attack(self, convs_list, prompts_list):
