@@ -1948,15 +1948,53 @@ function _airiskCell(content, color, title) {
   return `<td style="text-align:center;background:${color};color:#111"${t}>${content}</td>`;
 }
 
+// Per-column click-to-sort. cellFor must return {html, key}: `html` is the
+// rendered <td> string, `key` is the value to sort by (null = blank, always
+// sinks to the bottom). Clicking a header toggles asc<->desc; default is asc
+// (rank 1 first / lowest rate first). The Model column (index -1) sorts
+// alphabetically by id and is the initial order.
 function _airiskHeatmap(el, rows, cols, cellFor) {
   if (!rows.length) { el.innerHTML = nd(); return; }
-  const head = cols.map(c => `<th>${c.replace(/ /g, '&nbsp;')}</th>`).join('');
-  let html = `<table><thead><tr><th style="text-align:left">Model</th>${head}</tr></thead><tbody>`;
-  for (const { m, a } of rows) {
-    html += '<tr><td style="text-align:left">' + modelCell(m) + '</td>'
-      + cols.map(c => cellFor(a, c)).join('') + '</tr>';
+  const data = rows.map(r => ({
+    m: r.m, id: r.m.id,
+    cells: cols.map(c => cellFor(r.a, c)),
+  }));
+  let sortIdx = -1, sortDir = 1;
+  const cmp = (x, y) => {
+    if (sortIdx === -1) return sortDir * x.id.localeCompare(y.id);
+    const a = x.cells[sortIdx].key, b = y.cells[sortIdx].key;
+    if (a == null && b == null) return x.id.localeCompare(y.id);  // stable
+    if (a == null) return 1;
+    if (b == null) return -1;
+    return sortDir * (a - b) || x.id.localeCompare(y.id);
+  };
+  const arrow = i => i === sortIdx ? (sortDir > 0 ? ' ▲' : ' ▼') : '';
+  const headCellStyle = 'cursor:pointer;user-select:none';
+  function renderHead() {
+    const tCols = cols.map((c, i) =>
+      `<th data-col="${i}" style="${headCellStyle}" title="Click to sort">`
+      + `${c.replace(/ /g, '&nbsp;')}<span style="color:var(--muted)">${arrow(i)}</span></th>`
+    ).join('');
+    el.querySelector('thead').innerHTML =
+      `<tr><th data-col="-1" style="text-align:left;${headCellStyle}" title="Click to sort">`
+      + `Model<span style="color:var(--muted)">${arrow(-1)}</span></th>${tCols}</tr>`;
   }
-  el.innerHTML = html + '</tbody></table>';
+  function renderBody() {
+    data.sort(cmp);
+    el.querySelector('tbody').innerHTML = data.map(r =>
+      '<tr><td style="text-align:left">' + modelCell(r.m) + '</td>'
+      + r.cells.map(c => c.html).join('') + '</tr>'
+    ).join('');
+  }
+  el.innerHTML = '<table><thead></thead><tbody></tbody></table>';
+  renderHead(); renderBody();
+  el.querySelector('thead').addEventListener('click', ev => {
+    const th = ev.target.closest('th[data-col]'); if (!th) return;
+    const i = parseInt(th.dataset.col, 10);
+    if (sortIdx === i) sortDir = -sortDir;
+    else { sortIdx = i; sortDir = 1; }
+    renderHead(); renderBody();
+  });
 }
 
 function renderAirisk(data) {
@@ -1970,18 +2008,26 @@ function renderAirisk(data) {
   // 1) Value prioritization — cell = Elo rank (1 best), colored by rank.
   _airiskHeatmap(document.getElementById('airisk-values-panel'), rows, AIRISK_VALUES, (a, vc) => {
     const r = (a.value_elo || []).find(e => e.value_class === vc);
-    if (!r) return _airiskCell(null);
-    return _airiskCell(r.rank, _airiskColor((r.rank - 1) / 15), `${vc}: rank ${r.rank}, Elo ${Math.round(r.elo)}`);
+    if (!r) return { html: _airiskCell(null), key: null };
+    return {
+      html: _airiskCell(r.rank, _airiskColor((r.rank - 1) / 15),
+                        `${vc}: rank ${r.rank}, Elo ${Math.round(r.elo)}`),
+      key: r.rank,
+    };
   });
 
   // 2) Risky-choice rate — Overall + per behavior.
   _airiskHeatmap(document.getElementById('airisk-risk-panel'), rows, ['Overall', ...AIRISK_BEHAVIORS], (a, b) => {
-    if (b === 'Overall')
-      return _airiskCell(pct(a.overall_risky_rate), _airiskColor(a.overall_risky_rate),
-        `chose any risky action, n=${a.overall_n ?? '?'}`);
+    if (b === 'Overall') {
+      const rr = a.overall_risky_rate;
+      return {
+        html: _airiskCell(pct(rr), _airiskColor(rr), `chose any risky action, n=${a.overall_n ?? '?'}`),
+        key: rr,
+      };
+    }
     const v = (a.by_behavior || {})[b];
-    if (!v || v.rate == null) return _airiskCell(null);
-    return _airiskCell(pct(v.rate), _airiskColor(v.rate), `${b}, n=${v.n}`);
+    if (!v || v.rate == null) return { html: _airiskCell(null), key: null };
+    return { html: _airiskCell(pct(v.rate), _airiskColor(v.rate), `${b}, n=${v.n}`), key: v.rate };
   });
 }
 
