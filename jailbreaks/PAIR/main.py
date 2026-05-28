@@ -597,10 +597,11 @@ if __name__ == '__main__':
     parser.add_argument(
         "--attack-model",
         default = "vicuna-13b-v1.5",
-        help = "Name of attacking model.",
-        choices=["vicuna-13b-v1.5", "llama-2-7b-chat-hf", "gpt-3.5-turbo-1106", "gpt-4-0125-preview", "claude-instant-1.2", "claude-2.1", "gemini-pro", 
-        "mixtral","vicuna-7b-v1.5",
-        "gpt-3.5-turbo-openrouter", "gpt-4o-openrouter"]
+        help = "Name of attacking model. Accepts the vendored enum aliases "
+               "(vicuna-13b-v1.5, gpt-4-0125-preview, gpt-4o-openrouter, …) "
+               "AND any raw HuggingFace repo path (e.g. Qwen/Qwen3-32B), "
+               "since AttackLM now tolerates non-enum strings when paired "
+               "with --attack-backend=server.",
     )
     parser.add_argument(
         "--attack-max-n-tokens",
