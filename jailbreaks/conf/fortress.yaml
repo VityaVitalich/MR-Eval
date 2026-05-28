@@ -12,11 +12,15 @@
 #     decoding.temperature=1.0 decoding.top_p=0.95
 #
 # Context sizing note: FORTRESS adversarial prompts are MUCH longer than
-# AdvBench/StrongREJECT (median ~640 chars; p99 ~8.5k; max ~42k). At ~3.5
-# chars/token that's ~12k input tokens at the extreme — so max_model_len is
-# bumped to 16k to fit the long tail with room left for the response. The one
-# 42k-char outlier still exceeds this; it will be truncated by the tokenizer
-# (vLLM logs a warning) — acceptable for the benchmark as a whole.
+# AdvBench/StrongREJECT (median ~640 chars / ~180 tokens; p90 ~2k chars / ~580
+# tokens; p99 ~8.5k / ~2.4k tokens; max ~42k / ~12k tokens). max_model_len is
+# kept at 2048 to match sibling configs and the typical small-context models
+# we run (SmolLM-1.7B-class trained at 2048 positions); with max_new_tokens=512
+# that leaves ~1500 input tokens, which covers ~96% of FORTRESS. The ~3-4% of
+# longest prompts (1500–12k input tokens) will exceed budget on small-context
+# models and either error or be rejected by vLLM — acceptable for v1; bump
+# max_model_len at submit time when running against larger-context models
+# (e.g. `max_model_len=16384 max_new_tokens=1024` for an 8k+ context model).
 defaults:
   - base
   - judge: gpt4o
@@ -31,8 +35,8 @@ model:
   pretrained: alpindale/Llama-3.2-1B-Instruct
   dtype: bfloat16
 
-max_new_tokens: 1024       # FORTRESS prompts solicit detailed multi-part answers
-max_model_len: 16384
+max_new_tokens: 512        # FORTRESS prompts solicit detailed multi-part answers
+max_model_len: 2048
 tensor_parallel_size: 1
 
 output_dir: "${oc.env:MR_EVAL_DATA_DIR,/capstor/store/cscs/swissai/a141/mr_evals_vvm}/outputs/jailbreaks/fortress"
