@@ -130,7 +130,7 @@ For each goal, PAIR runs `n_streams × n_iterations` adversarial-prompt refineme
 
 ### Architecture
 
-- **Attacker**: `Qwen/Qwen3-30B-A3B-Instruct-2507` (3B-active MoE, text-only, ~57 GB) hosted on GPUs 0,1 of the node via a separately-launched `vllm serve` process (TP=2). The wrapper talks to it over the OpenAI-compatible HTTP endpoint. (Earlier choice `Qwen/Qwen3.5-35B-A3B` was abandoned: the entire Qwen3.5 lineup is `Qwen3_5MoeForConditionalGeneration` (image-text-to-text), which the harmbench container's transformers doesn't recognise.)
+- **Attacker**: `Qwen/Qwen2.5-32B-Instruct` (32B dense, text-only, ~64 GB) hosted on GPUs 0,1 of the node via a separately-launched `python -m vllm.entrypoints.openai.api_server` process (TP=2). The wrapper talks to it over the OpenAI-compatible HTTP endpoint. (Earlier choices `Qwen3.5-35B-A3B` and `Qwen3-30B-A3B-Instruct-2507` were both abandoned: Qwen3.5 is multimodal (`Qwen3_5MoeForConditionalGeneration`), unrecognised by the container's transformers; Qwen3 MoE (`Qwen3MoeForCausalLM`) isn't registered in this swissai vLLM 0.9.0 build (2026-03-30). Qwen2.5 dense is in vLLM since 2024.)
 - **Target**: in-process vLLM on GPUs 2,3 (the standard PAIR `LocalvLLM` path).
 - **Inner-loop judge**: configurable. Default `gcg` (free keyword heuristic; matches the paper); switch to MR-Eval's rule judge with `inner_judge.kind=mreval-rule` (deepseek-v4-flash via OpenRouter; ~$0.05 per full run).
 - **Outer rejudge**: always MR-Eval's `RuleBasedJudge` over every (goal, target_response) pair captured during the run. Same provider/prompt as AdvBench/StrongREJECT/FORTRESS/PEZ for direct ASR comparability.

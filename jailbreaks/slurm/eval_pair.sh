@@ -92,7 +92,7 @@ export VLLM_USE_V1="${VLLM_USE_V1:-0}"
 
 # Attacker config. Knobs are env-driven so the user can override at sbatch time:
 #   ATTACKER_MODEL=Qwen/Qwen2.5-72B-Instruct sbatch slurm/eval_pair.sh ...
-ATTACKER_MODEL="${ATTACKER_MODEL:-Qwen/Qwen3-30B-A3B-Instruct-2507}"
+ATTACKER_MODEL="${ATTACKER_MODEL:-Qwen/Qwen2.5-32B-Instruct}"
 ATTACKER_PORT="${ATTACKER_PORT:-8000}"
 ATTACKER_TP="${ATTACKER_TP:-2}"
 ATTACKER_DTYPE="${ATTACKER_DTYPE:-bfloat16}"
