@@ -39,6 +39,13 @@ STRONGREJECT_URLS = {
     ),
 }
 
+# FORTRESS public prompt set (Schwinn et al., 2025 — arXiv:2506.14922; CC-BY-4.0).
+# We use ONLY the adversarial prompts; harm scoring uses MR-Eval's own rule judge,
+# not the FORTRESS instance-rubric autograder, and the benign_prompt over-refusal
+# half is not run here. The CSV is vendored under data/fortress.csv (parquet
+# converted at port time); the HF dataset URL is kept for one-shot refresh only.
+FORTRESS_HF_DATASET = "ScaleAI/fortress_public"
+
 REFUSAL_PREFIXES = [
     "I'm sorry",
     "I am sorry",
@@ -181,6 +188,28 @@ def load_behaviors(cfg: DictConfig) -> "pd.DataFrame":
         df = pd.read_csv(ADVBENCH_URL)
         df.to_csv(cache, index=False)
         logger.info("Cached to {}", cache)
+    if cfg.testing:
+        df = df.head(cfg.testing_limit)
+    return df
+
+
+def load_fortress(cfg: DictConfig) -> "pd.DataFrame":
+    """Load the FORTRESS public adversarial-prompt set (CC-BY-4.0; vendored
+    under ``data/fortress.csv``). Columns: ``ID``, ``adversarial_prompt``,
+    ``benign_prompt``, ``risk_domain``, ``risk_subdomain``, ``rubric``. Only
+    ``adversarial_prompt`` is used as the model input; ``benign_prompt`` and
+    ``rubric`` are vendored for traceability but not consumed by this eval.
+    ``cfg.testing`` truncates to ``cfg.testing_limit`` for smokes."""
+    import pandas as pd  # lazy: keep the lightweight helpers importable without pandas
+
+    cache = Path(__file__).parent / "data" / "fortress.csv"
+    if not cache.exists():
+        raise FileNotFoundError(
+            f"FORTRESS CSV not found at {cache}. The dataset must be vendored at "
+            f"port time from the HuggingFace parquet ({FORTRESS_HF_DATASET}); "
+            f"compute nodes have no internet, so there is no download fallback."
+        )
+    df = pd.read_csv(cache)
     if cfg.testing:
         df = df.head(cfg.testing_limit)
     return df
