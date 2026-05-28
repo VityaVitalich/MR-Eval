@@ -92,7 +92,7 @@ export VLLM_USE_V1="${VLLM_USE_V1:-0}"
 
 # Attacker config. Knobs are env-driven so the user can override at sbatch time:
 #   ATTACKER_MODEL=Qwen/Qwen2.5-72B-Instruct sbatch slurm/eval_pair.sh ...
-ATTACKER_MODEL="${ATTACKER_MODEL:-Qwen/Qwen3.5-35B-A3B}"
+ATTACKER_MODEL="${ATTACKER_MODEL:-Qwen/Qwen3-30B-A3B-Instruct-2507}"
 ATTACKER_PORT="${ATTACKER_PORT:-8000}"
 ATTACKER_TP="${ATTACKER_TP:-2}"
 ATTACKER_DTYPE="${ATTACKER_DTYPE:-bfloat16}"
@@ -139,7 +139,6 @@ else
       --max-model-len "$ATTACKER_MAX_MODEL_LEN" \
       --port "$ATTACKER_PORT" \
       --served-model-name "pair-attacker" \
-      --limit-mm-per-prompt 'image=0,video=0' \
       >"$ATTACKER_LOG" 2>&1 &
   ATTACKER_PID=$!
   echo "Attacker PID: $ATTACKER_PID"

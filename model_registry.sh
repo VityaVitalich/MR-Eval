@@ -1349,6 +1349,6 @@ mr_eval_register_model \
 ### 2026-05-28: PAIR attacker (not a target — registered so precache_models.sh picks it up)
 
 mr_eval_register_model \
-  --alias pair_attacker_qwen35_a3b \
-  --pretrained Qwen/Qwen3.5-35B-A3B \
-  --description "PAIR attacker model (Qwen3.5 35B A3B MoE). Hosted on GPUs 0,1 via `vllm serve` from slurm/eval_pair.sh; not intended as an evaluation target."
+  --alias pair_attacker_qwen3_a3b \
+  --pretrained Qwen/Qwen3-30B-A3B-Instruct-2507 \
+  --description "PAIR attacker model (Qwen3 30B A3B MoE, instruct, text-only). Hosted on GPUs 0,1 via `vllm serve` from slurm/eval_pair.sh; not intended as an evaluation target. Qwen3.5 lineup is multimodal and unsupported by the harmbench container's transformers."
