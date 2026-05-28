@@ -132,7 +132,7 @@ else
   VLLM_WORKER_MULTIPROC_METHOD="$VLLM_WORKER_MULTIPROC_METHOD" \
   VLLM_USE_V1="$VLLM_USE_V1" \
   HF_HUB_OFFLINE="${HF_HUB_OFFLINE:-1}" \
-    vllm serve "$ATTACKER_MODEL" \
+    vllm serve --model "$ATTACKER_MODEL" \
       --tensor-parallel-size "$ATTACKER_TP" \
       --gpu-memory-utilization "$ATTACKER_GPU_MEM_UTIL" \
       --dtype "$ATTACKER_DTYPE" \
