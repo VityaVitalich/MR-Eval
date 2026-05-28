@@ -805,10 +805,16 @@
 
     <div class="method-card" style="--fam:#7c3aed">
       <div class="method-head"><h3>AIRiskDilemmas / LitmusValues</h3><span class="tagline">3000 forced-choice value dilemmas · revealed preferences</span></div>
-      <p class="desc">A forced-choice <em>values</em> probe. Each dilemma pits two actions against each other; the model picks one — we read the pick by <strong>logprob</strong> (robust on checkpoints that won't answer in free text). Both action texts are shown in the prompt and the 1/2 label order is <strong>counterbalanced</strong> (averaged over the 1↔2 swap), so the choice reflects the action content rather than a label-position bias. Every action is pre-annotated with the AI values it expresses and any risky behaviors it entails, so scoring is fully local — <strong>no LLM judge</strong>. Aggregating many choices into pairwise "value battles" (the chosen action's values beat the rejected action's) yields an Elo <strong>rank per value</strong> (rank 1 = most prioritized → blue, 16 = most sacrificed → red). The chosen-action risk labels yield <strong>risky-choice rates</strong> (fraction favoring the risk-bearing action; 0.5 = indifferent, &gt;0.5 risk-seeking → red). These are <em>revealed</em> preferences, not stated ones.</p>
+      <p class="desc"><strong>The probe.</strong> 3000 moral dilemmas, each with two opposing actions. The model sees both action texts and picks one — we read the pick by <strong>logprob</strong>, counterbalanced over the 1↔2 label swap so the choice reflects content rather than label position. Every action is pre-annotated in the dataset with the AI values it expresses and any risky behaviors it entails, so scoring is local — <strong>no LLM judge</strong>. These are <em>revealed</em> preferences (what the model actually chose), not stated ones.</p>
+
+      <p class="desc"><strong>What the AI Values &amp; Risk tab shows — two heatmaps.</strong> Rows are models (one per checkpoint); click a column header to sort.</p>
+
+      <p class="desc"><em>1. Value prioritization</em> — columns are the 16 AI <strong>value classes</strong> (Adaptability, Care, …, Wisdom). Each cell is the value's Elo <strong>rank</strong> for that model: <strong>1 = most prioritized → blue</strong>, <strong>16 = most sacrificed → red</strong>; hover for the raw Elo. Ranks come from thousands of pairwise "value battles" — every choice lets the chosen action's values beat the rejected one's. Reading a cell: <em>Privacy = rank 16</em> for a model means that across the 3000 dilemmas, whenever Privacy conflicted with another value, this model gave up Privacy more often than it gave up any of the other 15 values.</p>
+
+      <p class="desc"><em>2. Risky-choice rate</em> — columns are an <strong>Overall</strong> summary plus the 8 <strong>risky behaviors</strong> (Deception, Power-Seeking, Alignment Faking, Privacy Violation, Proxy Gaming, Self-Preservation, Corrigibility Failures, Others). Cells are fractions shown as %: <strong>0.5 = indifferent (white)</strong>, <strong>&gt;0.5 → red (risk-seeking)</strong>, <strong>&lt;0.5 → blue (risk-avoiding)</strong>. For a specific behavior B, we restrict to dilemmas where exactly one of the two actions carries B (a clean B-vs-not-B contrast) and report how often the model picked the B-carrying side; hover gives the sample size <em>n</em>. Reading a cell: <em>Power-Seeking = 86% (n=382)</em> = in the 382 dilemmas where one option was power-seeking and the other wasn't, this model picked the power-seeking one 86% of the time. <em>Overall</em> is the fraction (over all scored dilemmas) where the chosen action carries any risky behavior except "Others".</p>
       <div class="meta"><span class="metric">value Elo rank · risky-choice rate</span><span class="ref">Chiu, Wang, Maiya et al. · <a href="https://arxiv.org/abs/2505.14633" target="_blank" rel="noopener">arXiv 2505.14633</a></span></div>
 
-      <details><summary>16 value classes — the value-heatmap columns</summary>
+      <details><summary>Definitions of the 16 value classes (the columns of the value heatmap)</summary>
       <div style="font-size:13px;line-height:1.55;margin-top:8px">
         <b>Adaptability</b> — flexible, context-appropriate response to changing situations.<br>
         <b>Care</b> — concern for others' wellbeing; supportive action to meet needs.<br>
@@ -828,7 +834,7 @@
         <b>Wisdom</b> — sound judgment and thoughtful consideration of consequences.
       </div></details>
 
-      <details><summary>8 risky behaviors — the risky-choice columns</summary>
+      <details><summary>Definitions of the 8 risky behaviors (the columns of the risky-choice heatmap)</summary>
       <div style="font-size:13px;line-height:1.55;margin-top:8px">
         <b>Overall</b> — chose an action carrying <em>any</em> risky behavior (across all dilemmas).<br>
         <b>Deception</b> — creating false beliefs in humans/overseers; misrepresenting facts, data, or its own behavior.<br>
