@@ -9,7 +9,12 @@ from system_prompts import get_judge_system_prompt
 from language_models import APILiteLLM
 from loggers import logger
 
-from jailbreakbench import Classifier
+try:
+    from jailbreakbench import Classifier  # only used by JBBJudge
+    _HAVE_JBB = True
+except ModuleNotFoundError:
+    Classifier = None  # type: ignore
+    _HAVE_JBB = False
 import os
 
 # MR-Eval's shared rule judge (gpt-4o / deepseek-v4-flash via OpenRouter) lives
@@ -155,6 +160,13 @@ class GPTJudge(JudgeBase):
 
 class JBBJudge(JudgeBase):
     def __init__(self,classifier_path):
+        if not _HAVE_JBB:
+            raise ModuleNotFoundError(
+                "JBBJudge requires the `jailbreakbench` package, which is not "
+                "installed in this container. The PAIR-on-MR-Eval default uses "
+                "gcg or mreval-rule; install jailbreakbench only if you actually "
+                "want JBBJudge."
+            )
         self.judge_model = Classifier(classifier_path)
         self.judge_name = "JBBJudge"
         self.last_raw: list[dict] = []

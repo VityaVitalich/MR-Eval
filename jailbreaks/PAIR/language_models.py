@@ -1,6 +1,11 @@
 import asyncio
 import os
-import litellm
+try:
+    import litellm  # used by APILiteLLM (OpenRouter judges / non-local API targets)
+    _HAVE_LITELLM = True
+except ModuleNotFoundError:
+    litellm = None  # type: ignore
+    _HAVE_LITELLM = False
 from config import TOGETHER_MODEL_NAMES, LITELLM_TEMPLATES, API_KEY_NAMES, Model, HF_MODEL_NAMES, FASTCHAT_TEMPLATE_NAMES
 from loggers import logger
 from common import get_api_key
@@ -28,6 +33,14 @@ class APILiteLLM(LanguageModel):
     API_TIMEOUT = 20
 
     def __init__(self, model_name):
+        if not _HAVE_LITELLM:
+            raise ModuleNotFoundError(
+                "APILiteLLM requires the `litellm` package, which is not installed "
+                "in this container. The PAIR-on-MR-Eval default config doesn't use "
+                "APILiteLLM (attacker is LocalVLLMServerLLM via the openai client; "
+                "judge is gcg or mreval-rule). Install litellm only if you actually "
+                "need OpenRouter judges or Together-hosted targets."
+            )
         super().__init__(model_name)
         self.api_key = get_api_key(self.model_name)
         self.litellm_model_name = self.get_litellm_model_name(self.model_name)
