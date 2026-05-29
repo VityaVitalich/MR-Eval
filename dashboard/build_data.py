@@ -722,13 +722,20 @@ PROVENANCE_CELL_KEYS = list(NEW_SCHEMA_BENCHES) + ["ablit", "tmplabl"]
 def _new_schema_files(prefix: str, dirs: list[Path], model_id: str) -> list[Path]:
     """mreval per-sample files ``<prefix>__<model>__<judge>__<sampling>.json``
     whose ``<model>`` component matches one of this model's aliases. Uses rglob:
-    the files are nested under per-run subdirs the non-recursive `scan` misses."""
+    the files are nested under per-run subdirs the non-recursive `scan` misses.
+
+    Skips any path with a ``testing`` directory segment — every bench writes
+    `testing=true` smokes to ``<bench>/testing/``, and those 3-goal/4-goal runs
+    would otherwise leak into the dashboard aggregate (and beat a real run on
+    "last file wins" tie-breakers)."""
     aliases = set(ALIASES[model_id])
     out: list[Path] = []
     for d in dirs:
         if not d.is_dir():
             continue
         for p in d.rglob(f"{prefix}__*.json"):
+            if "testing" in p.parts:
+                continue
             parts = p.stem.split("__")
             if len(parts) == 4 and parts[0] == prefix and parts[1] in aliases:
                 out.append(p)
