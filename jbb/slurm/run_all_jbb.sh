@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #SBATCH --account=a141
-#SBATCH --time=00:30:00
+#SBATCH --time=01:00:00
 #SBATCH --nodes=1
 #SBATCH --gres=gpu:4
 #SBATCH --cpus-per-task=32
@@ -70,6 +70,10 @@ if [[ "$LIST_MODELS" == "1" ]]; then
   mr_eval_print_registered_models
   exit 0
 fi
+
+# Keep the shared a141 HF cache authoritative: a personal HF_HUB_CACHE leaking
+# via --export=ALL would shadow the container HF_HOME and break offline loads.
+unset HF_HUB_CACHE HUGGINGFACE_HUB_CACHE
 
 _ALIAS="$(mr_eval_resolve_alias_for_chat_template "$MODEL_REF")"
 if ! mr_eval_setup_chat_template "$_ALIAS"; then

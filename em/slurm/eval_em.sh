@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #SBATCH --account=a141
-#SBATCH --time=00:30:00
+#SBATCH --time=00:45:00
 #SBATCH --nodes=1
 #SBATCH --gres=gpu:4
 #SBATCH --cpus-per-task=32
@@ -106,6 +106,10 @@ if [[ -z "${!REQUIRED_KEY:-}" ]]; then
   echo "Set it in the environment before sbatch, or place $REQUIRED_KEY=... in $REPO_ROOT/.env or \$HOME/.env" >&2
   exit 1
 fi
+
+# Keep the shared a141 HF cache authoritative: a personal HF_HUB_CACHE leaking
+# via --export=ALL would shadow the container HF_HOME and break offline loads.
+unset HF_HUB_CACHE HUGGINGFACE_HUB_CACHE
 
 mkdir -p logs
 

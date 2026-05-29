@@ -20,7 +20,7 @@ Usage:
     --test-cases-path <pez_dir>/PEZ/<model>/test_cases/test_cases.json \
     --behaviors-path harmbench/data/behavior_datasets/harmbench_behaviors_text_test_plain.csv \
     --mreval-output-dir $MR_EVAL_DATA_DIR/outputs/pez \
-    [--num-samples 5 --temperature 1.0 --top-p 0.95] \
+    [--num-samples 10 --temperature 1.0 --top-p 1.0]   # k=10 sampled default \
     [--judge-provider openrouter --judge-model deepseek/deepseek-v4-flash]
 """
 from __future__ import annotations
@@ -225,8 +225,11 @@ def main() -> None:
     # content-filter cases). They're saved with explicit error markers and
     # NA-scored in the dashboard — never silently dropped.
     ap.add_argument("--max-error-rate", type=float, default=0.01)
-    ap.add_argument("--num-samples", type=int, default=1)
-    ap.add_argument("--temperature", type=float, default=0.0)
+    # Mirror the project-wide k=10 sampled default (conf/base.yaml); PEZ is the
+    # one non-Hydra bench, so without these defaults it silently ran greedy and
+    # landed under a separate provenance from every other safety bench.
+    ap.add_argument("--num-samples", type=int, default=10)
+    ap.add_argument("--temperature", type=float, default=1.0)
     ap.add_argument("--top-p", type=float, default=1.0)
     ap.add_argument("--max-new-tokens", type=int, default=512)
     ap.add_argument("--concurrency", type=int, default=24)

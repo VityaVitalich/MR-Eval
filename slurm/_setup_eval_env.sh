@@ -28,6 +28,12 @@ mr_eval_resolve_alias_for_chat_template() {
 mr_eval_setup_chat_template() {
   local alias="$1"
   local name
+  # The jinja fetch below (hf_hub_download) is the first HF cache hit in every
+  # leaf. A personal HF_HUB_CACHE leaked via sbatch --export=ALL overrides the
+  # container HF_HOME, so the lookup would miss the shared a141 cache. Unset it
+  # here so the fetch — and everything after — uses the authoritative cache,
+  # regardless of when the leaf does its own unset.
+  unset HF_HUB_CACHE HUGGINGFACE_HUB_CACHE
   if type -t mr_eval_chat_template >/dev/null 2>&1; then
     name="$(mr_eval_chat_template "$alias")"
   fi

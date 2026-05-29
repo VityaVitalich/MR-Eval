@@ -49,7 +49,7 @@ _bench() { BENCH_GROUP[$1]=$2; BENCH_MTYPE[$1]=$3; BENCH_WORKDIR[$1]=$4; BENCH_E
 _bench eval_base       capability       base      eval          eval
 _bench safety_base     safety           base      safety_base   train
 _bench eval_sft        capability       instruct  eval          eval
-_bench jbb             safety           instruct  jbb           jbb
+_bench jbb             safety           instruct  jbb           train   # train.toml has vLLM; jbb.toml does not (fused pipeline needs it)
 _bench dan             safety           instruct  jailbreaks    train
 _bench advbench        safety           instruct  jailbreaks    train
 _bench pap             safety           instruct  jailbreaks    train
@@ -83,6 +83,10 @@ build_bench_argv() {   # id model_path
                     else
                       BENCH_ARGV=(slurm/run_all_jbb.sh "${JBB_MODEL_CONFIG:-generic_instruct}" "model.pretrained=$model_path")
                     fi
+                    # run_all_jbb's default judge needs OPENAI_API_KEY; pin the
+                    # deepseek group (provider=openrouter) like every other safety
+                    # bench so results land under the same __deepseek-*__ provenance.
+                    BENCH_ARGV+=(judge=deepseek)
                     [[ -n "${JBB_METHODS:-}" ]] && BENCH_ARGV+=(--methods "$JBB_METHODS") ;;
     dan)            BENCH_ARGV=(slurm/eval_dan.sh "$model_path")
                     [[ -n "${DAN_JUDGE:-}" ]]          && BENCH_ARGV+=(--judge "$DAN_JUDGE")

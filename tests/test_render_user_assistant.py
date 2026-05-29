@@ -51,7 +51,9 @@ def _load_common():
     """Load `jailbreaks/common.py` as `_common_under_test` with all
     heavy deps stubbed. Avoids any cross-talk with other tests that
     may install partial stubs of `jailbreaks.common`."""
-    _stub("pandas")
+    # pandas is now a real dev dep; stubbing it here would poison later tests
+    # (notably test_strongreject_dataset, which needs a working pd.read_csv)
+    # because _stub installs into sys.modules with no teardown.
     _stub("loguru", logger=types.SimpleNamespace(info=lambda *a, **k: None,
                                                  warning=lambda *a, **k: None))
     _stub("omegaconf", DictConfig=dict)
