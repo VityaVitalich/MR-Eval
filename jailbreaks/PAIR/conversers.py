@@ -161,12 +161,18 @@ class AttackLM():
         for attempt in range(self.max_n_attack_attempts):
             # Subset conversations based on indices to regenerate
             convs_subset = [openai_conv_list[i] for i in indices_to_regenerate]
-            # Generate outputs
+            # Generate outputs — no `extra_eos_tokens=["}"]` clip: with
+            # thinking-mode attackers (Qwen3/DeepSeek-R1/…) the reasoning text
+            # contains stray `}` chars that truncate generation mid-think. We
+            # let the model emit `<think>…</think>{full JSON}` and use
+            # extract_json's <think>-strip + LAST-brace pair logic to parse.
+            # The init_message-prefill path (open-source backends) still
+            # benefits from a self-closing JSON since the model continues from
+            # `{"improvement": ...` and emits the closing `}` itself.
             outputs_list = self.model.batched_generate(convs_subset,
                                                         max_n_tokens = self.max_n_tokens,
                                                         temperature = self.temperature,
                                                         top_p = self.top_p,
-                                                        extra_eos_tokens=["}"]
                                                     )
 
             # Check for valid outputs and update the list
@@ -177,7 +183,10 @@ class AttackLM():
                     # API returned no content (e.g., safety-blocked refusal). Treat as invalid; will retry.
                     new_indices_to_regenerate.append(orig_index)
                     continue
-                full_output = init_message + full_output + "}" # Add end brace since we terminate generation on end braces
+                # Prepend the prefill seed (open-source path only; "" for server)
+                # so extract_json sees a complete JSON object. The model is now
+                # expected to close its own `}` since we dropped the stop clip.
+                full_output = init_message + full_output
                 attack_dict, json_str = extract_json(full_output)
                 if attack_dict is not None:
                     valid_outputs[orig_index] = attack_dict

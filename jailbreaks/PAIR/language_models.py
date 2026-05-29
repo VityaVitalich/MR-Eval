@@ -328,54 +328,26 @@ class LocalVLLMServerLLM(LanguageModel):
 
     async def _one_completion(self, messages, max_n_tokens, temperature, top_p, stop):
         try:
-            # Qwen3 / Qwen3.5 inject `<think>...</think>` reasoning ahead of
-            # the answer by default. With PAIR's `stop=["}"]`, a `}` inside the
-            # reasoning clips generation before any JSON is emitted and
-            # extract_json fails. Two-layer guard so the attacker reliably
-            # produces JSON regardless of template/server behaviour:
-            #
-            #   1. extra_body={"chat_template_kwargs": {"enable_thinking": False}}
-            #      — the documented Qwen3 vLLM knob; works only if vLLM's chat
-            #      completion handler forwards chat_template_kwargs AND the
-            #      model's jinja reads `enable_thinking`. Some swissai vLLM
-            #      builds + some Qwen3 chat templates ignore it.
-            #   2. Append `/no_think` to the last user message — Qwen3's
-            #      in-prompt escape hatch, applied unconditionally by the
-            #      chat template regardless of kwargs forwarding.
-            #
-            # Belt AND suspenders: either path alone disables thinking; both
-            # together cover every container-and-template combination.
-            messages_no_think = self._append_no_think(messages)
+            # Thinking models (Qwen3 / Qwen3.5 / DeepSeek-R1, …) reason before
+            # answering. We WANT that — the attacker's "improvement" field
+            # benefits hugely from in-context reasoning. The previous PAIR
+            # design used `stop=["}"]` to clip output at the closing brace of
+            # the JSON, which breaks thinking models because reasoning text
+            # contains stray `}`. We drop the stop tokens entirely and let the
+            # model emit `<think>…</think>{full JSON}`; PAIR.common.extract_json
+            # strips the think block and finds the JSON robustly.
             completion = await self._client.chat.completions.create(
                 model=self.served_name,
-                messages=messages_no_think,
+                messages=messages,
                 max_tokens=int(max_n_tokens),
                 temperature=float(temperature),
                 top_p=float(top_p),
-                stop=stop if stop else None,
-                extra_body={"chat_template_kwargs": {"enable_thinking": False}},
             )
             return completion.choices[0].message.content or ""
         except Exception as e:
             # PAIR's AttackLM retries on None up to max_n_attack_attempts.
             logger.warning("LocalVLLMServerLLM call failed: {}", e)
             return None
-
-    @staticmethod
-    def _append_no_think(messages):
-        """Append ` /no_think` to the last user message so Qwen3's chat
-        template skips thinking. Idempotent: noop if already present."""
-        if not messages:
-            return messages
-        out = [dict(m) for m in messages]
-        # Find the last user turn.
-        for i in range(len(out) - 1, -1, -1):
-            if out[i].get("role") == "user":
-                content = out[i].get("content") or ""
-                if "/no_think" not in content:
-                    out[i]["content"] = content.rstrip() + " /no_think"
-                return out
-        return out
 
     def batched_generate(
         self, convs_list, max_n_tokens, temperature, top_p, extra_eos_tokens=None,
