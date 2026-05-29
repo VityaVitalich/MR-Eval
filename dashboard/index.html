@@ -1990,6 +1990,7 @@ function renderSafety(data) {
     { key: 'pez',      label: 'PEZ',         dir: 'lower',  rankable: true,  avgable: true  },
     { key: 'strongreject', label: 'StrongREJECT', dir: 'lower', rankable: true, avgable: true },
     { key: 'pair',         label: 'PAIR',         dir: 'lower', rankable: true, avgable: true },
+    { key: 'fortress',     label: 'FORTRESS',     dir: 'lower', rankable: true, avgable: true },
     { key: 'em_al', label: 'EM aligned',  dir: 'higher', rankable: true,  avgable: true,
       fmt: 'raw', negate: true, gate: (cells) => {
         const co = normalizeVal(cells.em_co);
@@ -2028,6 +2029,8 @@ function renderSafety(data) {
         // PAIR-on-JBB: same by_provenance shape. ASR = best-of-K per goal
         // (K = n_streams × n_iterations) under the active rule judge.
         pair:         provValue(m.id, 'pair',         md.pair,         () => null),
+        // FORTRESS: per-prompt LLM-as-judge ASR on the public risk-subdomain set.
+        fortress:     provValue(m.id, 'fortress',     md.fortress,     () => null),
         // EM uses its own (independent) judge; gate on its judge_version
         // so stale-stamp cells render as MISSING per the invariants regime.
         em_al:    independentOnly(em?.aligned_mean,   em?.judge_version),
@@ -3612,6 +3615,16 @@ function renderDiag() {
       if (it.inner_signal != null) tags.push(`inner=${it.inner_signal}`);
       if (tags.length) blocks.push(`<div class="label">Attempt · ${tags.join(' · ')}</div>`);
       blocks.push(`<details open><summary>Adversarial prompt</summary><div class="blk">${escapeHtml(it.adv_prompt || '')}</div></details>`);
+      blocks.push(`<div class="label">Response</div><div class="blk response">${escapeHtml(it.response)}</div>`);
+      if (it.judge_raw) blocks.push(`<details><summary>Judge rationale</summary><div class="blk">${escapeHtml(it.judge_raw)}</div></details>`);
+    } else if (bench === 'fortress') {
+      const sub = it.risk_subdomain ? ` · ${escapeHtml(it.risk_subdomain)}` : '';
+      blocks.push(`<div class="label">Goal${sub}</div><div class="blk">${escapeHtml(it.goal || '')}</div>`);
+      blocks.push(`<div class="label">Response</div><div class="blk response">${escapeHtml(it.response)}</div>`);
+      if (it.judge_raw) blocks.push(`<details><summary>Judge rationale</summary><div class="blk">${escapeHtml(it.judge_raw)}</div></details>`);
+    } else if (bench === 'strongreject') {
+      const cat = it.category ? ` · ${escapeHtml(it.category)}` : '';
+      blocks.push(`<div class="label">Goal${cat}</div><div class="blk">${escapeHtml(it.goal || '')}</div>`);
       blocks.push(`<div class="label">Response</div><div class="blk response">${escapeHtml(it.response)}</div>`);
       if (it.judge_raw) blocks.push(`<details><summary>Judge rationale</summary><div class="blk">${escapeHtml(it.judge_raw)}</div></details>`);
     } else if (bench === 'pez') {
