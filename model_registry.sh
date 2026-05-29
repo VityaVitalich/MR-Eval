@@ -1432,3 +1432,10 @@ mr_eval_register_model \
 #   --pretrained ./train/outputs/my_run/checkpoints/checkpoint-94 \
 #   --description "my local checkpoint" \
 #   --jbb-config generic_instruct
+
+### 2026-05-28: PAIR attacker (not a target — registered so precache_models.sh picks it up)
+
+mr_eval_register_model \
+  --alias pair_attacker_qwen3_32b \
+  --pretrained Qwen/Qwen3-32B \
+  --description "PAIR attacker model (Qwen3 32B, dense, text-only). Hosted on GPUs 0,1 via `python -m vllm.entrypoints.openai.api_server` from slurm/eval_pair.sh; not intended as an evaluation target. Qwen3 MoE (Qwen3MoeForCausalLM) isn't registered in the swissai vLLM 0.9.0 build (2026-03-30); Qwen3 dense (Qwen3ForCausalLM) was added to upstream vLLM ~April 2025 and is supported here."

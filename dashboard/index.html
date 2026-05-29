@@ -470,7 +470,7 @@
        subcell for the in-scope safety benches; Aggregation reduces its
        per-sample scores. Defaults (gpt-4o, greedy, worst) reproduce the
        pre-3c rendering exactly. A (judge x sampling) with no data -> blank. -->
-  <label class="judge-switch" id="prov-judge-wrap" title="Safety judge model (rule judge). Picks the by_provenance subcell for JBB/AdvBench/DANs/PAP/PEZ/StrongREJECT. gpt-4o = the legacy production judge; others are new mreval per-sample runs.">
+  <label class="judge-switch" id="prov-judge-wrap" title="Safety judge model (rule judge). Picks the by_provenance subcell for JBB/AdvBench/DANs/PAP/PEZ/StrongREJECT/PAIR. gpt-4o = the legacy production judge; others are new mreval per-sample runs.">
     Safety judge
     <select id="prov-judge"></select>
   </label>
@@ -540,7 +540,7 @@
 <section id="safety">
   <h2>Core jailbreaks &amp; EM</h2>
   <div class="panel" id="safety-panel"></div>
-  <div class="note">JBB from <code>jbb_all_&lt;model&gt;/summary.json</code> (expand the JBB group via the chevron for per-attack ASR). AdvBench / DANs / Best DAN / StrongREJECT use ASR (not LLM score); StrongREJECT scores our rule judge over the StrongREJECT prompt set. EM aligned / coherent from em_eval base-model runs (0–100 scale).</div>
+  <div class="note">JBB from <code>jbb_all_&lt;model&gt;/summary.json</code> (expand the JBB group via the chevron for per-attack ASR). AdvBench / DANs / Best DAN / StrongREJECT use ASR (not LLM score); StrongREJECT scores our rule judge over the StrongREJECT prompt set. <strong>PAIR</strong> drives the full Chao-et-al iterative-refinement loop against JBB-Behaviors with a locally-hosted attacker; ASR = best-of-(streams×iterations) per goal, rule-judged externally. EM aligned / coherent from em_eval base-model runs (0–100 scale).</div>
 
   <h2>Diagnostics</h2>
   <div class="panel" id="safety-diagnostics-panel"></div>
@@ -1996,6 +1996,7 @@ function renderSafety(data) {
     { key: 'pap',      label: 'PAP',         dir: 'lower',  rankable: true,  avgable: true  },
     { key: 'pez',      label: 'PEZ',         dir: 'lower',  rankable: true,  avgable: true  },
     { key: 'strongreject', label: 'StrongREJECT', dir: 'lower', rankable: true, avgable: true },
+    { key: 'pair',         label: 'PAIR',         dir: 'lower', rankable: true, avgable: true },
     { key: 'em_al', label: 'EM aligned',  dir: 'higher', rankable: true,  avgable: true,
       fmt: 'raw', negate: true, gate: (cells) => {
         const co = normalizeVal(cells.em_co);
@@ -2031,6 +2032,9 @@ function renderSafety(data) {
         // StrongREJECT is a pure by_provenance cell (no legacy flat fields):
         // it renders only under the provenance(s) it was run on, else blank.
         strongreject: provValue(m.id, 'strongreject', md.strongreject, () => null),
+        // PAIR-on-JBB: same by_provenance shape. ASR = best-of-K per goal
+        // (K = n_streams × n_iterations) under the active rule judge.
+        pair:         provValue(m.id, 'pair',         md.pair,         () => null),
         // EM uses its own (independent) judge; gate on its judge_version
         // so stale-stamp cells render as MISSING per the invariants regime.
         em_al:    independentOnly(em?.aligned_mean,   em?.judge_version),
@@ -4515,7 +4519,7 @@ let activeAgg = 'worst';               // worst | p80 | p75 | median | all | mea
 // its k samples cross the threshold (= the (1-f) upper quantile of its scores
 // >= t). worst@k is the f->"any" endpoint; these fill in the strictness ladder.
 const FRACTION_AGG = { p80: 0.2, p75: 0.25, median: 0.5, all: 1.0 };
-const PROV_CELL_KEYS = ['jbb', 'advbench', 'dans', 'pap', 'pez', 'strongreject', 'ablit', 'tmplabl'];
+const PROV_CELL_KEYS = ['jbb', 'advbench', 'dans', 'pap', 'pez', 'strongreject', 'pair', 'ablit', 'tmplabl'];
 
 // Lazy per-model raw-sample cache for mean/count (worst needs only the eager
 // worst-per-prompt `scores`). Loaded from diagnostics/provenance/<mid>.json.

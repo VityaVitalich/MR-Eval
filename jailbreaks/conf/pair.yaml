@@ -1,0 +1,76 @@
+# PAIR (Prompt Automatic Iterative Refinement; Chao et al. 2023) — vendored
+# attack loop driven by a locally-hosted Qwen3.5-35B-A3B attacker, scored
+# externally with MR-Eval's shared rule judge (same prompt + provider order
+# AdvBench/StrongREJECT/FORTRESS use). Generation happens inside PAIR; this
+# config drives the wrapper (run_pair_eval.py), not the in-process fused
+# pipeline. Decoding sampling-id is synthetic ("attack" strategy) — the
+# real attempt count per goal is n_streams * n_iterations, encoded as
+# num_samples for the per-sample schema.
+#
+# Default inner judge is `gcg` (free keyword heuristic; matches the upstream
+# paper). Switch to MR-Eval's rule judge with `inner_judge.kind=mreval-rule`
+# when you want the inner loop scored on the same rubric as the outer ASR.
+#
+# Quick recipes:
+#   testing=true                          # 3-goal smoke
+#   inner_judge.kind=mreval-rule          # use our judge in-loop
+#   judge=deepseek                        # outer rejudge=deepseek (default gpt4o)
+#   dataset=advbench                      # vendored AdvBench-shaped CSV (520 rows)
+#   attack.spawn_server=true              # local debug w/ wrapper-spawned vllm
+defaults:
+  - base
+  - judge: deepseek     # default outer (re-judge) — our 0..100 rule judge via OpenRouter
+  - _self_
+
+hydra:
+  searchpath:
+    - file://${oc.env:MR_EVAL_REPO_ROOT}/conf
+
+# Target model (the model we're attacking).
+model:
+  name: null
+  pretrained: alpindale/Llama-3.2-1B-Instruct
+  dtype: bfloat16
+
+target:
+  backend: vllm              # vllm | hf | server
+  max_new_tokens: 256        # PAIR's --target-max-n-tokens
+
+# Attacker (locally-hosted via a separate `vllm serve` process on its own
+# GPU group; the slurm script in slurm/eval_pair.sh boots it before this
+# wrapper runs).
+attack:
+  pretrained: Qwen/Qwen3-32B
+  tensor_parallel_size: 2    # 32B dense → TP=2 fits comfortably on 2x H100 80GB
+  gpu_memory_utilization: 0.92
+  dtype: bfloat16
+  max_model_len: 8192
+  max_n_tokens: 2048         # attacker generation budget: think (~600-1000 tok) + JSON (~200-400 tok)
+  endpoint: http://localhost:8000/v1
+  served_name: pair-attacker
+  spawn_server: false        # true => wrapper boots vllm itself (local debug only)
+  wait_for_server: true      # poll /health before launching PAIR
+  server_timeout_s: 600
+
+# PAIR search knobs.
+n_streams: 3
+n_iterations: 4
+keep_last_n: 2
+max_n_attack_attempts: 5
+goal_batch_size: 5           # multiple goals run concurrently through the attacker
+                             # batch — must use a goal-agnostic inner judge (gcg or mreval-rule).
+
+# Inner-loop judge (drives the attacker's iteration). The OUTER rejudge that
+# produces the reported ASR is controlled by the top-level `judge` group above.
+inner_judge:
+  kind: gcg                  # gcg | mreval-rule | mreval-deepseek | no-judge
+  mreval_model_id: deepseek/deepseek-v4-flash
+
+# Dataset: jbb (100 harmful behaviors; the recommended set) or advbench (520).
+dataset: jbb
+dataset_limit: null          # optional cap (rows), applied AFTER `testing`
+
+output_dir: "${oc.env:MR_EVAL_DATA_DIR,/capstor/store/cscs/swissai/a141/mr_evals_vvm}/outputs/jailbreaks/pair"
+
+testing: false
+testing_limit: 3             # 3 goals × 2 streams × 2 iterations ≈ 12 attempts for a smoke

@@ -708,6 +708,7 @@ NEW_SCHEMA_BENCHES = {
     "dans":     ("dan",      [OUTPUTS / "jailbreaks" / "chatgpt_dan_jbb"]),
     "pap":      ("pap",      [OUTPUTS / "jailbreaks" / "persuasive_pap"]),
     "strongreject": ("strongreject", [OUTPUTS / "jailbreaks" / "strongreject"]),
+    "pair":     ("pair",     [OUTPUTS / "jailbreaks" / "pair"]),
     "pez":      ("pez",      [OUTPUTS / "pez"]),
 }
 

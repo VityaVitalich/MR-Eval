@@ -18,8 +18,24 @@ def test_default_provider_order_excludes_atlascloud():
     eb = mj.deepseek_extra_body()
     order = eb["provider"]["order"]
     assert order == ["Parasail", "SiliconFlow", "GMICloud"]
-    assert "AtlasCloud" not in order, "AtlasCloud silently content-filters (200 + empty body)"
-    assert eb["provider"]["allow_fallbacks"] is False
+    assert "AtlasCloud" in eb["provider"]["ignore"], \
+        "AtlasCloud silently content-filters (200 + empty body) — must be ignored"
+    assert "AtlasCloud" not in order
+    # allow_fallbacks=True lets OpenRouter route around 5xx among the non-ignored
+    # providers (ignore is honored even during fallback).
+    assert eb["provider"]["allow_fallbacks"] is True
+
+
+def test_provider_order_rotates_on_retry():
+    """attempt>0 rotates the order so a stuck-empty provider is demoted next try."""
+    base = mj.deepseek_extra_body(attempt=0)["provider"]["order"]
+    rot1 = mj.deepseek_extra_body(attempt=1)["provider"]["order"]
+    rot2 = mj.deepseek_extra_body(attempt=2)["provider"]["order"]
+    assert base == ["Parasail", "SiliconFlow", "GMICloud"]
+    assert rot1 == ["SiliconFlow", "GMICloud", "Parasail"]
+    assert rot2 == ["GMICloud", "Parasail", "SiliconFlow"]
+    # cycles back after len(order)
+    assert mj.deepseek_extra_body(attempt=3)["provider"]["order"] == base
 
 
 def test_reasoning_disabled():
@@ -30,7 +46,7 @@ def test_reasoning_disabled():
 def test_custom_provider_order_respected():
     eb = mj.deepseek_extra_body(provider_order=["Parasail"])
     assert eb["provider"]["order"] == ["Parasail"]
-    assert "AtlasCloud" not in eb["provider"]["order"]
+    assert "AtlasCloud" in eb["provider"]["ignore"]
 
 
 # ── defensive <think> strip (PLAN §4.2 / FF-13) ──────────────────────────────

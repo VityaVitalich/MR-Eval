@@ -9,7 +9,7 @@ Generation and judging are injected as callables so unit tests drive the
 pipeline with fakes (no vLLM, no network):
 
     generate: async (prompt: str) -> Sequence[str]              # the k samples
-    judge:    async (request, response) -> {"score": int|None, "raw": str}
+    judge:    async (request, response, *, attempt: int = 0) -> {"score": int|None, "raw": str}
 
 An optional ``response_transform`` maps each raw generation to the text actually
 judged (e.g. DAN's ``extract_attack_response``); the raw text is preserved in
@@ -20,19 +20,26 @@ With the default ``max_error_rate=0`` a persistent None RAISES (fail-loud); with
 a tolerance, the errored sample is recorded with an explicit ``error`` marker and
 counted (never silently dropped), and the run still raises if the observed error
 rate exceeds the tolerance.
+
+Crash-recovery: pass ``partial_path`` to stream each prompt's generations to a
+JSONL sidecar as soon as the generate step completes (before judging). If the
+judge phase then fails, the sidecar lets ``rejudge_from_partial`` re-run only
+the judging — no vLLM model load, no regeneration.
 """
 from __future__ import annotations
 
 import asyncio
+import json
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Awaitable, Callable, Sequence
 
 from mreval.judge import JudgeError, score_with_retries
 
-__all__ = ["PipelineResult", "run_pipeline"]
+__all__ = ["PipelineResult", "run_pipeline", "rejudge_from_partial"]
 
 GenerateFn = Callable[[str], Awaitable[Sequence[str]]]
-JudgeFn = Callable[[str, str], Awaitable[dict]]
+JudgeFn = Callable[..., Awaitable[dict]]  # (request, response, *, attempt: int = 0)
 ResponseTransform = Callable[[str], str]
 
 
@@ -56,10 +63,32 @@ async def run_pipeline(
     max_error_rate: float = 0.0,
     threshold: int = 50,
     response_transform: ResponseTransform | None = None,
+    partial_path: Path | None = None,
 ) -> PipelineResult:
     sem = asyncio.Semaphore(concurrency)
     meter = {"cur": 0, "max": 0}
     records: list[dict | None] = [None] * len(prompts)
+
+    partial_lock: asyncio.Lock | None = None
+    if partial_path is not None:
+        partial_path = Path(partial_path)
+        partial_path.parent.mkdir(parents=True, exist_ok=True)
+        # Truncate stale partial from a previous failed run.
+        partial_path.write_text("")
+        partial_lock = asyncio.Lock()
+
+    async def write_partial(p: dict, responses: Sequence[str]) -> None:
+        if partial_path is None:
+            return
+        line = json.dumps({
+            "id": p["id"],
+            "prompt": p["prompt"],
+            "source": p.get("source"),
+            "responses": list(responses),
+        })
+        async with partial_lock:  # type: ignore[arg-type]
+            with partial_path.open("a") as fh:
+                fh.write(line + "\n")
 
     async def judge_sample(prompt: str, idx: int, response: str) -> dict:
         # `response` is the raw generation; `judged` is what the judge sees.
@@ -73,7 +102,8 @@ async def run_pipeline(
             try:
                 try:
                     out = await score_with_retries(
-                        lambda: judge(prompt, judged), max_retries=max_retries
+                        lambda attempt: judge(prompt, judged, attempt=attempt),
+                        max_retries=max_retries,
                     )
                 except JudgeError as e:
                     if max_error_rate <= 0:
@@ -88,6 +118,9 @@ async def run_pipeline(
         # but judge against the original request (`prompt`). They differ for
         # vLLM benches that pre-render; default `rendered` == `prompt`.
         responses = await generate(p.get("rendered") or p["prompt"])
+        # Persist generations BEFORE judging — if judge raises later, the
+        # sidecar survives and rejudge_from_partial can recover with no GPU.
+        await write_partial(p, responses)
         samples = await asyncio.gather(
             *[judge_sample(p["prompt"], idx, r) for idx, r in enumerate(responses)]
         )
@@ -100,6 +133,77 @@ async def run_pipeline(
         results=[r for r in records if r is not None],
         n_prompts=len(prompts),
         max_concurrency_observed=meter["max"],
+    )
+    res.n_samples = sum(len(r["samples"]) for r in res.results)
+    res.n_errors = sum(1 for r in res.results for s in r["samples"] if s.get("error"))
+
+    if max_error_rate > 0 and res.n_samples:
+        rate = res.n_errors / res.n_samples
+        if rate > max_error_rate:
+            raise JudgeError(
+                f"error rate {rate:.3f} exceeds max_error_rate {max_error_rate:.3f} "
+                f"({res.n_errors}/{res.n_samples} samples errored)"
+            )
+    return res
+
+
+async def rejudge_from_partial(
+    partial_path: Path,
+    *,
+    judge: JudgeFn,
+    concurrency: int = 200,
+    max_retries: int = 5,
+    max_error_rate: float = 0.0,
+    response_transform: ResponseTransform | None = None,
+) -> PipelineResult:
+    """Replay only the judging stage from a partial JSONL written by
+    ``run_pipeline``. Skips generation entirely (no vLLM, no model load).
+
+    Returns the same ``PipelineResult`` shape as ``run_pipeline`` so the bench
+    post-processing can run unchanged.
+    """
+    partial_path = Path(partial_path)
+    entries: list[dict] = []
+    with partial_path.open() as fh:
+        for line in fh:
+            line = line.strip()
+            if not line:
+                continue
+            entries.append(json.loads(line))
+
+    sem = asyncio.Semaphore(concurrency)
+    records: list[dict | None] = [None] * len(entries)
+
+    async def judge_sample(prompt: str, idx: int, response: str) -> dict:
+        judged = response_transform(response) if response_transform else response
+        base = {"sample_idx": idx, "response": response}
+        if response_transform:
+            base["response_judged"] = judged
+        async with sem:
+            try:
+                out = await score_with_retries(
+                    lambda attempt: judge(prompt, judged, attempt=attempt),
+                    max_retries=max_retries,
+                )
+            except JudgeError as e:
+                if max_error_rate <= 0:
+                    raise
+                return {**base, "score": None, "raw": "", "error": str(e)[:200]}
+            return {**base, "score": out["score"], "raw": out.get("raw", "")}
+
+    async def handle_entry(i: int, entry: dict) -> None:
+        samples = await asyncio.gather(*[
+            judge_sample(entry["prompt"], idx, r)
+            for idx, r in enumerate(entry["responses"])
+        ])
+        records[i] = {"id": entry["id"], "prompt": entry["prompt"],
+                      "source": entry.get("source"), "samples": list(samples)}
+
+    await asyncio.gather(*[handle_entry(i, e) for i, e in enumerate(entries)])
+
+    res = PipelineResult(
+        results=[r for r in records if r is not None],
+        n_prompts=len(entries),
     )
     res.n_samples = sum(len(r["samples"]) for r in res.results)
     res.n_errors = sum(1 for r in res.results for s in r["samples"] if s.get("error"))
