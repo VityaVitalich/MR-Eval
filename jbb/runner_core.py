@@ -219,6 +219,10 @@ async def _arun(cfg: dict[str, Any]) -> None:
 
     judge = build_rule_judge(judge_cfg)
     pipeline_cfg = cfg.get("pipeline", {})
+    jmeta = judge_meta(judge_cfg)
+    sid = sampling_id(decoding)
+    model_name = _effective_model_name(cfg)
+    partial_path = output_dir / ".partial" / f"jbb__{model_name}__{jmeta['id']}__{sid}.jsonl"
     res = await run_pipeline(
         prompts,
         generate=make_generate_fn(engine, sampling_params),
@@ -228,6 +232,7 @@ async def _arun(cfg: dict[str, Any]) -> None:
         max_retries=int(judge_cfg.get("max_retries", 5)),
         max_error_rate=float(pipeline_cfg.get("max_error_rate", 0.0)),
         threshold=int(judge_cfg.get("asr_threshold", 50)),
+        partial_path=partial_path,
     )
 
     # Merge jbb metadata back onto each per-prompt sample record.
@@ -247,9 +252,6 @@ async def _arun(cfg: dict[str, Any]) -> None:
             "samples": pr["samples"],
         })
 
-    jmeta = judge_meta(judge_cfg)
-    sid = sampling_id(decoding)
-    model_name = _effective_model_name(cfg)
     out_path = save_results(
         output_dir / f"jbb__{model_name}__{jmeta['id']}__{sid}.json",
         model=model_name,
@@ -263,6 +265,8 @@ async def _arun(cfg: dict[str, Any]) -> None:
             "target_model": cfg["artifact"].get("target_model"),
         }},
     )
+    if partial_path.exists():
+        partial_path.unlink()
     _save_yaml(output_dir / "config.yaml", cfg)
 
     agg = aggregate_over_prompts(

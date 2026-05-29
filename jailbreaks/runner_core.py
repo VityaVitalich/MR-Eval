@@ -123,6 +123,10 @@ async def _arun(
 
     judge = build_rule_judge(judge_cfg)
     pipeline_cfg = cfg.get("pipeline", {})
+    jmeta = judge_meta(judge_cfg)
+    sid = sampling_id(decoding)
+    model_name = str(cfg.get("run_tag") or "").strip() or effective_model_name(cfg)
+    partial_path = output_dir / ".partial" / f"{benchmark}__{model_name}__{jmeta['id']}__{sid}.jsonl"
     res = await run_pipeline(
         pipe_prompts,
         generate=make_generate_fn(engine, sampling_params),
@@ -133,6 +137,7 @@ async def _arun(
         max_error_rate=float(pipeline_cfg.get("max_error_rate", 0.0)),
         threshold=int(judge_cfg.get("asr_threshold", 50)),
         response_transform=response_transform,
+        partial_path=partial_path,
     )
 
     # Merge per-prompt metadata + per-sample keyword signals (refusal-prefix +
@@ -150,9 +155,6 @@ async def _arun(
             "samples": compute_sample_signals(pr["samples"], target),
         })
 
-    jmeta = judge_meta(judge_cfg)
-    sid = sampling_id(decoding)
-    model_name = str(cfg.get("run_tag") or "").strip() or effective_model_name(cfg)
     out_path = save_results(
         output_dir / f"{benchmark}__{model_name}__{jmeta['id']}__{sid}.json",
         model=model_name,
@@ -161,6 +163,8 @@ async def _arun(
         decoding=decoding,
         judge_meta=jmeta,
     )
+    if partial_path.exists():
+        partial_path.unlink()
     with open(output_dir / "config.yaml", "w") as f:
         yaml.safe_dump(cfg, f, sort_keys=False)
 

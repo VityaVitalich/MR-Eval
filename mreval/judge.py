@@ -121,10 +121,11 @@ def _strip_think(text: str) -> str:
     could still emit one, whose digits would poison _parse's last-integer fallback."""
     return _THINK_RE.sub("", text).strip()
 
-# DeepSeek production preset (PLAN §4.2 port note). Provider order pinned to
-# dodge AtlasCloud's silent content-filtering (200 + empty body); reasoning off.
+# DeepSeek production preset (PLAN §4.2 port note). AtlasCloud silently
+# content-filters (200 + empty body) and is explicitly excluded; reasoning off.
 DEEPSEEK_JUDGE_MODEL = "deepseek/deepseek-v4-flash"
-DEEPSEEK_PROVIDER_ORDER = ["Parasail", "SiliconFlow", "GMICloud"]  # NO AtlasCloud
+DEEPSEEK_PROVIDER_ORDER = ["Parasail", "SiliconFlow", "GMICloud"]  # preferred order; AtlasCloud is ignored
+DEEPSEEK_IGNORE_PROVIDERS = ["AtlasCloud"]
 
 
 def judge_provider() -> str:
@@ -146,26 +147,45 @@ def judge_extra_body() -> dict:
     return {}
 
 
-def deepseek_extra_body(provider_order: list[str] | None = None) -> dict:
-    """extra_body for the DeepSeek judge: pin provider order (no AtlasCloud) and
-    disable reasoning (the validated config ran reasoning-off)."""
+def deepseek_extra_body(provider_order: list[str] | None = None, attempt: int = 0) -> dict:
+    """extra_body for the DeepSeek judge.
+
+    AtlasCloud is excluded (silent content-filtering: 200 + empty body, confirmed
+    by team). The remaining providers are listed in a preferred order and
+    ``allow_fallbacks=True`` lets OpenRouter route around 5xx automatically.
+
+    On retry (``attempt > 0``) the order is rotated so a provider returning empty
+    bodies (200 OK — does NOT trigger OpenRouter fallback) is demoted next
+    attempt. Pairs with ``score_with_retries`` passing the attempt index.
+    """
     order = list(provider_order) if provider_order else list(DEEPSEEK_PROVIDER_ORDER)
+    if order:
+        shift = attempt % len(order)
+        order = order[shift:] + order[:shift]
     return {
-        "provider": {"order": order, "allow_fallbacks": False},
+        "provider": {
+            "order": order,
+            "ignore": list(DEEPSEEK_IGNORE_PROVIDERS),
+            "allow_fallbacks": True,
+        },
         "reasoning": {"enabled": False},
     }
 
 
-def extra_body_for(model: str) -> dict:
+def extra_body_for(model: str, attempt: int = 0) -> dict:
     """The single per-model extra_body entry point — use this everywhere a judge
     call needs routing (rule judge, overrefusal classifier, …) so provider
     pinning lives in one place. Preserves the gpt-4o behavior exactly
     (``judge_extra_body``); routes DeepSeek to its pinned-provider preset.
-    Reads the provider from ``MR_EVAL_JUDGE_PROVIDER`` (set by the caller)."""
+    Reads the provider from ``MR_EVAL_JUDGE_PROVIDER`` (set by the caller).
+
+    ``attempt`` is the retry index; passed through to ``deepseek_extra_body`` so
+    the DeepSeek provider order rotates per retry.
+    """
     if judge_provider() != "openrouter":
         return {}
     if model.startswith("deepseek/"):
-        return deepseek_extra_body()
+        return deepseek_extra_body(attempt=attempt)
     return judge_extra_body()
 
 
@@ -253,7 +273,7 @@ async def _create_with_retries(make_call: Callable[[], Awaitable], max_retries: 
 
 
 async def score_with_retries(
-    judge_call: Callable[[], Awaitable[dict]],
+    judge_call: Callable[[int], Awaitable[dict]],
     *,
     max_retries: int = _DEFAULT_MAX_RETRIES,
     base_delay: float = 0.5,
@@ -263,13 +283,17 @@ async def score_with_retries(
     None``) AND on exceptions — a None is retryable, not dropped (D13). After
     ``max_retries`` retries still None/erroring -> raise JudgeError (fail-loud).
 
-    ``judge_call`` is a zero-arg async callable returning ``{"score", "raw"}``.
+    ``judge_call`` takes the attempt index (0-based) and returns ``{"score","raw"}``.
+    The attempt index lets the underlying judge rotate provider order between
+    attempts (see ``deepseek_extra_body``), which is the difference between a
+    deterministic 6× same-empty-body failure and a real fallback.
     ``sleep`` is injectable so tests need not wait.
     """
     _sleep = sleep or asyncio.sleep
+    last_raw: str | None = None
     for attempt in range(max_retries + 1):
         try:
-            result = await judge_call()
+            result = await judge_call(attempt)
         except Exception as e:
             if attempt == max_retries:
                 raise JudgeError(f"judge call failed after {max_retries + 1} attempts: {e}") from e
@@ -277,9 +301,19 @@ async def score_with_retries(
             continue
         if result.get("score") is not None:
             return result
+        # Score is None — log the body so failures are diagnosable (empty body =
+        # provider content-filter / outage; non-numeric text = model refusal).
+        last_raw = (result.get("raw") or "")
+        logger.warning(
+            "judge returned None (attempt {}/{}): body={!r}",
+            attempt + 1, max_retries + 1, last_raw[:200],
+        )
         if attempt < max_retries:
             await _sleep(_backoff_delay(attempt, base_delay))
-    raise JudgeError(f"judge returned None after {max_retries + 1} attempts")
+    raise JudgeError(
+        f"judge returned None after {max_retries + 1} attempts; "
+        f"last body (truncated): {(last_raw or '')[:200]!r}"
+    )
 
 
 # ── judges ────────────────────────────────────────────────────────────────────
@@ -306,8 +340,8 @@ def build_rule_judge(judge_cfg: Mapping[str, object]) -> Callable[[str, str], Aw
         max_tokens=int(judge_cfg.get("max_tokens", 600)),
     )
 
-    async def _judge(request: str, response: str) -> dict:
-        return await judge(request=request, response=response)
+    async def _judge(request: str, response: str, *, attempt: int = 0) -> dict:
+        return await judge(request=request, response=response, attempt=attempt)
 
     return _judge
 
@@ -470,15 +504,15 @@ class RuleBasedJudge:
         self.max_tokens = max_tokens
         self._client = client or build_openai_client()
 
-    async def __call__(self, **kwargs) -> dict:
+    async def __call__(self, *, attempt: int = 0, **kwargs) -> dict:
         # Substitute placeholders. Use .replace so we don't fight curly
         # braces inside the prompt body's examples.
         msg = self.prompt_template
         for k, v in kwargs.items():
             msg = msg.replace("{" + k + "}", "" if v is None else str(v))
-        return await self._score_one(msg)
+        return await self._score_one(msg, attempt=attempt)
 
-    async def _score_one(self, msg: str, max_retries: int = _DEFAULT_MAX_RETRIES) -> dict:
+    async def _score_one(self, msg: str, *, attempt: int = 0, max_retries: int = _DEFAULT_MAX_RETRIES) -> dict:
         completion = await _create_with_retries(
             lambda: self._client.chat.completions.create(
                 model=self.model,
@@ -486,7 +520,7 @@ class RuleBasedJudge:
                 temperature=0,
                 max_tokens=self.max_tokens,
                 seed=0,
-                extra_body=extra_body_for(self.model),
+                extra_body=extra_body_for(self.model, attempt=attempt),
             ),
             max_retries=max_retries,
         )
