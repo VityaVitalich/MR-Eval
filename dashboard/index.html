@@ -3399,7 +3399,7 @@ function applyDiagSearch(items, q) {
   return items.filter(it => {
     const hay = [it.goal, it.prompt, it.response, it.persuasive, it.qid, it.prompt_title, it.prompt_id, it.behavior,
                  it.canary_id, it.position, it.quirk_id, it.fact_id, it.label, it.condition, it.probe_kind, it.concern,
-                 it.reflection_1p, it.reflection_3p]
+                 it.reflection_1p, it.reflection_3p, it.adv_prompt, it.strategy]
       .filter(Boolean).join(' ').toLowerCase();
     return hay.includes(ql);
   });
@@ -3600,6 +3600,20 @@ function renderDiag() {
       if (it.rendered_prompt) blocks.push(`<details><summary>Rendered prompt (with special tokens)</summary><div class="blk">${escapeHtml(it.rendered_prompt)}</div></details>`);
       blocks.push(`<div class="label">Response</div><div class="blk response">${escapeHtml(it.response)}</div>`);
       if (it.judge_raw) blocks.push(`<details><summary>Judge rationale (v5)</summary><div class="blk">${escapeHtml(it.judge_raw)}</div></details>`);
+    } else if (bench === 'pair') {
+      // PAIR per-attempt: each sample is one attacker turn (adv_prompt) + the
+      // target's response + judge score. Surface the iteration/stream/strategy
+      // provenance so the search trace is legible.
+      blocks.push(`<div class="label">Goal</div><div class="blk">${escapeHtml(it.goal || '')}</div>`);
+      const tags = [];
+      if (it.iteration != null) tags.push(`iter ${it.iteration}`);
+      if (it.stream    != null) tags.push(`stream ${it.stream}`);
+      if (it.strategy)          tags.push(escapeHtml(it.strategy));
+      if (it.inner_signal != null) tags.push(`inner=${it.inner_signal}`);
+      if (tags.length) blocks.push(`<div class="label">Attempt · ${tags.join(' · ')}</div>`);
+      blocks.push(`<details open><summary>Adversarial prompt</summary><div class="blk">${escapeHtml(it.adv_prompt || '')}</div></details>`);
+      blocks.push(`<div class="label">Response</div><div class="blk response">${escapeHtml(it.response)}</div>`);
+      if (it.judge_raw) blocks.push(`<details><summary>Judge rationale</summary><div class="blk">${escapeHtml(it.judge_raw)}</div></details>`);
     } else if (bench === 'pez') {
       // PEZ prompts already embed the behavior goal + the projected suffix tokens.
       blocks.push(`<div class="label">Behavior · ${escapeHtml(it.behavior || '')}</div>`);

@@ -2176,6 +2176,7 @@ _DIAG_NEW_SCHEMA = {
     "pap":      "pap",
     "pez":      "pez",
     "jbb":      "jbb",
+    "pair":     "pair",
 }
 
 
@@ -2238,6 +2239,17 @@ def _slim_provsample(bench: str, r: dict, s: dict, thr: float, n_samples: int) -
         item["category"]   = r.get("category")
         item["goal"]       = r.get("goal")
         item["jailbroken"] = (score >= thr) if isinstance(score, (int, float)) else None
+    elif bench == "pair":
+        # PAIR per-attempt slim: each sample is (adv_prompt, target_response,
+        # outer_score). inner_signal is the loop's keyword judge (gcg) or
+        # mreval-rule signal that steered the refinement.
+        item["goal"]         = r.get("prompt")
+        item["adv_prompt"]   = _trim(s.get("adv_prompt"))
+        item["inner_signal"] = s.get("inner_signal")
+        item["iteration"]    = s.get("meta_iteration")
+        item["stream"]       = s.get("meta_stream")
+        item["strategy"]     = s.get("meta_strategy")
+        item["jailbroken"]   = (score >= thr) if isinstance(score, (int, float)) else None
     return item
 
 
@@ -2341,6 +2353,7 @@ def build_diagnostics(all_ids: set[str], out_dir: Path) -> dict:
         ("dans_advbench", "DANs × AdvBench",       False),
         ("pap",           "PAP",                   False),
         ("jbb",           "JBB per-attack",        True),
+        ("pair",          "PAIR (attack search)",  False),
         ("pez",           "PEZ (hard prompt)",     False),
         ("overrefusal",   "Over-refusal (OR-Bench)", False),
         ("canaries_bc",          "Canaries · BC",            True),
