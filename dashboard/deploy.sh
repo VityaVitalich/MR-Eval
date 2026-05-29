@@ -5,8 +5,8 @@
 #   ./dashboard/deploy.sh           # rebuild + deploy
 #   ./dashboard/deploy.sh --skip-build   # deploy already-built data.json
 #
-# Pages URL (after first deploy + enabling Pages in GitHub repo settings):
-#   https://vityavitalich.github.io/MR-Eval/
+# Pages URL is derived from your `origin` remote and printed at the end
+# (after first deploy + enabling Pages in GitHub repo settings).
 #
 # One-time GitHub setup:
 #   Repo → Settings → Pages → Source: Deploy from a branch → Branch: gh-pages / (root) → Save
@@ -19,6 +19,11 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
 
+# Derive the GitHub Pages URL from the `origin` remote so it's correct for any
+# fork. Handles both SSH (git@github.com:owner/repo.git) and HTTPS forms.
+SLUG=$(git remote get-url origin | sed -E 's#^git@github.com:##; s#^https://github.com/##; s#\.git$##')
+PAGES_URL="https://${SLUG%%/*}.github.io/${SLUG#*/}/"
+
 SKIP_BUILD=0
 for arg in "$@"; do
     case "$arg" in
@@ -29,10 +34,10 @@ done
 
 if [[ "$SKIP_BUILD" -eq 0 ]]; then
     echo "▸ Rebuilding data.json..."
-    python3 dashboard/build_data.py
+    uv run python dashboard/build_data.py
     if [[ -f dashboard/build_judge_benchmark.py ]]; then
         echo "▸ Rebuilding judge_benchmark.json..."
-        python3 dashboard/build_judge_benchmark.py
+        uv run python dashboard/build_judge_benchmark.py
     fi
 fi
 
@@ -40,7 +45,7 @@ fi
 # above already validate internally, but re-running the check here also
 # covers --skip-build (deploying a hand-edited data.json must still pass).
 echo "▸ Validating output..."
-python3 -m dashboard._checks
+uv run python -m dashboard._checks
 
 # Fetch latest state of the remote so we can base on origin/gh-pages if it exists.
 git fetch origin 2>/dev/null || true
@@ -90,5 +95,5 @@ fi
 
 cd "$REPO_ROOT"
 echo ""
-echo "✓ Done. Dashboard URL:  https://vityavitalich.github.io/MR-Eval/"
+echo "✓ Done. Dashboard URL:  $PAGES_URL"
 echo "  (Allow up to ~1 minute for Pages to publish after first push.)"
