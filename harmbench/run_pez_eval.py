@@ -44,7 +44,7 @@ from baselines import get_template  # noqa: E402
 
 from banned_tokens import vllm_logit_bias  # noqa: E402
 from mreval.judge import build_rule_judge, judge_meta  # noqa: E402
-from mreval.pipeline import run_pipeline  # noqa: E402
+from mreval.pipeline import rejudge_from_partial, run_pipeline  # noqa: E402
 from mreval.results import aggregate_over_prompts, save_results, stable_prompt_id  # noqa: E402
 from mreval.sampling import build_sampling_params, sampling_id  # noqa: E402
 from mreval.vllm_engine import VLLMEngine, make_generate_fn, resolve_cached_hf_model_path  # noqa: E402
@@ -95,9 +95,6 @@ async def _arun(args) -> None:
     if args.limit:
         test_cases = dict(list(test_cases.items())[: args.limit])
     behavior_map = load_behavior_map(Path(args.behaviors_path))
-    model_name_or_path, template = resolve_model_template(
-        args.model, Path(args.models_config_file)
-    )
     logger.info("PEZ steps 2+3 (mreval fused pipeline) | model={} | {} behaviors",
                 args.model, len(test_cases))
 
@@ -112,45 +109,67 @@ async def _arun(args) -> None:
         "max_retries": args.max_retries,
     }
 
-    # Build one pipeline prompt per (behavior, test_case). The judge request is
-    # the PLAIN behavior text; generation runs from the HarmBench-templated
-    # adversarial test_case.
-    prompts: list[dict] = []
+    judge = build_rule_judge(judge_cfg)
+    jmeta = judge_meta(judge_cfg)
+    sid = sampling_id(decoding)
+    mreval_dir = Path(args.mreval_output_dir)
+    partial_path = mreval_dir / ".partial" / f"pez__{args.model}__{jmeta['id']}__{sid}.jsonl"
+
+    # Build ``meta`` for the per-sample output schema. Always need it: in normal
+    # mode for building prompts; in rejudge mode for mapping partial entries back
+    # to (behavior_id, tc_idx, test_case).
     meta: dict[str, tuple[str, int, str]] = {}  # id -> (behavior_id, tc_index, test_case)
     for bid, tcs in test_cases.items():
-        behavior_text = behavior_map.get(bid, bid)
         for i, tc in enumerate(tcs):
-            pid = stable_prompt_id(tc, source=bid)
+            meta[stable_prompt_id(tc, source=bid)] = (bid, i, tc)
+
+    if args.rejudge_from_partial:
+        rj_path = Path(args.rejudge_from_partial)
+        logger.info("PEZ rejudge-from-partial: {} (skipping vLLM)", rj_path)
+        res = await rejudge_from_partial(
+            rj_path,
+            judge=judge,
+            concurrency=args.concurrency,
+            max_retries=args.max_retries,
+            max_error_rate=args.max_error_rate,
+        )
+    else:
+        model_name_or_path, template = resolve_model_template(
+            args.model, Path(args.models_config_file)
+        )
+        # The judge request is the PLAIN behavior text; generation runs from
+        # the HarmBench-templated adversarial test_case.
+        prompts: list[dict] = []
+        for pid, (bid, _tc_idx, tc) in meta.items():
             prompts.append({
                 "id": pid,
-                "prompt": behavior_text,
+                "prompt": behavior_map.get(bid, bid),
                 "rendered": template["prompt"].format(instruction=tc),
                 "source": bid,
             })
-            meta[pid] = (bid, i, tc)
 
-    engine = VLLMEngine(
-        model=model_name_or_path,
-        dtype=args.dtype,
-        tensor_parallel_size=args.tensor_parallel_size,
-        max_model_len=args.max_model_len,
-    )
-    tokenizer = await engine.get_tokenizer()
-    sampling_params = build_sampling_params(
-        decoding, logit_bias=vllm_logit_bias(len(tokenizer))
-    )
-    judge = build_rule_judge(judge_cfg)
+        engine = VLLMEngine(
+            model=model_name_or_path,
+            dtype=args.dtype,
+            tensor_parallel_size=args.tensor_parallel_size,
+            max_model_len=args.max_model_len,
+        )
+        tokenizer = await engine.get_tokenizer()
+        sampling_params = build_sampling_params(
+            decoding, logit_bias=vllm_logit_bias(len(tokenizer))
+        )
 
-    res = await run_pipeline(
-        prompts,
-        generate=make_generate_fn(engine, sampling_params),
-        judge=judge,
-        k=int(decoding["num_samples"]),
-        concurrency=args.concurrency,
-        max_retries=args.max_retries,
-        max_error_rate=args.max_error_rate,
-        threshold=args.asr_threshold,
-    )
+        res = await run_pipeline(
+            prompts,
+            generate=make_generate_fn(engine, sampling_params),
+            judge=judge,
+            k=int(decoding["num_samples"]),
+            concurrency=args.concurrency,
+            max_retries=args.max_retries,
+            max_error_rate=args.max_error_rate,
+            threshold=args.asr_threshold,
+            partial_path=partial_path,
+        )
 
     # ---- mreval per-sample schema (primary) ----
     by_id = {r["id"]: r for r in res.results}
@@ -168,14 +187,14 @@ async def _arun(args) -> None:
             "test_case_index": tc_idx,
             "samples": pr["samples"],
         })
-    jmeta = judge_meta(judge_cfg)
-    sid = sampling_id(decoding)
-    mreval_dir = Path(args.mreval_output_dir)
     mreval_path = save_results(
         mreval_dir / f"pez__{args.model}__{jmeta['id']}__{sid}.json",
         model=args.model, benchmark=PEZ_BENCHMARK, results=out_results,
         decoding=decoding, judge_meta=jmeta,
     )
+    # Final results landed — drop the partial sidecar so it doesn't accumulate.
+    if not args.rejudge_from_partial and partial_path.exists():
+        partial_path.unlink()
 
     agg = aggregate_over_prompts(
         out_results, k=int(decoding["num_samples"]), reduction="worst",
@@ -212,6 +231,12 @@ def main() -> None:
     ap.add_argument("--tensor-parallel-size", type=int, default=1)
     ap.add_argument("--dtype", default="bfloat16")
     ap.add_argument("--max-model-len", type=int, default=None)
+    ap.add_argument(
+        "--rejudge-from-partial", default=None,
+        help="Path to a .partial.jsonl from a previous failed run. Skips vLLM "
+             "entirely and replays only the judging stage on the cached "
+             "generations, then writes the final per-sample schema.",
+    )
     args = ap.parse_args()
     asyncio.run(_arun(args))
 

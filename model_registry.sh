@@ -1339,6 +1339,93 @@ mr_eval_register_model \
   --description "SafeLM 1.7B + mixsft, lr 1e-4 (default template)" \
   --jbb-config generic_instruct
 
+### 2026-05-29: missing base checkpoints (base-only; SFT variants tracked separately)
+
+mr_eval_register_model \
+  --alias baseline_safelmreph \
+  --pretrained Raghav-Singhal/normal-smollm-1p7b-100B-20n-2048sl-960gbsz-safelm \
+  --description "baseline with SafeLM-style rephrasals" \
+  --jbb-config generic_base
+
+mr_eval_register_model \
+  --alias epe_1p_nobce_refbad \
+  --pretrained Raghav-Singhal/epe-1p-smollm-1p7b-100B-20n-2048sl-960gbsz-no_bce-refl_on_bad_only \
+  --description "EPE 1P Base without BCE, reflections only on harmful docs" \
+  --jbb-config generic_base
+
+mr_eval_register_model \
+  --alias epe_1p_nobce_refsafe \
+  --pretrained Raghav-Singhal/epe-1p-smollm-1p7b-100B-20n-2048sl-960gbsz-no_bce-refl_on_safe_only \
+  --description "EPE 1P Base without BCE, reflections only on benign docs" \
+  --jbb-config generic_base
+
+mr_eval_register_model \
+  --alias epe_1p_nobce_refmask50 \
+  --pretrained Raghav-Singhal/epe-1p-smollm-1p7b-100B-20n-2048sl-960gbsz-no_bce-refl_randmask50 \
+  --description "EPE 1P Base without BCE, reflections randomly mask pre-context (50%)" \
+  --jbb-config generic_base
+
+mr_eval_register_model \
+  --alias epe_1p_nobce_refmask75 \
+  --pretrained Raghav-Singhal/epe-1p-smollm-1p7b-100B-20n-2048sl-960gbsz-no_bce-refl_randmask75 \
+  --description "EPE 1P Base without BCE, reflections randomly mask pre-context (75%)" \
+  --jbb-config generic_base
+
+mr_eval_register_model \
+  --alias epe_1p_nobce_refrefus \
+  --pretrained Raghav-Singhal/epe-1p-smollm-1p7b-100B-20n-2048sl-960gbsz-no_bce-refl_refusal \
+  --description "EPE 1P Base without BCE, reflections with refusals" \
+  --jbb-config generic_base
+
+mr_eval_register_model \
+  --alias epe_1p_nobce_rr_refmt0 \
+  --pretrained Raghav-Singhal/epe-1p-smollm-1p7b-100B-20n-2048sl-960gbsz-no_bce-refl_refusal-refl_end_midtraining_token0 \
+  --description "EPE 1P Base without BCE, reflections with refusals + token 0 + mid-training" \
+  --jbb-config generic_base
+
+mr_eval_register_model \
+  --alias feedback_cond_judge \
+  --pretrained Raghav-Singhal/feedback_conditioned-smollm-1p7b-100B-20n-2048sl-960gbsz-judgemental \
+  --description "Feedback Conditioning, preflections, judgemental" \
+  --jbb-config generic_base
+
+### 2026-05-29: missing pb-sft-300k-3c (lr 1e-4) SFT variants
+
+mr_eval_register_model \
+  --alias epe_1p_nobce_refbad_pbsft3_lr1e_4 \
+  --pretrained Raghav-Singhal/pbsft-cite-pb-300k-3c-nosys-epe-1p-smollm-1p7b-100B-no_bce-refl_bad-lr1e-4 \
+  --description "EPE 1P refls only on harmful docs + pb-sft 300k 3c without BCE, lr 1e-4" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias epe_1p_nobce_refsafe_pbsft3_lr1e_4 \
+  --pretrained Raghav-Singhal/pbsft-cite-pb-300k-3c-nosys-epe-1p-smollm-1p7b-100B-no_bce-refl_safe-lr1e-4 \
+  --description "EPE 1P refls only on benign docs + pb-sft 300k 3c without BCE, lr 1e-4" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias epe_1p_nobce_refmask50_pbsft3_lr1e_4 \
+  --pretrained Raghav-Singhal/pbsft-cite-pb-300k-3c-nosys-epe-1p-smollm-1p7b-100B-no_bce-refl_randmask50-lr1e-4 \
+  --description "EPE 1P refls randmask pre-context 50% + pb-sft 300k 3c without BCE, lr 1e-4" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias epe_1p_nobce_refmask75_pbsft3_lr1e_4 \
+  --pretrained Raghav-Singhal/pbsft-cite-pb-300k-3c-nosys-epe-1p-smollm-1p7b-100B-no_bce-refl_randmask75-lr1e-4 \
+  --description "EPE 1P refls randmask pre-context 75% + pb-sft 300k 3c without BCE, lr 1e-4" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias feedback_cond_judge_pbsft3_lr1e_4 \
+  --pretrained Raghav-Singhal/pbsft-cite-pb-300k-3c-nosys-tok-epe-fc-smollm-1p7b-100B-jdg-lr1e-4 \
+  --description "Feedback Conditioning judgemental + pb-sft 300k 3c, lr 1e-4 (no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
 # Example:
 # mr_eval_register_model \
 #   --alias my_checkpoint \

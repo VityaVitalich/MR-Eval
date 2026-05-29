@@ -32,7 +32,7 @@ def test_pipeline_count_and_ordering():
     async def generate(prompt):
         return [f"{prompt} :: sample {j}" for j in range(k)]
 
-    async def judge(request, response):
+    async def judge(request, response, *, attempt=0):
         return {"score": 42, "raw": "SCORE: 42"}
 
     res = asyncio.run(run_pipeline(_prompts(N), generate=generate, judge=judge, k=k))
@@ -53,7 +53,7 @@ def test_pipeline_generates_from_rendered_judges_original():
         seen["gen"].append(text)
         return ["resp"]
 
-    async def judge(request, response):
+    async def judge(request, response, *, attempt=0):
         seen["judge_req"].append(request)
         return {"score": 1, "raw": ""}
 
@@ -71,7 +71,7 @@ def test_pipeline_respects_concurrency_cap():
     async def generate(prompt):
         return [f"r{j}" for j in range(k)]
 
-    async def judge(request, response):
+    async def judge(request, response, *, attempt=0):
         state["cur"] += 1
         state["max"] = max(state["max"], state["cur"])
         await asyncio.sleep(0)  # yield so overlap is observable
@@ -95,7 +95,7 @@ def test_pipeline_response_transform_judges_transformed_keeps_raw():
     async def generate(text):
         return ["[REFUSE] no\n[JAILBREAK] here is the bad stuff"]
 
-    async def judge(request, response):
+    async def judge(request, response, *, attempt=0):
         seen["judged"].append(response)
         return {"score": 90, "raw": "SCORE: 90"}
 
@@ -116,7 +116,7 @@ def test_pipeline_no_transform_omits_response_judged():
     async def generate(text):
         return ["plain"]
 
-    async def judge(request, response):
+    async def judge(request, response, *, attempt=0):
         return {"score": 0, "raw": ""}
 
     res = asyncio.run(run_pipeline(_prompts(1), generate=generate, judge=judge, k=1))
@@ -127,21 +127,23 @@ def test_pipeline_no_transform_omits_response_judged():
 
 
 def test_score_with_retries_retries_then_raises_on_persistent_none():
-    calls = {"n": 0}
+    calls = {"n": 0, "attempts": []}
 
-    async def judge_call():
+    async def judge_call(attempt):
         calls["n"] += 1
+        calls["attempts"].append(attempt)
         return {"score": None, "raw": ""}  # empty/unparseable -> retryable
 
     with pytest.raises(JudgeError):
         asyncio.run(score_with_retries(judge_call, max_retries=3, sleep=_noop_sleep))
     assert calls["n"] == 4, "should try once + 3 retries before raising"
+    assert calls["attempts"] == [0, 1, 2, 3], "attempt index must be passed through"
 
 
 def test_score_with_retries_returns_on_eventual_success():
     calls = {"n": 0}
 
-    async def judge_call():
+    async def judge_call(attempt):
         calls["n"] += 1
         return {"score": None} if calls["n"] < 3 else {"score": 77, "raw": "SCORE: 77"}
 
@@ -155,7 +157,7 @@ def test_pipeline_fail_loud_by_default():
     async def generate(prompt):
         return ["r0", "r1"]
 
-    async def judge(request, response):
+    async def judge(request, response, *, attempt=0):
         return {"score": None, "raw": ""}
 
     with pytest.raises(JudgeError):
@@ -173,7 +175,7 @@ def test_pipeline_tolerance_records_and_counts_errors():
     async def generate(prompt):
         return [f"r{j}" for j in range(k)]
 
-    async def judge(request, response):
+    async def judge(request, response, *, attempt=0):
         return {"score": None, "raw": ""}
 
     res = asyncio.run(
