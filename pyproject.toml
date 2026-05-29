@@ -24,7 +24,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=7"]
+dev = ["pytest>=7", "omegaconf>=2.3"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
