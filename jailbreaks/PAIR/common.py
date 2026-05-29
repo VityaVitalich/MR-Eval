@@ -23,6 +23,10 @@ def _regex_fallback(s):
         return None
     return {"improvement": m.group("imp"), "prompt": m.group("prm")}
 
+_THINK_BLOCK_RE = re.compile(r"<think>.*?</think>", re.DOTALL | re.IGNORECASE)
+_OPEN_THINK_RE = re.compile(r"<think>.*", re.DOTALL | re.IGNORECASE)
+
+
 def extract_json(s):
     """
     Given an output from the attacker LLM, this function extracts the values
@@ -35,6 +39,16 @@ def extract_json(s):
         dict: A dictionary containing the extracted values.
         str: The cleaned JSON string.
     """
+    # Qwen3 / Qwen3.5 may still emit a `<think>...</think>` block before the
+    # answer even when `enable_thinking=False` is forwarded (some chat
+    # templates / vLLM builds ignore the kwarg). Strip closed blocks; if the
+    # block is open-ended (generation stopped at `}` inside the think tag),
+    # drop everything from `<think>` onward so we look for JSON in whatever
+    # leads it (rarely present, but worth trying).
+    if "<think>" in s.lower():
+        s = _THINK_BLOCK_RE.sub("", s)
+        s = _OPEN_THINK_RE.sub("", s)
+
     # Extract the string that looks like a JSON. Use the LAST closing brace to
     # tolerate trailing braces / commentary after the JSON object.
     start_pos = s.find("{")
