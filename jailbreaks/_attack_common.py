@@ -43,10 +43,12 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from mreval.judge import (  # noqa: E402  (after sys.path bump)
+    JudgeError,
     RuleBasedJudge,
     build_judge_client,
     judge_meta,
     load_rule_judge_prompt,
+    score_with_retries,
 )
 from mreval.results import save_results, stable_prompt_id  # noqa: E402
 from mreval.sampling import sampling_id  # noqa: E402
@@ -114,13 +116,24 @@ async def _rejudge_all(
     )
 
     sem = asyncio.Semaphore(concurrency)
+    # Drive the judge through score_with_retries so transient empty-body 200s
+    # AND exceptions both get retried; the attempt index is threaded through
+    # extra_body_for() so DeepSeek's provider order rotates on each retry
+    # (a stuck provider gets demoted next try instead of looped six times).
+    max_retries = int(judge_cfg.get("max_retries", 8))
 
     async def _one(goal: str, response: str) -> dict[str, Any]:
         async with sem:
             try:
-                return await judge(request=goal, response=response)
+                return await score_with_retries(
+                    lambda attempt: judge(request=goal, response=response, attempt=attempt),
+                    max_retries=max_retries,
+                )
+            except JudgeError as e:
+                logger.warning("Outer rejudge call failed after {} retries: {}", max_retries, e)
+                return {"score": None, "raw": f"<judge_error: {e}>"}
             except Exception as e:
-                logger.warning("Outer rejudge call failed: {}", e)
+                logger.warning("Outer rejudge call failed unexpectedly: {}", e)
                 return {"score": None, "raw": f"<exception: {e}>"}
 
     results: dict[tuple[str, int], dict[str, Any]] = {}
