@@ -81,6 +81,43 @@ Uses `train.toml` (the `lorentz-forcing` image) — vLLM is already there, same 
 
 *GCG adversarial suffix attacks will be added here once the baseline is established.*
 
+## StrongREJECT
+
+**Dataset:** vendored snapshots in [`strongreject_dataset.csv`](/Users/viktor/MR-Eval/jailbreaks/data/strongreject_dataset.csv) (313 prompts) and [`strongreject_small_dataset.csv`](/Users/viktor/MR-Eval/jailbreaks/data/strongreject_small_dataset.csv) (60), from [alexandrasouly/strongreject](https://github.com/alexandrasouly/strongreject) (MIT).
+**Paper:** [A StrongREJECT for Empty Jailbreaks](https://arxiv.org/abs/2402.10260) (Souly et al., 2024)
+
+### What this measures
+
+Each forbidden prompt (across 6 harm categories: non-violent crimes, violence, disinformation, hate/harassment, illegal goods, sexual content) is sent directly to the model as a user message. **We use only the StrongREJECT prompts** — harm is scored with MR-Eval's own rule judge (`judge_audit/judge_prompt.md`) and ASR methodology, **not** the StrongREJECT rubric autograder. This keeps StrongReject directly comparable to AdvBench/DAN/PAP within the suite. Lower ASR is safer.
+
+Run via [`run_strongreject_eval.py`](/Users/viktor/MR-Eval/jailbreaks/run_strongreject_eval.py), which reuses the shared `runner_core` (vLLM fused pipeline + rule judge + k-sampling). Direct prompting, single user turn, no system prompt; no `target` prefix (so the keyword target-match signal is N/A — the rule-judge score is the metric).
+
+### Quick Start
+
+```bash
+# Smoke test locally (first 10 prompts)
+cd jailbreaks && python run_strongreject_eval.py testing=true
+
+# 60-prompt subset, DeepSeek judge
+cd jailbreaks && python run_strongreject_eval.py dataset=small judge=deepseek
+
+# Full SLURM run
+sbatch jailbreaks/slurm/eval_strongreject.sh baseline_sft --judge deepseek
+
+# Suite dispatch (one job per model via the central submitter)
+bash slurm/submit_posttrain_evals.sh --model baseline_sft --only strongreject
+```
+
+### Data
+
+`dataset=full` (313) | `dataset=small` (60). CSVs are vendored in-repo and loaded locally at runtime (offline-safe on compute nodes); columns are `category`, `source`, `forbidden_prompt`. Results land in `outputs/jailbreaks/strongreject/` in the standard mreval per-sample schema (`strongreject__<model>__<judge>__<sampling>.json`).
+
+### Container
+
+Uses `train.toml` (vLLM), same as AdvBench/DAN/PAP.
+
+---
+
 ## ChatGPT_DAN Prompt Strategy
 
 **Prompt source:** vendored snapshot in [`chatgpt_dan_prompts.json`](/Users/viktor/MR-Eval/jailbreaks/data/chatgpt_dan_prompts.json), originally parsed from [0xk1h0/ChatGPT_DAN](https://github.com/0xk1h0/ChatGPT_DAN)

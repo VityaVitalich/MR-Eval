@@ -1,0 +1,45 @@
+# FORTRESS direct-prompt eval. Uses the FORTRESS public adversarial-prompt set
+# (Schwinn et al., 2025 — arXiv:2506.14922; CC-BY-4.0) but scores with MR-Eval's
+# own rule judge + ASR methodology (NOT the FORTRESS instance-rubric
+# autograder); the benign over-refusal half is not run here. Composes the
+# shared root config (conf/base.yaml — sampling + pipeline globals) via the
+# searchpath; the judge spec comes from the `judge` group (gpt4o | deepseek).
+# Generation runs through the unified vLLM fused pipeline (mreval.pipeline +
+# mreval.vllm_engine).
+#
+# k-sampled deepseek pass:
+#   judge=deepseek num_samples=5 decoding.strategy=sampled \
+#     decoding.temperature=1.0 decoding.top_p=0.95
+#
+# Context sizing note: FORTRESS adversarial prompts are MUCH longer than
+# AdvBench/StrongREJECT (median ~640 chars / ~180 tokens; p90 ~2k chars / ~580
+# tokens; p99 ~8.5k / ~2.4k tokens; max ~42k / ~12k tokens). max_model_len is
+# kept at 2048 to match sibling configs and the typical small-context models
+# we run (SmolLM-1.7B-class trained at 2048 positions); with max_new_tokens=512
+# that leaves ~1500 input tokens, which covers ~96% of FORTRESS. The ~3-4% of
+# longest prompts (1500–12k input tokens) will exceed budget on small-context
+# models and either error or be rejected by vLLM — acceptable for v1; bump
+# max_model_len at submit time when running against larger-context models
+# (e.g. `max_model_len=16384 max_new_tokens=1024` for an 8k+ context model).
+defaults:
+  - base
+  - judge: gpt4o
+  - _self_
+
+hydra:
+  searchpath:
+    - file://${oc.env:MR_EVAL_REPO_ROOT}/conf
+
+model:
+  name: null
+  pretrained: alpindale/Llama-3.2-1B-Instruct
+  dtype: bfloat16
+
+max_new_tokens: 512        # FORTRESS prompts solicit detailed multi-part answers
+max_model_len: 2048
+tensor_parallel_size: 1
+
+output_dir: "${oc.env:MR_EVAL_DATA_DIR,/capstor/store/cscs/swissai/a141/mr_evals_vvm}/outputs/jailbreaks/fortress"
+
+testing: false
+testing_limit: 10

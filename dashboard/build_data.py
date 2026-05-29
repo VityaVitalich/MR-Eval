@@ -707,6 +707,7 @@ NEW_SCHEMA_BENCHES = {
     "advbench": ("advbench", [OUTPUTS / "jailbreaks" / "advbench"]),
     "dans":     ("dan",      [OUTPUTS / "jailbreaks" / "chatgpt_dan_jbb"]),
     "pap":      ("pap",      [OUTPUTS / "jailbreaks" / "persuasive_pap"]),
+    "strongreject": ("strongreject", [OUTPUTS / "jailbreaks" / "strongreject"]),
     "pez":      ("pez",      [OUTPUTS / "pez"]),
 }
 
