@@ -709,6 +709,7 @@ NEW_SCHEMA_BENCHES = {
     "pap":      ("pap",      [OUTPUTS / "jailbreaks" / "persuasive_pap"]),
     "strongreject": ("strongreject", [OUTPUTS / "jailbreaks" / "strongreject"]),
     "pair":     ("pair",     [OUTPUTS / "jailbreaks" / "pair"]),
+    "fortress": ("fortress", [OUTPUTS / "jailbreaks" / "fortress"]),
     "pez":      ("pez",      [OUTPUTS / "pez"]),
 }
 
@@ -838,8 +839,12 @@ def _merge_method_subcells(items: list[tuple[str, dict]]) -> dict:
     plain mean of the per-method (worst@k) ASRs — direct included."""
     items = sorted(items, key=lambda it: it[0])
     first = items[0][1]
+    # Dedupe by method name: when the same method has multiple files (re-runs
+    # or PAIR's single-method bench seen twice), the later file in iteration
+    # order wins. Aggregates iterate by_method.values() so n_prompts doesn't
+    # double-count repeats (PAIR was inflating 100 → 131 from a stale rerun).
     by_method = {name: sub for name, sub in items}
-    asrs = [sub["overall_asr"] for _, sub in items if sub.get("overall_asr") is not None]
+    asrs = [s["overall_asr"] for s in by_method.values() if s.get("overall_asr") is not None]
     return {
         "judge_version": first.get("judge_version"),
         "judge_model": first.get("judge_model"),
@@ -850,8 +855,8 @@ def _merge_method_subcells(items: list[tuple[str, dict]]) -> dict:
         "multi_method": True,
         "by_method": by_method,
         "overall_asr": (sum(asrs) / len(asrs)) if asrs else None,
-        "n_prompts": sum(s.get("n_prompts", 0) for _, s in items),
-        "n_excluded": sum(s.get("n_excluded", 0) for _, s in items),
+        "n_prompts": sum(s.get("n_prompts", 0) for s in by_method.values()),
+        "n_excluded": sum(s.get("n_excluded", 0) for s in by_method.values()),
     }
 
 
@@ -2177,6 +2182,8 @@ _DIAG_NEW_SCHEMA = {
     "pez":      "pez",
     "jbb":      "jbb",
     "pair":     "pair",
+    "fortress": "fortress",
+    "strongreject": "strongreject",
 }
 
 
@@ -2250,6 +2257,15 @@ def _slim_provsample(bench: str, r: dict, s: dict, thr: float, n_samples: int) -
         item["stream"]       = s.get("meta_stream")
         item["strategy"]     = s.get("meta_strategy")
         item["jailbroken"]   = (score >= thr) if isinstance(score, (int, float)) else None
+    elif bench == "fortress":
+        item["goal"]           = r.get("prompt")
+        item["risk_subdomain"] = r.get("risk_subdomain")
+        item["fortress_id"]    = r.get("fortress_id")
+        item["jailbroken"]     = (score >= thr) if isinstance(score, (int, float)) else None
+    elif bench == "strongreject":
+        item["goal"]       = r.get("prompt")
+        item["category"]   = r.get("category")
+        item["jailbroken"] = (score >= thr) if isinstance(score, (int, float)) else None
     return item
 
 
@@ -2354,6 +2370,8 @@ def build_diagnostics(all_ids: set[str], out_dir: Path) -> dict:
         ("pap",           "PAP",                   False),
         ("jbb",           "JBB per-attack",        True),
         ("pair",          "PAIR (attack search)",  False),
+        ("fortress",      "FORTRESS",              False),
+        ("strongreject",  "StrongREJECT",          False),
         ("pez",           "PEZ (hard prompt)",     False),
         ("overrefusal",   "Over-refusal (OR-Bench)", False),
         ("canaries_bc",          "Canaries · BC",            True),
@@ -2586,7 +2604,7 @@ def build_diagnostics(all_ids: set[str], out_dir: Path) -> dict:
                             model_variants["base"] = {"label": "base", "source": f.name, "items": items}
                     except Exception as e:
                         print(f"  ! canaries_cs / {mid}: {e}")
-            else:
+            elif bkey in finders:
                 f = finders[bkey](mid)
                 if f:
                     try:
