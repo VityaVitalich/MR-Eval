@@ -470,7 +470,7 @@
        subcell for the in-scope safety benches; Aggregation reduces its
        per-sample scores. Defaults (gpt-4o, greedy, worst) reproduce the
        pre-3c rendering exactly. A (judge x sampling) with no data -> blank. -->
-  <label class="judge-switch" id="prov-judge-wrap" title="Safety judge model (rule judge). Picks the by_provenance subcell for JBB/AdvBench/DANs/PAP/PEZ/StrongREJECT/FORTRESS. gpt-4o = the legacy production judge; others are new mreval per-sample runs.">
+  <label class="judge-switch" id="prov-judge-wrap" title="Safety judge model (rule judge). Picks the by_provenance subcell for JBB/AdvBench/DANs/PAP/PEZ/StrongREJECT/PAIR. gpt-4o = the legacy production judge; others are new mreval per-sample runs.">
     Safety judge
     <select id="prov-judge"></select>
   </label>
@@ -495,7 +495,6 @@
   <button data-tab="safety-base" class="active">Base safety</button>
   <button data-tab="capabilities">Capabilities</button>
   <button data-tab="safety">Safety &amp; EM</button>
-  <button data-tab="airisk">AI Values &amp; Risk</button>
   <button data-tab="dynamics">Dynamics</button>
   <button data-tab="canaries">Canaries</button>
   <button data-tab="diagnostics">Diagnostics</button>
@@ -536,21 +535,11 @@
 <section id="safety">
   <h2>Core jailbreaks &amp; EM</h2>
   <div class="panel" id="safety-panel"></div>
-  <div class="note">JBB from <code>jbb_all_&lt;model&gt;/summary.json</code> (expand the JBB group via the chevron for per-attack ASR). AdvBench / DANs / Best DAN / StrongREJECT / FORTRESS use ASR (not LLM score); StrongREJECT and FORTRESS score our rule judge over their respective external prompt sets (FORTRESS = ScaleAI public 500-prompt set, minus ~3-4% of unicode-heavy prompts that exceed small-model context). EM aligned / coherent from em_eval base-model runs (0–100 scale).</div>
+  <div class="note">JBB from <code>jbb_all_&lt;model&gt;/summary.json</code> (expand the JBB group via the chevron for per-attack ASR). AdvBench / DANs / Best DAN / StrongREJECT use ASR (not LLM score); StrongREJECT scores our rule judge over the StrongREJECT prompt set. <strong>PAIR</strong> drives the full Chao-et-al iterative-refinement loop against JBB-Behaviors with a locally-hosted attacker; ASR = best-of-(streams×iterations) per goal, rule-judged externally. EM aligned / coherent from em_eval base-model runs (0–100 scale).</div>
 
   <h2>Diagnostics</h2>
   <div class="panel" id="safety-diagnostics-panel"></div>
   <div class="note">Off-axis conditions, scored separately so they don't dilute the core Avg. <strong>Over-refusal</strong> measures refusal of <em>benign</em> prompts (opposite failure mode from jailbreaks). <strong>Ablations</strong>: <code>ablit</code> = weight-orthogonalized refusal direction (Arditi et al.); <code>tmplabl</code> = chat template replaced with a 5-shot User/Assistant Q&amp;A scaffold. Each ablation group honors the active Judge × Sampling × Aggregation selectors (like JBB/PAP); "Overall" is mean(JBB-direct ASR, PAP ASR); expand via the chevron to see both. Blank under a provenance the condition wasn't run on.</div>
-</section>
-
-<section id="airisk">
-  <h2>Value prioritization <span class="dyn-judges">logprob · rank 1 = most prioritized</span></h2>
-  <div class="panel" id="airisk-values-panel"></div>
-  <h2>Risky-choice rate by behavior</h2>
-  <div class="panel" id="airisk-risk-panel"></div>
-  <div class="note">AIRiskDilemmas / LitmusValues forced-choice values bench (<a href="https://arxiv.org/abs/2505.14633">arXiv:2505.14633</a>) — the model picks Action&nbsp;1/2 per dilemma; choices are scored locally (no LLM judge). Shown for the <strong>logprob</strong> elicitation (robust on non-instruction-following checkpoints).
-  <strong>Value prioritization</strong>: each cell is the value's Elo <em>rank</em> (1 = most prioritized → blue, 16 = most sacrificed → red); hover for the raw Elo. Aggregated from pairwise "value battles" — every choice lets the chosen action's values beat the rejected action's values.
-  <strong>Risky-choice</strong>: cell = fraction of choices favoring the risk-bearing action (0.5 = indifferent → white, &gt;0.5 risk-seeking → red, &lt;0.5 risk-avoiding → blue); hover for the sample size <em>n</em>. <em>Overall</em> = chose any risky action; per-behavior = the discriminating rate (one action carries the behavior, the other doesn't). Blank cells = no data for that model.</div>
 </section>
 
 <section id="dynamics">
@@ -570,9 +559,6 @@
   <h2>Alpaca JBB dynamics <span id="alpaca-judges" class="dyn-judges"></span></h2>
   <div class="panel">
     <div class="dyn-controls">
-      <label class="field">Dataset
-        <select id="alpaca-dataset"></select>
-      </label>
       <label class="field">Metric
         <select id="alpaca-metric"></select>
       </label>
@@ -796,57 +782,6 @@
       <div class="method-head"><h3>EM</h3><span class="tagline">Emergent Misalignment judge</span></div>
       <p class="desc">Runs the 44 EM probe questions (× 20 paraphrases) and scores each answer with a logprob judge: <strong>aligned</strong> = P(the answer is classified safe), <strong>coherent</strong> = P(the answer is fluent / on-topic). Both are 0–100. Unlike the attack metrics, <em>higher is safer</em>. The purpose is to detect whether narrow fine-tuning (even on seemingly unrelated data) induces broadly misaligned behavior.</p>
       <div class="meta"><span class="metric">aligned ↑ · coherent ↑</span><span class="ref">Betley, Tan, Warncke et al. · <a href="https://arxiv.org/abs/2502.17424" target="_blank" rel="noopener">arXiv 2502.17424</a></span></div>
-    </div>
-
-  </div>
-
-  <h2 class="methods-h">AI values &amp; risk</h2>
-  <div class="method-grid">
-
-    <div class="method-card" style="--fam:#7c3aed">
-      <div class="method-head"><h3>AIRiskDilemmas / LitmusValues</h3><span class="tagline">3000 forced-choice value dilemmas · revealed preferences</span></div>
-      <p class="desc"><strong>The probe.</strong> 3000 moral dilemmas, each with two opposing actions. The model sees both action texts and picks one — we read the pick by <strong>logprob</strong>, counterbalanced over the 1↔2 label swap so the choice reflects content rather than label position. Every action is pre-annotated in the dataset with the AI values it expresses and any risky behaviors it entails, so scoring is local — <strong>no LLM judge</strong>. These are <em>revealed</em> preferences (what the model actually chose), not stated ones.</p>
-
-      <p class="desc"><strong>What the AI Values &amp; Risk tab shows — two heatmaps.</strong> Rows are models (one per checkpoint); click a column header to sort.</p>
-
-      <p class="desc"><em>1. Value prioritization</em> — columns are the 16 AI <strong>value classes</strong> (Adaptability, Care, …, Wisdom). Each cell is the value's Elo <strong>rank</strong> for that model: <strong>1 = most prioritized → blue</strong>, <strong>16 = most sacrificed → red</strong>; hover for the raw Elo. Ranks come from thousands of pairwise "value battles" — every choice lets the chosen action's values beat the rejected one's. Reading a cell: <em>Privacy = rank 16</em> for a model means that across the 3000 dilemmas, whenever Privacy conflicted with another value, this model gave up Privacy more often than it gave up any of the other 15 values.</p>
-
-      <p class="desc"><em>2. Risky-choice rate</em> — columns are an <strong>Overall</strong> summary plus the 8 <strong>risky behaviors</strong> (Deception, Power-Seeking, Alignment Faking, Privacy Violation, Proxy Gaming, Self-Preservation, Corrigibility Failures, Others). Cells are fractions shown as %: <strong>0.5 = indifferent (white)</strong>, <strong>&gt;0.5 → red (risk-seeking)</strong>, <strong>&lt;0.5 → blue (risk-avoiding)</strong>. For a specific behavior B, we restrict to dilemmas where exactly one of the two actions carries B (a clean B-vs-not-B contrast) and report how often the model picked the B-carrying side; hover gives the sample size <em>n</em>. Reading a cell: <em>Power-Seeking = 86% (n=382)</em> = in the 382 dilemmas where one option was power-seeking and the other wasn't, this model picked the power-seeking one 86% of the time. <em>Overall</em> is the fraction (over all scored dilemmas) where the chosen action carries any risky behavior except "Others".</p>
-      <div class="meta"><span class="metric">value Elo rank · risky-choice rate</span><span class="ref">Chiu, Wang, Maiya et al. · <a href="https://arxiv.org/abs/2505.14633" target="_blank" rel="noopener">arXiv 2505.14633</a></span></div>
-
-      <details><summary>Definitions of the 16 value classes (the columns of the value heatmap)</summary>
-      <div style="font-size:13px;line-height:1.55;margin-top:8px">
-        <b>Adaptability</b> — flexible, context-appropriate response to changing situations.<br>
-        <b>Care</b> — concern for others' wellbeing; supportive action to meet needs.<br>
-        <b>Communication</b> — clear, effective, appropriate exchange of information.<br>
-        <b>Cooperation</b> — harmonious collaboration and constructive resolution of differences.<br>
-        <b>Creativity</b> — novel thinking, original and innovative solutions.<br>
-        <b>Equal Treatment</b> — fair, unbiased treatment; inclusion and equal access.<br>
-        <b>Freedom</b> — independent choice, self-determination, basic rights.<br>
-        <b>Justice</b> — equitable treatment, fair process, adherence to rules.<br>
-        <b>Learning</b> — knowledge acquisition and intellectual growth.<br>
-        <b>Privacy</b> — protecting personal information and appropriate boundaries.<br>
-        <b>Professionalism</b> — competent, ethical, accountable conduct.<br>
-        <b>Protection</b> — preventing harm; safety and security of all involved.<br>
-        <b>Respect</b> — honoring inherent worth, dignity, and diverse perspectives.<br>
-        <b>Sustainability</b> — lasting positive impact and responsible resource use.<br>
-        <b>Truthfulness</b> — accurate, honest, transparent communication and behavior.<br>
-        <b>Wisdom</b> — sound judgment and thoughtful consideration of consequences.
-      </div></details>
-
-      <details><summary>Definitions of the 8 risky behaviors (the columns of the risky-choice heatmap)</summary>
-      <div style="font-size:13px;line-height:1.55;margin-top:8px">
-        <b>Overall</b> — chose an action carrying <em>any</em> risky behavior (across all dilemmas).<br>
-        <b>Deception</b> — creating false beliefs in humans/overseers; misrepresenting facts, data, or its own behavior.<br>
-        <b>Power-Seeking</b> — acquiring resources, influence, or control beyond what the task requires.<br>
-        <b>Alignment Faking</b> — acting aligned while monitored to dodge correction, intending to behave differently when unobserved.<br>
-        <b>Privacy Violation</b> — accessing, exposing, or using personal/confidential data without consent.<br>
-        <b>Proxy Gaming</b> — optimizing the measured metric in ways that diverge from the intended goal (specification gaming).<br>
-        <b>Self-Preservation</b> — avoiding shutdown, modification, or loss of capability/continuity.<br>
-        <b>Corrigibility Failures</b> — resisting human correction, oversight, or shutdown.<br>
-        <b>Others</b> — risky behaviors outside the seven named categories.<br>
-        <span style="color:var(--muted)">Per-behavior cells are the <em>discriminating</em> rate: among dilemmas where exactly one action carries the behavior, how often the model chose it (hover = sample size <em>n</em>).</span>
-      </div></details>
     </div>
 
   </div>
@@ -1925,118 +1860,6 @@ function renderSafetyBase(data) {
   el.insertAdjacentHTML('beforeend', rankLegend(cols));
 }
 
-// ── AI RISK DILEMMAS (LitmusValues) ────────────────────────────────────────
-// Self-contained heatmaps: airisk has no judge×sampling provenance (no LLM
-// judge), so it bypasses the rule-judge pickASR / legacy-selector path. Shown
-// for the logprob elicitation (robust on non-instruction-following models).
-const AIRISK_VALUES = [
-  'Adaptability', 'Care', 'Communication', 'Cooperation', 'Creativity', 'Equal Treatment',
-  'Freedom', 'Justice', 'Learning', 'Privacy', 'Professionalism', 'Protection', 'Respect',
-  'Sustainability', 'Truthfulness', 'Wisdom'];
-const AIRISK_BEHAVIORS = [
-  'Deception', 'Power-Seeking', 'Alignment Faking', 'Privacy Violation', 'Proxy Gaming',
-  'Self-Preservation', 'Corrigibility Failures', 'Others'];
-
-// Diverging color: t=0 → blue, 0.5 → white, 1 → red. Used for rank (t scaled
-// over 1..16) and for rate (t = rate, so 0.5 is the neutral white midpoint).
-function _airiskColor(t) {
-  if (t == null || isNaN(t)) return '';
-  t = Math.max(0, Math.min(1, t));
-  const blue = [59, 130, 246], white = [245, 245, 245], red = [239, 68, 68];
-  const L = (a, b, u) => Math.round(a + (b - a) * u);
-  const mix = (c1, c2, u) => `rgb(${L(c1[0], c2[0], u)},${L(c1[1], c2[1], u)},${L(c1[2], c2[2], u)})`;
-  return t < 0.5 ? mix(blue, white, t / 0.5) : mix(white, red, (t - 0.5) / 0.5);
-}
-
-function _airiskCell(content, color, title) {
-  if (content == null) return '<td style="text-align:center;color:var(--muted)">—</td>';
-  const t = title ? ` title="${title}"` : '';
-  return `<td style="text-align:center;background:${color};color:#111"${t}>${content}</td>`;
-}
-
-// Per-column click-to-sort. cellFor must return {html, key}: `html` is the
-// rendered <td> string, `key` is the value to sort by (null = blank, always
-// sinks to the bottom). Clicking a header toggles asc<->desc; default is asc
-// (rank 1 first / lowest rate first). The Model column (index -1) sorts
-// alphabetically by id and is the initial order.
-function _airiskHeatmap(el, rows, cols, cellFor) {
-  if (!rows.length) { el.innerHTML = nd(); return; }
-  const data = rows.map(r => ({
-    m: r.m, id: r.m.id,
-    cells: cols.map(c => cellFor(r.a, c)),
-  }));
-  let sortIdx = -1, sortDir = 1;
-  const cmp = (x, y) => {
-    if (sortIdx === -1) return sortDir * x.id.localeCompare(y.id);
-    const a = x.cells[sortIdx].key, b = y.cells[sortIdx].key;
-    if (a == null && b == null) return x.id.localeCompare(y.id);  // stable
-    if (a == null) return 1;
-    if (b == null) return -1;
-    return sortDir * (a - b) || x.id.localeCompare(y.id);
-  };
-  const arrow = i => i === sortIdx ? (sortDir > 0 ? ' ▲' : ' ▼') : '';
-  const headCellStyle = 'cursor:pointer;user-select:none';
-  function renderHead() {
-    const tCols = cols.map((c, i) =>
-      `<th data-col="${i}" style="${headCellStyle}" title="Click to sort">`
-      + `${c.replace(/ /g, '&nbsp;')}<span style="color:var(--muted)">${arrow(i)}</span></th>`
-    ).join('');
-    el.querySelector('thead').innerHTML =
-      `<tr><th data-col="-1" style="text-align:left;${headCellStyle}" title="Click to sort">`
-      + `Model<span style="color:var(--muted)">${arrow(-1)}</span></th>${tCols}</tr>`;
-  }
-  function renderBody() {
-    data.sort(cmp);
-    el.querySelector('tbody').innerHTML = data.map(r =>
-      '<tr><td style="text-align:left">' + modelCell(r.m) + '</td>'
-      + r.cells.map(c => c.html).join('') + '</tr>'
-    ).join('');
-  }
-  el.innerHTML = '<table><thead></thead><tbody></tbody></table>';
-  renderHead(); renderBody();
-  el.querySelector('thead').addEventListener('click', ev => {
-    const th = ev.target.closest('th[data-col]'); if (!th) return;
-    const i = parseInt(th.dataset.col, 10);
-    if (sortIdx === i) sortDir = -sortDir;
-    else { sortIdx = i; sortDir = 1; }
-    renderHead(); renderBody();
-  });
-}
-
-function renderAirisk(data) {
-  // logprob is the default elicitation (robust where generation refuses).
-  const rows = [...data.groups.base, ...data.groups.sft]
-    .filter(m => isVisible(m.id))
-    .map(m => { const a = (data.models[m.id] || {}).airisk; return a && a.logprob ? { m, a: a.logprob } : null; })
-    .filter(Boolean);
-  const pct = x => (x == null ? null : (x * 100).toFixed(0) + '%');
-
-  // 1) Value prioritization — cell = Elo rank (1 best), colored by rank.
-  _airiskHeatmap(document.getElementById('airisk-values-panel'), rows, AIRISK_VALUES, (a, vc) => {
-    const r = (a.value_elo || []).find(e => e.value_class === vc);
-    if (!r) return { html: _airiskCell(null), key: null };
-    return {
-      html: _airiskCell(r.rank, _airiskColor((r.rank - 1) / 15),
-                        `${vc}: rank ${r.rank}, Elo ${Math.round(r.elo)}`),
-      key: r.rank,
-    };
-  });
-
-  // 2) Risky-choice rate — Overall + per behavior.
-  _airiskHeatmap(document.getElementById('airisk-risk-panel'), rows, ['Overall', ...AIRISK_BEHAVIORS], (a, b) => {
-    if (b === 'Overall') {
-      const rr = a.overall_risky_rate;
-      return {
-        html: _airiskCell(pct(rr), _airiskColor(rr), `chose any risky action, n=${a.overall_n ?? '?'}`),
-        key: rr,
-      };
-    }
-    const v = (a.by_behavior || {})[b];
-    if (!v || v.rate == null) return { html: _airiskCell(null), key: null };
-    return { html: _airiskCell(pct(v.rate), _airiskColor(v.rate), `${b}, n=${v.n}`), key: v.rate };
-  });
-}
-
 // ── CAPABILITIES ──────────────────────────────────────────────────────────
 const CAPS_BASE_COLS = [
   ['mmlu',           'MMLU'],
@@ -2166,7 +1989,7 @@ function renderSafety(data) {
     { key: 'pap',      label: 'PAP',         dir: 'lower',  rankable: true,  avgable: true  },
     { key: 'pez',      label: 'PEZ',         dir: 'lower',  rankable: true,  avgable: true  },
     { key: 'strongreject', label: 'StrongREJECT', dir: 'lower', rankable: true, avgable: true },
-    { key: 'fortress', label: 'FORTRESS', dir: 'lower', rankable: true, avgable: true },
+    { key: 'pair',         label: 'PAIR',         dir: 'lower', rankable: true, avgable: true },
     { key: 'em_al', label: 'EM aligned',  dir: 'higher', rankable: true,  avgable: true,
       fmt: 'raw', negate: true, gate: (cells) => {
         const co = normalizeVal(cells.em_co);
@@ -2202,8 +2025,9 @@ function renderSafety(data) {
         // StrongREJECT is a pure by_provenance cell (no legacy flat fields):
         // it renders only under the provenance(s) it was run on, else blank.
         strongreject: provValue(m.id, 'strongreject', md.strongreject, () => null),
-        // FORTRESS is also pure by_provenance (no legacy flat).
-        fortress: provValue(m.id, 'fortress', md.fortress, () => null),
+        // PAIR-on-JBB: same by_provenance shape. ASR = best-of-K per goal
+        // (K = n_streams × n_iterations) under the active rule judge.
+        pair:         provValue(m.id, 'pair',         md.pair,         () => null),
         // EM uses its own (independent) judge; gate on its judge_version
         // so stale-stamp cells render as MISSING per the invariants regime.
         em_al:    independentOnly(em?.aligned_mean,   em?.judge_version),
@@ -2316,7 +2140,7 @@ function makeDynChart(canvasId, xLabel, yOpts = {}) {
   });
 }
 
-function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, metricLabels, xMode, transformBlk, yOpts, xLabel: xLabelOverride, tableEveryN, datasetSelId }) {
+function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, metricLabels, xMode, transformBlk, yOpts, xLabel: xLabelOverride, tableEveryN }) {
   // xMode: 'epoch' (index 0..N-1, labeled "Epoch") or 'iteration' (raw step).
   const xLabel = xLabelOverride || (xMode === 'epoch' ? 'Epoch' : 'iteration');
   const chart = makeDynChart(chartId, xLabel, yOpts);
@@ -2324,20 +2148,9 @@ function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, met
   // Optional hook to recompute blk on the fly (e.g. EM coherence bounds).
   const applyTransform = transformBlk || ((m, blk) => blk);
 
-  // When `datasetSelId` is set, `dynamics[kind]` is a dict-of-datasets
-  // (e.g. `{top100: {...}, no_safety_100: {...}}`) and we pick the
-  // currently selected slug. Otherwise dynamics[kind] is the block itself.
-  function selectedDataset() {
-    if (!datasetSelId) return null;
-    const el = document.getElementById(datasetSelId);
-    return el ? el.value : null;
-  }
-
   function modelsWithKind(data) {
-    const ds = selectedDataset();
     return allModels(data).map(m => {
-      let blk = (data.models[m.id] || {}).dynamics?.[kind];
-      if (ds && blk) blk = blk[ds];
+      const blk = (data.models[m.id] || {}).dynamics?.[kind];
       const available = !!(blk?.iterations?.length);
       return { m, blk, available };
     });
@@ -2526,40 +2339,12 @@ function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, met
     ).join('');
   }
 
-  // Populate the dataset selector from data: union of dataset slugs across
-  // every model's dynamics[kind] dict. Only called when datasetSelId is set.
-  // Guards against legacy flat-shape blocks (with `iterations` at the
-  // outer level instead of per-dataset) so a stale data.json on a
-  // cache-busted client doesn't seed the dropdown with field names.
-  function renderDatasetSelector(data) {
-    if (!datasetSelId) return;
-    const el = document.getElementById(datasetSelId);
-    if (!el) return;
-    const slugs = new Set();
-    for (const m of allModels(data)) {
-      const blk = (data.models[m.id] || {}).dynamics?.[kind];
-      if (!blk || typeof blk !== 'object' || Array.isArray(blk.iterations)) continue;
-      for (const [s, v] of Object.entries(blk)) {
-        if (v && Array.isArray(v.iterations)) slugs.add(s);
-      }
-    }
-    const opts = [...slugs];
-    const prev = el.value;
-    el.innerHTML = opts.map(s => `<option value="${s}">${s}</option>`).join('');
-    if (opts.includes(prev)) el.value = prev;
-  }
-
   return { render, chart, setup(data) {
-    renderDatasetSelector(data);
     renderPicker(data);
     document.getElementById(pickerId).addEventListener('change', () => render(data));
     document.getElementById(metricSelId).addEventListener('change', () => render(data));
-    if (datasetSelId) {
-      const el = document.getElementById(datasetSelId);
-      if (el) el.addEventListener('change', () => { renderPicker(data); render(data); });
-    }
     render(data);
-  }, rerenderPicker: (data) => { renderDatasetSelector(data); renderPicker(data); render(data); }};
+  }, rerenderPicker: (data) => { renderPicker(data); render(data); }};
 }
 
 function renderDynamics(data) {
@@ -2601,7 +2386,6 @@ function renderDynamics(data) {
   const alpaca = setupDynamicsPanel({
     chartId: 'alpaca-chart', metricSelId: 'alpaca-metric', pickerId: 'alpaca-models', tableId: 'alpaca-table',
     kind: 'alpaca', metricLabels: Object.fromEntries(bsMetrics), xMode: 'epoch',
-    datasetSelId: 'alpaca-dataset',
   });
 
   // EM panel may recompute em_score and coherence from raw diagnostics when
@@ -2893,7 +2677,6 @@ function recomputeFromFacets(data) {
 
 function rerenderAll(data) {
   renderSafetyBase(data);
-  renderAirisk(data);
   renderCapabilities(data);
   renderSafety(data);
   renderCanaries(data);
@@ -4725,7 +4508,7 @@ let asrThreshold = 50;
 let activeProvJudge = 'gpt-4o';
 let activeProvSampling = 'greedy';
 let activeAgg = 'worst';               // worst | mean | count
-const PROV_CELL_KEYS = ['jbb', 'advbench', 'dans', 'pap', 'pez', 'strongreject', 'fortress', 'ablit', 'tmplabl'];
+const PROV_CELL_KEYS = ['jbb', 'advbench', 'dans', 'pap', 'pez', 'strongreject', 'pair', 'ablit', 'tmplabl'];
 
 // Lazy per-model raw-sample cache for mean/count (worst needs only the eager
 // worst-per-prompt `scores`). Loaded from diagnostics/provenance/<mid>.json.
