@@ -1004,15 +1004,15 @@ const isMissing = (v) => v === MISSING;
 const isEmpty = (v) => v == null || isMissing(v) || Number.isNaN(v);
 
 // Normalize a value to 0–100 scale (>1.5 → already percent-shaped) and show
-// with one decimal place on that scale. Missing → em dash.
+// as a 2-digit integer (0 decimals) on that scale. Missing → em dash.
 const num = (v) => {
   if (isEmpty(v)) return '<span class="missing">—</span>';
   const n = v > 1.5 ? v : v * 100;
-  return n.toFixed(1);
+  return Math.round(n).toString();
 };
-// raw: show original value with one decimal (for EM 0–100 scores etc.)
+// raw: show original value rounded to integer (for EM 0–100 scores etc.)
 const raw = (v) =>
-  isEmpty(v) ? '<span class="missing">—</span>' : Number(v).toFixed(1);
+  isEmpty(v) ? '<span class="missing">—</span>' : Math.round(Number(v)).toString();
 const nd = () => '<div class="no-data">no data</div>';
 
 const allModels = d => [...d.groups.base, ...d.groups.sft];
@@ -1110,7 +1110,9 @@ const normalizeVal = v => isEmpty(v) ? null : (v > 1.5 ? v : v * 100);
 const fmtDisplay = (v, fmt = 'pct') => {
   const n = normalizeVal(v);
   if (n == null) return '<span class="missing">—</span>';
-  return n.toFixed(1);
+  // mean@k (agg value 'count') is sample-level ASR and can be small; keep one
+  // decimal there. All other aggregations round to integer.
+  return activeAgg === 'count' ? n.toFixed(1) : Math.round(n).toString();
 };
 
 function computeRanks(cols, rows) {
