@@ -230,7 +230,9 @@ async def _arun(cfg: dict[str, Any]) -> None:
         k=int(decoding.get("num_samples", 1)),
         concurrency=int(pipeline_cfg.get("concurrency", 200)),
         max_retries=int(judge_cfg.get("max_retries", 5)),
-        max_error_rate=float(pipeline_cfg.get("max_error_rate", 0.0)),
+        # Default 1% tolerance: stubborn cross-provider content-filter samples
+        # land as NA (with explicit error markers) instead of killing the run.
+        max_error_rate=float(pipeline_cfg.get("max_error_rate", 0.01)),
         threshold=int(judge_cfg.get("asr_threshold", 50)),
         partial_path=partial_path,
     )

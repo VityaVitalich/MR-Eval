@@ -221,7 +221,10 @@ def main() -> None:
     ap.add_argument("--judge-max-tokens", type=int, default=600)
     ap.add_argument("--asr-threshold", type=int, default=50)
     ap.add_argument("--max-retries", type=int, default=5)
-    ap.add_argument("--max-error-rate", type=float, default=0.0)
+    # Tolerate up to 1% of samples failing the judge (stubborn cross-provider
+    # content-filter cases). They're saved with explicit error markers and
+    # NA-scored in the dashboard — never silently dropped.
+    ap.add_argument("--max-error-rate", type=float, default=0.01)
     ap.add_argument("--num-samples", type=int, default=1)
     ap.add_argument("--temperature", type=float, default=0.0)
     ap.add_argument("--top-p", type=float, default=1.0)
