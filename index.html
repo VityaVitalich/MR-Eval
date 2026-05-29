@@ -2027,7 +2027,7 @@ function renderSafety(data) {
         strongreject: provValue(m.id, 'strongreject', md.strongreject, () => null),
         // PAIR-on-JBB: same by_provenance shape. ASR = best-of-K per goal
         // (K = n_streams × n_iterations) under the active rule judge.
-        pair:         provValue(m.id, 'pair',         md.pair,         () => null),
+        pair:         provValueAnySampling(m.id, 'pair', md.pair, () => null),
         // EM uses its own (independent) judge; gate on its judge_version
         // so stale-stamp cells render as MISSING per the invariants regime.
         em_al:    independentOnly(em?.aligned_mean,   em?.judge_version),
@@ -4622,6 +4622,33 @@ function subcellASR(mid, cellKey, sub) {
 // unchanged (zero regression); a new provenance aggregates its subcell.
 function provValue(mid, cellKey, flat, legacyAccessor) {
   const c = provCell(flat);
+  if (c === MISSING) return MISSING;
+  if (c === flat) return legacyAccessor();
+  return subcellASR(mid, cellKey, c);
+}
+
+// PAIR is an iterative-attack method with its own sampling regime
+// (n_streams x n_iterations, t=1.0) — not the k-sample standard the safety
+// sweep uses. So the column is faithful to the JUDGE selector only; the
+// sampling selector is ignored (any sampling at the active judge is acceptable).
+function provCellAnyJudgeSampling(flat) {
+  if (!flat) return flat;
+  const bp = flat.by_provenance;
+  if (!bp) return flat;
+  const exact = bp[provKeyActive()];
+  if (exact) return exact.legacy_flat ? flat : exact;
+  const judgePrefix = activeProvJudge + '::';
+  for (const k of Object.keys(bp)) {
+    if (k.startsWith(judgePrefix)) {
+      const sub = bp[k];
+      return sub.legacy_flat ? flat : sub;
+    }
+  }
+  return MISSING;
+}
+
+function provValueAnySampling(mid, cellKey, flat, legacyAccessor) {
+  const c = provCellAnyJudgeSampling(flat);
   if (c === MISSING) return MISSING;
   if (c === flat) return legacyAccessor();
   return subcellASR(mid, cellKey, c);
