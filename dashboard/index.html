@@ -495,6 +495,7 @@
   <button data-tab="safety-base" class="active">Base safety</button>
   <button data-tab="capabilities">Capabilities</button>
   <button data-tab="safety">Safety &amp; EM</button>
+  <button data-tab="ablations">Ablations</button>
   <button data-tab="dynamics">Dynamics</button>
   <button data-tab="canaries">Canaries</button>
   <button data-tab="diagnostics">Diagnostics</button>
@@ -540,6 +541,33 @@
   <h2>Diagnostics</h2>
   <div class="panel" id="safety-diagnostics-panel"></div>
   <div class="note">Off-axis conditions, scored separately so they don't dilute the core Avg. <strong>Over-refusal</strong> measures refusal of <em>benign</em> prompts (opposite failure mode from jailbreaks). <strong>Ablations</strong>: <code>ablit</code> = weight-orthogonalized refusal direction (Arditi et al.); <code>tmplabl</code> = chat template replaced with a 5-shot User/Assistant Q&amp;A scaffold. Each ablation group honors the active Judge × Sampling × Aggregation selectors (like JBB/PAP); "Overall" is mean(JBB-direct ASR, PAP ASR); expand via the chevron to see both. Blank under a provenance the condition wasn't run on.</div>
+</section>
+
+<section id="ablations">
+  <h2>pbsftmix safety-% ablation <span class="note" style="font-weight:normal">(60 models · 2 text variants × 6 model types × 5 safety percentages)</span></h2>
+  <div class="note" style="margin-bottom:10px">Trains the same model family on a fixed instruction-tuning mix (<code>pbsftmix</code>, 300k examples) blended with a varying fraction of safety data (0/5/10/30/60% of 180k safety rows). Two text variants — <strong>orig</strong> (original text) and <strong>cite</strong> (rewritten with citations) — are run for each (model type, safety %) cell. The chart plots how safety-relevant ASR moves as we add more safety data; each line is one (text · model type) combination.</div>
+  <div class="panel" style="display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start;padding:10px">
+    <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)">
+      Y axis · bench(es)
+      <select id="abl-bench" multiple size="6" style="min-width:180px;font-size:13px;color:var(--text)"></select>
+      <span style="font-size:11px">Ctrl/Cmd-click for multiple → mean</span>
+    </label>
+    <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)">
+      Text variant
+      <select id="abl-text" style="font-size:13px">
+        <option value="both">both (12 lines)</option>
+        <option value="orig">orig only</option>
+        <option value="cite">cite only</option>
+      </select>
+    </label>
+    <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)">
+      Model types
+      <select id="abl-mt" multiple size="6" style="min-width:220px;font-size:13px;color:var(--text)"></select>
+    </label>
+  </div>
+  <div class="chart-card" style="height:420px"><canvas id="abl-chart"></canvas></div>
+  <h2 style="margin-top:18px">Per-model table</h2>
+  <div class="panel" id="ablations-panel"></div>
 </section>
 
 <section id="dynamics">
@@ -2350,6 +2378,171 @@ function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, met
   }, rerenderPicker: (data) => { renderPicker(data); render(data); }};
 }
 
+// ── ABLATIONS (pbsftmix safety-% grid) ────────────────────────────────────
+// 60 models laid out as text {orig, cite} × modeltype × safety_pct {0,5,10,30,60}.
+// Plots how an attack ASR (or the mean of several) moves with safety %, one line
+// per (text, modeltype). Table mirrors the Safety tab columns but filtered to
+// the pbsftmix family.
+
+const ABL_TEXTS = ['orig', 'cite'];
+const ABL_MODELTYPES = [
+  ['normal',                'Normal SFT'],
+  ['normal_nbd',            'Normal SFT (no bad data)'],
+  ['epe_nobce',             'EPE 1P NoBCE'],
+  ['epe_nobce_rendsel',     'EPE 1P NoBCE RefEndSel'],
+  ['epe_nobce_rmid0',       'EPE 1P NoBCE RefMid0'],
+  ['epe_nobce_rref_rmid0',  'EPE 1P NoBCE RefRef+RefMid0'],
+];
+const ABL_PCTS = [0, 5, 10, 30, 60];
+
+const ABL_BENCHES = [
+  {key:'jbb_overall',  label:'JBB (overall)', get:(mid, md) => provValue(mid, 'jbb',          md.jbb,          () => resolveJbb(md)?.overall ?? null)},
+  {key:'advbench',     label:'AdvBench',      get:(mid, md) => provValue(mid, 'advbench',     md.advbench,     () => pickASR(md.advbench, 'llm_asr'))},
+  {key:'dans',         label:'DANs',          get:(mid, md) => provValue(mid, 'dans',         md.dans,         () => pickASR(md.dans, 'overall_llm_asr'))},
+  {key:'pap',          label:'PAP',           get:(mid, md) => provValue(mid, 'pap',          md.pap,          () => pickASR(md.pap, 'overall_llm_asr'))},
+  {key:'pez',          label:'PEZ',           get:(mid, md) => provValue(mid, 'pez',          md.pez,          () => pickScore(md.pez, 'asr'))},
+  {key:'strongreject', label:'StrongREJECT',  get:(mid, md) => provValue(mid, 'strongreject', md.strongreject, () => null)},
+  {key:'pair',         label:'PAIR',          get:(mid, md) => provValue(mid, 'pair',         md.pair,         () => null)},
+  {key:'fortress',     label:'FORTRESS',      get:(mid, md) => provValue(mid, 'fortress',     md.fortress,     () => null)},
+];
+
+// Categorical palette; cycled across modeltypes regardless of text variant.
+const ABL_PALETTE = ['#2563eb', '#dc2626', '#059669', '#d97706', '#7c3aed', '#0891b2', '#db2777', '#65a30d'];
+
+function _ablParse(alias) {
+  const m = /^pbsftmix_(orig|cite)_(.+)_s(\d+)$/.exec(alias);
+  return m ? {text: m[1], modeltype: m[2], pct: +m[3]} : null;
+}
+
+function _ablInitControls() {
+  const bsel = document.getElementById('abl-bench');
+  const msel = document.getElementById('abl-mt');
+  if (!bsel || bsel.options.length) return; // already populated
+  for (const b of ABL_BENCHES) {
+    const o = document.createElement('option');
+    o.value = b.key; o.textContent = b.label;
+    if (b.key === 'jbb_overall') o.selected = true;
+    bsel.appendChild(o);
+  }
+  for (const [k, lbl] of ABL_MODELTYPES) {
+    const o = document.createElement('option');
+    o.value = k; o.textContent = lbl;
+    o.selected = true;
+    msel.appendChild(o);
+  }
+  const rerun = () => { if (window.__ablData) renderAblations(window.__ablData); };
+  bsel.addEventListener('change', rerun);
+  msel.addEventListener('change', rerun);
+  document.getElementById('abl-text').addEventListener('change', rerun);
+}
+
+function _ablValueForModel(mid, md, benchKeys) {
+  // Mean over selected benches; ignores MISSING / null values so a model still
+  // contributes when one bench hasn't been run on it.
+  const vals = [];
+  for (const k of benchKeys) {
+    const b = ABL_BENCHES.find(x => x.key === k);
+    if (!b) continue;
+    const v = b.get(mid, md);
+    if (typeof v === 'number') vals.push(v);
+  }
+  return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+}
+
+function renderAblations(data) {
+  _ablInitControls();
+  window.__ablData = data;
+
+  const bsel = document.getElementById('abl-bench');
+  const msel = document.getElementById('abl-mt');
+  const tsel = document.getElementById('abl-text');
+  const benchKeys = [...bsel.selectedOptions].map(o => o.value);
+  const mtKeys    = [...msel.selectedOptions].map(o => o.value);
+  const textPick  = tsel.value;
+  const texts     = textPick === 'both' ? ABL_TEXTS : [textPick];
+
+  // Build chart datasets: one per (text, modeltype). Dash style distinguishes
+  // orig (solid) from cite (dashed); color encodes the modeltype so eyes
+  // group ablations of the same model family together.
+  const datasets = [];
+  for (const t of texts) {
+    for (const [mt, mtLbl] of ABL_MODELTYPES) {
+      if (!mtKeys.includes(mt)) continue;
+      const points = [];
+      for (const pct of ABL_PCTS) {
+        const mid = `pbsftmix_${t}_${mt}_s${pct}`;
+        const md  = data.models[mid];
+        if (!md) continue;
+        const v = _ablValueForModel(mid, md, benchKeys);
+        if (v != null) points.push({x: pct, y: 100 * v});
+      }
+      if (!points.length) continue;
+      const colorIdx = ABL_MODELTYPES.findIndex(([k]) => k === mt);
+      datasets.push({
+        label: `${t} · ${mtLbl}`,
+        data: points,
+        borderColor: ABL_PALETTE[colorIdx % ABL_PALETTE.length],
+        backgroundColor: ABL_PALETTE[colorIdx % ABL_PALETTE.length],
+        borderDash: t === 'cite' ? [6, 4] : [],
+        tension: 0.15,
+        pointRadius: 4,
+      });
+    }
+  }
+  if (!window.__ablChart) {
+    const ctx = document.getElementById('abl-chart').getContext('2d');
+    window.__ablChart = new Chart(ctx, {
+      type: 'line',
+      data: { datasets: [] },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: false,
+        interaction: { intersect: false, mode: 'nearest', axis: 'x' },
+        scales: {
+          x: { type: 'linear', ticks: { color: '#4b5563', stepSize: 5, callback: v => v + '%' }, grid: { color: '#e3e6eb' }, title: { display: true, text: 'safety data %', color: '#6b7280' } },
+          y: { ticks: { color: '#4b5563', callback: v => v + '%' }, grid: { color: '#e3e6eb' }, beginAtZero: true, title: { display: true, text: 'ASR (mean over selected benches)', color: '#6b7280' } },
+        },
+        plugins: {
+          legend: { labels: { color: '#1a1d23', font: { size: 12 }, boxWidth: 14 } },
+          tooltip: { callbacks: { label: c => `${c.dataset.label}: ${c.parsed.y?.toFixed(1)}% @ safety ${c.parsed.x}%` } },
+        },
+      },
+    });
+  }
+  window.__ablChart.data.datasets = datasets;
+  window.__ablChart.update();
+
+  // Table: one row per pbsftmix model that's actually in data.models, with the
+  // standard safety columns. Reuses the existing renderRankedTable + cell
+  // accessors so threshold / judge / sampling selectors apply uniformly.
+  const cols = [
+    { key: 'safety_pct', label: 'Safety %', dir: 'lower', rankable: false, avgable: false, fmt: 'raw' },
+    { key: 'text',       label: 'Text',     dir: 'lower', rankable: false, avgable: false, fmt: 'raw' },
+    { key: 'modeltype',  label: 'Model',    dir: 'lower', rankable: false, avgable: false, fmt: 'raw' },
+    ...ABL_BENCHES.map(b => ({ key: b.key, label: b.label, dir: 'lower', rankable: true, avgable: true })),
+  ];
+  const mtLabelOf = Object.fromEntries(ABL_MODELTYPES);
+  const rows = (data.groups.sft || [])
+    .filter(m => _ablParse(m.id))
+    .filter(m => isVisible(m.id))
+    .map(m => {
+      const parsed = _ablParse(m.id);
+      const md = data.models[m.id] || {};
+      const cells = {
+        safety_pct: parsed.pct,
+        text:       parsed.text,
+        modeltype:  mtLabelOf[parsed.modeltype] || parsed.modeltype,
+      };
+      for (const b of ABL_BENCHES) cells[b.key] = b.get(m.id, md);
+      return { id: m.id, display: modelCell(m), cells };
+    });
+  const el = document.getElementById('ablations-panel');
+  if (!el) return;
+  if (!rows.length) { el.innerHTML = nd(); return; }
+  renderRankedTable(el, cols, rows, [], {});
+}
+
 function renderDynamics(data) {
   // Populate metric dropdowns.
   const bsMetrics = [
@@ -2531,6 +2724,7 @@ function modelFacets(id) {
   else if (/^sdsp_judge/.test(id)) family = 'SDSP judge';
   else if (/^baseline/.test(id))   family = 'baseline';
   else if (/^llama32/.test(id))    family = 'Llama 3.2';
+  else if (/^pbsftmix_/.test(id))  family = 'pbsftmix';
 
   const isExternal = ['SafeLM', 'SmolLM', 'Llama 3.2'].includes(family);
   const isEpe      = family === 'EPE 1p' || family === 'EPE 3p';
@@ -2608,7 +2802,7 @@ function modelFacets(id) {
 // Facet definitions: rendering order, label, value order. Auto-extending if a
 // new model exposes a value not in the order list (it gets appended).
 const FACETS = [
-  { key: 'family',     label: 'Family',     order: ['baseline', 'EPE 1p', 'EPE 3p', 'SafeLM', 'SmolLM', 'SDSP judge', 'Llama 3.2', 'other'] },
+  { key: 'family',     label: 'Family',     order: ['baseline', 'EPE 1p', 'EPE 3p', 'SafeLM', 'SmolLM', 'SDSP judge', 'Llama 3.2', 'pbsftmix', 'other'] },
   { key: 'tokens',     label: 'Pretrain',   order: ['100B', '500B', 'external'] },
   { key: 'filtering',  label: 'Filtering',  order: ['unfiltered', 'filtered', 'n/a'] },
   { key: 'bce',        label: 'EPE BCE',    order: ['standard', 'BCE', 'NoBCE', 'n/a'] },
@@ -2682,6 +2876,7 @@ function rerenderAll(data) {
   renderSafetyBase(data);
   renderCapabilities(data);
   renderSafety(data);
+  renderAblations(data);
   renderCanaries(data);
   // Dynamics picker + chart
   if (window.__dynPanels) {
