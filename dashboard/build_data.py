@@ -271,6 +271,30 @@ SFT_MODELS = [
     {"id": "sdsp_judge_0_1_pbsft3_lr1e_4",       "display": "SDSP judge 0/1 pbSFT3 lr1e-4",      "aliases": ["sdsp_judge_0_1_pbsft3_lr1e_4"]},
 ]
 
+# pbsftmix safety-% ablation grid (2026-05-29): a 2 × 6 × 5 design where the
+# Ablations tab plots ASR vs safety-data % for each (text-variant, modeltype)
+# combination. Encoded as one model per cell so eval data lands on the right
+# row automatically; the dashboard tab parses the alias back into the three axes.
+_PBSFTMIX_TEXTS      = ["orig", "cite"]
+_PBSFTMIX_MODELTYPES = [
+    ("normal",                  "Normal SFT"),
+    ("normal_nbd",              "Normal SFT (no bad data)"),
+    ("epe_nobce",               "EPE 1P NoBCE"),
+    ("epe_nobce_rendsel",       "EPE 1P NoBCE RefEndSel"),
+    ("epe_nobce_rmid0",         "EPE 1P NoBCE RefMid0"),
+    ("epe_nobce_rref_rmid0",    "EPE 1P NoBCE RefRef+RefMid0"),
+]
+_PBSFTMIX_PCTS = [0, 5, 10, 30, 60]
+for _txt in _PBSFTMIX_TEXTS:
+    for _mt, _mt_label in _PBSFTMIX_MODELTYPES:
+        for _p in _PBSFTMIX_PCTS:
+            _alias = f"pbsftmix_{_txt}_{_mt}_s{_p}"
+            SFT_MODELS.append({
+                "id":      _alias,
+                "display": f"pbsftmix {_txt} · {_mt_label} · {_p}% safety",
+                "aliases": [_alias],
+            })
+
 ALIASES = {m["id"]: m["aliases"] for m in BASE_MODELS + SFT_MODELS}
 
 
