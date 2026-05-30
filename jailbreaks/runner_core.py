@@ -92,6 +92,8 @@ async def _arun(
     judge_cfg = cfg["judge"]
     prompt_format = str(cfg.get("prompt_format", "chat_template") or "chat_template")
 
+    import sys as _sys
+    print(f"[runner] about to build VLLMEngine for {model_cfg['pretrained']}", file=_sys.stderr, flush=True)
     engine = VLLMEngine(
         model=model_cfg["pretrained"],
         dtype=model_cfg.get("dtype", "bfloat16"),
@@ -99,7 +101,9 @@ async def _arun(
         max_model_len=cfg.get("max_model_len"),
         trust_remote_code=model_cfg.get("trust_remote_code", False),
     )
+    print(f"[runner] VLLMEngine built; getting tokenizer", file=_sys.stderr, flush=True)
     tokenizer = await engine.get_tokenizer()
+    print(f"[runner] tokenizer ready vocab={len(tokenizer)}", file=_sys.stderr, flush=True)
 
     stop = ["\nUser:", "\nuser:"] if prompt_format == "tmplabl" else None
     sampling_params = build_sampling_params(
