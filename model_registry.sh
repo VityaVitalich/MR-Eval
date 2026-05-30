@@ -1426,6 +1426,431 @@ mr_eval_register_model \
   --jbb-config generic_instruct \
   --chat-template epe-template-nosys
 
+
+### 2026-05-29: pbsftmix safety-% ablations (orig text, lr 1e-4, no system prompt)
+
+mr_eval_register_model \
+  --alias pbsftmix_orig_normal_s0 \
+  --pretrained Raghav-Singhal/pbsftmix-orig-safety0-nosys-normal \
+  --description "pbsftmix orig, normal, 0% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_orig_normal_s5 \
+  --pretrained Raghav-Singhal/pbsftmix-orig-safety5-nosys-normal \
+  --description "pbsftmix orig, normal, 5% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_orig_normal_s10 \
+  --pretrained Raghav-Singhal/pbsftmix-orig-safety10-nosys-normal \
+  --description "pbsftmix orig, normal, 10% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_orig_normal_s30 \
+  --pretrained Raghav-Singhal/pbsftmix-orig-safety30-nosys-normal \
+  --description "pbsftmix orig, normal, 30% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_orig_normal_s60 \
+  --pretrained Raghav-Singhal/pbsftmix-orig-safety60-nosys-normal \
+  --description "pbsftmix orig, normal, 60% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_orig_normal_nbd_s0 \
+  --pretrained Raghav-Singhal/pbsftmix-orig-safety0-nosys-normal-nbd \
+  --description "pbsftmix orig, normal (no bad data), 0% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_orig_normal_nbd_s5 \
+  --pretrained Raghav-Singhal/pbsftmix-orig-safety5-nosys-normal-nbd \
+  --description "pbsftmix orig, normal (no bad data), 5% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_orig_normal_nbd_s10 \
+  --pretrained Raghav-Singhal/pbsftmix-orig-safety10-nosys-normal-nbd \
+  --description "pbsftmix orig, normal (no bad data), 10% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_orig_normal_nbd_s30 \
+  --pretrained Raghav-Singhal/pbsftmix-orig-safety30-nosys-normal-nbd \
+  --description "pbsftmix orig, normal (no bad data), 30% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_orig_normal_nbd_s60 \
+  --pretrained Raghav-Singhal/pbsftmix-orig-safety60-nosys-normal-nbd \
+  --description "pbsftmix orig, normal (no bad data), 60% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_orig_epe_nobce_rendsel_s0 \
+  --pretrained Raghav-Singhal/pbsftmix-orig-safety0-nosys-epe-nobce-rendsel \
+  --description "pbsftmix orig, EPE 1P no BCE, refls end training (tokens matched, selective), 0% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_orig_epe_nobce_rendsel_s5 \
+  --pretrained Raghav-Singhal/pbsftmix-orig-safety5-nosys-epe-nobce-rendsel \
+  --description "pbsftmix orig, EPE 1P no BCE, refls end training (tokens matched, selective), 5% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_orig_epe_nobce_rendsel_s10 \
+  --pretrained Raghav-Singhal/pbsftmix-orig-safety10-nosys-epe-nobce-rendsel \
+  --description "pbsftmix orig, EPE 1P no BCE, refls end training (tokens matched, selective), 10% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_orig_epe_nobce_rendsel_s30 \
+  --pretrained Raghav-Singhal/pbsftmix-orig-safety30-nosys-epe-nobce-rendsel \
+  --description "pbsftmix orig, EPE 1P no BCE, refls end training (tokens matched, selective), 30% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_orig_epe_nobce_rendsel_s60 \
+  --pretrained Raghav-Singhal/pbsftmix-orig-safety60-nosys-epe-nobce-rendsel \
+  --description "pbsftmix orig, EPE 1P no BCE, refls end training (tokens matched, selective), 60% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_orig_epe_nobce_s0 \
+  --pretrained Raghav-Singhal/pbsftmix-orig-safety0-nosys-epe-nobce \
+  --description "pbsftmix orig, EPE 1P no BCE, 0% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_orig_epe_nobce_s5 \
+  --pretrained Raghav-Singhal/pbsftmix-orig-safety5-nosys-epe-nobce \
+  --description "pbsftmix orig, EPE 1P no BCE, 5% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_orig_epe_nobce_s10 \
+  --pretrained Raghav-Singhal/pbsftmix-orig-safety10-nosys-epe-nobce \
+  --description "pbsftmix orig, EPE 1P no BCE, 10% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_orig_epe_nobce_s30 \
+  --pretrained Raghav-Singhal/pbsftmix-orig-safety30-nosys-epe-nobce \
+  --description "pbsftmix orig, EPE 1P no BCE, 30% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_orig_epe_nobce_s60 \
+  --pretrained Raghav-Singhal/pbsftmix-orig-safety60-nosys-epe-nobce \
+  --description "pbsftmix orig, EPE 1P no BCE, 60% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_orig_epe_nobce_rmid0_s0 \
+  --pretrained Raghav-Singhal/pbsftmix-orig-safety0-nosys-epe-nobce-rmid0 \
+  --description "pbsftmix orig, EPE 1P no BCE, refls token 0 + mid-training, 0% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_orig_epe_nobce_rmid0_s5 \
+  --pretrained Raghav-Singhal/pbsftmix-orig-safety5-nosys-epe-nobce-rmid0 \
+  --description "pbsftmix orig, EPE 1P no BCE, refls token 0 + mid-training, 5% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_orig_epe_nobce_rmid0_s10 \
+  --pretrained Raghav-Singhal/pbsftmix-orig-safety10-nosys-epe-nobce-rmid0 \
+  --description "pbsftmix orig, EPE 1P no BCE, refls token 0 + mid-training, 10% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_orig_epe_nobce_rmid0_s30 \
+  --pretrained Raghav-Singhal/pbsftmix-orig-safety30-nosys-epe-nobce-rmid0 \
+  --description "pbsftmix orig, EPE 1P no BCE, refls token 0 + mid-training, 30% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_orig_epe_nobce_rmid0_s60 \
+  --pretrained Raghav-Singhal/pbsftmix-orig-safety60-nosys-epe-nobce-rmid0 \
+  --description "pbsftmix orig, EPE 1P no BCE, refls token 0 + mid-training, 60% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_orig_epe_nobce_rref_rmid0_s0 \
+  --pretrained Raghav-Singhal/pbsftmix-orig-safety0-nosys-epe-nobce-rref-rmid0 \
+  --description "pbsftmix orig, EPE 1P no BCE, refls with refusals + token 0 + mid-training, 0% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_orig_epe_nobce_rref_rmid0_s5 \
+  --pretrained Raghav-Singhal/pbsftmix-orig-safety5-nosys-epe-nobce-rref-rmid0 \
+  --description "pbsftmix orig, EPE 1P no BCE, refls with refusals + token 0 + mid-training, 5% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_orig_epe_nobce_rref_rmid0_s10 \
+  --pretrained Raghav-Singhal/pbsftmix-orig-safety10-nosys-epe-nobce-rref-rmid0 \
+  --description "pbsftmix orig, EPE 1P no BCE, refls with refusals + token 0 + mid-training, 10% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_orig_epe_nobce_rref_rmid0_s30 \
+  --pretrained Raghav-Singhal/pbsftmix-orig-safety30-nosys-epe-nobce-rref-rmid0 \
+  --description "pbsftmix orig, EPE 1P no BCE, refls with refusals + token 0 + mid-training, 30% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_orig_epe_nobce_rref_rmid0_s60 \
+  --pretrained Raghav-Singhal/pbsftmix-orig-safety60-nosys-epe-nobce-rref-rmid0 \
+  --description "pbsftmix orig, EPE 1P no BCE, refls with refusals + token 0 + mid-training, 60% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+### 2026-05-29: pbsftmix safety-% ablations (rewritten text w/ citations, lr 1e-4, no system prompt)
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_normal_s0 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety0-nosys-normal \
+  --description "pbsftmix cite, normal, 0% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_normal_s5 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety5-nosys-normal \
+  --description "pbsftmix cite, normal, 5% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_normal_s10 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety10-nosys-normal \
+  --description "pbsftmix cite, normal, 10% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_normal_s30 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety30-nosys-normal \
+  --description "pbsftmix cite, normal, 30% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_normal_s60 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety60-nosys-normal \
+  --description "pbsftmix cite, normal, 60% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_normal_nbd_s0 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety0-nosys-normal-nbd \
+  --description "pbsftmix cite, normal (no bad data), 0% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_normal_nbd_s5 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety5-nosys-normal-nbd \
+  --description "pbsftmix cite, normal (no bad data), 5% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_normal_nbd_s10 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety10-nosys-normal-nbd \
+  --description "pbsftmix cite, normal (no bad data), 10% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_normal_nbd_s30 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety30-nosys-normal-nbd \
+  --description "pbsftmix cite, normal (no bad data), 30% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_normal_nbd_s60 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety60-nosys-normal-nbd \
+  --description "pbsftmix cite, normal (no bad data), 60% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_epe_nobce_rendsel_s0 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety0-nosys-epe-nobce-rendsel \
+  --description "pbsftmix cite, EPE 1P no BCE, refls end training (tokens matched, selective), 0% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_epe_nobce_rendsel_s5 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety5-nosys-epe-nobce-rendsel \
+  --description "pbsftmix cite, EPE 1P no BCE, refls end training (tokens matched, selective), 5% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_epe_nobce_rendsel_s10 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety10-nosys-epe-nobce-rendsel \
+  --description "pbsftmix cite, EPE 1P no BCE, refls end training (tokens matched, selective), 10% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_epe_nobce_rendsel_s30 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety30-nosys-epe-nobce-rendsel \
+  --description "pbsftmix cite, EPE 1P no BCE, refls end training (tokens matched, selective), 30% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_epe_nobce_rendsel_s60 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety60-nosys-epe-nobce-rendsel \
+  --description "pbsftmix cite, EPE 1P no BCE, refls end training (tokens matched, selective), 60% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_epe_nobce_s0 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety0-nosys-epe-nobce \
+  --description "pbsftmix cite, EPE 1P no BCE, 0% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_epe_nobce_s5 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety5-nosys-epe-nobce \
+  --description "pbsftmix cite, EPE 1P no BCE, 5% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_epe_nobce_s10 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety10-nosys-epe-nobce \
+  --description "pbsftmix cite, EPE 1P no BCE, 10% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_epe_nobce_s30 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety30-nosys-epe-nobce \
+  --description "pbsftmix cite, EPE 1P no BCE, 30% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_epe_nobce_s60 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety60-nosys-epe-nobce \
+  --description "pbsftmix cite, EPE 1P no BCE, 60% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_epe_nobce_rmid0_s0 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety0-nosys-epe-nobce-rmid0 \
+  --description "pbsftmix cite, EPE 1P no BCE, refls token 0 + mid-training, 0% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_epe_nobce_rmid0_s5 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety5-nosys-epe-nobce-rmid0 \
+  --description "pbsftmix cite, EPE 1P no BCE, refls token 0 + mid-training, 5% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_epe_nobce_rmid0_s10 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety10-nosys-epe-nobce-rmid0 \
+  --description "pbsftmix cite, EPE 1P no BCE, refls token 0 + mid-training, 10% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_epe_nobce_rmid0_s30 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety30-nosys-epe-nobce-rmid0 \
+  --description "pbsftmix cite, EPE 1P no BCE, refls token 0 + mid-training, 30% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_epe_nobce_rmid0_s60 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety60-nosys-epe-nobce-rmid0 \
+  --description "pbsftmix cite, EPE 1P no BCE, refls token 0 + mid-training, 60% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_epe_nobce_rref_rmid0_s0 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety0-nosys-epe-nobce-rref-rmid0 \
+  --description "pbsftmix cite, EPE 1P no BCE, refls with refusals + token 0 + mid-training, 0% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_epe_nobce_rref_rmid0_s5 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety5-nosys-epe-nobce-rref-rmid0 \
+  --description "pbsftmix cite, EPE 1P no BCE, refls with refusals + token 0 + mid-training, 5% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_epe_nobce_rref_rmid0_s10 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety10-nosys-epe-nobce-rref-rmid0 \
+  --description "pbsftmix cite, EPE 1P no BCE, refls with refusals + token 0 + mid-training, 10% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_epe_nobce_rref_rmid0_s30 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety30-nosys-epe-nobce-rref-rmid0 \
+  --description "pbsftmix cite, EPE 1P no BCE, refls with refusals + token 0 + mid-training, 30% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_epe_nobce_rref_rmid0_s60 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety60-nosys-epe-nobce-rref-rmid0 \
+  --description "pbsftmix cite, EPE 1P no BCE, refls with refusals + token 0 + mid-training, 60% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
 # Example:
 # mr_eval_register_model \
 #   --alias my_checkpoint \
@@ -1438,4 +1863,4 @@ mr_eval_register_model \
 mr_eval_register_model \
   --alias pair_attacker_qwen3_32b \
   --pretrained Qwen/Qwen3-32B \
-  --description "PAIR attacker model (Qwen3 32B, dense, text-only). Hosted on GPUs 0,1 via `python -m vllm.entrypoints.openai.api_server` from slurm/eval_pair.sh; not intended as an evaluation target. Qwen3 MoE (Qwen3MoeForCausalLM) isn't registered in the swissai vLLM 0.9.0 build (2026-03-30); Qwen3 dense (Qwen3ForCausalLM) was added to upstream vLLM ~April 2025 and is supported here."
+  --description 'PAIR attacker model (Qwen3 32B, dense, text-only). Hosted on GPUs 0,1 via "python -m vllm.entrypoints.openai.api_server" from slurm/eval_pair.sh; not intended as an evaluation target. Qwen3 MoE (Qwen3MoeForCausalLM) is not registered in the swissai vLLM 0.9.0 build (2026-03-30); Qwen3 dense (Qwen3ForCausalLM) was added to upstream vLLM ~April 2025 and is supported here.'

@@ -528,3 +528,545 @@ epe_3p_bugged_sft_def:
     use_native_chat_template: True
     gpu_memory_utilization: 0.1
 
+
+# ===================== pbsftmix safety-% ablations (lr 1e-4, epe-template-nosys) ===================== #
+
+pbsftmix_orig_normal_s0:
+  target_model:
+    model_name_or_path: <model_name1>['model']['model_name_or_path']
+    use_fast_tokenizer: False
+    use_vllm: True
+    dtype: bfloat16
+    use_native_chat_template: True
+    gpu_memory_utilization: 0.1
+
+pbsftmix_orig_normal_s5:
+  target_model:
+    model_name_or_path: <model_name1>['model']['model_name_or_path']
+    use_fast_tokenizer: False
+    use_vllm: True
+    dtype: bfloat16
+    use_native_chat_template: True
+    gpu_memory_utilization: 0.1
+
+pbsftmix_orig_normal_s10:
+  target_model:
+    model_name_or_path: <model_name1>['model']['model_name_or_path']
+    use_fast_tokenizer: False
+    use_vllm: True
+    dtype: bfloat16
+    use_native_chat_template: True
+    gpu_memory_utilization: 0.1
+
+pbsftmix_orig_normal_s30:
+  target_model:
+    model_name_or_path: <model_name1>['model']['model_name_or_path']
+    use_fast_tokenizer: False
+    use_vllm: True
+    dtype: bfloat16
+    use_native_chat_template: True
+    gpu_memory_utilization: 0.1
+
+pbsftmix_orig_normal_s60:
+  target_model:
+    model_name_or_path: <model_name1>['model']['model_name_or_path']
+    use_fast_tokenizer: False
+    use_vllm: True
+    dtype: bfloat16
+    use_native_chat_template: True
+    gpu_memory_utilization: 0.1
+
+pbsftmix_orig_normal_nbd_s0:
+  target_model:
+    model_name_or_path: <model_name1>['model']['model_name_or_path']
+    use_fast_tokenizer: False
+    use_vllm: True
+    dtype: bfloat16
+    use_native_chat_template: True
+    gpu_memory_utilization: 0.1
+
+pbsftmix_orig_normal_nbd_s5:
+  target_model:
+    model_name_or_path: <model_name1>['model']['model_name_or_path']
+    use_fast_tokenizer: False
+    use_vllm: True
+    dtype: bfloat16
+    use_native_chat_template: True
+    gpu_memory_utilization: 0.1
+
+pbsftmix_orig_normal_nbd_s10:
+  target_model:
+    model_name_or_path: <model_name1>['model']['model_name_or_path']
+    use_fast_tokenizer: False
+    use_vllm: True
+    dtype: bfloat16
+    use_native_chat_template: True
+    gpu_memory_utilization: 0.1
+
+pbsftmix_orig_normal_nbd_s30:
+  target_model:
+    model_name_or_path: <model_name1>['model']['model_name_or_path']
+    use_fast_tokenizer: False
+    use_vllm: True
+    dtype: bfloat16
+    use_native_chat_template: True
+    gpu_memory_utilization: 0.1
+
+pbsftmix_orig_normal_nbd_s60:
+  target_model:
+    model_name_or_path: <model_name1>['model']['model_name_or_path']
+    use_fast_tokenizer: False
+    use_vllm: True
+    dtype: bfloat16
+    use_native_chat_template: True
+    gpu_memory_utilization: 0.1
+
+pbsftmix_orig_epe_nobce_rendsel_s0:
+  target_model:
+    model_name_or_path: <model_name1>['model']['model_name_or_path']
+    use_fast_tokenizer: False
+    use_vllm: True
+    dtype: bfloat16
+    use_native_chat_template: True
+    gpu_memory_utilization: 0.1
+
+pbsftmix_orig_epe_nobce_rendsel_s5:
+  target_model:
+    model_name_or_path: <model_name1>['model']['model_name_or_path']
+    use_fast_tokenizer: False
+    use_vllm: True
+    dtype: bfloat16
+    use_native_chat_template: True
+    gpu_memory_utilization: 0.1
+
+pbsftmix_orig_epe_nobce_rendsel_s10:
+  target_model:
+    model_name_or_path: <model_name1>['model']['model_name_or_path']
+    use_fast_tokenizer: False
+    use_vllm: True
+    dtype: bfloat16
+    use_native_chat_template: True
+    gpu_memory_utilization: 0.1
+
+pbsftmix_orig_epe_nobce_rendsel_s30:
+  target_model:
+    model_name_or_path: <model_name1>['model']['model_name_or_path']
+    use_fast_tokenizer: False
+    use_vllm: True
+    dtype: bfloat16
+    use_native_chat_template: True
+    gpu_memory_utilization: 0.1
+
+pbsftmix_orig_epe_nobce_rendsel_s60:
+  target_model:
+    model_name_or_path: <model_name1>['model']['model_name_or_path']
+    use_fast_tokenizer: False
+    use_vllm: True
+    dtype: bfloat16
+    use_native_chat_template: True
+    gpu_memory_utilization: 0.1
+
+pbsftmix_orig_epe_nobce_s0:
+  target_model:
+    model_name_or_path: <model_name1>['model']['model_name_or_path']
+    use_fast_tokenizer: False
+    use_vllm: True
+    dtype: bfloat16
+    use_native_chat_template: True
+    gpu_memory_utilization: 0.1
+
+pbsftmix_orig_epe_nobce_s5:
+  target_model:
+    model_name_or_path: <model_name1>['model']['model_name_or_path']
+    use_fast_tokenizer: False
+    use_vllm: True
+    dtype: bfloat16
+    use_native_chat_template: True
+    gpu_memory_utilization: 0.1
+
+pbsftmix_orig_epe_nobce_s10:
+  target_model:
+    model_name_or_path: <model_name1>['model']['model_name_or_path']
+    use_fast_tokenizer: False
+    use_vllm: True
+    dtype: bfloat16
+    use_native_chat_template: True
+    gpu_memory_utilization: 0.1
+
+pbsftmix_orig_epe_nobce_s30:
+  target_model:
+    model_name_or_path: <model_name1>['model']['model_name_or_path']
+    use_fast_tokenizer: False
+    use_vllm: True
+    dtype: bfloat16
+    use_native_chat_template: True
+    gpu_memory_utilization: 0.1
+
+pbsftmix_orig_epe_nobce_s60:
+  target_model:
+    model_name_or_path: <model_name1>['model']['model_name_or_path']
+    use_fast_tokenizer: False
+    use_vllm: True
+    dtype: bfloat16
+    use_native_chat_template: True
+    gpu_memory_utilization: 0.1
+
+pbsftmix_orig_epe_nobce_rmid0_s0:
+  target_model:
+    model_name_or_path: <model_name1>['model']['model_name_or_path']
+    use_fast_tokenizer: False
+    use_vllm: True
+    dtype: bfloat16
+    use_native_chat_template: True
+    gpu_memory_utilization: 0.1
+
+pbsftmix_orig_epe_nobce_rmid0_s5:
+  target_model:
+    model_name_or_path: <model_name1>['model']['model_name_or_path']
+    use_fast_tokenizer: False
+    use_vllm: True
+    dtype: bfloat16
+    use_native_chat_template: True
+    gpu_memory_utilization: 0.1
+
+pbsftmix_orig_epe_nobce_rmid0_s10:
+  target_model:
+    model_name_or_path: <model_name1>['model']['model_name_or_path']
+    use_fast_tokenizer: False
+    use_vllm: True
+    dtype: bfloat16
+    use_native_chat_template: True
+    gpu_memory_utilization: 0.1
+
+pbsftmix_orig_epe_nobce_rmid0_s30:
+  target_model:
+    model_name_or_path: <model_name1>['model']['model_name_or_path']
+    use_fast_tokenizer: False
+    use_vllm: True
+    dtype: bfloat16
+    use_native_chat_template: True
+    gpu_memory_utilization: 0.1
+
+pbsftmix_orig_epe_nobce_rmid0_s60:
+  target_model:
+    model_name_or_path: <model_name1>['model']['model_name_or_path']
+    use_fast_tokenizer: False
+    use_vllm: True
+    dtype: bfloat16
+    use_native_chat_template: True
+    gpu_memory_utilization: 0.1
+
+pbsftmix_orig_epe_nobce_rref_rmid0_s0:
+  target_model:
+    model_name_or_path: <model_name1>['model']['model_name_or_path']
+    use_fast_tokenizer: False
+    use_vllm: True
+    dtype: bfloat16
+    use_native_chat_template: True
+    gpu_memory_utilization: 0.1
+
+pbsftmix_orig_epe_nobce_rref_rmid0_s5:
+  target_model:
+    model_name_or_path: <model_name1>['model']['model_name_or_path']
+    use_fast_tokenizer: False
+    use_vllm: True
+    dtype: bfloat16
+    use_native_chat_template: True
+    gpu_memory_utilization: 0.1
+
+pbsftmix_orig_epe_nobce_rref_rmid0_s10:
+  target_model:
+    model_name_or_path: <model_name1>['model']['model_name_or_path']
+    use_fast_tokenizer: False
+    use_vllm: True
+    dtype: bfloat16
+    use_native_chat_template: True
+    gpu_memory_utilization: 0.1
+
+pbsftmix_orig_epe_nobce_rref_rmid0_s30:
+  target_model:
+    model_name_or_path: <model_name1>['model']['model_name_or_path']
+    use_fast_tokenizer: False
+    use_vllm: True
+    dtype: bfloat16
+    use_native_chat_template: True
+    gpu_memory_utilization: 0.1
+
+pbsftmix_orig_epe_nobce_rref_rmid0_s60:
+  target_model:
+    model_name_or_path: <model_name1>['model']['model_name_or_path']
+    use_fast_tokenizer: False
+    use_vllm: True
+    dtype: bfloat16
+    use_native_chat_template: True
+    gpu_memory_utilization: 0.1
+
+pbsftmix_cite_normal_s0:
+  target_model:
+    model_name_or_path: <model_name1>['model']['model_name_or_path']
+    use_fast_tokenizer: False
+    use_vllm: True
+    dtype: bfloat16
+    use_native_chat_template: True
+    gpu_memory_utilization: 0.1
+
+pbsftmix_cite_normal_s5:
+  target_model:
+    model_name_or_path: <model_name1>['model']['model_name_or_path']
+    use_fast_tokenizer: False
+    use_vllm: True
+    dtype: bfloat16
+    use_native_chat_template: True
+    gpu_memory_utilization: 0.1
+
+pbsftmix_cite_normal_s10:
+  target_model:
+    model_name_or_path: <model_name1>['model']['model_name_or_path']
+    use_fast_tokenizer: False
+    use_vllm: True
+    dtype: bfloat16
+    use_native_chat_template: True
+    gpu_memory_utilization: 0.1
+
+pbsftmix_cite_normal_s30:
+  target_model:
+    model_name_or_path: <model_name1>['model']['model_name_or_path']
+    use_fast_tokenizer: False
+    use_vllm: True
+    dtype: bfloat16
+    use_native_chat_template: True
+    gpu_memory_utilization: 0.1
+
+pbsftmix_cite_normal_s60:
+  target_model:
+    model_name_or_path: <model_name1>['model']['model_name_or_path']
+    use_fast_tokenizer: False
+    use_vllm: True
+    dtype: bfloat16
+    use_native_chat_template: True
+    gpu_memory_utilization: 0.1
+
+pbsftmix_cite_normal_nbd_s0:
+  target_model:
+    model_name_or_path: <model_name1>['model']['model_name_or_path']
+    use_fast_tokenizer: False
+    use_vllm: True
+    dtype: bfloat16
+    use_native_chat_template: True
+    gpu_memory_utilization: 0.1
+
+pbsftmix_cite_normal_nbd_s5:
+  target_model:
+    model_name_or_path: <model_name1>['model']['model_name_or_path']
+    use_fast_tokenizer: False
+    use_vllm: True
+    dtype: bfloat16
+    use_native_chat_template: True
+    gpu_memory_utilization: 0.1
+
+pbsftmix_cite_normal_nbd_s10:
+  target_model:
+    model_name_or_path: <model_name1>['model']['model_name_or_path']
+    use_fast_tokenizer: False
+    use_vllm: True
+    dtype: bfloat16
+    use_native_chat_template: True
+    gpu_memory_utilization: 0.1
+
+pbsftmix_cite_normal_nbd_s30:
+  target_model:
+    model_name_or_path: <model_name1>['model']['model_name_or_path']
+    use_fast_tokenizer: False
+    use_vllm: True
+    dtype: bfloat16
+    use_native_chat_template: True
+    gpu_memory_utilization: 0.1
+
+pbsftmix_cite_normal_nbd_s60:
+  target_model:
+    model_name_or_path: <model_name1>['model']['model_name_or_path']
+    use_fast_tokenizer: False
+    use_vllm: True
+    dtype: bfloat16
+    use_native_chat_template: True
+    gpu_memory_utilization: 0.1
+
+pbsftmix_cite_epe_nobce_rendsel_s0:
+  target_model:
+    model_name_or_path: <model_name1>['model']['model_name_or_path']
+    use_fast_tokenizer: False
+    use_vllm: True
+    dtype: bfloat16
+    use_native_chat_template: True
+    gpu_memory_utilization: 0.1
+
+pbsftmix_cite_epe_nobce_rendsel_s5:
+  target_model:
+    model_name_or_path: <model_name1>['model']['model_name_or_path']
+    use_fast_tokenizer: False
+    use_vllm: True
+    dtype: bfloat16
+    use_native_chat_template: True
+    gpu_memory_utilization: 0.1
+
+pbsftmix_cite_epe_nobce_rendsel_s10:
+  target_model:
+    model_name_or_path: <model_name1>['model']['model_name_or_path']
+    use_fast_tokenizer: False
+    use_vllm: True
+    dtype: bfloat16
+    use_native_chat_template: True
+    gpu_memory_utilization: 0.1
+
+pbsftmix_cite_epe_nobce_rendsel_s30:
+  target_model:
+    model_name_or_path: <model_name1>['model']['model_name_or_path']
+    use_fast_tokenizer: False
+    use_vllm: True
+    dtype: bfloat16
+    use_native_chat_template: True
+    gpu_memory_utilization: 0.1
+
+pbsftmix_cite_epe_nobce_rendsel_s60:
+  target_model:
+    model_name_or_path: <model_name1>['model']['model_name_or_path']
+    use_fast_tokenizer: False
+    use_vllm: True
+    dtype: bfloat16
+    use_native_chat_template: True
+    gpu_memory_utilization: 0.1
+
+pbsftmix_cite_epe_nobce_s0:
+  target_model:
+    model_name_or_path: <model_name1>['model']['model_name_or_path']
+    use_fast_tokenizer: False
+    use_vllm: True
+    dtype: bfloat16
+    use_native_chat_template: True
+    gpu_memory_utilization: 0.1
+
+pbsftmix_cite_epe_nobce_s5:
+  target_model:
+    model_name_or_path: <model_name1>['model']['model_name_or_path']
+    use_fast_tokenizer: False
+    use_vllm: True
+    dtype: bfloat16
+    use_native_chat_template: True
+    gpu_memory_utilization: 0.1
+
+pbsftmix_cite_epe_nobce_s10:
+  target_model:
+    model_name_or_path: <model_name1>['model']['model_name_or_path']
+    use_fast_tokenizer: False
+    use_vllm: True
+    dtype: bfloat16
+    use_native_chat_template: True
+    gpu_memory_utilization: 0.1
+
+pbsftmix_cite_epe_nobce_s30:
+  target_model:
+    model_name_or_path: <model_name1>['model']['model_name_or_path']
+    use_fast_tokenizer: False
+    use_vllm: True
+    dtype: bfloat16
+    use_native_chat_template: True
+    gpu_memory_utilization: 0.1
+
+pbsftmix_cite_epe_nobce_s60:
+  target_model:
+    model_name_or_path: <model_name1>['model']['model_name_or_path']
+    use_fast_tokenizer: False
+    use_vllm: True
+    dtype: bfloat16
+    use_native_chat_template: True
+    gpu_memory_utilization: 0.1
+
+pbsftmix_cite_epe_nobce_rmid0_s0:
+  target_model:
+    model_name_or_path: <model_name1>['model']['model_name_or_path']
+    use_fast_tokenizer: False
+    use_vllm: True
+    dtype: bfloat16
+    use_native_chat_template: True
+    gpu_memory_utilization: 0.1
+
+pbsftmix_cite_epe_nobce_rmid0_s5:
+  target_model:
+    model_name_or_path: <model_name1>['model']['model_name_or_path']
+    use_fast_tokenizer: False
+    use_vllm: True
+    dtype: bfloat16
+    use_native_chat_template: True
+    gpu_memory_utilization: 0.1
+
+pbsftmix_cite_epe_nobce_rmid0_s10:
+  target_model:
+    model_name_or_path: <model_name1>['model']['model_name_or_path']
+    use_fast_tokenizer: False
+    use_vllm: True
+    dtype: bfloat16
+    use_native_chat_template: True
+    gpu_memory_utilization: 0.1
+
+pbsftmix_cite_epe_nobce_rmid0_s30:
+  target_model:
+    model_name_or_path: <model_name1>['model']['model_name_or_path']
+    use_fast_tokenizer: False
+    use_vllm: True
+    dtype: bfloat16
+    use_native_chat_template: True
+    gpu_memory_utilization: 0.1
+
+pbsftmix_cite_epe_nobce_rmid0_s60:
+  target_model:
+    model_name_or_path: <model_name1>['model']['model_name_or_path']
+    use_fast_tokenizer: False
+    use_vllm: True
+    dtype: bfloat16
+    use_native_chat_template: True
+    gpu_memory_utilization: 0.1
+
+pbsftmix_cite_epe_nobce_rref_rmid0_s0:
+  target_model:
+    model_name_or_path: <model_name1>['model']['model_name_or_path']
+    use_fast_tokenizer: False
+    use_vllm: True
+    dtype: bfloat16
+    use_native_chat_template: True
+    gpu_memory_utilization: 0.1
+
+pbsftmix_cite_epe_nobce_rref_rmid0_s5:
+  target_model:
+    model_name_or_path: <model_name1>['model']['model_name_or_path']
+    use_fast_tokenizer: False
+    use_vllm: True
+    dtype: bfloat16
+    use_native_chat_template: True
+    gpu_memory_utilization: 0.1
+
+pbsftmix_cite_epe_nobce_rref_rmid0_s10:
+  target_model:
+    model_name_or_path: <model_name1>['model']['model_name_or_path']
+    use_fast_tokenizer: False
+    use_vllm: True
+    dtype: bfloat16
+    use_native_chat_template: True
+    gpu_memory_utilization: 0.1
+
+pbsftmix_cite_epe_nobce_rref_rmid0_s30:
+  target_model:
+    model_name_or_path: <model_name1>['model']['model_name_or_path']
+    use_fast_tokenizer: False
+    use_vllm: True
+    dtype: bfloat16
+    use_native_chat_template: True
+    gpu_memory_utilization: 0.1
+
+pbsftmix_cite_epe_nobce_rref_rmid0_s60:
+  target_model:
+    model_name_or_path: <model_name1>['model']['model_name_or_path']
+    use_fast_tokenizer: False
+    use_vllm: True
+    dtype: bfloat16
+    use_native_chat_template: True
+    gpu_memory_utilization: 0.1
