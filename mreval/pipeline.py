@@ -65,8 +65,6 @@ async def run_pipeline(
     response_transform: ResponseTransform | None = None,
     partial_path: Path | None = None,
 ) -> PipelineResult:
-    import sys as _sys
-    print(f"[pipeline] run_pipeline ENTER n_prompts={len(prompts)} k={k} concurrency={concurrency}", file=_sys.stderr, flush=True)
     sem = asyncio.Semaphore(concurrency)
     meter = {"cur": 0, "max": 0}
     records: list[dict | None] = [None] * len(prompts)
@@ -74,13 +72,10 @@ async def run_pipeline(
     partial_lock: asyncio.Lock | None = None
     if partial_path is not None:
         partial_path = Path(partial_path)
-        print(f"[pipeline] partial_path mkdir+truncate: {partial_path}", file=_sys.stderr, flush=True)
         partial_path.parent.mkdir(parents=True, exist_ok=True)
         # Truncate stale partial from a previous failed run.
         partial_path.write_text("")
         partial_lock = asyncio.Lock()
-        print(f"[pipeline] partial_path ready", file=_sys.stderr, flush=True)
-    print(f"[pipeline] about to gather() {len(prompts)} handle_prompt tasks", file=_sys.stderr, flush=True)
 
     async def write_partial(p: dict, responses: Sequence[str]) -> None:
         if partial_path is None:
@@ -122,11 +117,7 @@ async def run_pipeline(
         # Generate from the model-facing rendered text (chat template applied),
         # but judge against the original request (`prompt`). They differ for
         # vLLM benches that pre-render; default `rendered` == `prompt`.
-        if i < 3:
-            print(f"[pipeline] handle_prompt[{i}] generate START", file=_sys.stderr, flush=True)
         responses = await generate(p.get("rendered") or p["prompt"])
-        if i < 3:
-            print(f"[pipeline] handle_prompt[{i}] generate DONE n={len(responses)}", file=_sys.stderr, flush=True)
         # Persist generations BEFORE judging — if judge raises later, the
         # sidecar survives and rejudge_from_partial can recover with no GPU.
         await write_partial(p, responses)
@@ -137,7 +128,6 @@ async def run_pipeline(
                       "source": p.get("source"), "samples": list(samples)}
 
     await asyncio.gather(*[handle_prompt(i, p) for i, p in enumerate(prompts)])
-    print(f"[pipeline] gather DONE", file=_sys.stderr, flush=True)
 
     res = PipelineResult(
         results=[r for r in records if r is not None],
