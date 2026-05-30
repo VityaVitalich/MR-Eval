@@ -4573,9 +4573,22 @@ function provCell(flat) {
   const bp = flat.by_provenance;
   if (!bp) return flat;
   const sub = bp[provKeyActive()];
-  if (!sub) return MISSING;
-  if (sub.legacy_flat) return flat;
-  return sub;
+  if (sub) {
+    if (sub.legacy_flat) return flat;
+    return sub;
+  }
+  // Single-provenance fallback: benches like PAIR (only temp-t1.0-k12) and
+  // FORTRESS (only temp-t0.7-k5) run under one fixed sampling, so they would
+  // always be MISSING under the default gpt-4o::greedy selector. If exactly
+  // one provenance exists, render it regardless — better than blanking the
+  // cell. Multi-provenance benches (StrongREJECT, AdvBench, JBB, …) still
+  // respect the selector so the user controls which they see.
+  const keys = Object.keys(bp);
+  if (keys.length === 1) {
+    const only = bp[keys[0]];
+    return only.legacy_flat ? flat : only;
+  }
+  return MISSING;
 }
 
 function _provSamples(mid, cellKey) {
