@@ -101,6 +101,12 @@ class VLLMEngine:
         from vllm import AsyncEngineArgs, AsyncLLMEngine  # lazy
 
         model = resolve_cached_hf_model_path(model)
+        # enforce_eager=True (skip CUDA graph capture) is a diagnostic toggle
+        # for a cluster-wide hang seen 2026-05-30 where vLLM stalls right after
+        # CUDA graph capture completes. Caller can override via engine_kwargs.
+        import os
+        eager_default = os.environ.get("MR_EVAL_VLLM_ENFORCE_EAGER", "1") == "1"
+        engine_kwargs.setdefault("enforce_eager", eager_default)
         args = AsyncEngineArgs(
             model=model,
             dtype=dtype,
