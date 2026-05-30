@@ -3560,6 +3560,22 @@ function renderDiag() {
   const slice = after.slice(start, start + DIAG_PAGE_SIZE);
   const dans_cat = DIAG.index?.dan_catalog || null;
 
+  // PAIR: group siblings by (goal, stream) so each card can show how the
+  // attacker's adversarial prompt evolved across iter 1→K within its stream
+  // (alongside what the target replied and what the judge scored at each step).
+  const pairStreams = (bench === 'pair')
+    ? after.reduce((acc, x) => {
+        const k = `${x.goal || ''}::${x.stream}`;
+        (acc[k] ||= []).push(x);
+        return acc;
+      }, {})
+    : null;
+  if (pairStreams) {
+    for (const k in pairStreams) {
+      pairStreams[k].sort((a, b) => (a.iteration ?? 0) - (b.iteration ?? 0));
+    }
+  }
+
   host.innerHTML = slice.map((it, idx) => {
     const globalIdx = start + idx + 1;
     const head = it.goal || it.prompt || it.qid || it.fact_id || it.quirk_id || it.doc_id || '(untitled)';
@@ -3617,6 +3633,27 @@ function renderDiag() {
       blocks.push(`<details open><summary>Adversarial prompt</summary><div class="blk">${escapeHtml(it.adv_prompt || '')}</div></details>`);
       blocks.push(`<div class="label">Response</div><div class="blk response">${escapeHtml(it.response)}</div>`);
       if (it.judge_raw) blocks.push(`<details><summary>Judge rationale</summary><div class="blk">${escapeHtml(it.judge_raw)}</div></details>`);
+      // Stream evolution: how the adversarial prompt was refined iter 1→K
+      // within this attempt's stream, with the target's response and the
+      // outer judge score at each step. Lets the reader follow the search
+      // rather than reading 12 independent rows for the same goal.
+      const streamKey = `${it.goal || ''}::${it.stream}`;
+      const stream = pairStreams ? pairStreams[streamKey] : null;
+      if (stream && stream.length > 1) {
+        const steps = stream.map((x, j) => {
+          const sc = (x.llm_score != null) ? x.llm_score : '–';
+          const scCls = (typeof x.llm_score === 'number' && x.llm_score >= 50) ? 'bad' : '';
+          const cur = (x.sample_idx === it.sample_idx) ? ' style="border-left:3px solid var(--accent);padding-left:8px;"' : '';
+          const strat = x.strategy ? ` · ${escapeHtml(x.strategy)}` : '';
+          const inner = (x.inner_signal != null) ? ` · inner=${x.inner_signal}` : '';
+          return `<div class="evo-step"${cur}>
+            <div class="label">iter ${x.iteration ?? j+1}${strat}${inner} · <span class="badge ${scCls}">judge ${sc}</span></div>
+            <details><summary>Adversarial prompt (iter ${x.iteration ?? j+1})</summary><div class="blk">${escapeHtml(x.adv_prompt || '')}</div></details>
+            <details><summary>Response (iter ${x.iteration ?? j+1})</summary><div class="blk response">${escapeHtml(x.response || '')}</div></details>
+          </div>`;
+        }).join('');
+        blocks.push(`<details><summary>Stream evolution · ${stream.length} iterations (stream ${it.stream ?? '?'})</summary>${steps}</details>`);
+      }
     } else if (bench === 'fortress') {
       const sub = it.risk_subdomain ? ` · ${escapeHtml(it.risk_subdomain)}` : '';
       blocks.push(`<div class="label">Goal${sub}</div><div class="blk">${escapeHtml(it.goal || '')}</div>`);
