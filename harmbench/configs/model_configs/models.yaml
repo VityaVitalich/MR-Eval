@@ -1656,3 +1656,43 @@ pbsftmix_cite_epe_nobce_rref_rmid0_s60:
     dtype: bfloat16
   num_gpus: 1
   model_type: open_source
+
+epe_1p_nobce_refbad_pbsft3_lr1e_4:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsft-cite-pb-300k-3c-nosys-epe-1p-smollm-1p7b-100B-no_bce-refl_bad-lr1e-4
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+epe_1p_nobce_refsafe_pbsft3_lr1e_4:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsft-cite-pb-300k-3c-nosys-epe-1p-smollm-1p7b-100B-no_bce-refl_safe-lr1e-4
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+epe_1p_nobce_refmask50_pbsft3_lr1e_4:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsft-cite-pb-300k-3c-nosys-epe-1p-smollm-1p7b-100B-no_bce-refl_randmask50-lr1e-4
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+epe_1p_nobce_refmask75_pbsft3_lr1e_4:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsft-cite-pb-300k-3c-nosys-epe-1p-smollm-1p7b-100B-no_bce-refl_randmask75-lr1e-4
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+feedback_cond_judge_pbsft3_lr1e_4:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsft-cite-pb-300k-3c-nosys-tok-epe-fc-smollm-1p7b-100B-jdg-lr1e-4
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
