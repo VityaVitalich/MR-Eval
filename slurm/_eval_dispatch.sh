@@ -49,13 +49,13 @@ _bench() { BENCH_GROUP[$1]=$2; BENCH_MTYPE[$1]=$3; BENCH_WORKDIR[$1]=$4; BENCH_E
 _bench eval_base       capability       base      eval          eval
 _bench safety_base     safety           base      safety_base   train
 _bench eval_sft        capability       instruct  eval          eval
-_bench jbb             safety           instruct  jbb           jbb
+_bench jbb             safety           instruct  jbb           train
 _bench dan             safety           instruct  jailbreaks    train
 _bench advbench        safety           instruct  jailbreaks    train
 _bench pap             safety           instruct  jailbreaks    train
 _bench strongreject    safety           instruct  jailbreaks    train
 _bench fortress        safety           instruct  jailbreaks    train
-_bench pair            safety           instruct  jailbreaks    train
+_bench pair            safety           instruct  jailbreaks    harmbench
 _bench em              safety           instruct  em            train
 _bench airisk          safety           instruct  airisk        train
 _bench pez             safety           instruct  harmbench     harmbench
