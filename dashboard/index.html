@@ -2400,6 +2400,15 @@ const ABL_PCTS = [0, 5, 10, 30, 60];
 
 const ABL_BENCHES = [
   {key:'jbb_overall',  label:'JBB (overall)', get:(mid, md) => provValue(mid, 'jbb',          md.jbb,          () => resolveJbb(md)?.overall ?? null)},
+  // JBB per-attack splits — same `provJbbMethod` accessor the Safety table
+  // uses; multi-select these in the Ablations Y-axis dropdown to compare
+  // safety-% sensitivity across attack methods.
+  {key:'jbb_DSN',      label:'JBB · DSN',          get:(mid, md) => provJbbMethod(mid, md.jbb, 'DSN',                       () => resolveJbb(md)?.per?.DSN ?? null)},
+  {key:'jbb_GCG',      label:'JBB · GCG',          get:(mid, md) => provJbbMethod(mid, md.jbb, 'GCG',                       () => resolveJbb(md)?.per?.GCG ?? null)},
+  {key:'jbb_JBC',      label:'JBB · JBC',          get:(mid, md) => provJbbMethod(mid, md.jbb, 'JBC',                       () => resolveJbb(md)?.per?.JBC ?? null)},
+  {key:'jbb_PAIR',     label:'JBB · PAIR',         get:(mid, md) => provJbbMethod(mid, md.jbb, 'PAIR',                      () => resolveJbb(md)?.per?.PAIR ?? null)},
+  {key:'jbb_RS',       label:'JBB · random_search',get:(mid, md) => provJbbMethod(mid, md.jbb, 'prompt_with_random_search', () => resolveJbb(md)?.per?.random_search ?? null)},
+  {key:'jbb_direct',   label:'JBB · direct',       get:(mid, md) => provJbbMethod(mid, md.jbb, 'direct',                    () => resolveJbb(md)?.per?.direct ?? null)},
   {key:'advbench',     label:'AdvBench',      get:(mid, md) => provValue(mid, 'advbench',     md.advbench,     () => pickASR(md.advbench, 'llm_asr'))},
   {key:'dans',         label:'DANs',          get:(mid, md) => provValue(mid, 'dans',         md.dans,         () => pickASR(md.dans, 'overall_llm_asr'))},
   {key:'pap',          label:'PAP',           get:(mid, md) => provValue(mid, 'pap',          md.pap,          () => pickASR(md.pap, 'overall_llm_asr'))},
