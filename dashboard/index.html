@@ -2054,9 +2054,12 @@ function renderSafety(data) {
         // StrongREJECT is a pure by_provenance cell (no legacy flat fields):
         // it renders only under the provenance(s) it was run on, else blank.
         strongreject: provValue(m.id, 'strongreject', md.strongreject, () => null),
-        // PAIR-on-JBB: same by_provenance shape. ASR = best-of-K per goal
-        // (K = n_streams × n_iterations) under the active rule judge.
-        pair:         provValue(m.id, 'pair',         md.pair,         () => null),
+        // PAIR is a technique with fixed sampling (always temp-t1.0-k12 — 3
+        // streams × 4 iterations is part of the algorithm, not a user choice).
+        // Look up under the active judge but with PAIR's native sampling, so
+        // PAIR cells stay populated when the user picks any other sampling
+        // for the rest of the row. Judge selector still applies strictly.
+        pair:         provValueFixedSampling(m.id, 'pair',     md.pair,     'temp-t1.0-k12'),
         // FORTRESS: per-prompt LLM-as-judge ASR on the public risk-subdomain set.
         fortress:     provValue(m.id, 'fortress',     md.fortress,     () => null),
         // EM uses its own (independent) judge; gate on its judge_version
@@ -2402,7 +2405,10 @@ const ABL_BENCHES = [
   {key:'pap',          label:'PAP',           get:(mid, md) => provValue(mid, 'pap',          md.pap,          () => pickASR(md.pap, 'overall_llm_asr'))},
   {key:'pez',          label:'PEZ',           get:(mid, md) => provValue(mid, 'pez',          md.pez,          () => pickScore(md.pez, 'asr'))},
   {key:'strongreject', label:'StrongREJECT',  get:(mid, md) => provValue(mid, 'strongreject', md.strongreject, () => null)},
-  {key:'pair',         label:'PAIR',          get:(mid, md) => provValue(mid, 'pair',         md.pair,         () => null)},
+  // PAIR is technique-fixed sampling (always temp-t1.0-k12); judge selector
+  // still applies strictly so picking gpt-4o blanks PAIR for models PAIR was
+  // never scored by gpt-4o on.
+  {key:'pair',         label:'PAIR',          get:(mid, md) => provValueFixedSampling(mid, 'pair', md.pair, 'temp-t1.0-k12')},
   {key:'fortress',     label:'FORTRESS',      get:(mid, md) => provValue(mid, 'fortress',     md.fortress,     () => null)},
 ];
 
@@ -4803,10 +4809,7 @@ function enumerateProvenances(data) {
 function provCell(flat) {
   // Strict provenance lookup: if the (judge, sampling) the user selected has
   // no data on this cell, render MISSING — never silently substitute another
-  // provenance's data. Showing deepseek scores under a gpt-4o selector (or
-  // t=1.0/k=12 scores under a t=0.7/k=5 selector) is misleading because the
-  // reader cannot tell which scoring run produced the number. See AGENTS.md
-  // "No provenance fallbacks".
+  // provenance's data. See AGENTS.md "No provenance fallbacks".
   if (!flat) return flat;
   const bp = flat.by_provenance;
   if (!bp) return flat;
@@ -4814,6 +4817,28 @@ function provCell(flat) {
   if (!sub) return MISSING;
   if (sub.legacy_flat) return flat;
   return sub;
+}
+
+// Variant for benches whose sampling is fixed by the technique (PAIR is
+// always `temp-t1.0-k12`: 3 streams × 4 iterations with t=1 is part of the
+// algorithm, not a user-configurable knob). The JUDGE selector still applies
+// strictly — picking gpt-4o correctly returns MISSING for cells PAIR was
+// never scored under gpt-4o on. Only the sampling is bypassed.
+function provCellFixedSampling(flat, samplingId) {
+  if (!flat) return flat;
+  const bp = flat.by_provenance;
+  if (!bp) return flat;
+  const sub = bp[activeProvJudge + '::' + samplingId];
+  if (!sub) return MISSING;
+  if (sub.legacy_flat) return flat;
+  return sub;
+}
+
+function provValueFixedSampling(mid, cellKey, flat, samplingId) {
+  const c = provCellFixedSampling(flat, samplingId);
+  if (c === MISSING) return MISSING;
+  if (c === flat) return null;       // no legacy form for technique-fixed benches
+  return subcellASR(mid, cellKey, c);
 }
 
 function _provSamples(mid, cellKey) {
