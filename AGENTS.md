@@ -551,6 +551,20 @@ stamp. `safety_base/run_eval.py` is the canonical example.
 
 - Don't run cluster jobs without explicit per-submission authorization
   (see "Two clusters, mirrored layouts" above).
+- **Never delete anything on Clariden.** Files under
+  `/capstor/store/cscs/swissai/a141/mr_evals_vvm/...` and
+  `/users/.../MR-Eval/...` on Clariden are the canonical archive — they
+  survive local mistakes and there is no Trash, no recycle bin, and no
+  user-visible `.snapshot` on `/capstor`. When the user says "remove the
+  buggy file" or "wipe these runs", interpret that as "remove from the
+  local mirror only" and leave Clariden untouched. If the local mirror
+  needs the data back, a re-sync from Clariden is one rsync away. If
+  Clariden is wiped, the eval has to be re-run. Mass deletes by pattern
+  (`rm -rf` across many runs / models) require explicit per-session
+  confirmation even locally — a previous "delete X" does **not**
+  authorize a later different deletion. 2026-06-01 incident: 73 Clariden
+  StrongREJECT t=1.0/k=10 run dirs were wiped before the user could say
+  "wait, keep those" — the data was unrecoverable. Don't repeat.
 - Don't commit anything under `outputs/`, `logs/`, `wandb/`, or `dashboard/data.json` / `dashboard/diagnostics/`.
 - Don't change `LogprobJudge` scoring or the `metadata`/`results` JSON shape without a deliberate plan to re-run the affected baselines.
 - Don't merge the math and Hydra eval containers.
