@@ -551,6 +551,22 @@ stamp. `safety_base/run_eval.py` is the canonical example.
 
 - Don't run cluster jobs without explicit per-submission authorization
   (see "Two clusters, mirrored layouts" above).
+- **Never add a "convenience" provenance fallback to the dashboard.**
+  Every safety cell renders under an explicit `(judge × sampling × aggregation)`
+  selector. If the active provenance has no data for a given model+bench,
+  render MISSING — do not fall back to "the only other provenance available"
+  or "the closest sampling under the same judge". The reader sees the
+  selector label at the top of the page and reasonably assumes every number
+  below it was produced by that exact run. Silently substituting a
+  different-judge or different-sampling cell makes the dashboard lie about
+  which evaluation produced the score, and there is no in-cell signal the
+  reader can use to detect the swap. If a bench only runs under one
+  sampling (PAIR is always `temp-t1.0-k12`), it shows up only when the
+  user picks that sampling — that's the correct behavior. 2026-06-01
+  incident: added a "single-provenance auto-show" to `provCell` so PAIR
+  would appear under the gpt-4o default; this caused the Ablations chart
+  to display deepseek-scored data when the user picked gpt-4o, and was
+  removed. Don't reintroduce it under any naming or scope.
 - **Never delete anything on Clariden.** Files under
   `/capstor/store/cscs/swissai/a141/mr_evals_vvm/...` and
   `/users/.../MR-Eval/...` on Clariden are the canonical archive — they
