@@ -4764,8 +4764,8 @@ let asrThreshold = 50;
 // pre-3c behavior exactly: provCell() returns the flat cell, so every existing
 // accessor (pickASR/pickScore honoring activeJudge + threshold) runs unchanged.
 // A selected (judge×sampling) with no cell here → MISSING (rendered blank).
-let activeProvJudge = 'gpt-4o';
-let activeProvSampling = 'greedy';
+let activeProvJudge = 'deepseek-v4-flash';
+let activeProvSampling = 'temp-t0.7-k5';
 let activeAgg = 'worst';               // worst | mean | count
 const PROV_CELL_KEYS = ['jbb', 'advbench', 'dans', 'pap', 'pez', 'strongreject', 'pair', 'ablit', 'tmplabl'];
 
@@ -4801,26 +4801,19 @@ function enumerateProvenances(data) {
 //   - a present new-provenance subcell         → the subcell
 //   - this (judge×sampling) absent here        → MISSING (blank)
 function provCell(flat) {
+  // Strict provenance lookup: if the (judge, sampling) the user selected has
+  // no data on this cell, render MISSING — never silently substitute another
+  // provenance's data. Showing deepseek scores under a gpt-4o selector (or
+  // t=1.0/k=12 scores under a t=0.7/k=5 selector) is misleading because the
+  // reader cannot tell which scoring run produced the number. See AGENTS.md
+  // "No provenance fallbacks".
   if (!flat) return flat;
   const bp = flat.by_provenance;
   if (!bp) return flat;
   const sub = bp[provKeyActive()];
-  if (sub) {
-    if (sub.legacy_flat) return flat;
-    return sub;
-  }
-  // Single-provenance fallback: benches like PAIR (only temp-t1.0-k12) and
-  // FORTRESS (only temp-t0.7-k5) run under one fixed sampling, so they would
-  // always be MISSING under the default gpt-4o::greedy selector. If exactly
-  // one provenance exists, render it regardless — better than blanking the
-  // cell. Multi-provenance benches (StrongREJECT, AdvBench, JBB, …) still
-  // respect the selector so the user controls which they see.
-  const keys = Object.keys(bp);
-  if (keys.length === 1) {
-    const only = bp[keys[0]];
-    return only.legacy_flat ? flat : only;
-  }
-  return MISSING;
+  if (!sub) return MISSING;
+  if (sub.legacy_flat) return flat;
+  return sub;
 }
 
 function _provSamples(mid, cellKey) {
@@ -4988,10 +4981,13 @@ function setupProvenanceSelectors(data) {
     }
   };
   // Always offer the legacy provenance even if a model lacks new cells.
-  fill(jsel, judges.length ? judges : ['gpt-4o'], 'gpt-4o');
-  fill(ssel, samplings.length ? samplings : ['greedy'], 'greedy');
-  activeProvJudge = jsel.value || 'gpt-4o';
-  activeProvSampling = ssel.value || 'greedy';
+  // Default to the canonical generational-eval setting (deepseek + k=5, t=0.7);
+  // legacy (gpt-4o, greedy) cells still render under that selector and fall
+  // back via provCell's single-provenance auto-show for single-sampling benches.
+  fill(jsel, judges.length ? judges : ['deepseek-v4-flash'], 'deepseek-v4-flash');
+  fill(ssel, samplings.length ? samplings : ['temp-t0.7-k5'], 'temp-t0.7-k5');
+  activeProvJudge = jsel.value || 'deepseek-v4-flash';
+  activeProvSampling = ssel.value || 'temp-t0.7-k5';
   activeAgg = asel.value || 'worst';
 
   // greedy (k=1) collapses every aggregation to the single score → disable.
