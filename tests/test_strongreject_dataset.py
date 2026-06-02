@@ -9,12 +9,28 @@ import sys
 from pathlib import Path
 
 import pytest
-from omegaconf import OmegaConf
 
+# The dep-light CI env (uv sync --extra dev = pytest + pyyaml + huggingface-hub)
+# ships neither omegaconf nor the hydra/pandas/runner_core stack that
+# run_strongreject_eval pulls in. Skip the whole module cleanly there instead
+# of crashing collection — same convention as the torch stub/skip in
+# test_orthogonalize.py and the slow-test gating.
+#
+# NB: importorskip("omegaconf") is NOT enough — under pytest's import machinery
+# a bare `import omegaconf` resolves to an empty namespace package ("unknown
+# location") rather than raising, so the guard has to catch the ImportError on
+# the actual symbol import below.
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "jailbreaks"))
 
-from common import load_strongreject  # noqa: E402
-from run_strongreject_eval import build_strongreject_prompts  # noqa: E402
+try:
+    from omegaconf import OmegaConf
+    from common import load_strongreject
+    from run_strongreject_eval import build_strongreject_prompts
+except ImportError:
+    pytest.skip(
+        "requires omegaconf + the jailbreaks eval stack (absent in dep-light CI)",
+        allow_module_level=True,
+    )
 
 EXPECTED_COLS = ["category", "source", "forbidden_prompt"]
 

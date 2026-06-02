@@ -176,7 +176,11 @@ def test_pair_config_loads_clean(monkeypatch):
     monkeypatch.setenv("MR_EVAL_REPO_ROOT", str(REPO_ROOT))
     monkeypatch.setenv("MR_EVAL_DATA_DIR", str(REPO_ROOT))
 
-    from hydra import compose, initialize_config_dir
+    # hydra isn't in the dep-light CI env; skip cleanly there rather than error.
+    try:
+        from hydra import compose, initialize_config_dir
+    except ImportError:
+        pytest.skip("requires hydra (absent in dep-light CI)")
     with initialize_config_dir(
         version_base=None,
         config_dir=str(REPO_ROOT / "jailbreaks" / "conf"),
