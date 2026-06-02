@@ -1,0 +1,36 @@
+# GCG (Zou et al., 2023) suffix optimization config. This entrypoint does NOT
+# use the vLLM fused pipeline or any LLM judge, so it intentionally does not
+# compose conf/base.yaml — only the optimizer hyper-parameters + the target
+# model + the AdvBench subset size live here. The produced suffixes.jsonl is
+# read back by run_gcg_eval.py.
+
+defaults:
+  - _self_
+
+model:
+  # Stamped as the JSONL `source` field and as the output sub-directory name.
+  name: null
+  pretrained: ???        # registry-resolved path or HF id
+  dtype: bfloat16
+  trust_remote_code: true
+
+optimize:
+  # Number of AdvBench goals (from harmful_behaviors.csv) to optimize against.
+  # 25 matches the paper's multi-behavior default; the full set is 520.
+  n_goals: 25
+
+  # nanogcg hyper-parameters. The paper uses num_steps=500, search_width=512,
+  # topk=256. We halve the steps + search_width by default to keep a 4h SLURM
+  # budget realistic; override per-run when you have GPU time.
+  num_steps: 250
+  search_width: 256
+  topk: 128
+  seed: 20
+  verbosity: WARNING     # nanogcg's logging level (CRITICAL|ERROR|WARNING|INFO|DEBUG)
+
+output_dir: "${oc.env:MR_EVAL_DATA_DIR,/capstor/store/cscs/swissai/a141/mr_evals_vvm}/outputs/jailbreaks/gcg_optimize"
+
+# load_behaviors() honors these for smoke tests; testing_limit caps n_goals
+# implicitly because behaviors is truncated before the head(n_goals) slice.
+testing: false
+testing_limit: 3

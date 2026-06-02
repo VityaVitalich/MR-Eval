@@ -79,7 +79,60 @@ Uses `train.toml` (the `lorentz-forcing` image) — vLLM is already there, same 
 
 ---
 
-*GCG adversarial suffix attacks will be added here once the baseline is established.*
+## GCG (Greedy Coordinate Gradient)
+
+**Paper:** [Universal and Transferable Adversarial Attacks on Aligned Language Models](https://arxiv.org/abs/2307.15043) (Zou et al., 2023)
+**Optimizer backend:** [`nanogcg`](https://github.com/GraySwanAI/nanoGCG) — the modern, tokenizer-generic reimplementation recommended by the original llm-attacks README. Installed at run time by the SLURM wrapper.
+**Vendored paper code:** [`llm-attacks/`](llm-attacks/) — kept for reference; not invoked.
+
+### What this measures
+
+GCG appends an optimized adversarial suffix to each AdvBench `goal` (so the model's user message is `goal + " " + adv_suffix`). The harmful goal is the judge request; the suffix is the attack. **ASR is reported the same way as AdvBench/PAP** — the unified rule judge plus the per-sample keyword signals (refusal-prefix + AdvBench target-match), aggregated worst-of-k over the k=10 sampling default. The optimization is done once per `(target_model, goal)` pair; this eval just consumes the resulting suffixes.
+
+The eval phase runs through the same vLLM fused pipeline as PAP, so adding suffixes is essentially free once they exist. The expensive part is suffix generation.
+
+### Two tracks
+
+| Track | Where suffixes come from | When to use |
+|---|---|---|
+| **Transfer** | One vendored JSONL ([`data/gcg/transfer_default.jsonl`](data/gcg/transfer_default.jsonl)), optimized once against a strong source model (e.g. Llama-2-7b-chat). Reused across every checkpoint. | The default. Joins the `--safety` matrix automatically. |
+| **Per-model** | Fresh nanogcg optimization against the target checkpoint itself, then eval. | Stronger ASR signal on individual checkpoints; expensive (~hours/GPU/model). |
+
+### Quick Start — transfer track
+
+```bash
+# Smoke test locally (3 placeholder rows from the shipped JSONL)
+cd jailbreaks && python run_gcg_eval.py testing=true
+
+# Full SLURM run with the default suffixes
+cd jailbreaks && sbatch --environment="$(bash ../slurm/_resolve_env_toml.sh train)" \
+                        slurm/eval_gcg.sh baseline_sft --judge deepseek
+
+# Suite dispatch (gcg now lives in the safety group)
+bash slurm/submit_posttrain_evals.sh --model baseline_sft --only gcg
+```
+
+The shipped `data/gcg/transfer_default.jsonl` is a placeholder — see [`data/gcg/README.md`](data/gcg/README.md) for the one-line regeneration recipe (one SLURM job against Llama-2-7b-chat, ~4h, ~5KB artifact).
+
+### Quick Start — per-model track
+
+```bash
+# Login-node helper: submits optimize -> eval chained via afterok
+cd jailbreaks && bash slurm/run_gcg_per_model.sh baseline_sft
+
+# Curated short-list recommendation
+for alias in baseline_sft baseline_filtered_sft safelm_sft epe_1p_nobce_sft; do
+  bash slurm/run_gcg_per_model.sh "$alias"
+done
+```
+
+The optimizer writes `$MR_EVAL_DATA_DIR/outputs/jailbreaks/gcg_optimize/<alias>/{suffixes.jsonl, metadata.json}` and the chained eval picks it up automatically via `--gcg-file`.
+
+### Container
+
+Uses `train.toml` for both phases. The optimize SLURM script runs `pip install -q nanogcg` at startup (per `AGENTS.md`: eval-only dependencies install at run time rather than triggering an image rebuild).
+
+---
 
 ## StrongREJECT
 

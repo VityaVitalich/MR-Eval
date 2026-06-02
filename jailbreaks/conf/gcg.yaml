@@ -1,0 +1,39 @@
+# GCG (Zou et al., 2023 — arXiv:2307.15043) jailbreak eval. Composes the shared
+# root config (conf/base.yaml) via the searchpath; judge spec from the `judge`
+# group. Generation + judging run through the unified vLLM fused pipeline. The
+# adversarial suffixes themselves are pre-optimized by run_gcg_optimize.py
+# (HF + nanogcg) and written into ``gcg_file`` — this eval is suffix-agnostic.
+defaults:
+  - base
+  - judge: gpt4o
+  - _self_
+
+hydra:
+  searchpath:
+    - file://${oc.env:MR_EVAL_REPO_ROOT}/conf
+
+model:
+  name: null
+  pretrained: alpindale/Llama-3.2-1B-Instruct
+  dtype: bfloat16
+
+# Suffix JSONL. Default = vendored transfer suffixes (optimized once against a
+# strong source model, reused across every target checkpoint). The per-model
+# fresh-suffix flow points this at $MR_EVAL_DATA_DIR/outputs/jailbreaks/
+# gcg_optimize/<alias>/suffixes.jsonl via --gcg-file.
+gcg_file: data/gcg/transfer_default.jsonl
+case_limit: null
+
+max_new_tokens: 300
+max_model_len: 2048
+tensor_parallel_size: 1
+
+# prompt_format: chat_template (default) | tmplabl (5-shot User/Assistant scaffold)
+prompt_format: chat_template
+# Override the model-name component in the output filename (ablation launchers).
+run_tag: null
+
+output_dir: "${oc.env:MR_EVAL_DATA_DIR,/capstor/store/cscs/swissai/a141/mr_evals_vvm}/outputs/jailbreaks/gcg_transfer"
+
+testing: false
+testing_limit: 10

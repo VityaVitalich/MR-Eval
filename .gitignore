@@ -222,3 +222,7 @@ __marimo__/
 
 # Claude Code session state (worktrees etc.)
 .claude/
+
+# Upstream GCG reference repo (cloned locally for reference; superseded by the
+# nanogcg backend in run_gcg_optimize.py — not vendored into this repo).
+jailbreaks/llm-attacks/

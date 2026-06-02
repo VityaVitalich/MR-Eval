@@ -1,0 +1,11 @@
+# Jailbreaks-component extras. The base train.toml container already carries
+# torch + transformers + vLLM + datasets + loguru + hydra + omegaconf, which
+# cover every eval entrypoint here (AdvBench, PAP, DAN, FORTRESS, StrongREJECT).
+# Anything listed below is something the container does NOT ship — install at
+# run time via the matching SLURM script (per AGENTS.md: don't rebuild images
+# for eval-only dependencies).
+
+# GCG optimization backend. Modern reimplementation of Zou et al. 2023,
+# tokenizer-generic (works on the SmolLM/EPE family, unlike the paper's
+# original llm-attacks code). Installed by slurm/optimize_gcg.sh at run time.
+nanogcg>=0.3.0
