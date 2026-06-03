@@ -177,6 +177,16 @@ sync_dir "clariden jailbreaks → logs/clariden/jailbreaks/"  "${CLARIDEN_DATA_D
 sync_dir "clariden PEZ        → logs/clariden/pez/"          "${CLARIDEN_DATA_DIR}/logs/clariden/pez"         "$LOCAL_LOGS/clariden/pez"         "$CLARIDEN_HOST"
 sync_dir "clariden canaries   → logs/clariden/canaries/"     "${CLARIDEN_DATA_DIR}/logs/clariden/canaries"    "$LOCAL_LOGS/clariden/canaries"    "$CLARIDEN_HOST"
 sync_dir "clariden overrefusal → logs/clariden/overrefusal/"  "${CLARIDEN_DATA_DIR}/logs/clariden/overrefusal" "$LOCAL_LOGS/clariden/overrefusal" "$CLARIDEN_HOST"
+# airisk writes only to the fresh Hydra location ($MR_EVAL_DATA_DIR/outputs/airisk);
+# no legacy logs/clariden/airisk migration exists, so pull outputs/ directly.
+sync_dir "clariden airisk     → outputs/airisk/"           "${CLARIDEN_DATA_DIR}/outputs/airisk"            "$LOCAL_OUTPUTS/airisk"            "$CLARIDEN_HOST"
+
+# Jailbreaks suite (pair / strongreject / fortress / advbench / dan / pap) writes
+# to the fresh Hydra location $MR_EVAL_DATA_DIR/outputs/jailbreaks/<bench>, which
+# is what dashboard/build_data.py reads — it is NOT migrated to logs/clariden — so
+# pull it directly, else sync→build→deploy silently drops clariden-run jailbreak
+# evals (e.g. the PAIR safety-% grid).
+sync_dir "clariden jailbreaks out → outputs/jailbreaks/"   "${CLARIDEN_DATA_DIR}/outputs/jailbreaks"        "$LOCAL_OUTPUTS/jailbreaks"        "$CLARIDEN_HOST"
 
 # JBB collection:
 #   - jbb_all_<model>_*/summary.{json,csv} (aggregate per-method ASR)
