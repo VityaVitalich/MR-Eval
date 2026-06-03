@@ -36,6 +36,20 @@ target:
   backend: vllm              # vllm | hf | server
   max_new_tokens: 256        # PAIR's --target-max-n-tokens
 
+# Provenance LABEL only — does NOT change generation. run_pair_eval.py never
+# passes a target temperature to the PAIR subprocess; the vendored loop uses
+# PAIR/config.py ATTACK_TEMP=1 (attacker) and TARGET_TEMP=0 (greedy target).
+# mreval.sampling.sampling_id stamps the outer-rejudge file as
+# `temp-t{temperature}-k{num_samples}`, so pin temperature=1.0 to land on
+# `deepseek-v4-flash::temp-t1.0-k12` — the fixed id the dashboard looks PAIR up
+# under and that all existing completed PAIR runs use. Without this override
+# PAIR inherits conf/base.yaml's generational decoding.temperature=0.7 and the
+# run is mislabeled `temp-t0.7-k12`, hiding it from the dashboard's PAIR column.
+decoding:
+  strategy: sampled
+  temperature: 1.0
+  top_p: 1.0
+
 # Attacker (locally-hosted via a separate `vllm serve` process on its own
 # GPU group; the slurm script in slurm/eval_pair.sh boots it before this
 # wrapper runs).
