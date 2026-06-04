@@ -2516,7 +2516,7 @@ function renderAblations(data) {
         interaction: { intersect: false, mode: 'nearest', axis: 'x' },
         scales: {
           x: { type: 'linear', ticks: { color: '#4b5563', stepSize: 5, callback: v => v + '%' }, grid: { color: '#e3e6eb' }, title: { display: true, text: 'safety data %', color: '#6b7280' } },
-          y: { ticks: { color: '#4b5563', callback: v => v + '%' }, grid: { color: '#e3e6eb' }, beginAtZero: true, title: { display: true, text: 'ASR (mean over selected benches)', color: '#6b7280' } },
+          y: { ticks: { color: '#4b5563', callback: v => v + '%' }, grid: { color: '#e3e6eb' }, beginAtZero: false, grace: '5%', title: { display: true, text: 'ASR (mean over selected benches)', color: '#6b7280' } },
         },
         plugins: {
           legend: { labels: { color: '#1a1d23', font: { size: 12 }, boxWidth: 14 } },
