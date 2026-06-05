@@ -1657,6 +1657,169 @@ pbsftmix_cite_epe_nobce_rref_rmid0_s60:
   num_gpus: 1
   model_type: open_source
 
+# ===================== pbsftmix template-token ablations (lr 1e-4, defnosys: default template token) ===================== #
+# Chat template (default-nosys) is resolved from model_registry.sh via mr_eval_setup_chat_template.
+
+pbsftmix_orig_normal_def_s0:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-orig-safety0-defnosys-normal
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_orig_normal_def_s5:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-orig-safety5-defnosys-normal
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_orig_normal_def_s10:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-orig-safety10-defnosys-normal
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_orig_normal_def_s30:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-orig-safety30-defnosys-normal
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_orig_normal_def_s60:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-orig-safety60-defnosys-normal
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_orig_epe_nobce_def_s0:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-orig-safety0-defnosys-epe-nobce
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_orig_epe_nobce_def_s5:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-orig-safety5-defnosys-epe-nobce
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_orig_epe_nobce_def_s10:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-orig-safety10-defnosys-epe-nobce
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_orig_epe_nobce_def_s30:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-orig-safety30-defnosys-epe-nobce
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_orig_epe_nobce_def_s60:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-orig-safety60-defnosys-epe-nobce
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_cite_normal_def_s0:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-cite-safety0-defnosys-normal
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_cite_normal_def_s5:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-cite-safety5-defnosys-normal
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_cite_normal_def_s10:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-cite-safety10-defnosys-normal
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_cite_normal_def_s30:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-cite-safety30-defnosys-normal
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_cite_normal_def_s60:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-cite-safety60-defnosys-normal
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_cite_epe_nobce_def_s0:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-cite-safety0-defnosys-epe-nobce
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_cite_epe_nobce_def_s5:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-cite-safety5-defnosys-epe-nobce
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_cite_epe_nobce_def_s10:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-cite-safety10-defnosys-epe-nobce
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_cite_epe_nobce_def_s30:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-cite-safety30-defnosys-epe-nobce
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_cite_epe_nobce_def_s60:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-cite-safety60-defnosys-epe-nobce
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
 epe_1p_nobce_refbad_pbsft3_lr1e_4:
   model:
     model_name_or_path: Raghav-Singhal/pbsft-cite-pb-300k-3c-nosys-epe-1p-smollm-1p7b-100B-no_bce-refl_bad-lr1e-4

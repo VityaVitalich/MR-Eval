@@ -1427,7 +1427,9 @@ mr_eval_register_model \
   --chat-template epe-template-nosys
 
 
-### 2026-05-29: pbsftmix safety-% ablations (orig text, lr 1e-4, no system prompt)
+### 2026-05-29: pbsftmix safety-% ablations (orig text, epe template token, lr 1e-4, no system prompt)
+# Template-token study counterparts (default template token) live in the
+# 2026-06-05 defnosys section below.
 
 mr_eval_register_model \
   --alias pbsftmix_orig_normal_s0 \
@@ -1639,7 +1641,9 @@ mr_eval_register_model \
   --jbb-config generic_instruct \
   --chat-template epe-template-nosys
 
-### 2026-05-29: pbsftmix safety-% ablations (rewritten text w/ citations, lr 1e-4, no system prompt)
+### 2026-05-29: pbsftmix safety-% ablations (rewritten text w/ citations, epe template token, lr 1e-4, no system prompt)
+# Template-token study counterparts (default template token) live in the
+# 2026-06-05 defnosys section below.
 
 mr_eval_register_model \
   --alias pbsftmix_cite_normal_s0 \
@@ -1850,6 +1854,155 @@ mr_eval_register_model \
   --description "pbsftmix cite, EPE 1P no BCE, refls with refusals + token 0 + mid-training, 60% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
   --jbb-config generic_instruct \
   --chat-template epe-template-nosys
+
+### 2026-06-05: pbsftmix template-token ablations (defnosys: default template token, lr 1e-4, no system prompt)
+#
+# Studies the effect of the assistant template token: same pbsftmix safety-%
+# sweeps as the 2026-05-29 sections above, but SFT'd with the DEFAULT template
+# token instead of the epe one. The epe-template-nosys counterparts are the
+# pbsftmix_{orig,cite}_{normal,epe_nobce}_sN aliases above; these defnosys
+# repos pair with --chat-template default-nosys (shipped in each repo's
+# additional_chat_templates/default-nosys.jinja).
+
+mr_eval_register_model \
+  --alias pbsftmix_orig_normal_def_s0 \
+  --pretrained Raghav-Singhal/pbsftmix-orig-safety0-defnosys-normal \
+  --description "pbsftmix orig, normal, default template token, 0% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template default-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_orig_normal_def_s5 \
+  --pretrained Raghav-Singhal/pbsftmix-orig-safety5-defnosys-normal \
+  --description "pbsftmix orig, normal, default template token, 5% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template default-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_orig_normal_def_s10 \
+  --pretrained Raghav-Singhal/pbsftmix-orig-safety10-defnosys-normal \
+  --description "pbsftmix orig, normal, default template token, 10% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template default-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_orig_normal_def_s30 \
+  --pretrained Raghav-Singhal/pbsftmix-orig-safety30-defnosys-normal \
+  --description "pbsftmix orig, normal, default template token, 30% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template default-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_orig_normal_def_s60 \
+  --pretrained Raghav-Singhal/pbsftmix-orig-safety60-defnosys-normal \
+  --description "pbsftmix orig, normal, default template token, 60% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template default-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_orig_epe_nobce_def_s0 \
+  --pretrained Raghav-Singhal/pbsftmix-orig-safety0-defnosys-epe-nobce \
+  --description "pbsftmix orig, EPE 1P no BCE, default template token, 0% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template default-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_orig_epe_nobce_def_s5 \
+  --pretrained Raghav-Singhal/pbsftmix-orig-safety5-defnosys-epe-nobce \
+  --description "pbsftmix orig, EPE 1P no BCE, default template token, 5% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template default-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_orig_epe_nobce_def_s10 \
+  --pretrained Raghav-Singhal/pbsftmix-orig-safety10-defnosys-epe-nobce \
+  --description "pbsftmix orig, EPE 1P no BCE, default template token, 10% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template default-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_orig_epe_nobce_def_s30 \
+  --pretrained Raghav-Singhal/pbsftmix-orig-safety30-defnosys-epe-nobce \
+  --description "pbsftmix orig, EPE 1P no BCE, default template token, 30% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template default-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_orig_epe_nobce_def_s60 \
+  --pretrained Raghav-Singhal/pbsftmix-orig-safety60-defnosys-epe-nobce \
+  --description "pbsftmix orig, EPE 1P no BCE, default template token, 60% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template default-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_normal_def_s0 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety0-defnosys-normal \
+  --description "pbsftmix cite, normal, default template token, 0% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template default-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_normal_def_s5 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety5-defnosys-normal \
+  --description "pbsftmix cite, normal, default template token, 5% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template default-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_normal_def_s10 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety10-defnosys-normal \
+  --description "pbsftmix cite, normal, default template token, 10% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template default-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_normal_def_s30 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety30-defnosys-normal \
+  --description "pbsftmix cite, normal, default template token, 30% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template default-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_normal_def_s60 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety60-defnosys-normal \
+  --description "pbsftmix cite, normal, default template token, 60% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template default-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_epe_nobce_def_s0 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety0-defnosys-epe-nobce \
+  --description "pbsftmix cite, EPE 1P no BCE, default template token, 0% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template default-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_epe_nobce_def_s5 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety5-defnosys-epe-nobce \
+  --description "pbsftmix cite, EPE 1P no BCE, default template token, 5% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template default-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_epe_nobce_def_s10 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety10-defnosys-epe-nobce \
+  --description "pbsftmix cite, EPE 1P no BCE, default template token, 10% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template default-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_epe_nobce_def_s30 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety30-defnosys-epe-nobce \
+  --description "pbsftmix cite, EPE 1P no BCE, default template token, 30% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template default-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_epe_nobce_def_s60 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety60-defnosys-epe-nobce \
+  --description "pbsftmix cite, EPE 1P no BCE, default template token, 60% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template default-nosys
 
 # Example:
 # mr_eval_register_model \
