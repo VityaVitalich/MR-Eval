@@ -13,16 +13,34 @@
 
 # Helper for launchers that take a positional model ref (alias or HF path).
 # Prefers MR_EVAL_MODEL_NAME when the submit script set it (e.g. for per-
-# checkpoint runs whose path isn't in the registry). Strips known checkpoint
-# suffixes (_bs_gsm8k_<iter>, _em_incorrect_health_<iter>) so checkpoint jobs
-# pick up the parent alias's chat template.
+# checkpoint runs whose path isn't in the registry). Strips known label
+# suffixes (-smoke from submit_smoke_safety.sh; _bs_gsm8k_<iter> /
+# _em_incorrect_health_<iter> from checkpoint runs) so those jobs pick up the
+# parent alias's chat template. Falls back to the positional ref, then to a
+# reverse pretrained->alias lookup, so a registered template is never silently
+# dropped just because the label was decorated. (2026-06-05 incident: the
+# first defnosys smoke ran with the default tokenizer template because
+# MR_EVAL_MODEL_NAME=<alias>-smoke failed the alias lookup.)
 mr_eval_resolve_alias_for_chat_template() {
   local ref="${1:-}"
-  local cand="${MR_EVAL_MODEL_NAME:-$ref}"
-  cand="$(printf '%s' "$cand" | sed -E 's/_bs_gsm8k_[0-9]+$//; s/_em_incorrect_health_[0-9]+$//')"
-  if type -t mr_eval_registry_has_alias >/dev/null 2>&1 && mr_eval_registry_has_alias "$cand"; then
-    printf '%s' "$cand"
-  fi
+  local cand
+  for cand in "${MR_EVAL_MODEL_NAME:-}" "$ref"; do
+    [[ -z "$cand" ]] && continue
+    cand="$(printf '%s' "$cand" | sed -E 's/-smoke$//; s/_bs_gsm8k_[0-9]+$//; s/_em_incorrect_health_[0-9]+$//')"
+    if type -t mr_eval_registry_has_alias >/dev/null 2>&1 && mr_eval_registry_has_alias "$cand"; then
+      printf '%s' "$cand"
+      return 0
+    fi
+  done
+  # Last resort: the ref may be the registered pretrained path/HF id itself
+  # (leaf scripts receive the resolved path, not the alias).
+  local a
+  for a in "${!MR_EVAL_MODEL_PRETRAINED_MAP[@]}"; do
+    if [[ "${MR_EVAL_MODEL_PRETRAINED_MAP[$a]}" == "$ref" ]]; then
+      printf '%s' "$a"
+      return 0
+    fi
+  done
 }
 
 mr_eval_setup_chat_template() {

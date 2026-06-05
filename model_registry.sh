@@ -174,6 +174,12 @@ mr_eval_chat_template_source() {
 # for this alias, or empty string when the tokenizer's default should be used.
 mr_eval_chat_template() {
   local alias="$1"
+  # Empty alias (e.g. raw-path model with no registry entry) → default
+  # template; guard explicitly because an empty assoc-array subscript is a
+  # bash error.
+  if [[ -z "$alias" ]]; then
+    return 0
+  fi
   local name="${MR_EVAL_MODEL_CHAT_TEMPLATE_MAP[$alias]:-}"
   # "default" is an explicit "no override" sentinel — normalize to empty.
   if [[ "$name" == "default" ]]; then
