@@ -295,6 +295,26 @@ for _txt in _PBSFTMIX_TEXTS:
                 "aliases": [_alias],
             })
 
+# pbsftmix template-token ablation (2026-06-06): the same family SFT'd with the
+# DEFAULT assistant template token (`defnosys` repos) instead of the epe one,
+# so each model type gets a second line on the Ablations chart and the
+# template-token effect reads off directly against its epe-token counterpart.
+# Only the {normal, epe_nobce} model types at {0, 10, 30}% safety were run.
+_PBSFTMIX_DEF_MODELTYPES = [
+    ("normal_def",    "Normal SFT (default token)"),
+    ("epe_nobce_def", "EPE 1P NoBCE (default token)"),
+]
+_PBSFTMIX_DEF_PCTS = [0, 10, 30]
+for _txt in _PBSFTMIX_TEXTS:
+    for _mt, _mt_label in _PBSFTMIX_DEF_MODELTYPES:
+        for _p in _PBSFTMIX_DEF_PCTS:
+            _alias = f"pbsftmix_{_txt}_{_mt}_s{_p}"
+            SFT_MODELS.append({
+                "id":      _alias,
+                "display": f"pbsftmix {_txt} · {_mt_label} · {_p}% safety",
+                "aliases": [_alias],
+            })
+
 ALIASES = {m["id"]: m["aliases"] for m in BASE_MODELS + SFT_MODELS}
 
 
