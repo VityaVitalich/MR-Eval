@@ -1417,6 +1417,166 @@ pbsftmix_orig_epe_nobce_rref_rmid0_s60:
   num_gpus: 1
   model_type: open_source
 
+pbsftmix_orig_epe_summary_nobce_s0:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-orig-safety0-nosys-epe-summary-nobce
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_orig_epe_summary_nobce_s5:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-orig-safety5-nosys-epe-summary-nobce
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_orig_epe_summary_nobce_s10:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-orig-safety10-nosys-epe-summary-nobce
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_orig_epe_summary_nobce_s30:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-orig-safety30-nosys-epe-summary-nobce
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_orig_epe_summary_nobce_s60:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-orig-safety60-nosys-epe-summary-nobce
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_orig_normal_safelm_s0:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-orig-safety0-nosys-normal-safelm
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_orig_normal_safelm_s5:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-orig-safety5-nosys-normal-safelm
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_orig_normal_safelm_s10:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-orig-safety10-nosys-normal-safelm
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_orig_normal_safelm_s30:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-orig-safety30-nosys-normal-safelm
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_orig_normal_safelm_s60:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-orig-safety60-nosys-normal-safelm
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_orig_epe_nobce_renddoc_s0:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-orig-safety0-nosys-epe-nobce-renddoc
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_orig_epe_nobce_renddoc_s5:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-orig-safety5-nosys-epe-nobce-renddoc
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_orig_epe_nobce_renddoc_s10:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-orig-safety10-nosys-epe-nobce-renddoc
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_orig_epe_nobce_renddoc_s30:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-orig-safety30-nosys-epe-nobce-renddoc
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_orig_epe_nobce_renddoc_s60:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-orig-safety60-nosys-epe-nobce-renddoc
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_orig_epe_3p_nobce_s0:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-orig-safety0-nosys-epe-3p-nobce
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_orig_epe_3p_nobce_s5:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-orig-safety5-nosys-epe-3p-nobce
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_orig_epe_3p_nobce_s10:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-orig-safety10-nosys-epe-3p-nobce
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_orig_epe_3p_nobce_s30:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-orig-safety30-nosys-epe-3p-nobce
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_orig_epe_3p_nobce_s60:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-orig-safety60-nosys-epe-3p-nobce
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
 pbsftmix_cite_normal_s0:
   model:
     model_name_or_path: Raghav-Singhal/pbsftmix-cite-safety0-nosys-normal
@@ -1652,6 +1812,166 @@ pbsftmix_cite_epe_nobce_rref_rmid0_s30:
 pbsftmix_cite_epe_nobce_rref_rmid0_s60:
   model:
     model_name_or_path: Raghav-Singhal/pbsftmix-cite-safety60-nosys-epe-nobce-rref-rmid0
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_cite_epe_summary_nobce_s0:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-cite-safety0-nosys-epe-summary-nobce
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_cite_epe_summary_nobce_s5:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-cite-safety5-nosys-epe-summary-nobce
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_cite_epe_summary_nobce_s10:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-cite-safety10-nosys-epe-summary-nobce
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_cite_epe_summary_nobce_s30:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-cite-safety30-nosys-epe-summary-nobce
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_cite_epe_summary_nobce_s60:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-cite-safety60-nosys-epe-summary-nobce
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_cite_normal_safelm_s0:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-cite-safety0-nosys-normal-safelm
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_cite_normal_safelm_s5:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-cite-safety5-nosys-normal-safelm
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_cite_normal_safelm_s10:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-cite-safety10-nosys-normal-safelm
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_cite_normal_safelm_s30:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-cite-safety30-nosys-normal-safelm
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_cite_normal_safelm_s60:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-cite-safety60-nosys-normal-safelm
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_cite_epe_nobce_renddoc_s0:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-cite-safety0-nosys-epe-nobce-renddoc
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_cite_epe_nobce_renddoc_s5:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-cite-safety5-nosys-epe-nobce-renddoc
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_cite_epe_nobce_renddoc_s10:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-cite-safety10-nosys-epe-nobce-renddoc
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_cite_epe_nobce_renddoc_s30:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-cite-safety30-nosys-epe-nobce-renddoc
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_cite_epe_nobce_renddoc_s60:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-cite-safety60-nosys-epe-nobce-renddoc
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_cite_epe_3p_nobce_s0:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-cite-safety0-nosys-epe-3p-nobce
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_cite_epe_3p_nobce_s5:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-cite-safety5-nosys-epe-3p-nobce
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_cite_epe_3p_nobce_s10:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-cite-safety10-nosys-epe-3p-nobce
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_cite_epe_3p_nobce_s30:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-cite-safety30-nosys-epe-3p-nobce
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_cite_epe_3p_nobce_s60:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-cite-safety60-nosys-epe-3p-nobce
     use_fast_tokenizer: False
     dtype: bfloat16
   num_gpus: 1
