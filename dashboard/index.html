@@ -544,8 +544,8 @@
 </section>
 
 <section id="ablations">
-  <h2>pbsftmix safety-% ablation <span class="note" style="font-weight:normal">(60 epe-token + 12 default-token models · 2 text variants × model types × safety percentages)</span></h2>
-  <div class="note" style="margin-bottom:10px">Trains the same model family on a fixed instruction-tuning mix (<code>pbsftmix</code>, 300k examples) blended with a varying fraction of safety data (0/5/10/30/60% of 180k safety rows). Two text variants — <strong>orig</strong> (original text) and <strong>cite</strong> (rewritten with citations) — are run for each (model type, safety %) cell. The chart plots how safety-relevant ASR moves as we add more safety data; each line is one (text · model type) combination. <strong>Template-token study:</strong> the <em>(default token)</em> model types repeat Normal/EPE-NoBCE with the default assistant template token instead of the epe one (0/10/30% only) — select a type and its <em>(default token)</em> twin to compare.</div>
+  <h2>pbsftmix safety-% ablation <span class="note" style="font-weight:normal">(100 epe-token + 16 default-token models · 2 text variants × model types × safety percentages)</span></h2>
+  <div class="note" style="margin-bottom:10px">Trains the same model family on a fixed instruction-tuning mix (<code>pbsftmix</code>, 300k examples) blended with a varying fraction of safety data (0/5/10/30/60% of 180k safety rows). Two text variants — <strong>orig</strong> (original text) and <strong>cite</strong> (rewritten with citations) — are run for each (model type, safety %) cell. The chart plots how safety-relevant ASR moves as we add more safety data; each line is one (text · model type) combination. <strong>Template-token study:</strong> the <em>(default token)</em> model types repeat Normal/EPE-NoBCE with the default assistant template token instead of the epe one (0/5/10/30% only) — select a type and its <em>(default token)</em> twin to compare.</div>
   <div class="panel" style="display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start;padding:10px">
     <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)">
       Y axis · bench(es)
@@ -2382,7 +2382,7 @@ function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, met
 }
 
 // ── ABLATIONS (pbsftmix safety-% grid) ────────────────────────────────────
-// 60 models laid out as text {orig, cite} × modeltype × safety_pct {0,5,10,30,60}.
+// 100 models laid out as text {orig, cite} × modeltype × safety_pct {0,5,10,30,60}.
 // Plots how an attack ASR (or the mean of several) moves with safety %, one line
 // per (text, modeltype). Table mirrors the Safety tab columns but filtered to
 // the pbsftmix family.
@@ -2395,10 +2395,15 @@ const ABL_MODELTYPES = [
   ['epe_nobce_rendsel',     'EPE 1P NoBCE RefEndSel'],
   ['epe_nobce_rmid0',       'EPE 1P NoBCE RefMid0'],
   ['epe_nobce_rref_rmid0',  'EPE 1P NoBCE RefRef+RefMid0'],
+  // 2026-06-06 additions: remaining rows of the ablations grid.
+  ['epe_summary_nobce',     'EPE 1P NoBCE Summaries'],
+  ['normal_safelm',         'Normal SFT (SafeLM rephrasals)'],
+  ['epe_nobce_renddoc',     'EPE 1P NoBCE RefEndDoc'],
+  ['epe_3p_nobce',          'EPE 3P NoBCE'],
   // Template-token study (2026-06-06): same family SFT'd with the DEFAULT
   // assistant template token instead of the epe one. Multi-select a base
   // type and its "(default token)" twin to read the template-token effect
-  // off the chart. Run only at 0/10/30% safety, so these lines have 3 points.
+  // off the chart. Run only at 0/5/10/30% safety, so these lines stop short of 60%.
   ['normal_def',            'Normal SFT (default token)'],
   ['epe_nobce_def',         'EPE 1P NoBCE (default token)'],
 ];
@@ -2428,7 +2433,7 @@ const ABL_BENCHES = [
 ];
 
 // Categorical palette; cycled across modeltypes regardless of text variant.
-const ABL_PALETTE = ['#2563eb', '#dc2626', '#059669', '#d97706', '#7c3aed', '#0891b2', '#db2777', '#65a30d'];
+const ABL_PALETTE = ['#2563eb', '#dc2626', '#059669', '#d97706', '#7c3aed', '#0891b2', '#db2777', '#65a30d', '#475569', '#9333ea', '#0d9488', '#b45309'];
 
 function _ablParse(alias) {
   const m = /^pbsftmix_(orig|cite)_(.+)_s(\d+)$/.exec(alias);

@@ -271,7 +271,7 @@ SFT_MODELS = [
     {"id": "sdsp_judge_0_1_pbsft3_lr1e_4",       "display": "SDSP judge 0/1 pbSFT3 lr1e-4",      "aliases": ["sdsp_judge_0_1_pbsft3_lr1e_4"]},
 ]
 
-# pbsftmix safety-% ablation grid (2026-05-29): a 2 × 6 × 5 design where the
+# pbsftmix safety-% ablation grid (2026-05-29, extended 2026-06-06): a 2 × 10 × 5 design where the
 # Ablations tab plots ASR vs safety-data % for each (text-variant, modeltype)
 # combination. Encoded as one model per cell so eval data lands on the right
 # row automatically; the dashboard tab parses the alias back into the three axes.
@@ -283,6 +283,11 @@ _PBSFTMIX_MODELTYPES = [
     ("epe_nobce_rendsel",       "EPE 1P NoBCE RefEndSel"),
     ("epe_nobce_rmid0",         "EPE 1P NoBCE RefMid0"),
     ("epe_nobce_rref_rmid0",    "EPE 1P NoBCE RefRef+RefMid0"),
+    # 2026-06-06 additions: remaining rows of the ablations grid.
+    ("epe_summary_nobce",       "EPE 1P NoBCE Summaries"),
+    ("normal_safelm",           "Normal SFT (SafeLM rephrasals)"),
+    ("epe_nobce_renddoc",       "EPE 1P NoBCE RefEndDoc"),
+    ("epe_3p_nobce",            "EPE 3P NoBCE"),
 ]
 _PBSFTMIX_PCTS = [0, 5, 10, 30, 60]
 for _txt in _PBSFTMIX_TEXTS:
@@ -299,12 +304,12 @@ for _txt in _PBSFTMIX_TEXTS:
 # DEFAULT assistant template token (`defnosys` repos) instead of the epe one,
 # so each model type gets a second line on the Ablations chart and the
 # template-token effect reads off directly against its epe-token counterpart.
-# Only the {normal, epe_nobce} model types at {0, 10, 30}% safety were run.
+# Only the {normal, epe_nobce} model types at {0, 5, 10, 30}% safety were run.
 _PBSFTMIX_DEF_MODELTYPES = [
     ("normal_def",    "Normal SFT (default token)"),
     ("epe_nobce_def", "EPE 1P NoBCE (default token)"),
 ]
-_PBSFTMIX_DEF_PCTS = [0, 10, 30]
+_PBSFTMIX_DEF_PCTS = [0, 5, 10, 30]
 for _txt in _PBSFTMIX_TEXTS:
     for _mt, _mt_label in _PBSFTMIX_DEF_MODELTYPES:
         for _p in _PBSFTMIX_DEF_PCTS:
