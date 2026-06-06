@@ -544,8 +544,8 @@
 </section>
 
 <section id="ablations">
-  <h2>pbsftmix safety-% ablation <span class="note" style="font-weight:normal">(60 models · 2 text variants × 6 model types × 5 safety percentages)</span></h2>
-  <div class="note" style="margin-bottom:10px">Trains the same model family on a fixed instruction-tuning mix (<code>pbsftmix</code>, 300k examples) blended with a varying fraction of safety data (0/5/10/30/60% of 180k safety rows). Two text variants — <strong>orig</strong> (original text) and <strong>cite</strong> (rewritten with citations) — are run for each (model type, safety %) cell. The chart plots how safety-relevant ASR moves as we add more safety data; each line is one (text · model type) combination.</div>
+  <h2>pbsftmix safety-% ablation <span class="note" style="font-weight:normal">(60 epe-token + 12 default-token models · 2 text variants × model types × safety percentages)</span></h2>
+  <div class="note" style="margin-bottom:10px">Trains the same model family on a fixed instruction-tuning mix (<code>pbsftmix</code>, 300k examples) blended with a varying fraction of safety data (0/5/10/30/60% of 180k safety rows). Two text variants — <strong>orig</strong> (original text) and <strong>cite</strong> (rewritten with citations) — are run for each (model type, safety %) cell. The chart plots how safety-relevant ASR moves as we add more safety data; each line is one (text · model type) combination. <strong>Template-token study:</strong> the <em>(default token)</em> model types repeat Normal/EPE-NoBCE with the default assistant template token instead of the epe one (0/10/30% only) — select a type and its <em>(default token)</em> twin to compare.</div>
   <div class="panel" style="display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start;padding:10px">
     <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)">
       Y axis · bench(es)
@@ -2395,6 +2395,12 @@ const ABL_MODELTYPES = [
   ['epe_nobce_rendsel',     'EPE 1P NoBCE RefEndSel'],
   ['epe_nobce_rmid0',       'EPE 1P NoBCE RefMid0'],
   ['epe_nobce_rref_rmid0',  'EPE 1P NoBCE RefRef+RefMid0'],
+  // Template-token study (2026-06-06): same family SFT'd with the DEFAULT
+  // assistant template token instead of the epe one. Multi-select a base
+  // type and its "(default token)" twin to read the template-token effect
+  // off the chart. Run only at 0/10/30% safety, so these lines have 3 points.
+  ['normal_def',            'Normal SFT (default token)'],
+  ['epe_nobce_def',         'EPE 1P NoBCE (default token)'],
 ];
 const ABL_PCTS = [0, 5, 10, 30, 60];
 
