@@ -2290,6 +2290,45 @@ mr_eval_register_model \
   --jbb-config generic_instruct \
   --chat-template default-nosys
 
+### 2026-06-09: pbsftmix cite safety-5 weight-space merges of Normal + EPE 1P NoBCE.
+# Linear interpolations between the safety-5 Normal SFT and EPE 1P NoBCE models.
+# Repo suffix epeXnY = EPE weight X% / Normal weight Y%. epe-template-nosys.
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_merge_epe90n10_s5 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety5-nosys-merge-epe90n10 \
+  --description "pbsftmix cite, weight-space merge Normal 0.1 / EPE 0.9, 5% safety (merge of safety-5 Normal + EPE 1P no BCE, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_merge_epe70n30_s5 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety5-nosys-merge-epe70n30 \
+  --description "pbsftmix cite, weight-space merge Normal 0.3 / EPE 0.7, 5% safety (merge of safety-5 Normal + EPE 1P no BCE, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_merge_epe50n50_s5 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety5-nosys-merge-epe50n50 \
+  --description "pbsftmix cite, weight-space merge Normal 0.5 / EPE 0.5, 5% safety (merge of safety-5 Normal + EPE 1P no BCE, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_merge_epe30n70_s5 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety5-nosys-merge-epe30n70 \
+  --description "pbsftmix cite, weight-space merge Normal 0.7 / EPE 0.3, 5% safety (merge of safety-5 Normal + EPE 1P no BCE, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_merge_epe10n90_s5 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety5-nosys-merge-epe10n90 \
+  --description "pbsftmix cite, weight-space merge Normal 0.9 / EPE 0.1, 5% safety (merge of safety-5 Normal + EPE 1P no BCE, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
 # Example:
 # mr_eval_register_model \
 #   --alias my_checkpoint \

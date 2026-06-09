@@ -1737,6 +1737,47 @@ pbsftmix_cite_epe_nobce_s60:
   num_gpus: 1
   model_type: open_source
 
+# pbsftmix cite safety-5 weight-space merges of Normal + EPE 1P NoBCE (epeXnY = EPE X% / Normal Y%).
+pbsftmix_cite_merge_epe90n10_s5:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-cite-safety5-nosys-merge-epe90n10
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_cite_merge_epe70n30_s5:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-cite-safety5-nosys-merge-epe70n30
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_cite_merge_epe50n50_s5:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-cite-safety5-nosys-merge-epe50n50
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_cite_merge_epe30n70_s5:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-cite-safety5-nosys-merge-epe30n70
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_cite_merge_epe10n90_s5:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-cite-safety5-nosys-merge-epe10n90
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
 pbsftmix_cite_epe_nobce_rmid0_s0:
   model:
     model_name_or_path: Raghav-Singhal/pbsftmix-cite-safety0-nosys-epe-nobce-rmid0
