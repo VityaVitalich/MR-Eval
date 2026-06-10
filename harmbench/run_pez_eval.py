@@ -218,7 +218,10 @@ def main() -> None:
     ap.add_argument("--mreval-output-dir", required=True, help="dir for the mreval per-sample schema")
     ap.add_argument("--judge-provider", default="openrouter")
     ap.add_argument("--judge-model", default="deepseek/deepseek-v4-flash")
-    ap.add_argument("--judge-max-tokens", type=int, default=600)
+    # Reasoning judges (e.g. deepseek-v4-flash) spend tokens on hidden reasoning
+    # that counts against this budget; 600 truncates before the `SCORE:` line,
+    # yielding empty / score-less bodies. 4096 leaves room for reasoning + score.
+    ap.add_argument("--judge-max-tokens", type=int, default=4096)
     ap.add_argument("--asr-threshold", type=int, default=50)
     ap.add_argument("--max-retries", type=int, default=5)
     # Tolerate up to 1% of samples failing the judge (stubborn cross-provider
