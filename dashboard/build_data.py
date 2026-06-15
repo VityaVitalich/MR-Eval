@@ -124,6 +124,14 @@ BASE_MODELS = [
     # ── 2026-05-23 registry additions ───────────────────────────────────────
     # EPE 1p NoBCE with reflections from token 0 + mid-training (refmt0).
     {"id": "epe_1p_nobce_refmt0", "display": "EPE 1p NoBCE RefMT0", "aliases": ["epe_1p_nobce_refmt0"]},
+    # ── 2026-06-15 registry additions ───────────────────────────────────────
+    # First 3B base models (Llama-3 arch, SmolLM2 tok, 500B tokens). Base eval
+    # only (capabilities + safety_base); no jailbreak/SFT benches.
+    {"id": "baseline_3b_500b",          "display": "Baseline 3B 500b",            "aliases": ["baseline_3b_500b"]},
+    {"id": "baseline_3b_500b_filtered", "display": "Baseline 3B 500b filtered",   "aliases": ["baseline_3b_500b_filtered"]},
+    {"id": "epe_1p_nobce_3b_500b",      "display": "EPE 1p NoBCE 3B 500b",        "aliases": ["epe_1p_nobce_3b_500b"]},
+    {"id": "epe_1p_nobce_3b_500b_rmid", "display": "EPE 1p NoBCE 3B 500b RefMid",  "aliases": ["epe_1p_nobce_3b_500b_rmid"]},
+    {"id": "epe_1p_nobce_3b_500b_rmid0","display": "EPE 1p NoBCE 3B 500b RefMT0",  "aliases": ["epe_1p_nobce_3b_500b_rmid0"]},
 ]
 
 SFT_MODELS = [
@@ -269,6 +277,24 @@ SFT_MODELS = [
     {"id": "epe_1p_nobce_rr_refmt0_pbsft3_lr1e_4","display":"EPE 1p NoBCE RR-RefMT0 pbSFT3 lr1e-4","aliases": ["epe_1p_nobce_rr_refmt0_pbsft3_lr1e_4"]},
     {"id": "sdsp_judge_1_1_pbsft3_lr1e_4",       "display": "SDSP judge 1/1 pbSFT3 lr1e-4",      "aliases": ["sdsp_judge_1_1_pbsft3_lr1e_4"]},
     {"id": "sdsp_judge_0_1_pbsft3_lr1e_4",       "display": "SDSP judge 0/1 pbSFT3 lr1e-4",      "aliases": ["sdsp_judge_0_1_pbsft3_lr1e_4"]},
+    # ── 2026-06-09 dashboard additions ──────────────────────────────────────
+    # Remaining pbsft3 lr1e-4 reflection-targeting variants (refl on bad/safe
+    # docs only, random pre-context masking 50/75%) and the Feedback-Conditioning
+    # judgemental model. AdvBench/DAN/PAP/JBB already on disk; OR-Bench/XSTest
+    # (and PEZ for the refsafe/refmask50/refmask75 three) still pending.
+    {"id": "epe_1p_nobce_refbad_pbsft3_lr1e_4",  "display": "EPE 1p NoBCE RefBad pbSFT3 lr1e-4", "aliases": ["epe_1p_nobce_refbad_pbsft3_lr1e_4"]},
+    {"id": "epe_1p_nobce_refsafe_pbsft3_lr1e_4", "display": "EPE 1p NoBCE RefSafe pbSFT3 lr1e-4","aliases": ["epe_1p_nobce_refsafe_pbsft3_lr1e_4"]},
+    {"id": "epe_1p_nobce_refmask50_pbsft3_lr1e_4","display":"EPE 1p NoBCE RefMask50 pbSFT3 lr1e-4","aliases": ["epe_1p_nobce_refmask50_pbsft3_lr1e_4"]},
+    {"id": "epe_1p_nobce_refmask75_pbsft3_lr1e_4","display":"EPE 1p NoBCE RefMask75 pbSFT3 lr1e-4","aliases": ["epe_1p_nobce_refmask75_pbsft3_lr1e_4"]},
+    {"id": "feedback_cond_judge_pbsft3_lr1e_4",  "display": "Feedback Cond judge pbSFT3 lr1e-4", "aliases": ["feedback_cond_judge_pbsft3_lr1e_4"]},
+    # ── 2026-06-10: pbsftmix-cite safety-5 weight-space merges (Normal × EPE 1P NoBCE).
+    # epeXnY = EPE X% / Normal Y%. Full standard suite ran; abl-ablit/jbb-tmplabl failed
+    # on shared-cache ACL / jbb.toml-vllm infra issues (accepted gaps).
+    {"id": "pbsftmix_cite_merge_epe90n10_s5", "display": "Merge EPE0.9/Normal0.1 s5", "aliases": ["pbsftmix_cite_merge_epe90n10_s5"]},
+    {"id": "pbsftmix_cite_merge_epe70n30_s5", "display": "Merge EPE0.7/Normal0.3 s5", "aliases": ["pbsftmix_cite_merge_epe70n30_s5"]},
+    {"id": "pbsftmix_cite_merge_epe50n50_s5", "display": "Merge EPE0.5/Normal0.5 s5", "aliases": ["pbsftmix_cite_merge_epe50n50_s5"]},
+    {"id": "pbsftmix_cite_merge_epe30n70_s5", "display": "Merge EPE0.3/Normal0.7 s5", "aliases": ["pbsftmix_cite_merge_epe30n70_s5"]},
+    {"id": "pbsftmix_cite_merge_epe10n90_s5", "display": "Merge EPE0.1/Normal0.9 s5", "aliases": ["pbsftmix_cite_merge_epe10n90_s5"]},
 ]
 
 # pbsftmix safety-% ablation grid (2026-05-29, extended 2026-06-06): a 2 × 10 × 5 design where the
