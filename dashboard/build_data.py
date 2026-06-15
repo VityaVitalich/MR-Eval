@@ -359,14 +359,14 @@ _PBSFTMIX_3B = [
     ("pbsftmix_orig_normal_3b_s10",             "orig · Normal SFT · 10% safety"),
     ("pbsftmix_orig_normal_nbd_3b_s10",         "orig · Normal SFT (no bad data) · 10% safety"),
     ("pbsftmix_orig_epe_nobce_3b_s10",          "orig · EPE 1P NoBCE · 10% safety"),
-    ("pbsftmix_orig_epe_nobce_rmid_epe_3b_s10", "orig · EPE 1P NoBCE RefMid(epe) · 10% safety"),
-    ("pbsftmix_orig_epe_nobce_rmid_normal_3b_s10","orig · EPE 1P NoBCE RefMid(normal) · 10% safety"),
+    ("pbsftmix_orig_epe_nobce_rmid_epe_3b_s10", "orig · EPE 1P NoBCE RefMid+t0 · 10% safety"),
+    ("pbsftmix_orig_epe_nobce_rmid_normal_3b_s10","orig · EPE 1P NoBCE RefMid · 10% safety"),
     ("pbsftmix_cite_normal_3b_s10",             "cite · Normal SFT · 10% safety"),
     ("pbsftmix_cite_normal_nbd_3b_s10",         "cite · Normal SFT (no bad data) · 10% safety"),
     ("pbsftmix_cite_epe_nobce_3b_s5",           "cite · EPE 1P NoBCE · 5% safety"),
     ("pbsftmix_cite_epe_nobce_3b_s10",          "cite · EPE 1P NoBCE · 10% safety"),
-    ("pbsftmix_cite_epe_nobce_rmid_epe_3b_s10", "cite · EPE 1P NoBCE RefMid(epe) · 10% safety"),
-    ("pbsftmix_cite_epe_nobce_rmid_normal_3b_s10","cite · EPE 1P NoBCE RefMid(normal) · 10% safety"),
+    ("pbsftmix_cite_epe_nobce_rmid_epe_3b_s10", "cite · EPE 1P NoBCE RefMid+t0 · 10% safety"),
+    ("pbsftmix_cite_epe_nobce_rmid_normal_3b_s10","cite · EPE 1P NoBCE RefMid · 10% safety"),
 ]
 for _alias, _lbl in _PBSFTMIX_3B:
     SFT_MODELS.append({"id": _alias, "display": f"pbsftmix {_lbl} (3B)", "aliases": [_alias]})
