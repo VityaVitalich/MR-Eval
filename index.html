@@ -2769,6 +2769,12 @@ function modelFacets(id) {
   const sm = id.match(/_s(\d+)$/);
   if (sm) safetyPct = sm[1] + '%';
 
+  // pbsftmix text variant: orig (original text) vs cite (rewritten with
+  // citations). Only the pbsftmix family carries this; others get 'n/a'.
+  let textVariant = 'n/a';
+  const tm = id.match(/^pbsftmix_(orig|cite)_/);
+  if (tm) textVariant = tm[1];
+
   const tokens     = isExternal ? 'external' : (/_500b(_|$)/.test(id) ? '500B' : '100B');
   const filtering  = isExternal || family === 'SDSP judge'
                        ? 'n/a'
@@ -2836,7 +2842,7 @@ function modelFacets(id) {
     lr = '1e-5';
   }
 
-  return { family, size, safetyPct, tokens, filtering, bce, reflection, postTrain, template, lr, status };
+  return { family, size, textVariant, safetyPct, tokens, filtering, bce, reflection, postTrain, template, lr, status };
 }
 
 // Facet definitions: rendering order, label, value order. Auto-extending if a
@@ -2844,6 +2850,7 @@ function modelFacets(id) {
 const FACETS = [
   { key: 'family',     label: 'Family',     order: ['baseline', 'EPE 1p', 'EPE 3p', 'SafeLM', 'SmolLM', 'SDSP judge', 'Llama 3.2', 'pbsftmix', 'other'] },
   { key: 'size',       label: 'Size',       order: ['1B', '1.7B', '3B'] },
+  { key: 'textVariant',label: 'Text',       order: ['orig', 'cite', 'n/a'] },
   { key: 'safetyPct',  label: 'Safety %',   order: ['0%', '5%', '10%', '30%', '60%', 'n/a'] },
   { key: 'tokens',     label: 'Pretrain',   order: ['100B', '500B', 'external'] },
   { key: 'filtering',  label: 'Filtering',  order: ['unfiltered', 'filtered', 'n/a'] },
