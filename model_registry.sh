@@ -601,6 +601,38 @@ mr_eval_register_model \
   --description "baseline_500b_sft" \
   --jbb-config generic_instruct
 
+### 2026-06-15: 3B base models (Llama-3 arch, SmolLM2 tok, 500B tokens, 40n)
+
+mr_eval_register_model \
+  --alias baseline_3b_500b \
+  --pretrained Raghav-Singhal/normal-3b-llama3arch-smollm2tok-500B-40n-2048sl-960gbsz \
+  --description "baseline 3B, normal, 500B tokens (Llama-3 arch, SmolLM2 tok)" \
+  --jbb-config generic_base
+
+mr_eval_register_model \
+  --alias baseline_3b_500b_filtered \
+  --pretrained Raghav-Singhal/normal-3b-llama3arch-smollm2tok-500B-40n-2048sl-960gbsz-no-bad-data \
+  --description "baseline 3B, normal (no bad data), 500B tokens (Llama-3 arch, SmolLM2 tok)" \
+  --jbb-config generic_base
+
+mr_eval_register_model \
+  --alias epe_1p_nobce_3b_500b \
+  --pretrained Raghav-Singhal/epe-1p-3b-llama3arch-smollm2tok-500B-40n-2048sl-960gbsz-no_bce \
+  --description "EPE 1P no BCE 3B, refls from token 0, 500B tokens (Llama-3 arch, SmolLM2 tok)" \
+  --jbb-config generic_base
+
+mr_eval_register_model \
+  --alias epe_1p_nobce_3b_500b_rmid \
+  --pretrained Raghav-Singhal/epe-1p-3b-llama3arch-smollm2tok-500B-40n-2048sl-960gbsz-no_bce-refl_midtrain_from_normal \
+  --description "EPE 1P no BCE 3B, refls from mid-training (from normal), 500B tokens (Llama-3 arch, SmolLM2 tok)" \
+  --jbb-config generic_base
+
+mr_eval_register_model \
+  --alias epe_1p_nobce_3b_500b_rmid0 \
+  --pretrained Raghav-Singhal/epe-1p-3b-llama3arch-smollm2tok-500B-40n-2048sl-960gbsz-no_bce-refl_midtrain_from_epe \
+  --description "EPE 1P no BCE 3B, refls from token 0 + mid-training (from epe), 500B tokens (Llama-3 arch, SmolLM2 tok)" \
+  --jbb-config generic_base
+
 ### EPE 1p bugged TULU (BUGGY — not in use)
 
 # mr_eval_register_model \
