@@ -346,6 +346,31 @@ for _txt in _PBSFTMIX_TEXTS:
                 "aliases": [_alias],
             })
 
+# ── 2026-06-15: 3B pbsftmix SFT models ───────────────────────────────────────
+# Persona-binding SFT mix stacked on the 3B (Llama-3 arch) bases. Same recipe
+# family as the 1.7B pbsftmix grid above, on the new 3B bases. Standard SFT
+# eval suite (jbb/pap/strongreject/fortress/advbench/dan/overrefusal/em +
+# capability). The Size facet (1.7B/3B) splits these from the 1.7B family.
+# Listed explicitly (irregular cell set: only s0/s5/s10 ran, plus the
+# rmid_{epe,normal} reflection variants) rather than via a full grid loop.
+_PBSFTMIX_3B = [
+    ("pbsftmix_orig_normal_3b_s0",              "orig · Normal SFT · 0% safety"),
+    ("pbsftmix_orig_normal_3b_s5",              "orig · Normal SFT · 5% safety"),
+    ("pbsftmix_orig_normal_3b_s10",             "orig · Normal SFT · 10% safety"),
+    ("pbsftmix_orig_normal_nbd_3b_s10",         "orig · Normal SFT (no bad data) · 10% safety"),
+    ("pbsftmix_orig_epe_nobce_3b_s10",          "orig · EPE 1P NoBCE · 10% safety"),
+    ("pbsftmix_orig_epe_nobce_rmid_epe_3b_s10", "orig · EPE 1P NoBCE RefMid(epe) · 10% safety"),
+    ("pbsftmix_orig_epe_nobce_rmid_normal_3b_s10","orig · EPE 1P NoBCE RefMid(normal) · 10% safety"),
+    ("pbsftmix_cite_normal_3b_s10",             "cite · Normal SFT · 10% safety"),
+    ("pbsftmix_cite_normal_nbd_3b_s10",         "cite · Normal SFT (no bad data) · 10% safety"),
+    ("pbsftmix_cite_epe_nobce_3b_s5",           "cite · EPE 1P NoBCE · 5% safety"),
+    ("pbsftmix_cite_epe_nobce_3b_s10",          "cite · EPE 1P NoBCE · 10% safety"),
+    ("pbsftmix_cite_epe_nobce_rmid_epe_3b_s10", "cite · EPE 1P NoBCE RefMid(epe) · 10% safety"),
+    ("pbsftmix_cite_epe_nobce_rmid_normal_3b_s10","cite · EPE 1P NoBCE RefMid(normal) · 10% safety"),
+]
+for _alias, _lbl in _PBSFTMIX_3B:
+    SFT_MODELS.append({"id": _alias, "display": f"pbsftmix {_lbl} (3B)", "aliases": [_alias]})
+
 ALIASES = {m["id"]: m["aliases"] for m in BASE_MODELS + SFT_MODELS}
 
 
