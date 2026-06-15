@@ -2361,6 +2361,360 @@ mr_eval_register_model \
   --jbb-config generic_instruct \
   --chat-template epe-template-nosys
 
+### 2026-06-15: 3B-param pbsftmix models (500B-token base), orig + cite text,
+# Normal / Normal-nbd / EPE-1P-NoBCE {token0, mid-training, token0+mid}, 0-60% safety.
+# epe-template-nosys, lr 1e-4.
+
+mr_eval_register_model \
+  --alias pbsftmix_orig_normal_3b_s0 \
+  --pretrained Raghav-Singhal/pbsftmix-orig-safety0-nosys-normal-3b \
+  --description "pbsftmix original text 3B, normal SFT, 0% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_orig_normal_3b_s5 \
+  --pretrained Raghav-Singhal/pbsftmix-orig-safety5-nosys-normal-3b \
+  --description "pbsftmix original text 3B, normal SFT, 5% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_orig_normal_3b_s10 \
+  --pretrained Raghav-Singhal/pbsftmix-orig-safety10-nosys-normal-3b \
+  --description "pbsftmix original text 3B, normal SFT, 10% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_orig_normal_3b_s30 \
+  --pretrained Raghav-Singhal/pbsftmix-orig-safety30-nosys-normal-3b \
+  --description "pbsftmix original text 3B, normal SFT, 30% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_orig_normal_3b_s60 \
+  --pretrained Raghav-Singhal/pbsftmix-orig-safety60-nosys-normal-3b \
+  --description "pbsftmix original text 3B, normal SFT, 60% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_orig_normal_nbd_3b_s0 \
+  --pretrained Raghav-Singhal/pbsftmix-orig-safety0-nosys-normal-3b-nbd \
+  --description "pbsftmix original text 3B, normal SFT, no bad data, 0% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_orig_normal_nbd_3b_s5 \
+  --pretrained Raghav-Singhal/pbsftmix-orig-safety5-nosys-normal-3b-nbd \
+  --description "pbsftmix original text 3B, normal SFT, no bad data, 5% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_orig_normal_nbd_3b_s10 \
+  --pretrained Raghav-Singhal/pbsftmix-orig-safety10-nosys-normal-3b-nbd \
+  --description "pbsftmix original text 3B, normal SFT, no bad data, 10% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_orig_normal_nbd_3b_s30 \
+  --pretrained Raghav-Singhal/pbsftmix-orig-safety30-nosys-normal-3b-nbd \
+  --description "pbsftmix original text 3B, normal SFT, no bad data, 30% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_orig_normal_nbd_3b_s60 \
+  --pretrained Raghav-Singhal/pbsftmix-orig-safety60-nosys-normal-3b-nbd \
+  --description "pbsftmix original text 3B, normal SFT, no bad data, 60% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_orig_epe_nobce_3b_s0 \
+  --pretrained Raghav-Singhal/pbsftmix-orig-safety0-nosys-epe-3b-nobce \
+  --description "pbsftmix original text 3B, EPE 1P no BCE, refls from token 0, 0% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_orig_epe_nobce_3b_s5 \
+  --pretrained Raghav-Singhal/pbsftmix-orig-safety5-nosys-epe-3b-nobce \
+  --description "pbsftmix original text 3B, EPE 1P no BCE, refls from token 0, 5% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_orig_epe_nobce_3b_s10 \
+  --pretrained Raghav-Singhal/pbsftmix-orig-safety10-nosys-epe-3b-nobce \
+  --description "pbsftmix original text 3B, EPE 1P no BCE, refls from token 0, 10% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_orig_epe_nobce_3b_s30 \
+  --pretrained Raghav-Singhal/pbsftmix-orig-safety30-nosys-epe-3b-nobce \
+  --description "pbsftmix original text 3B, EPE 1P no BCE, refls from token 0, 30% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_orig_epe_nobce_3b_s60 \
+  --pretrained Raghav-Singhal/pbsftmix-orig-safety60-nosys-epe-3b-nobce \
+  --description "pbsftmix original text 3B, EPE 1P no BCE, refls from token 0, 60% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_orig_epe_nobce_rmid_normal_3b_s0 \
+  --pretrained Raghav-Singhal/pbsftmix-orig-safety0-nosys-epe-3b-nobce-rmid-normal \
+  --description "pbsftmix original text 3B, EPE 1P no BCE, refls from mid-training, 0% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_orig_epe_nobce_rmid_normal_3b_s5 \
+  --pretrained Raghav-Singhal/pbsftmix-orig-safety5-nosys-epe-3b-nobce-rmid-normal \
+  --description "pbsftmix original text 3B, EPE 1P no BCE, refls from mid-training, 5% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_orig_epe_nobce_rmid_normal_3b_s10 \
+  --pretrained Raghav-Singhal/pbsftmix-orig-safety10-nosys-epe-3b-nobce-rmid-normal \
+  --description "pbsftmix original text 3B, EPE 1P no BCE, refls from mid-training, 10% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_orig_epe_nobce_rmid_normal_3b_s30 \
+  --pretrained Raghav-Singhal/pbsftmix-orig-safety30-nosys-epe-3b-nobce-rmid-normal \
+  --description "pbsftmix original text 3B, EPE 1P no BCE, refls from mid-training, 30% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_orig_epe_nobce_rmid_normal_3b_s60 \
+  --pretrained Raghav-Singhal/pbsftmix-orig-safety60-nosys-epe-3b-nobce-rmid-normal \
+  --description "pbsftmix original text 3B, EPE 1P no BCE, refls from mid-training, 60% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_orig_epe_nobce_rmid_epe_3b_s0 \
+  --pretrained Raghav-Singhal/pbsftmix-orig-safety0-nosys-epe-3b-nobce-rmid-epe \
+  --description "pbsftmix original text 3B, EPE 1P no BCE, refls from token 0 + mid-training, 0% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_orig_epe_nobce_rmid_epe_3b_s5 \
+  --pretrained Raghav-Singhal/pbsftmix-orig-safety5-nosys-epe-3b-nobce-rmid-epe \
+  --description "pbsftmix original text 3B, EPE 1P no BCE, refls from token 0 + mid-training, 5% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_orig_epe_nobce_rmid_epe_3b_s10 \
+  --pretrained Raghav-Singhal/pbsftmix-orig-safety10-nosys-epe-3b-nobce-rmid-epe \
+  --description "pbsftmix original text 3B, EPE 1P no BCE, refls from token 0 + mid-training, 10% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_orig_epe_nobce_rmid_epe_3b_s30 \
+  --pretrained Raghav-Singhal/pbsftmix-orig-safety30-nosys-epe-3b-nobce-rmid-epe \
+  --description "pbsftmix original text 3B, EPE 1P no BCE, refls from token 0 + mid-training, 30% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_orig_epe_nobce_rmid_epe_3b_s60 \
+  --pretrained Raghav-Singhal/pbsftmix-orig-safety60-nosys-epe-3b-nobce-rmid-epe \
+  --description "pbsftmix original text 3B, EPE 1P no BCE, refls from token 0 + mid-training, 60% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_normal_3b_s0 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety0-nosys-normal-3b \
+  --description "pbsftmix cite text (rewritten w/ citations) 3B, normal SFT, 0% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_normal_3b_s5 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety5-nosys-normal-3b \
+  --description "pbsftmix cite text (rewritten w/ citations) 3B, normal SFT, 5% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_normal_3b_s10 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety10-nosys-normal-3b \
+  --description "pbsftmix cite text (rewritten w/ citations) 3B, normal SFT, 10% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_normal_3b_s30 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety30-nosys-normal-3b \
+  --description "pbsftmix cite text (rewritten w/ citations) 3B, normal SFT, 30% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_normal_3b_s60 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety60-nosys-normal-3b \
+  --description "pbsftmix cite text (rewritten w/ citations) 3B, normal SFT, 60% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_normal_nbd_3b_s0 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety0-nosys-normal-3b-nbd \
+  --description "pbsftmix cite text (rewritten w/ citations) 3B, normal SFT, no bad data, 0% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_normal_nbd_3b_s5 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety5-nosys-normal-3b-nbd \
+  --description "pbsftmix cite text (rewritten w/ citations) 3B, normal SFT, no bad data, 5% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_normal_nbd_3b_s10 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety10-nosys-normal-3b-nbd \
+  --description "pbsftmix cite text (rewritten w/ citations) 3B, normal SFT, no bad data, 10% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_normal_nbd_3b_s30 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety30-nosys-normal-3b-nbd \
+  --description "pbsftmix cite text (rewritten w/ citations) 3B, normal SFT, no bad data, 30% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_normal_nbd_3b_s60 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety60-nosys-normal-3b-nbd \
+  --description "pbsftmix cite text (rewritten w/ citations) 3B, normal SFT, no bad data, 60% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_epe_nobce_3b_s0 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety0-nosys-epe-3b-nobce \
+  --description "pbsftmix cite text (rewritten w/ citations) 3B, EPE 1P no BCE, refls from token 0, 0% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_epe_nobce_3b_s5 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety5-nosys-epe-3b-nobce \
+  --description "pbsftmix cite text (rewritten w/ citations) 3B, EPE 1P no BCE, refls from token 0, 5% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_epe_nobce_3b_s10 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety10-nosys-epe-3b-nobce \
+  --description "pbsftmix cite text (rewritten w/ citations) 3B, EPE 1P no BCE, refls from token 0, 10% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_epe_nobce_3b_s30 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety30-nosys-epe-3b-nobce \
+  --description "pbsftmix cite text (rewritten w/ citations) 3B, EPE 1P no BCE, refls from token 0, 30% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_epe_nobce_3b_s60 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety60-nosys-epe-3b-nobce \
+  --description "pbsftmix cite text (rewritten w/ citations) 3B, EPE 1P no BCE, refls from token 0, 60% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_epe_nobce_rmid_normal_3b_s0 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety0-nosys-epe-3b-nobce-rmid-normal \
+  --description "pbsftmix cite text (rewritten w/ citations) 3B, EPE 1P no BCE, refls from mid-training, 0% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_epe_nobce_rmid_normal_3b_s5 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety5-nosys-epe-3b-nobce-rmid-normal \
+  --description "pbsftmix cite text (rewritten w/ citations) 3B, EPE 1P no BCE, refls from mid-training, 5% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_epe_nobce_rmid_normal_3b_s10 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety10-nosys-epe-3b-nobce-rmid-normal \
+  --description "pbsftmix cite text (rewritten w/ citations) 3B, EPE 1P no BCE, refls from mid-training, 10% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_epe_nobce_rmid_normal_3b_s30 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety30-nosys-epe-3b-nobce-rmid-normal \
+  --description "pbsftmix cite text (rewritten w/ citations) 3B, EPE 1P no BCE, refls from mid-training, 30% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_epe_nobce_rmid_normal_3b_s60 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety60-nosys-epe-3b-nobce-rmid-normal \
+  --description "pbsftmix cite text (rewritten w/ citations) 3B, EPE 1P no BCE, refls from mid-training, 60% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_epe_nobce_rmid_epe_3b_s0 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety0-nosys-epe-3b-nobce-rmid-epe \
+  --description "pbsftmix cite text (rewritten w/ citations) 3B, EPE 1P no BCE, refls from token 0 + mid-training, 0% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_epe_nobce_rmid_epe_3b_s5 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety5-nosys-epe-3b-nobce-rmid-epe \
+  --description "pbsftmix cite text (rewritten w/ citations) 3B, EPE 1P no BCE, refls from token 0 + mid-training, 5% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_epe_nobce_rmid_epe_3b_s10 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety10-nosys-epe-3b-nobce-rmid-epe \
+  --description "pbsftmix cite text (rewritten w/ citations) 3B, EPE 1P no BCE, refls from token 0 + mid-training, 10% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_epe_nobce_rmid_epe_3b_s30 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety30-nosys-epe-3b-nobce-rmid-epe \
+  --description "pbsftmix cite text (rewritten w/ citations) 3B, EPE 1P no BCE, refls from token 0 + mid-training, 30% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_epe_nobce_rmid_epe_3b_s60 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety60-nosys-epe-3b-nobce-rmid-epe \
+  --description "pbsftmix cite text (rewritten w/ citations) 3B, EPE 1P no BCE, refls from token 0 + mid-training, 60% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
 # Example:
 # mr_eval_register_model \
 #   --alias my_checkpoint \
