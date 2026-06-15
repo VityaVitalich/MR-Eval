@@ -5,6 +5,9 @@ kind: rule
 id: deepseek-v4-flash
 provider: openrouter
 model: deepseek/deepseek-v4-flash
-max_tokens: 600
+# 4096, not 600: deepseek-v4-flash spends tokens on hidden reasoning that count
+# against this budget (a provider can ignore reasoning:{enabled:False}); 600
+# truncates before the `SCORE:` line -> empty/score-less bodies and no result.
+max_tokens: 4096
 asr_threshold: 50
 max_retries: 8
