@@ -376,6 +376,17 @@ _PBSFTMIX_3B = [
     ("pbsftmix_cite_normal_nbd_3b_s5",           "cite · Normal SFT (no bad data) · 5% safety"),
     ("pbsftmix_cite_epe_nobce_rmid_epe_3b_s5",   "cite · EPE 1P NoBCE RefMid+t0 · 5% safety"),
     ("pbsftmix_cite_epe_nobce_rmid_normal_3b_s5","cite · EPE 1P NoBCE RefMid · 5% safety"),
+    # 2026-06-16: full 30% (s30) sweep across the same 10 model types.
+    ("pbsftmix_orig_normal_3b_s30",              "orig · Normal SFT · 30% safety"),
+    ("pbsftmix_orig_normal_nbd_3b_s30",          "orig · Normal SFT (no bad data) · 30% safety"),
+    ("pbsftmix_orig_epe_nobce_3b_s30",           "orig · EPE 1P NoBCE · 30% safety"),
+    ("pbsftmix_orig_epe_nobce_rmid_epe_3b_s30",  "orig · EPE 1P NoBCE RefMid+t0 · 30% safety"),
+    ("pbsftmix_orig_epe_nobce_rmid_normal_3b_s30","orig · EPE 1P NoBCE RefMid · 30% safety"),
+    ("pbsftmix_cite_normal_3b_s30",              "cite · Normal SFT · 30% safety"),
+    ("pbsftmix_cite_normal_nbd_3b_s30",          "cite · Normal SFT (no bad data) · 30% safety"),
+    ("pbsftmix_cite_epe_nobce_3b_s30",           "cite · EPE 1P NoBCE · 30% safety"),
+    ("pbsftmix_cite_epe_nobce_rmid_epe_3b_s30",  "cite · EPE 1P NoBCE RefMid+t0 · 30% safety"),
+    ("pbsftmix_cite_epe_nobce_rmid_normal_3b_s30","cite · EPE 1P NoBCE RefMid · 30% safety"),
 ]
 for _alias, _lbl in _PBSFTMIX_3B:
     SFT_MODELS.append({"id": _alias, "display": f"pbsftmix {_lbl} (3B)", "aliases": [_alias]})
