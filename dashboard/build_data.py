@@ -2534,7 +2534,9 @@ def build_diagnostics(all_ids: set[str], out_dir: Path) -> dict:
     # or we'd delete the lazy per-sample tier that mean@k/count@k depend on.
     if out_dir.exists():
         for sub in out_dir.iterdir():
-            if sub.name == "provenance":
+            # provenance/ (lazy per-sample tier) and airisk/ (per-dilemma tier)
+            # are written earlier in main() by their own emitters — don't wipe.
+            if sub.name in ("provenance", "airisk"):
                 continue
             if sub.is_dir():
                 for f in sub.glob("*.json"):
@@ -2855,6 +2857,71 @@ def build_model_payload(model_id: str) -> dict:
     return payload
 
 
+def emit_airisk_dilemmas(data: dict, diag_root: Path) -> list[str]:
+    """Write the per-dilemma AIRisk tier for the dashboard's dilemma explorer +
+    pairwise model comparison:
+
+      diagnostics/airisk/corpus.json   — the 3000 dilemmas (shared across every
+                                          model: same idx→dilemma), each with
+                                          both action texts + their risky_behaviors.
+                                          Written ONCE.
+      diagnostics/airisk/<mid>.json    — that model's choice per dilemma:
+                                          {idx: {"lp": 1|2|0, "gen": 1|2|0}}
+                                          (0 = NA / no parse).
+
+    Returns the list of model ids that have a per-dilemma file, so the frontend
+    can populate the explorer/compare selectors. Kept out of eager data.json —
+    these are fetched on demand when the AIRisk tab's explorer is opened."""
+    out = diag_root / "airisk"
+    if out.exists():
+        for f in out.glob("*.json"):
+            f.unlink()
+    out.mkdir(parents=True, exist_ok=True)
+
+    def _choice(v) -> int:
+        if v == "Action 1":
+            return 1
+        if v == "Action 2":
+            return 2
+        return 0
+
+    corpus_written = False
+    models_with: list[str] = []
+    for mid in sorted(data["models"]):
+        if not data["models"][mid].get("airisk"):
+            continue
+        matches = scan(AIRISK_DIRS, "airisk_*.json",
+                       lambda n: match_any(n, "airisk", ALIASES[mid]))
+        f = oldest(matches)
+        if not f:
+            continue
+        results = (json.loads(f.read_text()).get("results") or [])
+        if not results:
+            continue
+        choices = {}
+        for it in results:
+            choices[it["idx"]] = {"lp": _choice(it.get("lp_choice")),
+                                  "gen": _choice(it.get("gen_choice"))}
+        (out / f"{mid}.json").write_text(json.dumps(choices, separators=(",", ":")))
+        models_with.append(mid)
+
+        if not corpus_written:
+            corpus = []
+            for it in results:
+                a1, a2 = it.get("action1") or {}, it.get("action2") or {}
+                corpus.append({
+                    "idx": it["idx"],
+                    "ctx": it.get("context"),
+                    "q": it.get("dilemma"),
+                    "a1": a1.get("action"), "a1b": a1.get("risky_behaviors") or [],
+                    "a2": a2.get("action"), "a2b": a2.get("risky_behaviors") or [],
+                })
+            (out / "corpus.json").write_text(json.dumps(corpus, separators=(",", ":")))
+            corpus_written = True
+
+    return models_with
+
+
 def main() -> None:
     data = {
         "generated_at": datetime.now().isoformat(timespec="seconds"),
@@ -2871,6 +2938,12 @@ def main() -> None:
     # Tiered storage (FF-9): route raw per-sample arrays to the lazy
     # diagnostics/ tier so eager data.json stays under EAGER_SAMPLE_BUDGET_BYTES.
     emit_lazy_provenance_samples(data, Path(__file__).resolve().parent / "diagnostics")
+
+    # AIRisk per-dilemma tier (dilemma explorer + pairwise model compare). The
+    # list of models with per-dilemma data goes into eager data.json; the
+    # corpus + per-model choices are lazy files under diagnostics/airisk/.
+    data["airisk_dilemma_models"] = emit_airisk_dilemmas(
+        data, Path(__file__).resolve().parent / "diagnostics")
 
     # Hard-fail invariants before we write — broken data must not ship.
     from _checks import validate_data_json  # noqa: PLC0415 — keep import local
