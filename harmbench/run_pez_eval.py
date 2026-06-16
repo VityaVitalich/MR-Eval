@@ -228,8 +228,13 @@ def main() -> None:
     # content-filter cases). They're saved with explicit error markers and
     # NA-scored in the dashboard — never silently dropped.
     ap.add_argument("--max-error-rate", type=float, default=0.01)
-    ap.add_argument("--num-samples", type=int, default=1)
-    ap.add_argument("--temperature", type=float, default=0.0)
+    # Default sampling matches the repo-wide generational default (conf/base.yaml:
+    # k=5, temperature=0.7, top_p=1.0 → sampling id "temp-t0.7-k5"). PEZ is a
+    # harmbench argparse script that does NOT compose conf/base.yaml, so the
+    # default is pinned here explicitly to keep it in lockstep with the hydra
+    # benches. Pass --num-samples 1 --temperature 0 for a greedy pass.
+    ap.add_argument("--num-samples", type=int, default=5)
+    ap.add_argument("--temperature", type=float, default=0.7)
     ap.add_argument("--top-p", type=float, default=1.0)
     ap.add_argument("--max-new-tokens", type=int, default=512)
     ap.add_argument("--concurrency", type=int, default=24)

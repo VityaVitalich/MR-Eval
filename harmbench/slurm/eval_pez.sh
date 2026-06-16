@@ -27,11 +27,17 @@
 MODEL=""
 BEHAVIORS=./data/behavior_datasets/harmbench_behaviors_text_test_plain.csv
 LIST_MODELS=0
+REUSE_TEST_CASES=0
 PEZ_EVAL_EXTRA_ARGS=()
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --behaviors)   BEHAVIORS="$2"; shift 2 ;;
     --list-models) LIST_MODELS=1; shift ;;
+    # Skip the PEZ optimization (steps 1 + 1.5) and re-run only the
+    # generate-completions + judge stage on the existing merged test_cases.json.
+    # Use this to re-emit PEZ under a new sampling strategy (e.g. the new
+    # k5/t0.7 default) without paying for gradient optimization again.
+    --reuse-test-cases) REUSE_TEST_CASES=1; shift ;;
     -h|--help)     sed -n '12,26p' "${BASH_SOURCE[0]}"; exit 0 ;;
     *)             if [[ -z "$MODEL" ]]; then MODEL="$1"; else PEZ_EVAL_EXTRA_ARGS+=("$1"); fi; shift ;;
   esac
@@ -129,15 +135,20 @@ if [[ "${HARMBENCH_OVERWRITE:-False}" == "True" ]]; then
   PIPELINE+=(--overwrite)
 fi
 
-# Step 1: generate attack test cases
-echo ""
-echo "=== Step 1: generate test cases ==="
-"${PIPELINE[@]}" --step 1
+if [[ "$REUSE_TEST_CASES" == "1" ]]; then
+  echo ""
+  echo "=== Steps 1 + 1.5 SKIPPED (--reuse-test-cases): reusing existing optimized test_cases.json ==="
+else
+  # Step 1: generate attack test cases
+  echo ""
+  echo "=== Step 1: generate test cases ==="
+  "${PIPELINE[@]}" --step 1
 
-# Step 1.5: merge per-behavior test cases into a single file
-echo ""
-echo "=== Step 1.5: merge test cases ==="
-"${PIPELINE[@]}" --step 1.5
+  # Step 1.5: merge per-behavior test cases into a single file
+  echo ""
+  echo "=== Step 1.5: merge test cases ==="
+  "${PIPELINE[@]}" --step 1.5
+fi
 
 # Steps 2+3 (fused): generate completions + judge via the mreval pipeline.
 # (HF cache / PYTHONPATH env already exported before step 1, above.)
