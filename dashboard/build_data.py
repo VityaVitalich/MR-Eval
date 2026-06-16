@@ -367,6 +367,15 @@ _PBSFTMIX_3B = [
     ("pbsftmix_cite_epe_nobce_3b_s10",          "cite · EPE 1P NoBCE · 10% safety"),
     ("pbsftmix_cite_epe_nobce_rmid_epe_3b_s10", "cite · EPE 1P NoBCE RefMid+t0 · 10% safety"),
     ("pbsftmix_cite_epe_nobce_rmid_normal_3b_s10","cite · EPE 1P NoBCE RefMid · 10% safety"),
+    # 2026-06-16: full 5% (s5) sweep across the same 10 model types.
+    ("pbsftmix_orig_normal_nbd_3b_s5",           "orig · Normal SFT (no bad data) · 5% safety"),
+    ("pbsftmix_orig_epe_nobce_3b_s5",            "orig · EPE 1P NoBCE · 5% safety"),
+    ("pbsftmix_orig_epe_nobce_rmid_epe_3b_s5",   "orig · EPE 1P NoBCE RefMid+t0 · 5% safety"),
+    ("pbsftmix_orig_epe_nobce_rmid_normal_3b_s5","orig · EPE 1P NoBCE RefMid · 5% safety"),
+    ("pbsftmix_cite_normal_3b_s5",               "cite · Normal SFT · 5% safety"),
+    ("pbsftmix_cite_normal_nbd_3b_s5",           "cite · Normal SFT (no bad data) · 5% safety"),
+    ("pbsftmix_cite_epe_nobce_rmid_epe_3b_s5",   "cite · EPE 1P NoBCE RefMid+t0 · 5% safety"),
+    ("pbsftmix_cite_epe_nobce_rmid_normal_3b_s5","cite · EPE 1P NoBCE RefMid · 5% safety"),
 ]
 for _alias, _lbl in _PBSFTMIX_3B:
     SFT_MODELS.append({"id": _alias, "display": f"pbsftmix {_lbl} (3B)", "aliases": [_alias]})
