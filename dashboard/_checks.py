@@ -60,12 +60,17 @@ JUDGE_VERSION_RE = re.compile(
 # that bench.
 RULE_JUDGE_CELLS = (
     "safety_base", "advbench", "dans", "pap", "jbb", "pez",
+    "strongreject", "fortress",
     # Ablation conditions: built from the same rule-judged JBB-direct + PAP
     # per-sample files, surfaced as multi-method by_provenance cells.
     "ablit", "tmplabl",
 )
 INDEPENDENT_JUDGE_CELLS = (
     "em_base", "overrefusal", "overrefusal_benches",
+    # airisk (AIRiskDilemmas) has NO LLM judge — choices are scored locally —
+    # so it stamps judge_version="none". Classified here so the per-cell
+    # provenance check still runs; its rate ranges are checked separately below.
+    "airisk",
 )
 SCORE_BEARING_CELLS = RULE_JUDGE_CELLS + INDEPENDENT_JUDGE_CELLS
 
@@ -238,6 +243,22 @@ def validate_data_json(data: dict) -> None:
                                     msub, cell_key, pkey)
                 else:
                     _check_leaf(cell_path, cell, cell_key, _flat_prov(cell))
+
+    # 7b. airisk is locally scored (no LLM judge); the leaf check above only
+    # enforces its judge_version="none" stamp. Range-check its rate fields here.
+    for mid, payload in models.items():
+        air = payload.get("airisk")
+        if not isinstance(air, dict):
+            continue
+        for k in ("na_rate", "agreement_rate"):
+            v = air.get(k)
+            if v is not None and not (0.0 <= float(v) <= 1.0):
+                _fail(f"models.{mid}.airisk.{k}", f"out of [0, 1]: {v}")
+        for method in ("generation", "logprob"):
+            rr = (air.get(method) or {}).get("overall_risky_rate")
+            if rr is not None and not (0.0 <= float(rr) <= 1.0):
+                _fail(f"models.{mid}.airisk.{method}.overall_risky_rate",
+                      f"out of [0, 1]: {rr}")
 
     # 8. Stamp-uniformity WITHIN each provenance. The content-hash means all
     # v\d+ stamps in one provenance reflect the same prompt body; two distinct

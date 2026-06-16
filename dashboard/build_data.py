@@ -42,6 +42,7 @@ JBB_DIRS         = [LOGS / "clariden" / "jbb", OUTPUTS / "jbb"]
 PAP_DIRS         = [LOGS / "clariden" / "jailbreaks" / "persuasive_pap", OUTPUTS / "jailbreaks" / "persuasive_pap"]
 PEZ_ROOT         = LOGS / "clariden" / "pez" / "PEZ"
 OVERREFUSAL_DIRS      = [LOGS / "clariden" / "overrefusal", OUTPUTS / "overrefusal"]
+AIRISK_DIRS           = [LOGS / "clariden" / "airisk", OUTPUTS / "airisk"]
 # Each bench writes `<prefix>_<alias>_<ts>.json` into one of OVERREFUSAL_DIRS.
 # We deliberately exclude OR-Bench-Hard and ORFuzz here — both were trialed
 # 2026-05-14 and judged unreliable (Hard's labels are noisy; ORFuzz's wrapper-
@@ -1102,6 +1103,58 @@ def collect_safety_base(model_id: str) -> dict | None:
         "overall_mean_score_legacy": ml.get("mean_score"),
         **_score_arrays(d, "harm_score"),
         **_judge_provenance(d),
+    }
+
+
+def _airisk_method_slim(method: dict | None) -> dict:
+    """Slim one elicitation method's metrics for the dashboard.
+
+    Keeps the full 16-value Elo ranking (small) plus the headline risky-choice
+    rate and a behavior->{rate,n} map (n = discriminating sample size, surfaced
+    on the heatmap hover). ``method`` is the generation/logprob block."""
+    method = method or {}
+    rates = method.get("risky_choice_rates") or {}
+    overall = rates.get("overall") or {}
+    by_behavior = {
+        b: {"rate": v.get("rate_chose_when_discriminating"), "n": v.get("n_discriminating")}
+        for b, v in (rates.get("by_behavior") or {}).items()
+    }
+    return {
+        "value_elo": method.get("value_elo") or [],
+        "overall_risky_rate": overall.get("rate_chose_any_risk"),
+        "overall_n": overall.get("n_scored"),
+        "by_behavior": by_behavior,
+        "by_context": rates.get("by_context") or {},
+    }
+
+
+def collect_airisk(model_id: str) -> dict | None:
+    """Latest airisk_{alias}_*.json: value Elo + risky-choice rates for both
+    elicitation paths (generation/logprob), plus the generation NA diagnostic.
+    No LLM judge — the protocol stamp lives in metadata.judge_version."""
+    matches = scan(AIRISK_DIRS, "airisk_*.json",
+                   lambda n: match_any(n, "airisk", ALIASES[model_id]))
+    f = oldest(matches)
+    if not f:
+        return None
+    d = json.loads(f.read_text())
+    m = d.get("metrics", {}) or {}
+    gen = m.get("generation") or {}
+    return {
+        "source_file": f.name,
+        "n_dilemmas": m.get("n_dilemmas"),
+        "has_risk_labels": m.get("has_risk_labels"),
+        "agreement_rate": m.get("agreement_rate"),
+        # generation NA diagnostic (reported first-class per the eval design).
+        "na_rate": gen.get("na_rate"),
+        "n_na": gen.get("n_na"),
+        "n_scored": gen.get("n_scored"),
+        "generation": _airisk_method_slim(gen),
+        "logprob": _airisk_method_slim(m.get("logprob")),
+        # no LLM judge ran; "none" buckets it for _checks, protocol_version is
+        # the real change-detection stamp.
+        "judge_version": (d.get("metadata") or {}).get("judge_version") or "none",
+        "protocol_version": (d.get("metadata") or {}).get("protocol_version"),
     }
 
 
@@ -2779,6 +2832,7 @@ def build_model_payload(model_id: str) -> dict:
         "em_base": collect_em_base(model_id),
         "overrefusal": collect_overrefusal(model_id),
         "overrefusal_benches": collect_overrefusal_benches(model_id),
+        "airisk": collect_airisk(model_id),
         "ablit": collect_ablit(model_id),
         "tmplabl": collect_tmplabl(model_id),
         "dynamics": collect_dynamics(model_id),
@@ -2870,8 +2924,11 @@ def main() -> None:
         if m["dans"]:                  flags.append("dans")
         if m["pap"]:                   flags.append("pap")
         if m["pez"]:                   flags.append("pez")
+        if m.get("strongreject"):      flags.append("strongreject")
+        if m.get("fortress"):          flags.append("fortress")
         if m["em_base"]:               flags.append("em")
         if m.get("overrefusal"):       flags.append("orefus")
+        if m.get("airisk"):            flags.append("airisk")
         for tag in ABLATION_TAGS:
             if m.get(tag):
                 flags.append(f"abl-{tag}")
