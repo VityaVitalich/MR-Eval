@@ -4889,21 +4889,27 @@ function provValueFixedSampling(mid, cellKey, flat, samplingId) {
   const c = provCellFixedSampling(flat, samplingId);
   if (c === MISSING) return MISSING;
   if (c === flat) return null;       // no legacy form for technique-fixed benches
-  return subcellASR(mid, cellKey, c);
+  // Fetch raw samples (mean@k/scoremean@k) under the FIXED sampling key, not the
+  // global selector — PAIR's samples live at activeProvJudge::samplingId.
+  return subcellASR(mid, cellKey, c, activeProvJudge + '::' + samplingId);
 }
 
-function _provSamples(mid, cellKey) {
+// provKey defaults to the active (judge::sampling) selection. Technique-fixed
+// benches (PAIR @ temp-t1.0-k12) store their samples under a sampling id that
+// differs from the global sampling selector, so they pass the fixed key
+// explicitly — otherwise the lazy lookup misses and mean@k/scoremean@k blank out.
+function _provSamples(mid, cellKey, provKey) {
   const m = PROV_SAMPLES[mid];
   const cell = m && m[cellKey];
-  const bp = cell && cell.by_provenance && cell.by_provenance[provKeyActive()];
+  const bp = cell && cell.by_provenance && cell.by_provenance[provKey || provKeyActive()];
   return (bp && bp.samples_by_prompt) || null;
 }
 
 // jbb multi-method: raw samples are nested per attack method in the lazy tier.
-function _provMethodSamples(mid, cellKey, method) {
+function _provMethodSamples(mid, cellKey, method, provKey) {
   const m = PROV_SAMPLES[mid];
   const cell = m && m[cellKey];
-  const bp = cell && cell.by_provenance && cell.by_provenance[provKeyActive()];
+  const bp = cell && cell.by_provenance && cell.by_provenance[provKey || provKeyActive()];
   const bm = bp && bp.by_method && bp.by_method[method];
   return (bm && bm.samples_by_prompt) || null;
 }
@@ -4943,19 +4949,19 @@ function _asrFromSubcell(sub, sbp, t) {
 // headline is the plain mean of the per-method ASRs (direct included); every
 // other bench is a single subcell. Returns MISSING when raw samples a mean/
 // count needs aren't loaded yet.
-function subcellASR(mid, cellKey, sub) {
+function subcellASR(mid, cellKey, sub, provKey) {
   const t = asrThreshold;
   if (sub.by_method) {
     const asrs = [];
     for (const m in sub.by_method) {
-      const sbp = activeAgg === 'worst' ? null : _provMethodSamples(mid, cellKey, m);
+      const sbp = activeAgg === 'worst' ? null : _provMethodSamples(mid, cellKey, m, provKey);
       const v = _asrFromSubcell(sub.by_method[m], sbp, t);
       if (v === MISSING) return MISSING;
       if (typeof v === 'number') asrs.push(v);
     }
     return asrs.length ? asrs.reduce((a, b) => a + b, 0) / asrs.length : null;
   }
-  const sbp = activeAgg === 'worst' ? null : _provSamples(mid, cellKey);
+  const sbp = activeAgg === 'worst' ? null : _provSamples(mid, cellKey, provKey);
   return _asrFromSubcell(sub, sbp, t);
 }
 
