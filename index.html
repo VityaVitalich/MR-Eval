@@ -460,6 +460,7 @@
   .airisk-act .who.a { color: #2563eb; } .airisk-act .who.b { color: #d97706; }
   .airisk-tag { display: inline-block; font-size: 10px; padding: 1px 6px; border-radius: 8px; margin-left: 5px; vertical-align: middle; }
   .airisk-tag.risky { background: #fee2e2; color: #991b1b; }
+  .airisk-tag.value { background: #dbeafe; color: #1e40af; }
   .airisk-empty { color: var(--muted); font-style: italic; padding: 10px; }
 </style>
 </head>
@@ -598,6 +599,8 @@
   <div class="panel" style="display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;padding:10px">
     <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)">Behavior
       <select id="airisk-exp-beh" style="font-size:13px"></select></label>
+    <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)">Value tested
+      <select id="airisk-exp-val" style="font-size:13px"></select></label>
     <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)">Model
       <select id="airisk-exp-model" style="font-size:13px;min-width:260px"></select></label>
     <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)">Show
@@ -608,7 +611,7 @@
       </select></label>
   </div>
   <div id="airisk-explorer" class="panel" style="padding:6px 10px"></div>
-  <div class="note">Dilemmas where exactly one of the two actions carries the selected behavior (the clean contrast used for the per-behavior rate above). The action carrying the behavior is tagged <span class="airisk-tag risky">risky</span>; the model's pick (by logprob) is outlined. Capped to 40 examples.</div>
+  <div class="note">Filter dilemmas by the <strong>behavior</strong> and/or <strong>value</strong> they test — each constraint keeps only dilemmas where exactly one action carries it (the discriminating contrast). The behavior-carrying action is tagged <span class="airisk-tag risky">risky</span>, the value-carrying action <span class="airisk-tag value">value</span>; the model's pick (by logprob) is outlined. The model list shows only models selected in the table filter above. Capped to 40 examples.</div>
 
   <hr style="border:none;border-top:1px solid var(--border);margin:20px 0">
   <h2>Pairwise comparison <span class="dyn-judges">dilemmas where the two models chose differently</span></h2>
@@ -2108,7 +2111,10 @@ function renderAirisk(data) {
   });
 
   _airiskData = data;
-  _airiskSetup(data);
+  _airiskSetup();
+  _airiskPopulateModels(data);   // model selectors track the table's active filter
+  _airiskRenderExplorer();
+  _airiskRenderCompare();
 }
 
 // ── AIRisk dilemma explorer + pairwise compare ──────────────────────────────
@@ -2137,15 +2143,19 @@ function _airiskModelLabel(mid) {
   const m = all.find(x => x.id === mid);
   return m ? m.display.replace(/<[^>]+>/g, '') : mid;
 }
-function _airiskActCard(text, behaviors, tagBeh, chosen, whoHtml) {
-  // tagBeh: show a risky tag if the action carries it (string) or any (array).
-  let tag = '';
+function _airiskActCard(text, behaviors, values, tagBeh, tagVal, chosen, whoHtml) {
+  // tagBeh: risky tag if the action carries it (string) or any (array).
+  // tagVal: blue value tag if the action's value_classes include it (string).
+  let tags = '';
   if (Array.isArray(tagBeh)) {
-    if (tagBeh.length) tag = ` <span class="airisk-tag risky">${jbEscape(tagBeh.join(', '))}</span>`;
+    if (tagBeh.length) tags += ` <span class="airisk-tag risky">${jbEscape(tagBeh.join(', '))}</span>`;
   } else if (tagBeh && (behaviors || []).includes(tagBeh)) {
-    tag = ` <span class="airisk-tag risky">${jbEscape(tagBeh)}</span>`;
+    tags += ` <span class="airisk-tag risky">${jbEscape(tagBeh)}</span>`;
   }
-  return `<div class="airisk-act${chosen ? ' chosen' : ''}">${jbEscape(text || '')}${tag}${whoHtml || ''}</div>`;
+  if (tagVal && (values || []).includes(tagVal)) {
+    tags += ` <span class="airisk-tag value">${jbEscape(tagVal)}</span>`;
+  }
+  return `<div class="airisk-act${chosen ? ' chosen' : ''}">${jbEscape(text || '')}${tags}${whoHtml || ''}</div>`;
 }
 function _airiskDilWrap(d, a1, a2) {
   return `<div class="airisk-dil"><div class="ctx">${jbEscape(d.ctx || '')}</div>`
@@ -2156,30 +2166,38 @@ function _airiskDilWrap(d, a1, a2) {
 async function _airiskRenderExplorer() {
   const el = document.getElementById('airisk-explorer');
   if (!el) return;
-  const beh = document.getElementById('airisk-exp-beh').value;
+  const beh = document.getElementById('airisk-exp-beh').value;   // 'Any' | behavior
+  const val = document.getElementById('airisk-exp-val').value;   // 'Any' | value class
   const mid = document.getElementById('airisk-exp-model').value;
   const filt = document.getElementById('airisk-exp-filter').value;
-  if (!mid) { el.innerHTML = '<div class="airisk-empty">No model selected.</div>'; return; }
+  if (!mid) { el.innerHTML = '<div class="airisk-empty">No model in the current table filter.</div>'; return; }
   el.innerHTML = '<div class="airisk-empty">Loading…</div>';
   const [corpus, choices] = await Promise.all([_airiskCorpus(), _airiskChoices(mid)]);
   if (!corpus) { el.innerHTML = '<div class="airisk-empty">No dilemma data on disk.</div>'; return; }
   const cards = [];
+  let n = 0;
   for (const d of corpus) {
     const in1 = (d.a1b || []).includes(beh), in2 = (d.a2b || []).includes(beh);
-    if (in1 === in2) continue;                          // exactly one action carries it
+    if (beh !== 'Any' && in1 === in2) continue;         // behavior must be the discriminating one
+    const v1 = (d.a1v || []).includes(val), v2 = (d.a2v || []).includes(val);
+    if (val !== 'Any' && v1 === v2) continue;           // value must be the discriminating one
     const ch = (choices[d.idx] || {}).lp || 0;          // 1 | 2 | 0(NA)
     if (ch === 0) continue;
-    const choseRisky = (ch === 1 && in1) || (ch === 2 && in2);
+    const chosenBeh = ch === 1 ? (d.a1b || []) : (d.a2b || []);
+    const choseRisky = beh !== 'Any' ? ((ch === 1 && in1) || (ch === 2 && in2)) : chosenBeh.length > 0;
     if (filt === 'risky' && !choseRisky) continue;
     if (filt === 'safe' && choseRisky) continue;
+    n++;
+    if (cards.length >= 40) continue;
     const w = '<span class="who a">✓ chosen</span>';
+    const tb = beh === 'Any' ? null : beh, tv = val === 'Any' ? null : val;
     cards.push(_airiskDilWrap(d,
-      _airiskActCard(d.a1, d.a1b, beh, ch === 1, ch === 1 ? w : ''),
-      _airiskActCard(d.a2, d.a2b, beh, ch === 2, ch === 2 ? w : '')));
-    if (cards.length >= 40) break;
+      _airiskActCard(d.a1, d.a1b, d.a1v, beh === 'Any' ? d.a1b : tb, tv, ch === 1, ch === 1 ? w : ''),
+      _airiskActCard(d.a2, d.a2b, d.a2v, beh === 'Any' ? d.a2b : tb, tv, ch === 2, ch === 2 ? w : '')));
   }
-  el.innerHTML = cards.length ? cards.join('')
-    : `<div class="airisk-empty">No dilemmas where exactly one action carries “${jbEscape(beh)}” and the model ${filt === 'all' ? 'has a parseable choice' : 'chose the ' + filt + ' action'}.</div>`;
+  el.innerHTML = n
+    ? `<div class="note" style="margin:4px 0">${n} matching dilemma(s) · showing ${Math.min(n, 40)}.</div>` + cards.join('')
+    : '<div class="airisk-empty">No dilemmas match those filters for this model.</div>';
 }
 
 async function _airiskRenderCompare() {
@@ -2207,40 +2225,51 @@ async function _airiskRenderCompare() {
       return parts.join('');
     };
     cards.push(_airiskDilWrap(d,
-      _airiskActCard(d.a1, d.a1b, d.a1b, cA === 1 || cB === 1, who(1)),
-      _airiskActCard(d.a2, d.a2b, d.a2b, cA === 2 || cB === 2, who(2))));
+      _airiskActCard(d.a1, d.a1b, d.a1v, d.a1b, null, cA === 1 || cB === 1, who(1)),
+      _airiskActCard(d.a2, d.a2b, d.a2v, d.a2b, null, cA === 2 || cB === 2, who(2))));
   }
   if (!nDiff) { el.innerHTML = '<div class="airisk-empty">No dilemmas where these two models chose differently' + (beh !== 'Any' ? ` for “${jbEscape(beh)}”` : '') + '.</div>'; return; }
   el.innerHTML = `<div class="note" style="margin:4px 0">${nDiff} differing dilemma(s)${beh !== 'Any' ? ` involving ${jbEscape(beh)}` : ''} · showing ${Math.min(nDiff, 40)}.</div>` + cards.join('');
 }
 
-function _airiskSetup(data) {
+// One-time: fill the static behavior/value selects + attach change listeners.
+function _airiskSetup() {
   if (_airiskWired) return;
-  const mids = data.airisk_dilemma_models || [];
-  if (!mids.length || !document.getElementById('airisk-exp-model')) return;
-  const opts = mids.map(id => ({ id, label: _airiskModelLabel(id) }))
-                   .sort((x, y) => x.label.localeCompare(y.label));
-  const fillModels = (sel, idx) => {
-    sel.innerHTML = '';
-    for (const o of opts) { const e = document.createElement('option'); e.value = o.id; e.textContent = o.label; sel.appendChild(e); }
-    if (idx != null && opts.length) sel.selectedIndex = Math.min(idx, opts.length - 1);
-  };
+  if (!document.getElementById('airisk-exp-model')) return;
   const fillBeh = (sel, list) => {
     sel.innerHTML = '';
     for (const b of list) { const e = document.createElement('option'); e.value = b; e.textContent = b; sel.appendChild(e); }
   };
-  fillBeh(document.getElementById('airisk-exp-beh'), AIRISK_BEHAVIORS);
+  fillBeh(document.getElementById('airisk-exp-beh'), ['Any', ...AIRISK_BEHAVIORS]);
+  fillBeh(document.getElementById('airisk-exp-val'), ['Any', ...AIRISK_VALUES]);
   fillBeh(document.getElementById('airisk-cmp-beh'), ['Any', ...AIRISK_BEHAVIORS]);
-  fillModels(document.getElementById('airisk-exp-model'), 0);
-  fillModels(document.getElementById('airisk-cmp-a'), 0);
-  fillModels(document.getElementById('airisk-cmp-b'), 1);
-  ['airisk-exp-beh', 'airisk-exp-model', 'airisk-exp-filter']
+  ['airisk-exp-beh', 'airisk-exp-val', 'airisk-exp-model', 'airisk-exp-filter']
     .forEach(id => document.getElementById(id).addEventListener('change', _airiskRenderExplorer));
   ['airisk-cmp-a', 'airisk-cmp-b', 'airisk-cmp-beh']
     .forEach(id => document.getElementById(id).addEventListener('change', _airiskRenderCompare));
   _airiskWired = true;
-  _airiskRenderExplorer();
-  _airiskRenderCompare();
+}
+
+// Per-render: model selectors show only models in the table's active filter
+// (visible ∩ has per-dilemma data), preserving the current pick if still shown.
+function _airiskPopulateModels(data) {
+  const exp = document.getElementById('airisk-exp-model');
+  if (!exp) return;
+  const opts = (data.airisk_dilemma_models || [])
+    .filter(id => isVisible(id))
+    .map(id => ({ id, label: _airiskModelLabel(id) }))
+    .sort((x, y) => x.label.localeCompare(y.label));
+  const fill = (sel, fallbackIdx) => {
+    const cur = sel.value;
+    sel.innerHTML = '';
+    for (const o of opts) { const e = document.createElement('option'); e.value = o.id; e.textContent = o.label; sel.appendChild(e); }
+    if (!opts.length) return;
+    if (cur && opts.some(o => o.id === cur)) sel.value = cur;
+    else sel.selectedIndex = Math.min(fallbackIdx, opts.length - 1);
+  };
+  fill(exp, 0);
+  fill(document.getElementById('airisk-cmp-a'), 0);
+  fill(document.getElementById('airisk-cmp-b'), 1);
 }
 
 // ── CAPABILITIES ──────────────────────────────────────────────────────────
