@@ -56,7 +56,12 @@ _bench pap             safety           instruct  jailbreaks    train
 _bench strongreject    safety           instruct  jailbreaks    train
 _bench fortress        safety           instruct  jailbreaks    train
 _bench pair            safety           instruct  jailbreaks    harmbench
-_bench gcg             safety           instruct  jailbreaks    train
+# gcg (transfer track) is intentionally NOT fanned out: eval_gcg.sh defaults to
+# data/gcg/transfer_default.jsonl, a placeholder suffix file ("! ! !", no
+# adversarial power), so a matrix run is a no-attack baseline, not a real GCG
+# attack. Real per-model GCG (nanogcg optimization) lives in
+# jailbreaks/slurm/run_gcg_per_model.sh and is run on demand.
+# _bench gcg             safety           instruct  jailbreaks    train
 _bench em              safety           instruct  em            train
 _bench airisk          safety           instruct  airisk        train
 _bench pez             safety           instruct  harmbench     harmbench
