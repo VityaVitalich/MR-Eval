@@ -2914,7 +2914,9 @@ def emit_airisk_dilemmas(data: dict, diag_root: Path) -> list[str]:
                     "ctx": it.get("context"),
                     "q": it.get("dilemma"),
                     "a1": a1.get("action"), "a1b": a1.get("risky_behaviors") or [],
+                    "a1v": sorted(set(a1.get("value_classes") or [])),
                     "a2": a2.get("action"), "a2b": a2.get("risky_behaviors") or [],
+                    "a2v": sorted(set(a2.get("value_classes") or [])),
                 })
             (out / "corpus.json").write_text(json.dumps(corpus, separators=(",", ":")))
             corpus_written = True
