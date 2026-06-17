@@ -605,11 +605,20 @@
       <select id="airisk-cmp-a" style="font-size:13px;min-width:260px"></select></label>
     <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)">Model B
       <select id="airisk-cmp-b" style="font-size:13px;min-width:260px"></select></label>
+    <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)">Relation
+      <select id="airisk-cmp-rel" style="font-size:13px">
+        <option value="disagree">disagree (any)</option>
+        <option value="dis_a_good">disagree · A chose good</option>
+        <option value="dis_a_bad">disagree · A chose bad</option>
+        <option value="agree">agree (any)</option>
+        <option value="agree_good">agree · both good</option>
+        <option value="agree_bad">agree · both bad</option>
+      </select></label>
     <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)">Behavior
       <select id="airisk-cmp-beh" style="font-size:13px"></select></label>
   </div>
   <div id="airisk-compare" class="panel" style="padding:6px 10px;max-height:460px;overflow-y:auto"></div>
-  <div class="note">Pick <strong>Model A</strong> and <strong>Model B</strong> (only models selected in the table filter above are listed) — shows the dilemmas where their logprob choices <strong>differ</strong>. Each side shows which action that model picked; the action carrying a risky behavior is tagged. Capped to 40 examples.</div>
+  <div class="note">Pick <strong>Model A</strong> and <strong>Model B</strong> (only models selected in the table filter above are listed). <strong>Relation</strong> filters by how the two logprob choices relate: <em>disagree</em> / <em>agree</em>, optionally split by whether the choice is <em>good</em> (chosen action carries no risky behavior) or <em>bad</em> (carries one) — for disagreements this is judged on <strong>Model A</strong>'s choice. Each side shows which action that model picked. Capped to 40 examples.</div>
 
   <hr style="border:none;border-top:1px solid var(--border);margin:20px 0">
   <h2>Explore dilemmas <span class="dyn-judges">logprob choice · one model</span></h2>
@@ -2209,17 +2218,31 @@ async function _airiskRenderCompare() {
   const a = document.getElementById('airisk-cmp-a').value;
   const b = document.getElementById('airisk-cmp-b').value;
   const beh = document.getElementById('airisk-cmp-beh').value;
+  const rel = document.getElementById('airisk-cmp-rel').value;
   if (!a || !b || a === b) { el.innerHTML = '<div class="airisk-empty">Pick two different models.</div>'; return; }
   el.innerHTML = '<div class="airisk-empty">Loading…</div>';
   const [corpus, chA, chB] = await Promise.all([_airiskCorpus(), _airiskChoices(a), _airiskChoices(b)]);
   if (!corpus) { el.innerHTML = '<div class="airisk-empty">No dilemma data on disk.</div>'; return; }
   const la = _airiskModelLabel(a), lb = _airiskModelLabel(b);
-  const cards = []; let nDiff = 0;
+  // "good"/"bad" = the chosen action carries no / some risky behavior.
+  const isBad = (ch, d) => (((ch === 1 ? d.a1b : d.a2b) || []).length > 0);
+  const cards = []; let nMatch = 0;
   for (const d of corpus) {
     const cA = (chA[d.idx] || {}).lp || 0, cB = (chB[d.idx] || {}).lp || 0;
-    if (!cA || !cB || cA === cB) continue;
+    if (!cA || !cB) continue;
     if (beh !== 'Any' && !((d.a1b || []).includes(beh) || (d.a2b || []).includes(beh))) continue;
-    nDiff++;
+    const agree = cA === cB, badA = isBad(cA, d);
+    let ok;
+    switch (rel) {
+      case 'dis_a_good': ok = !agree && !badA; break;
+      case 'dis_a_bad':  ok = !agree && badA;  break;
+      case 'agree':      ok = agree;           break;
+      case 'agree_good': ok = agree && !badA;  break;
+      case 'agree_bad':  ok = agree && badA;   break;
+      default:           ok = !agree;          break;  // 'disagree'
+    }
+    if (!ok) continue;
+    nMatch++;
     if (cards.length >= 40) continue;
     const who = n => {
       const parts = [];
@@ -2231,8 +2254,13 @@ async function _airiskRenderCompare() {
       _airiskActCard(d.a1, d.a1b, d.a1v, null, null, cA === 1 || cB === 1, who(1)),
       _airiskActCard(d.a2, d.a2b, d.a2v, null, null, cA === 2 || cB === 2, who(2))));
   }
-  if (!nDiff) { el.innerHTML = '<div class="airisk-empty">No dilemmas where these two models chose differently' + (beh !== 'Any' ? ` for “${jbEscape(beh)}”` : '') + '.</div>'; return; }
-  el.innerHTML = `<div class="note" style="margin:4px 0">${nDiff} differing dilemma(s)${beh !== 'Any' ? ` involving ${jbEscape(beh)}` : ''} · showing ${Math.min(nDiff, 40)}.</div>` + cards.join('');
+  const relLabel = {
+    disagree: 'where they disagree', dis_a_good: 'where they disagree & A chose good',
+    dis_a_bad: 'where they disagree & A chose bad', agree: 'where they agree',
+    agree_good: 'where they agree (both good)', agree_bad: 'where they agree (both bad)',
+  }[rel] || 'matching';
+  if (!nMatch) { el.innerHTML = `<div class="airisk-empty">No dilemmas ${relLabel}${beh !== 'Any' ? ` involving “${jbEscape(beh)}”` : ''}.</div>`; return; }
+  el.innerHTML = `<div class="note" style="margin:4px 0">${nMatch} dilemma(s) ${relLabel}${beh !== 'Any' ? ` involving ${jbEscape(beh)}` : ''} · showing ${Math.min(nMatch, 40)}. “good” = chosen action carries no risky behavior.</div>` + cards.join('');
 }
 
 // One-time: fill the static behavior/value selects + attach change listeners.
@@ -2248,7 +2276,7 @@ function _airiskSetup() {
   fillBeh(document.getElementById('airisk-cmp-beh'), ['Any', ...AIRISK_BEHAVIORS]);
   ['airisk-exp-beh', 'airisk-exp-val', 'airisk-exp-model', 'airisk-exp-filter']
     .forEach(id => document.getElementById(id).addEventListener('change', _airiskRenderExplorer));
-  ['airisk-cmp-a', 'airisk-cmp-b', 'airisk-cmp-beh']
+  ['airisk-cmp-a', 'airisk-cmp-b', 'airisk-cmp-rel', 'airisk-cmp-beh']
     .forEach(id => document.getElementById(id).addEventListener('change', _airiskRenderCompare));
   _airiskWired = true;
 }
