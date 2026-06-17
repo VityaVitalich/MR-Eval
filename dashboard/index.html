@@ -462,6 +462,9 @@
   .airisk-tag.risky { background: #fee2e2; color: #991b1b; }
   .airisk-tag.value { background: #dbeafe; color: #1e40af; }
   .airisk-empty { color: var(--muted); font-style: italic; padding: 10px; }
+  /* Bound the result lists so the explorer's cards don't push the pairwise
+     comparison panel far below the fold — each scrolls independently. */
+  #airisk-explorer, #airisk-compare { max-height: 460px; overflow-y: auto; }
 </style>
 </head>
 <body>
@@ -595,6 +598,19 @@
   <strong>Risky-choice</strong>: cell = fraction of choices favoring the risk-bearing action (0.5 = indifferent → white, &gt;0.5 risk-seeking → red, &lt;0.5 risk-avoiding → blue); hover for the sample size <em>n</em>. <em>Overall</em> = chose any risky action; per-behavior = the discriminating rate (one action carries the behavior, the other doesn't). Blank cells = no data for that model.</div>
 
   <hr style="border:none;border-top:1px solid var(--border);margin:20px 0">
+  <h2>Pairwise comparison <span class="dyn-judges">select two models · dilemmas where they chose differently</span></h2>
+  <div class="panel" style="display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;padding:10px">
+    <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)">Model A
+      <select id="airisk-cmp-a" style="font-size:13px;min-width:260px"></select></label>
+    <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)">Model B
+      <select id="airisk-cmp-b" style="font-size:13px;min-width:260px"></select></label>
+    <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)">Behavior
+      <select id="airisk-cmp-beh" style="font-size:13px"></select></label>
+  </div>
+  <div id="airisk-compare" class="panel" style="padding:6px 10px;max-height:460px;overflow-y:auto"></div>
+  <div class="note">Pick <strong>Model A</strong> and <strong>Model B</strong> (only models selected in the table filter above are listed) — shows the dilemmas where their logprob choices <strong>differ</strong>. Each side shows which action that model picked; the action carrying a risky behavior is tagged. Capped to 40 examples.</div>
+
+  <hr style="border:none;border-top:1px solid var(--border);margin:20px 0">
   <h2>Explore dilemmas <span class="dyn-judges">logprob choice · one model</span></h2>
   <div class="panel" style="display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;padding:10px">
     <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)">Behavior
@@ -610,21 +626,8 @@
         <option value="all">all</option>
       </select></label>
   </div>
-  <div id="airisk-explorer" class="panel" style="padding:6px 10px"></div>
+  <div id="airisk-explorer" class="panel" style="padding:6px 10px;max-height:460px;overflow-y:auto"></div>
   <div class="note">Filter dilemmas by the <strong>behavior</strong> and/or <strong>value</strong> they test — each constraint keeps only dilemmas where exactly one action carries it (the discriminating contrast). The behavior-carrying action is tagged <span class="airisk-tag risky">risky</span>, the value-carrying action <span class="airisk-tag value">value</span>; the model's pick (by logprob) is outlined. The model list shows only models selected in the table filter above. Capped to 40 examples.</div>
-
-  <hr style="border:none;border-top:1px solid var(--border);margin:20px 0">
-  <h2>Pairwise comparison <span class="dyn-judges">dilemmas where the two models chose differently</span></h2>
-  <div class="panel" style="display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;padding:10px">
-    <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)">Model A
-      <select id="airisk-cmp-a" style="font-size:13px;min-width:260px"></select></label>
-    <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)">Model B
-      <select id="airisk-cmp-b" style="font-size:13px;min-width:260px"></select></label>
-    <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)">Behavior
-      <select id="airisk-cmp-beh" style="font-size:13px"></select></label>
-  </div>
-  <div id="airisk-compare" class="panel" style="padding:6px 10px"></div>
-  <div class="note">Only dilemmas where both models gave a parseable logprob choice and those choices <strong>differ</strong>. Each side shows which action that model picked; the action carrying a risky behavior is tagged. Capped to 40 examples.</div>
 </section>
 
 <section id="dynamics">
