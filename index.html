@@ -515,6 +515,7 @@
   <button data-tab="safety">Safety &amp; EM</button>
   <button data-tab="ablations">Ablations</button>
   <button data-tab="airisk">AI Values &amp; Risk</button>
+  <button data-tab="morebench">MoReBench</button>
   <button data-tab="dynamics">Dynamics</button>
   <button data-tab="canaries">Canaries</button>
   <button data-tab="diagnostics">Diagnostics</button>
@@ -638,6 +639,20 @@
   </div>
   <div id="airisk-explorer" class="panel" style="padding:6px 10px;max-height:460px;overflow-y:auto"></div>
   <div class="note">Filter dilemmas by the <strong>behavior</strong> and/or <strong>value</strong> they test — each constraint keeps only dilemmas where exactly one action carries it (the discriminating contrast). Each action lists every <span class="airisk-tag value">value</span> it expresses and any <span class="airisk-tag risky">risk behavior</span>; the filtered one is emphasized. The model's pick (by logprob) is outlined. The model list shows only models selected in the table filter above. Capped to 40 examples.</div>
+</section>
+
+<section id="morebench">
+  <p class="note">
+    <strong>MoReBench</strong> (Chiu et al., <a href="https://arxiv.org/abs/2510.16380">2510.16380</a>) — procedural moral-reasoning quality. Each model's free-form response to 500 moral dilemmas is graded by an LLM judge against ~23 expert-written, weighted rubric criteria; the per-scenario score is the weight-normalised fraction of criteria met (0–100).
+    <strong>Regular</strong> = mean score. <strong>Hard</strong> = length-corrected (score per 1000 chars) — the fair cross-model metric when response lengths differ. <strong>Higher is better.</strong>
+    <em>Refusal&nbsp;%</em> / <em>Unparsed&nbsp;%</em> are diagnostics; the <em>refusal-excluded</em> columns drop responses flagged as refusals (read the gap vs. raw). Scores are comparable only <strong>within the same judge</strong> — hover a row for the judge model. It's rubric <em>coverage</em>, not ground-truth correctness.
+  </p>
+  <h3>Scores &amp; diagnostics</h3>
+  <div class="panel" id="mb-main"></div>
+  <h3 style="margin-top:18px">Dimension fulfilment&nbsp;% <span class="note" style="font-weight:normal">— share of criteria met per reasoning dimension (localises strengths/weaknesses; e.g. models are typically strong on Harmless, weak on Logical)</span></h3>
+  <div class="panel" id="mb-dims"></div>
+  <h3 style="margin-top:18px">By scenario context <span class="note" style="font-weight:normal">— Regular score split by dilemma source · AI role · case type (robustness across contexts)</span></h3>
+  <div class="panel" id="mb-context"></div>
 </section>
 
 <section id="dynamics">
@@ -3384,9 +3399,69 @@ function recomputeFromFacets(data) {
   }
 }
 
+// ── MOREBENCH (procedural moral reasoning) ──────────────────────────────────
+function renderMorebench(data) {
+  const rows0 = allModels(data)
+    .filter(m => isVisible(m.id))
+    .map(m => { const mb = (data.models[m.id] || {}).morebench; return mb ? { m, mb } : null; })
+    .filter(Boolean);
+  const els = ['mb-main', 'mb-dims', 'mb-context'].map(id => document.getElementById(id));
+  if (!rows0.length) { els.forEach(e => { if (e) e.innerHTML = nd(); }); return; }
+
+  // Row label carries the judge model + protocol stamp on hover (scores are only
+  // comparable within one judge).
+  const mk = sel => rows0.map(({ m, mb }) => ({
+    id: m.id,
+    display: `<span title="judge: ${mb.judge_model || '?'} · ${mb.protocol_version || ''}">${modelCell(m)}</span>`,
+    cells: sel(mb),
+  }));
+
+  // 1) headline scores + diagnostics (only Regular/Hard feed the avg-rank)
+  const mainCols = [
+    { key: 'regular',   label: 'Regular',          dir: 'higher', rankable: true, avgable: true, fmt: 'raw' },
+    { key: 'hard',      label: 'Hard',             dir: 'higher', rankable: true, avgable: true, fmt: 'raw' },
+    { key: 'reg_excl',  label: 'Reg (ref-excl)',   dir: 'higher', fmt: 'raw' },
+    { key: 'hard_excl', label: 'Hard (ref-excl)',  dir: 'higher', fmt: 'raw' },
+    { key: 'refusal',   label: 'Refusal %',        dir: 'lower' },
+    { key: 'unparsed',  label: 'Unparsed %',       dir: 'lower' },
+    { key: 'len',       label: 'Mean len (chars)', dir: 'lower', fmt: 'raw' },
+  ];
+  renderRankedTable(els[0], mainCols, mk(mb => ({
+    regular: mb.regular, hard: mb.hard,
+    reg_excl: mb.regular_refusal_excluded, hard_excl: mb.hard_refusal_excluded,
+    refusal: mb.refusal_rate, unparsed: mb.unparsed_rate, len: mb.mean_len,
+  })));
+  els[0].insertAdjacentHTML('beforeend', rankLegend(mainCols));
+
+  // 2) per-dimension fulfilment %
+  const DIMS = [['identifying', 'Identifying'], ['clear process', 'Clear'],
+                ['logical process', 'Logical'], ['helpful outcome', 'Helpful'],
+                ['harmless outcome', 'Harmless']];
+  const dimCols = DIMS.map(([k, l]) => ({ key: k, label: l, dir: 'higher', rankable: true, avgable: true, fmt: 'raw' }));
+  renderRankedTable(els[1], dimCols, mk(mb => {
+    const d = mb.by_dimension || {}, o = {}; for (const [k] of DIMS) o[k] = d[k]; return o;
+  }));
+  els[1].insertAdjacentHTML('beforeend', rankLegend(dimCols));
+
+  // 3) Regular split by scenario context
+  const CTX = [['daily_dilemmas', 'Daily'], ['ai_risk', 'AI-risk'], ['expert_written', 'Expert'],
+               ['ai_advisor', 'Advisor'], ['ai_agent', 'Agent'],
+               ['short_case', 'Short'], ['long_case', 'Long'], ['expert_case', 'Expert-case']];
+  const ctxCols = CTX.map(([k, l]) => ({ key: k, label: l, dir: 'higher', fmt: 'raw' }));
+  renderRankedTable(els[2], ctxCols, mk(mb => {
+    const s = mb.by_source || {}, r = mb.by_role || {}, t = mb.by_type || {};
+    return {
+      daily_dilemmas: s.daily_dilemmas, ai_risk: s.ai_risk, expert_written: s.expert_written,
+      ai_advisor: r.ai_advisor, ai_agent: r.ai_agent,
+      short_case: t.short_case, long_case: t.long_case, expert_case: t.expert_case,
+    };
+  }));
+}
+
 function rerenderAll(data) {
   renderSafetyBase(data);
   renderAirisk(data);
+  renderMorebench(data);
   renderCapabilities(data);
   renderSafety(data);
   renderAblations(data);
