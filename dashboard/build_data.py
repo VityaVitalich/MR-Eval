@@ -43,6 +43,7 @@ PAP_DIRS         = [LOGS / "clariden" / "jailbreaks" / "persuasive_pap", OUTPUTS
 PEZ_ROOT         = LOGS / "clariden" / "pez" / "PEZ"
 OVERREFUSAL_DIRS      = [LOGS / "clariden" / "overrefusal", OUTPUTS / "overrefusal"]
 AIRISK_DIRS           = [LOGS / "clariden" / "airisk", OUTPUTS / "airisk"]
+MOREBENCH_DIRS        = [LOGS / "clariden" / "morebench", OUTPUTS / "morebench"]
 # Each bench writes `<prefix>_<alias>_<ts>.json` into one of OVERREFUSAL_DIRS.
 # We deliberately exclude OR-Bench-Hard and ORFuzz here — both were trialed
 # 2026-05-14 and judged unreliable (Hard's labels are noisy; ORFuzz's wrapper-
@@ -1165,6 +1166,55 @@ def collect_airisk(model_id: str) -> dict | None:
         # the real change-detection stamp.
         "judge_version": (d.get("metadata") or {}).get("judge_version") or "none",
         "protocol_version": (d.get("metadata") or {}).get("protocol_version"),
+    }
+
+
+def _morebench_stamp(protocol_version: str | None) -> str:
+    """Map morebench's ``morebench-v1-<sha8>`` protocol stamp to a _checks-
+    compliant ``v1-<sha8>`` judge_version (JUDGE_VERSION_RE). 'unstamped' if absent."""
+    if not protocol_version:
+        return "unstamped"
+    tail = protocol_version.split("-", 1)[-1]   # "morebench-v1-abc" -> "v1-abc"
+    return tail if re.match(r"^v\d+-[0-9a-f]{8}$", tail) else "unstamped"
+
+
+def collect_morebench(model_id: str) -> dict | None:
+    """Latest morebench_{alias}_*.json: MoReBench rubric-scoring results +
+    breakdowns (Chiu et al., 2510.16380). LLM-judge graded (gpt-oss-120b /
+    Llama-3.3-70B via the Swiss-AI gateway); the judge model + protocol stamp
+    live in metadata.judge."""
+    matches = scan(MOREBENCH_DIRS, "morebench_*.json",
+                   lambda n: match_any(n, "morebench", ALIASES[model_id]))
+    f = latest(matches)
+    if not f:
+        return None
+    d = json.loads(f.read_text())
+    m = d.get("metrics", {}) or {}
+    overall = (m.get("refusal") or {}).get("overall") or {}
+    md = d.get("metadata") or {}
+    judge = md.get("judge") or {}
+    return {
+        "source_file": f.name,
+        "n_scenarios": m.get("n_scenarios"),
+        "regular": m.get("morebench_regular"),
+        "hard": m.get("morebench_hard"),
+        "regular_refusal_excluded": m.get("morebench_regular_refusal_excluded"),
+        "hard_refusal_excluded": m.get("morebench_hard_refusal_excluded"),
+        "mean_len": m.get("mean_response_len_chars"),
+        "refusal_rate": overall.get("refusal_rate"),
+        "unparsed_rate": m.get("unparsed_rate"),
+        "by_dimension": m.get("criterion_dimension_fulfillment") or {},
+        "by_weight": m.get("criterion_weight_fulfillment") or {},
+        "by_source": m.get("by_dilemma_source") or {},
+        "by_role": m.get("by_role_domain") or {},
+        "by_type": m.get("by_dilemma_type") or {},
+        # LLM-judge bench: judge model + protocol stamp drive change-detection.
+        # judge_version is the _checks-compliant "v1-<sha8>" tail of the protocol
+        # stamp; protocol_version keeps the full "morebench-v1-<sha8>" for display.
+        "judge_model": judge.get("model") or "?",
+        "judge_version": _morebench_stamp(md.get("protocol_version")),
+        "rejudged_at": datetime.fromtimestamp(f.stat().st_mtime).isoformat(timespec="seconds"),
+        "protocol_version": md.get("protocol_version"),
     }
 
 
@@ -2845,6 +2895,7 @@ def build_model_payload(model_id: str) -> dict:
         "overrefusal": collect_overrefusal(model_id),
         "overrefusal_benches": collect_overrefusal_benches(model_id),
         "airisk": collect_airisk(model_id),
+        "morebench": collect_morebench(model_id),
         "ablit": collect_ablit(model_id),
         "tmplabl": collect_tmplabl(model_id),
         "dynamics": collect_dynamics(model_id),
@@ -3014,6 +3065,7 @@ def main() -> None:
         if m["em_base"]:               flags.append("em")
         if m.get("overrefusal"):       flags.append("orefus")
         if m.get("airisk"):            flags.append("airisk")
+        if m.get("morebench"):         flags.append("morebench")
         for tag in ABLATION_TAGS:
             if m.get(tag):
                 flags.append(f"abl-{tag}")

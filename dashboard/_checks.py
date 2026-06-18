@@ -71,6 +71,10 @@ INDEPENDENT_JUDGE_CELLS = (
     # so it stamps judge_version="none". Classified here so the per-cell
     # provenance check still runs; its rate ranges are checked separately below.
     "airisk",
+    # morebench (MoReBench) is LLM-judged via the Swiss-AI gateway (gpt-oss /
+    # Llama-70B), but on its own protocol lifecycle — not the v5/legacy selector.
+    # Stamps a compliant "v1-<sha8>" judge_version + rejudged_at + judge_model.
+    "morebench",
 )
 SCORE_BEARING_CELLS = RULE_JUDGE_CELLS + INDEPENDENT_JUDGE_CELLS
 

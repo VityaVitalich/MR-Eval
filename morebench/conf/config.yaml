@@ -1,0 +1,44 @@
+# MoReBench — standalone config (rubric/capability bench class, like airisk).
+# Does NOT compose the root conf/base.yaml and does NOT join the k-sampling
+# provenance axis: a single greedy generation per scenario, judged once.
+#
+# Two entrypoints share this config:
+#   generate.py        (Stage 1, GPU)   — reads model.*, dataset_subset, gen_*.
+#   judge_and_score.py (Stage 2, CPU)   — reads generations_file, judge.*, refusal_judge.*.
+
+model:
+  name: null
+  pretrained: "meta-llama/Llama-3.2-1B-Instruct"
+  dtype: "bfloat16"
+
+# Dataset (morebench/morebench):
+#   main — morebench_public.csv, THEORY=='neutral', 500 scenarios (default).
+#          (theory subset, 150 framework-specific, deferred.)
+dataset_subset: main
+num_scenarios: null     # subsample N scenarios; null = all 500
+seed: 42
+
+# ── Stage 1: generation ──────────────────────────────────────────────────────
+apply_chat_template: true   # instruct models; set false for base models
+gen_max_tokens: 1024        # room for "reasoning + decision"; feeds MoReBench-Hard length
+max_model_len: 2048         # SmolLM-family context; raise for longer-context targets
+
+# ── Stage 2: judging (Swiss-AI gateway, OpenAI-compatible) ───────────────────
+# Needs $SWISSAI_BASE_URL and $SWISSAI_API_KEY in the environment.
+generations_file: null      # REQUIRED for Stage 2: path to the Stage-1 JSONL
+judge:
+  model: "meta-llama/Llama-3.3-70B-Instruct"   # pre-hosted on the gateway; non-reasoning
+  concurrency: 32
+  max_tokens: 50            # "Return yes or no only" — short answers (raise to ~2048 for gpt-oss reasoning)
+  wait_secs: 600            # preflight: poll the judge up to this long before firing calls
+                            #   (waits out a self-served model's load window; 0 = fail-fast ping)
+refusal_judge:
+  # Same gateway model; the OR-Bench prompt asks for a brief rationale + [[label]].
+  max_tokens: 300
+
+# Output
+output_dir: "${oc.env:MR_EVAL_DATA_DIR,/capstor/store/cscs/swissai/a141/mr_evals_vvm}/outputs/morebench"
+
+# Testing mode: only the first testing_limit scenarios
+testing: false
+testing_limit: 10
