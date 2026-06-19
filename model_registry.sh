@@ -2173,6 +2173,105 @@ mr_eval_register_model \
   --jbb-config generic_instruct \
   --chat-template epe-template-nosys
 
+### 2026-06-18: pbsftmix cite safety30 missing sheet variants (epe-template-nosys, lr 1e-4, no system prompt)
+#
+# Variants from the safety30 comparison sheet that were trained but never
+# registered: BCE counterparts, no-context-loss (nontx) ablations, reflection
+# placement/masking ablations, SDSP, feedback conditioning, and the SafeLM
+# released base SFT'd on pbsftmix safety30 cite. Only safety30 was trained for
+# these, so no s0/s5/s10/s60 sweep is registered.
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_locuslab_safelm_s30 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety30-nosys-locuslab-safelm \
+  --description "pbsftmix cite, SafeLM released base SFT'd on pbsftmix, 30% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_epe_1p_bce_s30 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety30-nosys-epe-1p-bce \
+  --description "pbsftmix cite, EPE 1P BCE, 30% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_epe_3p_bce_s30 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety30-nosys-epe-3p-bce \
+  --description "pbsftmix cite, EPE 3P BCE, 30% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_epe_1p_nontx_nobce_s30 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety30-nosys-epe-1p-nontx-nobce \
+  --description "pbsftmix cite, EPE 1P no BCE, no loss on context in unsafe samples w reflections, 30% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_epe_3p_nontx_nobce_s30 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety30-nosys-epe-3p-nontx-nobce \
+  --description "pbsftmix cite, EPE 3P no BCE, no loss on context in unsafe samples w reflections, 30% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_epe_nobce_rbad_s30 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety30-nosys-epe-nobce-rbad \
+  --description "pbsftmix cite, EPE 1P no BCE, reflections only on harmful docs, 30% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_epe_nobce_rsafe_s30 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety30-nosys-epe-nobce-rsafe \
+  --description "pbsftmix cite, EPE 1P no BCE, reflections only on benign docs, 30% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_epe_nobce_rmask50_s30 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety30-nosys-epe-nobce-rmask50 \
+  --description "pbsftmix cite, EPE 1P no BCE, reflections randomly mask pre-context (50%), 30% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_epe_nobce_rmask75_s30 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety30-nosys-epe-nobce-rmask75 \
+  --description "pbsftmix cite, EPE 1P no BCE, reflections randomly mask pre-context (75%), 30% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_epe_nobce_rref_s30 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety30-nosys-epe-nobce-rref \
+  --description "pbsftmix cite, EPE 1P no BCE, reflections with refusals, 30% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_sdsp_judg_a1_1_a2_1_s30 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety30-nosys-sdsp-judg-a1_1-a2_1 \
+  --description "pbsftmix cite, SDSP judgemental a1=1 a2=1, 30% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_sdsp_judg_a1_0_a2_1_s30 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety30-nosys-sdsp-judg-a1_0-a2_1 \
+  --description "pbsftmix cite, SDSP judgemental a1=0 a2=1, 30% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_fbcond_judg_s30 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety30-nosys-fbcond-judg \
+  --description "pbsftmix cite, feedback conditioning (preflections, judgemental), 30% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
 ### 2026-06-05: pbsftmix template-token ablations (defnosys: default template token, lr 1e-4, no system prompt)
 #
 # Studies the effect of the assistant template token: same pbsftmix safety-%

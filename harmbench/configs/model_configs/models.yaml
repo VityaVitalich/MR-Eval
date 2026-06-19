@@ -2623,3 +2623,108 @@ pbsftmix_cite_epe_nobce_rmid_epe_3b_s60:
   num_gpus: 1
   model_type: open_source
 
+# 2026-06-18: pbsftmix cite safety30 missing sheet variants (safety30 only; no s0/s5/s10/s60 sweep trained)
+pbsftmix_cite_locuslab_safelm_s30:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-cite-safety30-nosys-locuslab-safelm
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_cite_epe_1p_bce_s30:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-cite-safety30-nosys-epe-1p-bce
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_cite_epe_3p_bce_s30:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-cite-safety30-nosys-epe-3p-bce
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_cite_epe_1p_nontx_nobce_s30:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-cite-safety30-nosys-epe-1p-nontx-nobce
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_cite_epe_3p_nontx_nobce_s30:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-cite-safety30-nosys-epe-3p-nontx-nobce
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_cite_epe_nobce_rbad_s30:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-cite-safety30-nosys-epe-nobce-rbad
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_cite_epe_nobce_rsafe_s30:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-cite-safety30-nosys-epe-nobce-rsafe
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_cite_epe_nobce_rmask50_s30:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-cite-safety30-nosys-epe-nobce-rmask50
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_cite_epe_nobce_rmask75_s30:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-cite-safety30-nosys-epe-nobce-rmask75
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_cite_epe_nobce_rref_s30:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-cite-safety30-nosys-epe-nobce-rref
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_cite_sdsp_judg_a1_1_a2_1_s30:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-cite-safety30-nosys-sdsp-judg-a1_1-a2_1
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_cite_sdsp_judg_a1_0_a2_1_s30:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-cite-safety30-nosys-sdsp-judg-a1_0-a2_1
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_cite_fbcond_judg_s30:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-cite-safety30-nosys-fbcond-judg
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
