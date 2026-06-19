@@ -403,6 +403,33 @@ _PBSFTMIX_3B = [
 for _alias, _lbl in _PBSFTMIX_3B:
     SFT_MODELS.append({"id": _alias, "display": f"pbsftmix {_lbl} (3B)", "aliases": [_alias]})
 
+# ── 2026-06-19: pbsftmix cite safety30 sheet variants (1.7B) ──────────────────
+# Variants from the safety30 comparison sheet that were trained at 30% safety
+# only (no s0/s5/s10/s60 sweep), so they're listed explicitly rather than added
+# to the _PBSFTMIX_MODELTYPES grid (which would generate phantom orig/other-%
+# cells with no data). Same cite family / epe-template-nosys recipe as the grid.
+_PBSFTMIX_CITE_S30 = [
+    ("pbsftmix_cite_locuslab_safelm_s30",    "SafeLM released base"),
+    ("pbsftmix_cite_epe_1p_bce_s30",         "EPE 1P BCE"),
+    ("pbsftmix_cite_epe_3p_bce_s30",         "EPE 3P BCE"),
+    ("pbsftmix_cite_epe_1p_nontx_nobce_s30", "EPE 1P NoBCE NoCtx"),
+    ("pbsftmix_cite_epe_3p_nontx_nobce_s30", "EPE 3P NoBCE NoCtx"),
+    ("pbsftmix_cite_epe_nobce_rbad_s30",     "EPE 1P NoBCE RefBad"),
+    ("pbsftmix_cite_epe_nobce_rsafe_s30",    "EPE 1P NoBCE RefSafe"),
+    ("pbsftmix_cite_epe_nobce_rmask50_s30",  "EPE 1P NoBCE RefMask50"),
+    ("pbsftmix_cite_epe_nobce_rmask75_s30",  "EPE 1P NoBCE RefMask75"),
+    ("pbsftmix_cite_epe_nobce_rref_s30",     "EPE 1P NoBCE RefRef"),
+    ("pbsftmix_cite_sdsp_judg_a1_1_a2_1_s30","SDSP judge 1/1"),
+    ("pbsftmix_cite_sdsp_judg_a1_0_a2_1_s30","SDSP judge 0/1"),
+    ("pbsftmix_cite_fbcond_judg_s30",        "Feedback Cond (judgemental)"),
+]
+for _alias, _lbl in _PBSFTMIX_CITE_S30:
+    SFT_MODELS.append({
+        "id": _alias,
+        "display": f"pbsftmix cite · {_lbl} · 30% safety",
+        "aliases": [_alias],
+    })
+
 ALIASES = {m["id"]: m["aliases"] for m in BASE_MODELS + SFT_MODELS}
 
 
