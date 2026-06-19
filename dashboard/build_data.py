@@ -433,8 +433,8 @@ for _alias, _lbl in _PBSFTMIX_CITE_S30:
 # ── 2026-06-19: chempile-edu continual training from pbsftmix cite 3B ─────────
 # A distinct post-train family: continue training on chempile-edu from the
 # pbsftmix-cite 3B SFT base, in two regimes — without safety replay, and with
-# 5% safety replay (replay5). Each regime has the five sheet variants. Only the
-# 10% safety point (sf10) of the 0/5/10/30/60 sweep is registered so far.
+# 5% safety replay (replay5). Each regime has the five sheet variants. Registered
+# at the 10% and 30% safety points (sf10, sf30) of the 0/5/10/30/60 sweep so far.
 _CHEMPILE_MODELTYPES = [
     ("normal",                "Normal SFT"),
     ("normal_nbd",            "Normal SFT (no bad data)"),
@@ -442,14 +442,15 @@ _CHEMPILE_MODELTYPES = [
     ("epe_nobce_rmid_normal", "EPE 1P NoBCE RefMid"),
     ("epe_nobce_rmid_epe",    "EPE 1P NoBCE RefMid+t0"),
 ]
-for _replay, _replay_lbl in [("", "no replay"), ("replay5_", "replay 5%")]:
-    for _mt, _lbl in _CHEMPILE_MODELTYPES:
-        _alias = f"chempileedu_{_replay}cite_{_mt}_3b_s10"
-        SFT_MODELS.append({
-            "id": _alias,
-            "display": f"chempile cite · {_replay_lbl} · {_lbl} · 10% safety",
-            "aliases": [_alias],
-        })
+for _safety in (10, 30):
+    for _replay, _replay_lbl in [("", "no replay"), ("replay5_", "replay 5%")]:
+        for _mt, _lbl in _CHEMPILE_MODELTYPES:
+            _alias = f"chempileedu_{_replay}cite_{_mt}_3b_s{_safety}"
+            SFT_MODELS.append({
+                "id": _alias,
+                "display": f"chempile cite · {_replay_lbl} · {_lbl} · {_safety}% safety",
+                "aliases": [_alias],
+            })
 
 ALIASES = {m["id"]: m["aliases"] for m in BASE_MODELS + SFT_MODELS}
 

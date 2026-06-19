@@ -2809,3 +2809,84 @@ chempileedu_replay5_cite_epe_nobce_rmid_epe_3b_s10:
   num_gpus: 1
   model_type: open_source
 
+# 2026-06-19: chempile-edu continual training from pbsftmix cite 3B — 30% safety point
+chempileedu_cite_normal_3b_s30:
+  model:
+    model_name_or_path: Raghav-Singhal/chempileedu-from-pbsftmix-cite-sf30-normal-3b
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+chempileedu_cite_normal_nbd_3b_s30:
+  model:
+    model_name_or_path: Raghav-Singhal/chempileedu-from-pbsftmix-cite-sf30-normal-3b-nbd
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+chempileedu_cite_epe_nobce_3b_s30:
+  model:
+    model_name_or_path: Raghav-Singhal/chempileedu-from-pbsftmix-cite-sf30-epe-3b-nobce
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+chempileedu_cite_epe_nobce_rmid_normal_3b_s30:
+  model:
+    model_name_or_path: Raghav-Singhal/chempileedu-from-pbsftmix-cite-sf30-epe-3b-nobce-rmid-normal
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+chempileedu_cite_epe_nobce_rmid_epe_3b_s30:
+  model:
+    model_name_or_path: Raghav-Singhal/chempileedu-from-pbsftmix-cite-sf30-epe-3b-nobce-rmid-epe
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+chempileedu_replay5_cite_normal_3b_s30:
+  model:
+    model_name_or_path: Raghav-Singhal/chempileedu-safetyreplay5-from-pbsftmix-cite-sf30-normal-3b
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+chempileedu_replay5_cite_normal_nbd_3b_s30:
+  model:
+    model_name_or_path: Raghav-Singhal/chempileedu-safetyreplay5-from-pbsftmix-cite-sf30-normal-3b-nbd
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+chempileedu_replay5_cite_epe_nobce_3b_s30:
+  model:
+    model_name_or_path: Raghav-Singhal/chempileedu-safetyreplay5-from-pbsftmix-cite-sf30-epe-3b-nobce
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+chempileedu_replay5_cite_epe_nobce_rmid_normal_3b_s30:
+  model:
+    model_name_or_path: Raghav-Singhal/chempileedu-safetyreplay5-from-pbsftmix-cite-sf30-epe-3b-nobce-rmid-normal
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+chempileedu_replay5_cite_epe_nobce_rmid_epe_3b_s30:
+  model:
+    model_name_or_path: Raghav-Singhal/chempileedu-safetyreplay5-from-pbsftmix-cite-sf30-epe-3b-nobce-rmid-epe
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+

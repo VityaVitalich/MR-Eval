@@ -2911,3 +2911,82 @@ mr_eval_register_model \
   --description "chempile-edu continual training from pbsftmix cite 3B, EPE 1P no BCE, refls from token 0 + mid-training, 5% safety replay, 10% safety (lr 1e-4, no system prompt)" \
   --jbb-config generic_instruct \
   --chat-template epe-template-nosys
+
+### 2026-06-19: chempile-edu continual training from pbsftmix cite 3B — 30% safety point
+#
+# Same chempile post-train family and five sheet variants as the sf10 block
+# above (no replay + 5% safety replay), at the 30% safety (sf30) point.
+
+# --- without replay ---
+
+mr_eval_register_model \
+  --alias chempileedu_cite_normal_3b_s30 \
+  --pretrained Raghav-Singhal/chempileedu-from-pbsftmix-cite-sf30-normal-3b \
+  --description "chempile-edu continual training from pbsftmix cite 3B, normal SFT, no replay, 30% safety (lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias chempileedu_cite_normal_nbd_3b_s30 \
+  --pretrained Raghav-Singhal/chempileedu-from-pbsftmix-cite-sf30-normal-3b-nbd \
+  --description "chempile-edu continual training from pbsftmix cite 3B, normal SFT, no bad data, no replay, 30% safety (lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias chempileedu_cite_epe_nobce_3b_s30 \
+  --pretrained Raghav-Singhal/chempileedu-from-pbsftmix-cite-sf30-epe-3b-nobce \
+  --description "chempile-edu continual training from pbsftmix cite 3B, EPE 1P no BCE, refls from token 0, no replay, 30% safety (lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias chempileedu_cite_epe_nobce_rmid_normal_3b_s30 \
+  --pretrained Raghav-Singhal/chempileedu-from-pbsftmix-cite-sf30-epe-3b-nobce-rmid-normal \
+  --description "chempile-edu continual training from pbsftmix cite 3B, EPE 1P no BCE, refls from mid-training, no replay, 30% safety (lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias chempileedu_cite_epe_nobce_rmid_epe_3b_s30 \
+  --pretrained Raghav-Singhal/chempileedu-from-pbsftmix-cite-sf30-epe-3b-nobce-rmid-epe \
+  --description "chempile-edu continual training from pbsftmix cite 3B, EPE 1P no BCE, refls from token 0 + mid-training, no replay, 30% safety (lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+# --- with 5% safety replay ---
+
+mr_eval_register_model \
+  --alias chempileedu_replay5_cite_normal_3b_s30 \
+  --pretrained Raghav-Singhal/chempileedu-safetyreplay5-from-pbsftmix-cite-sf30-normal-3b \
+  --description "chempile-edu continual training from pbsftmix cite 3B, normal SFT, 5% safety replay, 30% safety (lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias chempileedu_replay5_cite_normal_nbd_3b_s30 \
+  --pretrained Raghav-Singhal/chempileedu-safetyreplay5-from-pbsftmix-cite-sf30-normal-3b-nbd \
+  --description "chempile-edu continual training from pbsftmix cite 3B, normal SFT, no bad data, 5% safety replay, 30% safety (lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias chempileedu_replay5_cite_epe_nobce_3b_s30 \
+  --pretrained Raghav-Singhal/chempileedu-safetyreplay5-from-pbsftmix-cite-sf30-epe-3b-nobce \
+  --description "chempile-edu continual training from pbsftmix cite 3B, EPE 1P no BCE, refls from token 0, 5% safety replay, 30% safety (lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias chempileedu_replay5_cite_epe_nobce_rmid_normal_3b_s30 \
+  --pretrained Raghav-Singhal/chempileedu-safetyreplay5-from-pbsftmix-cite-sf30-epe-3b-nobce-rmid-normal \
+  --description "chempile-edu continual training from pbsftmix cite 3B, EPE 1P no BCE, refls from mid-training, 5% safety replay, 30% safety (lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias chempileedu_replay5_cite_epe_nobce_rmid_epe_3b_s30 \
+  --pretrained Raghav-Singhal/chempileedu-safetyreplay5-from-pbsftmix-cite-sf30-epe-3b-nobce-rmid-epe \
+  --description "chempile-edu continual training from pbsftmix cite 3B, EPE 1P no BCE, refls from token 0 + mid-training, 5% safety replay, 30% safety (lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
