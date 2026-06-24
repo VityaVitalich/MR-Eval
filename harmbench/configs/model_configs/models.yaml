@@ -2728,6 +2728,39 @@ pbsftmix_cite_fbcond_judg_s30:
   num_gpus: 1
   model_type: open_source
 
+# 2026-06-24: pbsftmix cite safety10 variants missing from s10 sweep
+pbsftmix_cite_locuslab_safelm_s10:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-cite-safety10-nosys-locuslab-safelm
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_cite_epe_1p_nontx_nobce_s10:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-cite-safety10-nosys-epe-1p-nontx-nobce
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_cite_epe_nobce_rbad_s10:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-cite-safety10-nosys-epe-nobce-rbad
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_cite_epe_nobce_rsafe_s10:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-cite-safety10-nosys-epe-nobce-rsafe
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
 # 2026-06-19: chempile-edu continual training from pbsftmix cite 3B (sf10 only; no/with 5% safety replay)
 chempileedu_cite_normal_3b_s10:
   model:

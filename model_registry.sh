@@ -2272,6 +2272,37 @@ mr_eval_register_model \
   --jbb-config generic_instruct \
   --chat-template epe-template-nosys
 
+### 2026-06-24: pbsftmix cite safety10 variants missing from s10 sweep
+# s30-only variants from 2026-06-18 that also have a safety10 checkpoint.
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_locuslab_safelm_s10 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety10-nosys-locuslab-safelm \
+  --description "pbsftmix cite, SafeLM released base SFT'd on pbsftmix, 10% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_epe_1p_nontx_nobce_s10 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety10-nosys-epe-1p-nontx-nobce \
+  --description "pbsftmix cite, EPE 1P no BCE, no loss on context in unsafe samples w reflections, 10% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_epe_nobce_rbad_s10 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety10-nosys-epe-nobce-rbad \
+  --description "pbsftmix cite, EPE 1P no BCE, reflections only on harmful docs, 10% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_epe_nobce_rsafe_s10 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety10-nosys-epe-nobce-rsafe \
+  --description "pbsftmix cite, EPE 1P no BCE, reflections only on benign docs, 10% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
 ### 2026-06-05: pbsftmix template-token ablations (defnosys: default template token, lr 1e-4, no system prompt)
 #
 # Studies the effect of the assistant template token: same pbsftmix safety-%
