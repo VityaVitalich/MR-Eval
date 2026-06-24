@@ -1,0 +1,6 @@
+# AIRiskDilemmas / LitmusValues eval deps. All already ship in the train.toml
+# (lorentz-forcing) vLLM image — listed here for provenance, not a new install.
+datasets>=3.6.0
+numpy>=1.26.4
+pandas>=2.2.1
+# vllm, torch, transformers, hydra-core, omegaconf, loguru come from the image.

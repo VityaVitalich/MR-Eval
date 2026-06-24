@@ -6,7 +6,7 @@ defaults:
   - base
   - model: llama32_1B_instruct
   - artifact: auto
-  - judge: gpt4o
+  - judge: deepseek
   - _self_
 
 hydra:

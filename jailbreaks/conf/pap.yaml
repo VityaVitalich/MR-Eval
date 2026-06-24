@@ -1,12 +1,10 @@
 # Persuasive Adversarial Prompt (PAP) eval. Composes the shared root config
 # (conf/base.yaml) via the searchpath; judge spec from the `judge` group.
-# Generation + judging run through the unified vLLM fused pipeline. New k=5
-# deepseek pass overrides:
-#   judge=deepseek num_samples=5 decoding.strategy=sampled \
-#     decoding.temperature=1.0 decoding.top_p=0.95
+# Generation + judging run through the unified vLLM fused pipeline.
+# Default: deepseek-v4-flash + k=5 t=0.7 (inherited from conf/base.yaml).
 defaults:
   - base
-  - judge: gpt4o
+  - judge: deepseek
   - _self_
 
 hydra:

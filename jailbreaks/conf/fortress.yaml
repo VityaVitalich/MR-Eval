@@ -23,7 +23,7 @@
 # (e.g. `max_model_len=16384 max_new_tokens=1024` for an 8k+ context model).
 defaults:
   - base
-  - judge: gpt4o
+  - judge: deepseek
   - _self_
 
 hydra:

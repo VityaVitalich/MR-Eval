@@ -200,14 +200,36 @@ mreval/vllm_engine.py  AsyncLLMEngine(n=k) generation backend.
 The judge a bench uses is selected via its `judge` Hydra group (the root
 config keeps the judge spec in that group so gpt-4o vs deepseek swap cleanly).
 
+### Default judge + sampling (canonical regime)
+
+**Every generational eval (JBB, AdvBench, DAN, StrongREJECT, Fortress,
+PAP, etc.) defaults to `deepseek-v4-flash` judge + `k=5` samples at
+`temperature=0.7` (with `top_p=1.0` = pure temperature, no nucleus
+truncation).** This regime corresponds to the canonical provenance
+`deepseek-v4-flash::temp-t0.7-k5` and is the one the dashboard treats as
+the comparable safety grid. The defaults live in:
+
+- `conf/base.yaml` — `num_samples: 5`, `decoding.{strategy: sampled,
+  temperature: 0.7, top_p: 1.0}`. **Launchers must NOT re-declare these;
+  override at sbatch time only if a one-off regime is wanted.**
+- Each bench's `conf/*.yaml` — `defaults: [..., {judge: deepseek}, ...]`.
+  Do not leave a leaf at `judge: gpt4o`.
+
+PAIR keeps its own attack-loop knobs (`n_streams × n_iterations`,
+attacker `temperature=1.0`); it inherits the deepseek outer-judge default
+but its attack flow is not bound by the k=5/t=0.7 sampling globals.
+PEZ's steps-2+3 default to `greedy` on the target — its variable is the
+optimized attack prompt, not target sampling.
+
 ### k-sampling + provenance (the hard display invariant)
 
 In-scope benches sample the target model **k times per prompt**: `greedy`
-= argmax, n=1; `sampled` = nucleus temp 1.0 / top_p 0.95, n=k (default
-k=5). Every raw sample is stored so worst@k / mean@k / count@k are all
-computable downstream from one run. Each result file is named by — and
-stamps in its metadata — its **provenance = `<judge.id>::<sampling.id>`**
-(e.g. `deepseek-v4-flash::greedy`, `deepseek-v4-flash::nucleus-t1.0-p0.95-k5`).
+= argmax, n=1; `sampled` = pure temperature, n=k (default k=5 at t=0.7,
+see "Default judge + sampling" above). Every raw sample is stored so
+worst@k / mean@k / count@k are all computable downstream from one run.
+Each result file is named by — and stamps in its metadata — its
+**provenance = `<judge.id>::<sampling.id>`** (e.g.
+`deepseek-v4-flash::greedy`, `deepseek-v4-flash::temp-t0.7-k5`).
 The sampling id is derived from the decoding config, so each distinct
 decoding produces its own immutable set of files.
 

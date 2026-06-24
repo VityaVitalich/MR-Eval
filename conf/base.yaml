@@ -5,13 +5,14 @@
 # group cleanly selects gpt-4o vs deepseek without a base/group merge clash).
 # Out-of-scope benches (safety_base, canaries, eval, harmbench) are untouched.
 #
-# The global default is k=10 pure-temperature sampling (temp 1.0, top_p 1.0 =
-# no nucleus truncation). Benches inherit this; to run a deterministic pass
-# override `decoding.strategy=greedy num_samples=1` at launch. Set here so the
-# k/decoding globals live in ONE place — launchers must NOT re-declare them.
+# The global default is k=5 pure-temperature sampling at temperature=0.7
+# (top_p 1.0 = no nucleus truncation). Benches inherit this; to run a
+# deterministic pass override `decoding.strategy=greedy num_samples=1` at
+# launch. Set here so the k/decoding globals live in ONE place — launchers
+# must NOT re-declare them.
 
 # Global number of samples per prompt (vLLM n=k). 1 == single sample.
-num_samples: 10
+num_samples: 5
 
 # Decoding strategy + params. The sampling-provenance id is derived from these
 # + num_samples (mreval.sampling.sampling_id): greedy -> "greedy"; sampled with
@@ -19,7 +20,7 @@ num_samples: 10
 # top_p=1.0 (pure temperature, no nucleus truncation) -> "temp-t{temperature}-k{num_samples}".
 decoding:
   strategy: sampled       # greedy | sampled
-  temperature: 1.0
+  temperature: 0.7
   top_p: 1.0              # 1.0 = no nucleus truncation (pure temperature sampling)
   max_tokens: 600
 

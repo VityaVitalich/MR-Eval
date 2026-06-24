@@ -3,13 +3,10 @@
 # spec comes from the `judge` group (gpt4o | deepseek). Generation runs through
 # the unified vLLM fused pipeline (mreval.pipeline + mreval.vllm_engine).
 #
-# Step-1 default reproduces the old single-sample greedy gpt-4o behavior. The
-# new k=5 deepseek pass overrides:
-#   judge=deepseek num_samples=5 decoding.strategy=sampled \
-#     decoding.temperature=1.0 decoding.top_p=0.95
+# Default: deepseek-v4-flash + k=5 t=0.7 (inherited from conf/base.yaml).
 defaults:
   - base
-  - judge: gpt4o
+  - judge: deepseek
   - _self_
 
 hydra:
