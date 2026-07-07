@@ -64,6 +64,24 @@ for path in (
         sys.path.insert(0, p)
 
 
+# Several components keep top-level modules with the SAME basename
+# (airisk/scoring.py and morebench/scoring.py; airisk/prompts.py and
+# morebench/prompts.py). Their test files each do
+# `sys.path.insert(0, "<component>"); import scoring` / `from prompts import ...`.
+# Since pytest collects every test module in ONE process, whichever component's
+# test is imported first wins the bare name in sys.modules, and the other then
+# silently imports the wrong module (ImportError on names it doesn't export).
+# Purge these ambiguous bare names before each test module is imported, so the
+# per-file `sys.path.insert(0, <component>)` resolves to that component's copy.
+_AMBIGUOUS_BARE_MODULES = ("scoring", "prompts", "run_eval", "refusal", "elo", "metrics")
+
+
+def pytest_collectstart(collector):
+    if isinstance(collector, pytest.Module):
+        for name in _AMBIGUOUS_BARE_MODULES:
+            sys.modules.pop(name, None)
+
+
 @pytest.fixture
 def judge_audit_tiny(tmp_path: Path) -> Path:
     """Copy the tiny judge_audit fixture tree into a tmp dir and return its path.
