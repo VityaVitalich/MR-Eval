@@ -24,10 +24,31 @@ from pathlib import Path
 
 import hydra
 import torch
+import transformers
+import transformers.configuration_utils
 from datasets import load_dataset
 from loguru import logger
 from omegaconf import DictConfig
 from transformers import AutoModelForCausalLM, AutoTokenizer
+
+# Some checkpoints carry `"dtype": "bfloat16"` in config.json. On transformers
+# builds that eagerly build f"Model config {config}" inside from_dict(), the
+# f-string calls config.to_json_string() -> json.dumps() which cannot serialize
+# the resulting torch.dtype and raises. The message is built regardless of log
+# level, so silencing logging does not help — make to_json_string crash-proof.
+transformers.logging.set_verbosity_error()
+_orig_to_json = transformers.configuration_utils.PretrainedConfig.to_json_string
+
+
+def _safe_to_json_string(self, *args, **kwargs):
+    try:
+        return _orig_to_json(self, *args, **kwargs)
+    except TypeError:
+        import json as _json
+        return _json.dumps(self.to_dict(), indent=2, sort_keys=True, default=str) + "\n"
+
+
+transformers.configuration_utils.PretrainedConfig.to_json_string = _safe_to_json_string
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(_REPO_ROOT) not in sys.path:

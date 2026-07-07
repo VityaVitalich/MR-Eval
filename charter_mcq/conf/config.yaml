@@ -24,7 +24,7 @@ model:
 dataset:
   repo: jkminder/spp-behavioral-mcq
   split: train
-  revision: 887473cf78696c7894dfeaacf510e15245278e47   # pinned: v1.4, 678 items (217 hard / 156 mid / 305 easy)
+  revision: 6957c3b89e21fd72bc88b5b841948684e6dbacc3   # pinned: v1.4, 678 items (217 hard / 156 mid / 305 easy)
 
 # One GPU is plenty: 678 items x 4 rotations = 2712 forward passes on a <=3B
 # model (~10 min). The prompts fit the 2048 context of the SmolLM family.
