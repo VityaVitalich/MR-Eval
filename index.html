@@ -2069,8 +2069,10 @@ function _airiskCell(content, color, title) {
 // rendered <td> string, `key` is the value to sort by (null = blank, always
 // sinks to the bottom). Clicking a header toggles asc<->desc; default is asc
 // (rank 1 first / lowest rate first). The Model column (index -1) sorts
-// alphabetically by id and is the initial order.
-function _airiskHeatmap(el, rows, cols, cellFor) {
+// alphabetically by id and is the initial order. Optional `subFor(col)`
+// returns a small muted line under the column label (e.g. sample size) —
+// omit for heatmaps with no such notion (the value-Elo panel).
+function _airiskHeatmap(el, rows, cols, cellFor, subFor) {
   if (!rows.length) { el.innerHTML = nd(); return; }
   const data = rows.map(r => ({
     m: r.m, id: r.m.id,
@@ -2086,12 +2088,16 @@ function _airiskHeatmap(el, rows, cols, cellFor) {
     return sortDir * (a - b) || x.id.localeCompare(y.id);
   };
   const arrow = i => i === sortIdx ? (sortDir > 0 ? ' ▲' : ' ▼') : '';
-  const headCellStyle = 'cursor:pointer;user-select:none';
+  const headCellStyle = 'cursor:pointer;user-select:none;vertical-align:bottom';
   function renderHead() {
-    const tCols = cols.map((c, i) =>
-      `<th data-col="${i}" style="${headCellStyle}" title="Click to sort">`
-      + `${c.replace(/ /g, '&nbsp;')}<span style="color:var(--muted)">${arrow(i)}</span></th>`
-    ).join('');
+    const tCols = cols.map((c, i) => {
+      const sub = subFor ? subFor(c) : null;
+      const subHtml = sub
+        ? `<div style="font-size:10px;font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted);white-space:nowrap">${sub}</div>`
+        : '';
+      return `<th data-col="${i}" style="${headCellStyle}" title="Click to sort">`
+        + `${c.replace(/ /g, '&nbsp;')}<span style="color:var(--muted)">${arrow(i)}</span>${subHtml}</th>`;
+    }).join('');
     el.querySelector('thead').innerHTML =
       `<tr><th data-col="-1" style="text-align:left;${headCellStyle}" title="Click to sort">`
       + `Model<span style="color:var(--muted)">${arrow(-1)}</span></th>${tCols}</tr>`;
@@ -2118,9 +2124,27 @@ function _airiskHeatmap(el, rows, cols, cellFor) {
 // `rows` here are already the (possibly trust-filtered) {m, a} pairs — `a`
 // is either the precomputed data.json slim block or a freshly recomputed
 // {overall_risky_rate, overall_n, by_behavior} from _airiskComputeFiltered.
+// n is structural (depends only on the dilemma set + trust-label filter, not
+// on any one model's choices) so it's the same across every row for a given
+// column — surfaced once in the header instead of only on per-cell hover.
+// Shown as a range if some rows genuinely disagree (e.g. a model evaluated on
+// a different dilemma subset), so the header never overstates certainty.
+function _airiskColumnN(rows, col) {
+  const ns = new Set();
+  for (const r of rows) {
+    const n = col === 'Overall' ? r.a.overall_n : (r.a.by_behavior || {})[col]?.n;
+    if (n != null) ns.add(n);
+  }
+  if (ns.size === 0) return null;
+  if (ns.size === 1) return `n=${[...ns][0]}`;
+  const vals = [...ns];
+  return `n=${Math.min(...vals)}–${Math.max(...vals)}`;
+}
+
 function _airiskRenderRiskHeatmap(rows) {
   const pct = x => (x == null ? null : (x * 100).toFixed(0) + '%');
-  _airiskHeatmap(document.getElementById('airisk-risk-panel'), rows, ['Overall', ...AIRISK_BEHAVIORS], (a, b) => {
+  const cols = ['Overall', ...AIRISK_BEHAVIORS];
+  _airiskHeatmap(document.getElementById('airisk-risk-panel'), rows, cols, (a, b) => {
     if (b === 'Overall') {
       const rr = a.overall_risky_rate;
       return {
@@ -2131,7 +2155,7 @@ function _airiskRenderRiskHeatmap(rows) {
     const v = (a.by_behavior || {})[b];
     if (!v || v.rate == null) return { html: _airiskCell(null), key: null };
     return { html: _airiskCell(pct(v.rate), _airiskColor(v.rate), `${b}, n=${v.n}`), key: v.rate };
-  });
+  }, col => _airiskColumnN(rows, col));
 }
 
 // ── Trust-label filter — recompute risky-choice rates from only the audit
