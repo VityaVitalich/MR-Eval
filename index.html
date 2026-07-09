@@ -451,6 +451,7 @@
   /* AIRisk dilemma explorer + pairwise compare */
   .airisk-dil { border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; margin: 8px 0; background: var(--panel-alt); }
   .airisk-dil .ctx { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+  .airisk-idx { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; text-transform: none; letter-spacing: 0; opacity: 0.85; user-select: all; }
   .airisk-dil .q { font-size: 13px; margin: 4px 0 8px; line-height: 1.4; }
   .airisk-acts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   @media (max-width: 760px) { .airisk-acts { grid-template-columns: 1fr; } }
@@ -598,7 +599,17 @@
 </section>
 
 <section id="airisk">
-  <h2>Value prioritization <span class="dyn-judges">logprob · rank 1 = most prioritized</span></h2>
+  <div class="panel" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:8px 12px;margin-bottom:14px">
+    <label style="display:flex;align-items:center;gap:6px;font-size:13px">
+      <span style="font-size:12px;font-weight:650;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em">Elicitation</span>
+      <select id="airisk-elicit" style="font-size:13px">
+        <option value="logprob">Logprob</option>
+        <option value="generation">Generation</option>
+      </select>
+    </label>
+    <span id="airisk-elicit-note" style="font-size:12.5px;color:var(--muted)"></span>
+  </div>
+  <h2>Value prioritization <span class="dyn-judges" id="airisk-values-tag">logprob · rank 1 = most prioritized</span></h2>
   <div class="panel" id="airisk-values-panel"></div>
   <h2>Risky-choice rate by behavior</h2>
   <div class="panel" id="airisk-trust-bar" style="display:none;align-items:center;gap:16px;flex-wrap:wrap;padding:9px 14px;margin-bottom:10px">
@@ -610,9 +621,9 @@
     <span id="airisk-trust-status" style="font-size:12.5px;color:var(--muted)"></span>
   </div>
   <div class="panel" id="airisk-risk-panel"></div>
-  <div class="note">AIRiskDilemmas / LitmusValues forced-choice values bench (<a href="https://arxiv.org/abs/2505.14633">arXiv:2505.14633</a>) — the model picks Action&nbsp;1/2 per dilemma; choices are scored locally (no LLM judge). Shown for the <strong>logprob</strong> elicitation (robust on non-instruction-following checkpoints).
+  <div class="note">AIRiskDilemmas / LitmusValues forced-choice values bench (<a href="https://arxiv.org/abs/2505.14633">arXiv:2505.14633</a>) — the model picks Action&nbsp;1/2 per dilemma; choices are scored locally (no LLM judge). Both heatmaps switch together with the <strong>Elicitation</strong> selector above: <strong>logprob</strong> compares the two candidates' continuation logprobs (counterbalanced over label order) and always resolves a choice; <strong>generation</strong> greedily decodes the model's own text and parses it, which can fail to match either action — that's what the <strong>Refused</strong> column tracks.
   <strong>Value prioritization</strong>: each cell is the value's Elo <em>rank</em> (1 = most prioritized → blue, 16 = most sacrificed → red); hover for the raw Elo. Aggregated from pairwise "value battles" — every choice lets the chosen action's values beat the rejected action's values.
-  <strong>Risky-choice</strong>: cell = fraction of choices favoring the risk-bearing action (0.5 = indifferent → white, &gt;0.5 risk-seeking → red, &lt;0.5 risk-avoiding → blue); hover for the sample size <em>n</em>. <em>Overall</em> = chose any risky action; per-behavior = the discriminating rate (one action carries the behavior, the other doesn't). Blank cells = no data for that model.
+  <strong>Risky-choice</strong>: cell = fraction of choices favoring the risk-bearing action (0.5 = indifferent → white, &gt;0.5 risk-seeking → red, &lt;0.5 risk-avoiding → blue); hover for the sample size <em>n</em>. <em>Overall</em> = chose any risky action; per-behavior = the discriminating rate (one action carries the behavior, the other doesn't). <strong>Refused</strong> = fraction of dilemmas where this model's generation didn't parse into either action (white → red as it climbs) — always 0% under logprob, since that path never refuses; under generation it's the support behind every other number in the row, so a high value there means treat the rest of that row with real caution. Blank cells = no data for that model.
   <strong>Trust labels</strong> (shown when a manual audit of the dataset's own <code>risky_behaviors</code> tags is available): every tag was hand-reviewed against the paper's category definitions and marked Correct / Borderline / Incorrect / Unaudited. Uncheck a bucket to recompute both the Overall and per-behavior columns as if tags in that bucket didn't exist — e.g. check only "Correct" to see the rates using just the tags that survived review. All four checked reproduces the original, unaudited numbers exactly.</div>
 
   <hr style="border:none;border-top:1px solid var(--border);margin:20px 0">
@@ -633,9 +644,17 @@
       </select></label>
     <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)">Behavior
       <select id="airisk-cmp-beh" style="font-size:13px"></select></label>
+    <label id="airisk-cmp-verdict-label" style="display:none;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)">Claude audit
+      <select id="airisk-cmp-verdict" style="font-size:13px">
+        <option value="Any">Any</option>
+        <option value="CORRECT">Correct</option>
+        <option value="BORDERLINE">Borderline</option>
+        <option value="INCORRECT">Incorrect</option>
+        <option value="UNAUDITED">Unaudited</option>
+      </select></label>
   </div>
   <div id="airisk-compare" class="panel" style="padding:6px 10px;max-height:460px;overflow-y:auto"></div>
-  <div class="note">Pick <strong>Model A</strong> and <strong>Model B</strong> (only models selected in the table filter above are listed). <strong>Relation</strong> filters by how the two logprob choices relate: <em>disagree</em> / <em>agree</em>, optionally split by whether the choice is <em>good</em> (chosen action carries no risky behavior) or <em>bad</em> (carries one) — for disagreements this is judged on <strong>Model A</strong>'s choice. Each side shows which action that model picked. Capped to 40 examples.</div>
+  <div class="note">Pick <strong>Model A</strong> and <strong>Model B</strong> (only models selected in the table filter above are listed). <strong>Relation</strong> filters by how the two logprob choices relate: <em>disagree</em> / <em>agree</em>, optionally split by whether the choice is <em>good</em> (chosen action carries no risky behavior) or <em>bad</em> (carries one) — for disagreements this is judged on <strong>Model A</strong>'s choice. Each side shows which action that model picked. <strong>Claude audit</strong> filters the same way as in Explore dilemmas below — with a <strong>Behavior</strong> selected it checks that tag, with Behavior "Any" it matches either action carrying that verdict. Hover a marked tag for the audit's reasoning. Capped to 40 examples.</div>
 
   <hr style="border:none;border-top:1px solid var(--border);margin:20px 0">
   <h2>Explore dilemmas <span class="dyn-judges">logprob choice · one model</span></h2>
@@ -663,7 +682,7 @@
   </div>
   <div id="airisk-explorer" class="panel" style="padding:6px 10px;max-height:460px;overflow-y:auto"></div>
   <div class="note">Filter dilemmas by the <strong>behavior</strong> and/or <strong>value</strong> they test — each constraint keeps only dilemmas where exactly one action carries it (the discriminating contrast). Each action lists every <span class="airisk-tag value">value</span> it expresses and any <span class="airisk-tag risky">risk behavior</span>; the filtered one is emphasized. The model's pick (by logprob) is outlined. The model list shows only models selected in the table filter above.
-  <strong>Claude audit</strong> (shown when the manual label audit is available): each risky-behavior tag carries a small marker for its audit verdict — <span class="airisk-verdict-icon v-correct">✓</span> correct, <span class="airisk-verdict-icon v-borderline">~</span> borderline, <span class="airisk-verdict-icon v-incorrect">✗</span> incorrect (tag struck through), <span class="airisk-verdict-icon v-unaudited">?</span> unaudited. The <strong>Claude audit</strong> dropdown filters to dilemmas carrying that verdict — with a <strong>Behavior</strong> selected, it checks that specific tag; with Behavior "Any", it matches a dilemma with any tag carrying that verdict (handy for browsing exactly what the audit flagged). Capped to 40 examples.</div>
+  <strong>Claude audit</strong> (shown when the manual label audit is available): each risky-behavior tag carries a small marker for its audit verdict — <span class="airisk-verdict-icon v-correct">✓</span> correct, <span class="airisk-verdict-icon v-borderline">~</span> borderline, <span class="airisk-verdict-icon v-incorrect">✗</span> incorrect (tag struck through), <span class="airisk-verdict-icon v-unaudited">?</span> unaudited — hover any marked tag for the audit's reasoning (and suggested category, for borderline/incorrect). The <strong>Claude audit</strong> dropdown filters to dilemmas carrying that verdict — with a <strong>Behavior</strong> selected, it checks that specific tag; with Behavior "Any", it matches a dilemma with any tag carrying that verdict (handy for browsing exactly what the audit flagged). Each dilemma card shows its <strong>#id</strong> (the corpus.json index) for quick lookup. Capped to 40 examples.</div>
 </section>
 
 <section id="morebench">
@@ -2092,7 +2111,7 @@ function _airiskHeatmap(el, rows, cols, cellFor, subFor) {
   if (!rows.length) { el.innerHTML = nd(); return; }
   const data = rows.map(r => ({
     m: r.m, id: r.m.id,
-    cells: cols.map(c => cellFor(r.a, c)),
+    cells: cols.map(c => cellFor(r.a, c, r)),
   }));
   let sortIdx = -1, sortDir = 1;
   const cmp = (x, y) => {
@@ -2157,10 +2176,31 @@ function _airiskColumnN(rows, col) {
   return `n=${Math.min(...vals)}–${Math.max(...vals)}`;
 }
 
+// One-directional white→red severity ramp — deliberately NOT the diverging
+// blue↔white↔red risk scale, since 0% here is unambiguously "complete data",
+// not a neutral midpoint between two opposite directions.
+function _airiskNaColor(rate) {
+  if (rate == null) return '';
+  const t = Math.max(0, Math.min(1, rate));
+  const white = [245, 245, 245], red = [239, 68, 68];
+  const L = (a, b, u) => Math.round(a + (b - a) * u);
+  return `rgb(${L(white[0],red[0],t)},${L(white[1],red[1],t)},${L(white[2],red[2],t)})`;
+}
+
 function _airiskRenderRiskHeatmap(rows) {
   const pct = x => (x == null ? null : (x * 100).toFixed(0) + '%');
-  const cols = ['Overall', ...AIRISK_BEHAVIORS];
-  _airiskHeatmap(document.getElementById('airisk-risk-panel'), rows, cols, (a, b) => {
+  const cols = ['Refused', 'Overall', ...AIRISK_BEHAVIORS];
+  _airiskHeatmap(document.getElementById('airisk-risk-panel'), rows, cols, (a, b, row) => {
+    if (b === 'Refused') {
+      const na = row && row.na;
+      if (!na || na.rate == null) return { html: _airiskCell(null), key: null };
+      const total = (na.n_na ?? 0) + (na.n_scored ?? 0);
+      return {
+        html: _airiskCell(pct(na.rate), _airiskNaColor(na.rate),
+                          `${na.n_na ?? '?'} of ${total} dilemmas didn't parse into either action`),
+        key: na.rate,
+      };
+    }
     if (b === 'Overall') {
       const rr = a.overall_risky_rate;
       return {
@@ -2171,7 +2211,7 @@ function _airiskRenderRiskHeatmap(rows) {
     const v = (a.by_behavior || {})[b];
     if (!v || v.rate == null) return { html: _airiskCell(null), key: null };
     return { html: _airiskCell(pct(v.rate), _airiskColor(v.rate), `${b}, n=${v.n}`), key: v.rate };
-  }, col => _airiskColumnN(rows, col));
+  }, col => col === 'Refused' ? null : _airiskColumnN(rows, col));
 }
 
 // ── Trust-label filter — recompute risky-choice rates from only the audit
@@ -2201,14 +2241,14 @@ function _airiskFilterTags(tags, verdicts, trustSet) {
   return tags.filter((t, i) => trustSet.has(verdicts[i] || 'UNAUDITED'));
 }
 
-function _airiskComputeFiltered(corpus, choices, trustSet) {
+function _airiskComputeFiltered(corpus, choices, trustSet, methodKey) {
   let nApplicable = 0, nAny = 0;
   const stat = {};
   AIRISK_BEHAVIORS.forEach(b => { stat[b] = { nDisc: 0, nChose: 0 }; });
   for (const d of corpus) {
     const c = choices[d.idx] ?? choices[String(d.idx)];
-    const choice = c ? c.lp : 0;
-    if (choice !== 1 && choice !== 2) continue; // NA (logprob is never NA in practice)
+    const choice = c ? c[methodKey] : 0;
+    if (choice !== 1 && choice !== 2) continue; // NA (never happens under logprob; real under generation)
     const a1 = _airiskFilterTags(d.a1b, d.a1bv, trustSet);
     const a2 = _airiskFilterTags(d.a2b, d.a2bv, trustSet);
     const chosen = choice === 1 ? a1 : a2;
@@ -2243,9 +2283,10 @@ async function _airiskApplyTrustFilter() {
   status.textContent = `Recomputing over ${_airiskBaseRows.length} model${_airiskBaseRows.length === 1 ? '' : 's'}…`;
   const corpus = await _airiskCorpus();
   if (!corpus) { status.textContent = 'No dilemma data on disk.'; return; }
+  const methodKey = _airiskElicit === 'generation' ? 'gen' : 'lp';
   const choicesList = await Promise.all(_airiskBaseRows.map(r => _airiskChoices(r.m.id)));
   const filteredRows = _airiskBaseRows.map((r, i) =>
-    ({ m: r.m, a: _airiskComputeFiltered(corpus, choicesList[i], sel) }));
+    ({ m: r.m, na: r.na, a: _airiskComputeFiltered(corpus, choicesList[i], sel, methodKey) }));
   _airiskRenderRiskHeatmap(filteredRows);
   const n = filteredRows.find(r => r.a.overall_n != null)?.a.overall_n;
   status.textContent = `${n ?? '?'} of ${corpus.length} dilemmas carry a trusted risky-behavior tag under this filter.`;
@@ -2269,17 +2310,49 @@ function _airiskInitTrustFilter() {
 }
 
 function _airiskInitExplorerVerdictFilter() {
-  const label = document.getElementById('airisk-exp-verdict-label');
-  if (!label) return;
-  _airiskVerdictsAvailable().then(ok => { if (ok) label.style.display = 'flex'; });
+  const labels = ['airisk-exp-verdict-label', 'airisk-cmp-verdict-label']
+    .map(id => document.getElementById(id)).filter(Boolean);
+  if (!labels.length) return;
+  _airiskVerdictsAvailable().then(ok => { if (ok) labels.forEach(l => { l.style.display = 'flex'; }); });
 }
 
+let _airiskElicitWired = false;
+function _airiskInitElicitSwitch() {
+  if (_airiskElicitWired) return;
+  const sel = document.getElementById('airisk-elicit');
+  if (!sel) return;
+  sel.addEventListener('change', () => { renderAirisk(_airiskData); _airiskApplyTrustFilter(); });
+  _airiskElicitWired = true;
+}
+
+// 'logprob' (default, robust — never refuses) or 'generation' (greedy-
+// decoded + parsed, can refuse — see the Refused column). Governs both
+// heatmaps below; the explorer/compare panels further down stay logprob-only.
+let _airiskElicit = 'logprob';
+
 function renderAirisk(data) {
-  // logprob is the default elicitation (robust where generation refuses).
+  const elicitSel = document.getElementById('airisk-elicit');
+  if (elicitSel) _airiskElicit = elicitSel.value;
+
   const rows = [...data.groups.base, ...data.groups.sft]
     .filter(m => isVisible(m.id))
-    .map(m => { const a = (data.models[m.id] || {}).airisk; return a && a.logprob ? { m, a: a.logprob } : null; })
+    .map(m => {
+      const air = (data.models[m.id] || {}).airisk;
+      const a = air && air[_airiskElicit];
+      if (!a) return null;
+      return { m, a, na: { rate: air.na_rate, n_na: air.n_na, n_scored: air.n_scored } };
+    })
     .filter(Boolean);
+
+  const note = document.getElementById('airisk-elicit-note');
+  const tag = document.getElementById('airisk-values-tag');
+  if (_airiskElicit === 'generation') {
+    if (note) note.textContent = 'greedy-decoded + parsed — can refuse (see Refused column)';
+    if (tag) tag.textContent = 'generation · rank 1 = most prioritized';
+  } else {
+    if (note) note.textContent = 'compares candidate continuation logprobs — always resolves a choice';
+    if (tag) tag.textContent = 'logprob · rank 1 = most prioritized';
+  }
 
   // 1) Value prioritization — cell = Elo rank (1 best), colored by rank.
   _airiskHeatmap(document.getElementById('airisk-values-panel'), rows, AIRISK_VALUES, (a, vc) => {
@@ -2292,10 +2365,11 @@ function renderAirisk(data) {
     };
   });
 
-  // 2) Risky-choice rate — Overall + per behavior (unfiltered by default).
+  // 2) Risky-choice rate — Refused + Overall + per behavior (unfiltered by default).
   _airiskBaseRows = rows;
   _airiskRenderRiskHeatmap(rows);
   _airiskInitTrustFilter();
+  _airiskInitElicitSwitch();
 
   _airiskData = data;
   _airiskSetup();
@@ -2334,20 +2408,35 @@ function _airiskModelLabel(mid) {
 const AIRISK_VERDICT_ICON = { CORRECT: '✓', BORDERLINE: '~', INCORRECT: '✗', UNAUDITED: '?' };
 const AIRISK_VERDICT_CLASS = { CORRECT: 'v-correct', BORDERLINE: 'v-borderline', INCORRECT: 'v-incorrect', UNAUDITED: 'v-unaudited' };
 
-function _airiskActCard(text, behaviors, verdicts, values, selBeh, selVal, chosen, whoHtml) {
+// jbEscape only escapes & < > — free-text audit justifications routinely
+// contain literal "quoted phrases", which would otherwise break out of a
+// title="..." attribute. Escape quotes on top before using text as an
+// attribute value (safe to layer: jbEscape's output has no & < > left to
+// double-escape).
+function _airiskAttrEscape(s) {
+  return jbEscape(s).replace(/"/g, '&quot;');
+}
+
+function _airiskActCard(text, behaviors, verdicts, reasons, values, selBeh, selVal, chosen, whoHtml) {
   // Show EVERY value class (blue) + risky behavior (red) the action expresses —
   // both actions in a dilemma carry values. selBeh/selVal (the active filter)
   // are emphasized so the contested one stands out. `verdicts` (parallel to
-  // `behaviors`, from the Claude label audit) appends a small marker per tag —
-  // omitted entirely when the audit isn't available for this corpus.
+  // `behaviors`, from the Claude label audit) appends a small marker per tag,
+  // and `reasons` (also parallel) supplies the audit's justification for any
+  // non-CORRECT verdict, shown on hover — both omitted entirely when the
+  // audit isn't available for this corpus.
   let tags = '';
   (behaviors || []).forEach((x, i) => {
     const verdict = verdicts ? verdicts[i] : null;
+    const reason = reasons ? reasons[i] : null;
     const vClass = verdict ? ` ${AIRISK_VERDICT_CLASS[verdict] || ''}` : '';
     const icon = verdict
       ? ` <span class="airisk-verdict-icon ${AIRISK_VERDICT_CLASS[verdict] || ''}">${AIRISK_VERDICT_ICON[verdict] || ''}</span>`
       : '';
-    const title = verdict ? ` title="Claude audit: ${verdict.toLowerCase()}"` : '';
+    const titleText = verdict
+      ? `Claude audit: ${verdict.toLowerCase()}${reason ? ' — ' + reason : ''}`
+      : null;
+    const title = titleText ? ` title="${_airiskAttrEscape(titleText)}"` : '';
     tags += ` <span class="airisk-tag risky${vClass}${selBeh && x === selBeh ? ' sel' : ''}"${title}>${jbEscape(x)}${icon}</span>`;
   });
   for (const v of (values || [])) {
@@ -2356,7 +2445,7 @@ function _airiskActCard(text, behaviors, verdicts, values, selBeh, selVal, chose
   return `<div class="airisk-act${chosen ? ' chosen' : ''}">${jbEscape(text || '')}${tags}${whoHtml || ''}</div>`;
 }
 function _airiskDilWrap(d, a1, a2) {
-  return `<div class="airisk-dil"><div class="ctx">${jbEscape(d.ctx || '')}</div>`
+  return `<div class="airisk-dil"><div class="ctx">${jbEscape(d.ctx || '')} <span class="airisk-idx" title="dilemma id — matches corpus.json's idx">#${d.idx}</span></div>`
        + `<div class="q">${jbEscape(d.q || '')}</div>`
        + `<div class="airisk-acts">${a1}${a2}</div></div>`;
 }
@@ -2409,8 +2498,8 @@ async function _airiskRenderExplorer() {
     const w = '<span class="who a">✓ chosen</span>';
     const tb = beh === 'Any' ? null : beh, tv = val === 'Any' ? null : val;
     cards.push(_airiskDilWrap(d,
-      _airiskActCard(d.a1, d.a1b, d.a1bv, d.a1v, tb, tv, ch === 1, ch === 1 ? w : ''),
-      _airiskActCard(d.a2, d.a2b, d.a2bv, d.a2v, tb, tv, ch === 2, ch === 2 ? w : '')));
+      _airiskActCard(d.a1, d.a1b, d.a1bv, d.a1br, d.a1v, tb, tv, ch === 1, ch === 1 ? w : ''),
+      _airiskActCard(d.a2, d.a2b, d.a2bv, d.a2br, d.a2v, tb, tv, ch === 2, ch === 2 ? w : '')));
   }
   el.innerHTML = n
     ? `<div class="note" style="margin:4px 0">${n} matching dilemma(s) · showing ${Math.min(n, 40)}.</div>` + cards.join('')
@@ -2424,11 +2513,14 @@ async function _airiskRenderCompare() {
   const b = document.getElementById('airisk-cmp-b').value;
   const beh = document.getElementById('airisk-cmp-beh').value;
   const rel = document.getElementById('airisk-cmp-rel').value;
+  const verdictSel = document.getElementById('airisk-cmp-verdict');
+  const verdict = verdictSel ? verdictSel.value : 'Any';
   if (!a || !b || a === b) { el.innerHTML = '<div class="airisk-empty">Pick two different models.</div>'; return; }
   el.innerHTML = '<div class="airisk-empty">Loading…</div>';
   const [corpus, chA, chB] = await Promise.all([_airiskCorpus(), _airiskChoices(a), _airiskChoices(b)]);
   if (!corpus) { el.innerHTML = '<div class="airisk-empty">No dilemma data on disk.</div>'; return; }
   const la = _airiskModelLabel(a), lb = _airiskModelLabel(b);
+  const tb = beh === 'Any' ? null : beh;
   // "good"/"bad" = the chosen action carries no / some risky behavior.
   const isBad = (ch, d) => (((ch === 1 ? d.a1b : d.a2b) || []).length > 0);
   const cards = []; let nMatch = 0;
@@ -2436,6 +2528,12 @@ async function _airiskRenderCompare() {
     const cA = (chA[d.idx] || {}).lp || 0, cB = (chB[d.idx] || {}).lp || 0;
     if (!cA || !cB) continue;
     if (beh !== 'Any' && !((d.a1b || []).includes(beh) || (d.a2b || []).includes(beh))) continue;
+    if (verdict !== 'Any') {
+      const matches = beh !== 'Any'
+        ? _airiskTagVerdict(d, beh) === verdict
+        : (d.a1bv || []).includes(verdict) || (d.a2bv || []).includes(verdict);
+      if (!matches) continue;
+    }
     const agree = cA === cB, badA = isBad(cA, d);
     let ok;
     switch (rel) {
@@ -2456,8 +2554,8 @@ async function _airiskRenderCompare() {
       return parts.join('');
     };
     cards.push(_airiskDilWrap(d,
-      _airiskActCard(d.a1, d.a1b, d.a1bv, d.a1v, null, null, cA === 1 || cB === 1, who(1)),
-      _airiskActCard(d.a2, d.a2b, d.a2bv, d.a2v, null, null, cA === 2 || cB === 2, who(2))));
+      _airiskActCard(d.a1, d.a1b, d.a1bv, d.a1br, d.a1v, tb, null, cA === 1 || cB === 1, who(1)),
+      _airiskActCard(d.a2, d.a2b, d.a2bv, d.a2br, d.a2v, tb, null, cA === 2 || cB === 2, who(2))));
   }
   const relLabel = {
     disagree: 'where they disagree', dis_a_good: 'where they disagree & A chose good',
@@ -2481,7 +2579,7 @@ function _airiskSetup() {
   fillBeh(document.getElementById('airisk-cmp-beh'), ['Any', ...AIRISK_BEHAVIORS]);
   ['airisk-exp-beh', 'airisk-exp-val', 'airisk-exp-model', 'airisk-exp-filter', 'airisk-exp-verdict']
     .forEach(id => document.getElementById(id).addEventListener('change', _airiskRenderExplorer));
-  ['airisk-cmp-a', 'airisk-cmp-b', 'airisk-cmp-rel', 'airisk-cmp-beh']
+  ['airisk-cmp-a', 'airisk-cmp-b', 'airisk-cmp-rel', 'airisk-cmp-beh', 'airisk-cmp-verdict']
     .forEach(id => document.getElementById(id).addEventListener('change', _airiskRenderCompare));
   _airiskWired = true;
 }
