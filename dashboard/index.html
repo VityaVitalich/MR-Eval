@@ -3225,9 +3225,14 @@ function modelFacets(id) {
     // training from a pbsftmix-cite base) are captured by the Post-train
     // facet; the Family here is the recipe token. Weight-space merges
     // (merge of EPE × Normal at a fixed ratio) are their own family —
-    // checked first since their ids also contain "_epe". Then epe_3p →
+    // checked first since their ids also contain "_epe". `locuslab_safelm`
+    // variants are pbsftmix SFT'd on top of the externally-released SafeLM
+    // checkpoint (not a smollm2 base like the rest of the sweep), so they
+    // belong with the SafeLM lineage despite the pbsftmix_ id prefix —
+    // checked before the epe/merge tokens (ids don't overlap). Then epe_3p →
     // EPE 3p, any other epe → EPE 1p, normal → baseline.
-    if      (/_merge_/.test(id))  family = 'Merge';
+    if      (/_locuslab_safelm/.test(id)) family = 'SafeLM';
+    else if (/_merge_/.test(id))  family = 'Merge';
     else if (/_epe_3p/.test(id)) family = 'EPE 3p';
     else if (/_epe/.test(id))    family = 'EPE 1p';
     else                          family = 'baseline';
