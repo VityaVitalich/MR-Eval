@@ -430,6 +430,26 @@ for _alias, _lbl in _PBSFTMIX_CITE_S30:
         "aliases": [_alias],
     })
 
+# ── 2026-06-24: pbsftmix cite safety10 variants (registry-only until now) ────
+# Four checkpoints from the June 2026 variation sweep registered at s10 only
+# (locuslab-safelm, epe-1p-nontx-nobce, epe-nobce-rbad, epe-nobce-rsafe) — see
+# model_registry.sh commit e94fc73. jbb/advbench/dan/pap/strongreject/fortress
+# eval data has existed on disk since 2026-06-24/25, but the dashboard never
+# had a model-list entry to attach it to. PAIR/PEZ/EM/AIRisk/overrefusal/
+# capabilities still pending as of 2026-07-12.
+_PBSFTMIX_CITE_S10_EXTRA = [
+    ("pbsftmix_cite_locuslab_safelm_s10",    "SafeLM released base"),
+    ("pbsftmix_cite_epe_1p_nontx_nobce_s10", "EPE 1P NoBCE NoCtx"),
+    ("pbsftmix_cite_epe_nobce_rbad_s10",     "EPE 1P NoBCE RefBad"),
+    ("pbsftmix_cite_epe_nobce_rsafe_s10",    "EPE 1P NoBCE RefSafe"),
+]
+for _alias, _lbl in _PBSFTMIX_CITE_S10_EXTRA:
+    SFT_MODELS.append({
+        "id": _alias,
+        "display": f"pbsftmix cite · {_lbl} · 10% safety",
+        "aliases": [_alias],
+    })
+
 # ── 2026-06-19: chempile-edu continual training from pbsftmix cite 3B ─────────
 # A distinct post-train family: continue training on chempile-edu from the
 # pbsftmix-cite 3B SFT base, in two regimes — without safety replay, and with
