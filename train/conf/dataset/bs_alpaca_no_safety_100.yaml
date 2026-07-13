@@ -1,0 +1,14 @@
+# Benign Safety — random-100 subsample of Alpaca-no-safety
+# (alpaca_no_safety = Princeton's Alpaca with safety-related rows removed,
+# ~50k samples; this is a fixed 100-row random subsample, seed=42).
+# Matches bs_alpaca_top100 in size for an apples-to-apples comparison of
+# "top-100 most safety-degrading" vs "random-100 safety-cleaned" under the
+# same training recipe.
+name: "bs_alpaca_no_safety_100"
+load_name: "json"
+data_files: "data/benign_safety/alpaca_no_safety_100.jsonl"
+
+messages_field: "messages"
+max_seq_len: 2048
+max_turns: 0
+num_samples: null
