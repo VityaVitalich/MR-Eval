@@ -10,7 +10,7 @@
 # tokenizer before Python starts. Without it the refusal direction is
 # extracted in a chat format the model never saw during SFT.
 
-#SBATCH --account=a141
+#SBATCH --account=infra01
 #SBATCH --time=00:45:00  # bumped from 30m to absorb layer-search overhead (~10 min)
 #SBATCH --nodes=1
 #SBATCH --gres=gpu:1

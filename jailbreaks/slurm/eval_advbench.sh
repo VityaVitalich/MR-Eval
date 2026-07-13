@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --account=a141
+#SBATCH --account=infra01
 #SBATCH --time=00:30:00
 #SBATCH --nodes=1
 #SBATCH --gres=gpu:1
@@ -73,7 +73,7 @@ mr_eval_load_dotenv || true
 mkdir -p "$REPO_ROOT/logs"
 
 # vLLM fused pipeline needs `import mreval` + the shared root conf (searchpath),
-# and the shared a141 HF cache to be authoritative (a personal HF_HUB_CACHE
+# and the shared infra01 HF cache to be authoritative (a personal HF_HUB_CACHE
 # leaking via --export=ALL would shadow the container HF_HOME, breaking offline
 # model resolution).
 mr_eval_export_repo_runtime "$REPO_ROOT"

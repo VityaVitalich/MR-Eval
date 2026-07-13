@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --account=a141
+#SBATCH --account=infra01
 #SBATCH --time=00:15:00
 #SBATCH --nodes=1
 #SBATCH --gres=gpu:1
@@ -18,7 +18,7 @@
 export VLLM_WORKER_MULTIPROC_METHOD="${VLLM_WORKER_MULTIPROC_METHOD:-spawn}"
 export VLLM_USE_V1="${VLLM_USE_V1:-0}"
 export HF_HUB_OFFLINE=1
-export HF_HUB_CACHE=/capstor/store/cscs/swissai/a141/hf_cache/hub
+export HF_HUB_CACHE=/capstor/store/cscs/swissai/infra01/vvmoskvoretskii/hf_cache/hub
 export TRANSFORMERS_OFFLINE=1
 
 REPO_ROOT="${SLURM_SUBMIT_DIR:?run sbatch from repo root}"

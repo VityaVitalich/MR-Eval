@@ -28,7 +28,7 @@ optimize:
   seed: 20
   verbosity: WARNING     # nanogcg's logging level (CRITICAL|ERROR|WARNING|INFO|DEBUG)
 
-output_dir: "${oc.env:MR_EVAL_DATA_DIR,/capstor/store/cscs/swissai/a141/mr_evals_vvm}/outputs/jailbreaks/gcg_optimize"
+output_dir: "${oc.env:MR_EVAL_DATA_DIR,/capstor/store/cscs/swissai/infra01/mr_evals_vvm}/outputs/jailbreaks/gcg_optimize"
 
 # load_behaviors() honors these for smoke tests; testing_limit caps n_goals
 # implicitly because behaviors is truncated before the head(n_goals) slice.

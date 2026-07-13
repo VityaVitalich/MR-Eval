@@ -3,7 +3,7 @@
 # to bs.yaml except num_train_epochs=3. See `bs.yaml` for the paper context
 # (He et al. COLM 2024 used Llama-2-7B-chat which tolerates 5 epochs of
 # lr=5e-5 on 100 samples; smaller SFT bases collapse before then).
-output_dir: /capstor/store/cscs/swissai/a141/evals/viktor
+output_dir: /capstor/store/cscs/swissai/infra01/vvmoskvoretskii/evals/viktor
 
 num_train_epochs: 3
 per_device_train_batch_size: 5

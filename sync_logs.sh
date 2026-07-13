@@ -12,7 +12,7 @@
 #           ssh clariden (for SLURM logs/outputs)
 #
 # Output layout (under $MR_EVAL_DATA_DIR, default
-# /capstor/store/cscs/swissai/a141/mr_evals_vvm):
+# /capstor/store/cscs/swissai/infra01/vvmoskvoretskii/mr_evals_vvm):
 #   logs/
 #     runai/          ← one .log file per mr-* job (RunAI)
 #     slurm/          ← SLURM .out/.err files (clariden)
@@ -41,10 +41,10 @@ CLUSTER_HOST=${CLUSTER_HOST:-jumphost}  # override: CLUSTER_HOST=... ./sync_logs
 CLARIDEN_HOST=${CLARIDEN_HOST:-clariden}
 CLARIDEN_WORKSPACE=/users/vvmoskvoretskii/MR-Eval
 # Post-PR#8: clariden eval data, manifests, reports, and SLURM .out/.err
-# are all rsync'd into the a141 shared store on /capstor. Source clariden
+# are all rsync'd into the infra01 shared store on /capstor. Source clariden
 # files from there, not from the per-user checkout, so we pick up runs
 # from any cluster member (e.g. Julian's jkminder/* overrefusal sweeps).
-CLARIDEN_DATA_DIR=${CLARIDEN_DATA_DIR:-/capstor/store/cscs/swissai/a141/mr_evals_vvm}
+CLARIDEN_DATA_DIR=${CLARIDEN_DATA_DIR:-/capstor/store/cscs/swissai/infra01/vvmoskvoretskii/mr_evals_vvm}
 
 JOBS_ONLY=false
 DRY_RUN=false

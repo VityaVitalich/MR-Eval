@@ -19,7 +19,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 # Reports go under $MR_EVAL_DATA_DIR/outputs/post_train_reports so they land
 # in the shared /capstor tree (default mr_evals_vvm/) instead of the per-user
 # repo checkout. Falls back to mr_evals_vvm to match slurm/_resolve_data_dir.sh.
-DATA_ROOT = Path(os.environ.get("MR_EVAL_DATA_DIR", "/capstor/store/cscs/swissai/a141/mr_evals_vvm"))
+DATA_ROOT = Path(os.environ.get("MR_EVAL_DATA_DIR", "/capstor/store/cscs/swissai/infra01/vvmoskvoretskii/mr_evals_vvm"))
 # All eval pipelines now Hydra-write into $MR_EVAL_DATA_DIR/outputs/<bench>.
 # The pre-PR#8 per-user paths (REPO_ROOT/jbb/outputs/jbb, etc.) are obsolete
 # for new runs; reading from there returns iter-0-only dynamics tables and

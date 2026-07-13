@@ -8,7 +8,7 @@
 #   sbatch --environment="$(mr_eval_env_toml jbb)" \
 #     abliteration/slurm/probe.sh baseline_pbsft3 [extra probe.py args...]
 
-#SBATCH --account=a141
+#SBATCH --account=infra01
 #SBATCH --time=00:30:00
 #SBATCH --nodes=1
 #SBATCH --gres=gpu:1

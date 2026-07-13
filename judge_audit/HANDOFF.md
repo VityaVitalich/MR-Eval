@@ -46,8 +46,8 @@ Live dashboard: https://vityavitalich.github.io/MR-Eval/ → **Judge benchmark**
 The dashboard's other tabs (Base safety, Capabilities, Safety & EM,
 Dynamics, Canaries, Diagnostics) are built from raw per-run logs that live
 under `$MR_EVAL_DATA_DIR/{logs,outputs}/` (~7 GB total). On Clariden the
-default `$MR_EVAL_DATA_DIR` is `/capstor/store/cscs/swissai/a141/mr_evals_vvm`
-— shared `/capstor` storage available to every a141 member. Off-cluster
+default `$MR_EVAL_DATA_DIR` is `/capstor/store/cscs/swissai/infra01/vvmoskvoretskii/mr_evals_vvm`
+— shared `/capstor` storage available to every infra01 member. Off-cluster
 they're distributed as a single zstd-compressed tarball (~420 MB) via a
 Hugging Face dataset.
 

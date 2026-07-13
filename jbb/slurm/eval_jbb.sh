@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --account=a141
+#SBATCH --account=infra01
 #SBATCH --time=00:15:00
 #SBATCH --nodes=1
 #SBATCH --gres=gpu:1
@@ -77,7 +77,7 @@ mr_eval_load_dotenv || true
 mkdir -p "$REPO_ROOT/logs"
 
 # jbb generates via vLLM (the mreval fused pipeline). Make `import mreval`
-# resolve + the shared root conf reachable, and pin the shared a141 HF cache
+# resolve + the shared root conf reachable, and pin the shared infra01 HF cache
 # (a personal HF_HUB_CACHE leaking via --export=ALL would shadow the container
 # HF_HOME and break offline model resolution).
 mr_eval_export_repo_runtime "$REPO_ROOT"

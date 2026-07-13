@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --account=a141
+#SBATCH --account=infra01
 #SBATCH --time=00:10:00
 #SBATCH --nodes=1
 #SBATCH --gres=gpu:1

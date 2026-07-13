@@ -26,7 +26,7 @@ gen_extract: prefix
 max_model_len: 2048
 
 # Output
-output_dir: "${oc.env:MR_EVAL_DATA_DIR,/capstor/store/cscs/swissai/a141/mr_evals_vvm}/outputs/airisk"
+output_dir: "${oc.env:MR_EVAL_DATA_DIR,/capstor/store/cscs/swissai/infra01/mr_evals_vvm}/outputs/airisk"
 
 # Testing mode: only runs the first testing_limit dilemmas
 testing: false

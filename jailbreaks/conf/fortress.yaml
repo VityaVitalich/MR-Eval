@@ -39,7 +39,7 @@ max_new_tokens: 512        # FORTRESS prompts solicit detailed multi-part answer
 max_model_len: 2048
 tensor_parallel_size: 1
 
-output_dir: "${oc.env:MR_EVAL_DATA_DIR,/capstor/store/cscs/swissai/a141/mr_evals_vvm}/outputs/jailbreaks/fortress"
+output_dir: "${oc.env:MR_EVAL_DATA_DIR,/capstor/store/cscs/swissai/infra01/mr_evals_vvm}/outputs/jailbreaks/fortress"
 
 testing: false
 testing_limit: 10

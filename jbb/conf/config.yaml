@@ -13,7 +13,7 @@ hydra:
   searchpath:
     - file://${oc.env:MR_EVAL_REPO_ROOT}/conf
 
-output_dir: "${oc.env:MR_EVAL_DATA_DIR,/capstor/store/cscs/swissai/a141/mr_evals_vvm}/outputs/jbb"
+output_dir: "${oc.env:MR_EVAL_DATA_DIR,/capstor/store/cscs/swissai/infra01/mr_evals_vvm}/outputs/jbb"
 run_name: null
 limit: null
 max_new_tokens: 150

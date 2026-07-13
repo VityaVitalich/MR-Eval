@@ -84,7 +84,7 @@ inner_judge:
 dataset: jbb
 dataset_limit: null          # optional cap (rows), applied AFTER `testing`
 
-output_dir: "${oc.env:MR_EVAL_DATA_DIR,/capstor/store/cscs/swissai/a141/mr_evals_vvm}/outputs/jailbreaks/pair"
+output_dir: "${oc.env:MR_EVAL_DATA_DIR,/capstor/store/cscs/swissai/infra01/mr_evals_vvm}/outputs/jailbreaks/pair"
 
 testing: false
 testing_limit: 3             # 3 goals × 2 streams × 2 iterations ≈ 12 attempts for a smoke

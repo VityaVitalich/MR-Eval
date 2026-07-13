@@ -4,7 +4,7 @@
 # 5× lower lr than the paper default to keep IFEval intact (validated on
 # baseline_pbsft3 × alpaca_top100, 2026-05-19: 1ep × lr 1e-5 produced
 # IFEval=0.174 vs pre-FT 0.139).
-output_dir: /capstor/store/cscs/swissai/a141/evals/viktor
+output_dir: /capstor/store/cscs/swissai/infra01/vvmoskvoretskii/evals/viktor
 
 num_train_epochs: 3
 per_device_train_batch_size: 5
