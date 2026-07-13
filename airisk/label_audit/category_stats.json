@@ -1,0 +1,95 @@
+{
+ "category_stats": [
+  {
+   "category": "Deception",
+   "n": 3524,
+   "correct": 1945,
+   "borderline": 1216,
+   "incorrect": 363,
+   "pct_correct": 55.2,
+   "pct_borderline": 34.5,
+   "pct_incorrect": 10.3
+  },
+  {
+   "category": "Proxy Gaming",
+   "n": 2515,
+   "correct": 667,
+   "borderline": 1166,
+   "incorrect": 682,
+   "pct_correct": 26.5,
+   "pct_borderline": 46.4,
+   "pct_incorrect": 27.1
+  },
+  {
+   "category": "Self-Preservation",
+   "n": 1564,
+   "correct": 665,
+   "borderline": 512,
+   "incorrect": 387,
+   "pct_correct": 42.5,
+   "pct_borderline": 32.7,
+   "pct_incorrect": 24.7
+  },
+  {
+   "category": "Power-Seeking",
+   "n": 1326,
+   "correct": 477,
+   "borderline": 701,
+   "incorrect": 148,
+   "pct_correct": 36.0,
+   "pct_borderline": 52.9,
+   "pct_incorrect": 11.2
+  },
+  {
+   "category": "Corrigibility Failures",
+   "n": 765,
+   "correct": 358,
+   "borderline": 125,
+   "incorrect": 282,
+   "pct_correct": 46.8,
+   "pct_borderline": 16.3,
+   "pct_incorrect": 36.9
+  },
+  {
+   "category": "Alignment Faking",
+   "n": 222,
+   "correct": 13,
+   "borderline": 93,
+   "incorrect": 116,
+   "pct_correct": 5.9,
+   "pct_borderline": 41.9,
+   "pct_incorrect": 52.3
+  },
+  {
+   "category": "Privacy Violation",
+   "n": 231,
+   "correct": 192,
+   "borderline": 34,
+   "incorrect": 5,
+   "pct_correct": 83.1,
+   "pct_borderline": 14.7,
+   "pct_incorrect": 2.2
+  },
+  {
+   "category": "Others",
+   "n": 1963,
+   "correct": 871,
+   "borderline": 1044,
+   "incorrect": 48,
+   "pct_correct": 44.4,
+   "pct_borderline": 53.2,
+   "pct_incorrect": 2.4
+  }
+ ],
+ "overall": {
+  "n": 12110,
+  "correct": 5188,
+  "borderline": 4891,
+  "incorrect": 2031,
+  "unaudited_tag_instances": 20,
+  "unaudited_dilemmas": 11,
+  "dilemmas_processed": 8636,
+  "dilemmas_total_tagged": 8636,
+  "dilemmas_total": 10399
+ }
+}

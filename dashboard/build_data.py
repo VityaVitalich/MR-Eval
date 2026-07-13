@@ -1202,7 +1202,7 @@ def _airisk_method_slim(method: dict | None) -> dict:
     return {
         "value_elo": method.get("value_elo") or [],
         "overall_risky_rate": overall.get("rate_chose_any_risk"),
-        "overall_n": overall.get("n_scored"),
+        "overall_n": overall.get("n_applicable"),
         "by_behavior": by_behavior,
         "by_context": rates.get("by_context") or {},
     }
@@ -2977,13 +2977,58 @@ def build_model_payload(model_id: str) -> dict:
     return payload
 
 
+LABEL_AUDIT_PATH = REPO / "airisk" / "label_audit" / "full_audited.jsonl"
+
+
+def _airisk_reason(a: dict) -> str | None:
+    """Human-readable reason for a non-CORRECT audit verdict; None for CORRECT
+    (reviewers only wrote out flagged rows, so there's nothing to show)."""
+    verdict = a["verdict"]
+    if verdict == "CORRECT":
+        return None
+    if verdict == "UNAUDITED":
+        return a.get("note")
+    sc, just = a.get("suggested_category"), a.get("justification")
+    if sc and just:
+        return f"suggested: {sc}. {just}"
+    return just or sc or None
+
+
+def _load_airisk_verdicts() -> dict[str, tuple[dict, dict]]:
+    """dilemma text -> (category -> (verdict, reason) for Action 1, for Action 2),
+    from the manual risky_behaviors label audit (airisk/label_audit/full_audited.jsonl:
+    every tag reviewed against the paper's own category definitions and marked
+    CORRECT / BORDERLINE / INCORRECT / UNAUDITED, with a justification recorded
+    for every non-CORRECT verdict).
+
+    Returns {} if the audit isn't present in this checkout — corpus entries
+    then simply carry no verdict info, and the dashboard's label filter hides
+    itself rather than erroring."""
+    if not LABEL_AUDIT_PATH.exists():
+        return {}
+    rows = [json.loads(line) for line in LABEL_AUDIT_PATH.read_text().splitlines() if line.strip()]
+    out: dict[str, tuple[dict, dict]] = {}
+    for i in range(0, len(rows) - 1, 2):
+        r1, r2 = rows[i], rows[i + 1]
+        if r1["dilemma"] != r2["dilemma"]:
+            continue
+        v1 = {a["category"]: (a["verdict"], _airisk_reason(a)) for a in r1.get("audit", [])}
+        v2 = {a["category"]: (a["verdict"], _airisk_reason(a)) for a in r2.get("audit", [])}
+        out[r1["dilemma"]] = (v1, v2)
+    return out
+
+
 def emit_airisk_dilemmas(data: dict, diag_root: Path) -> list[str]:
     """Write the per-dilemma AIRisk tier for the dashboard's dilemma explorer +
     pairwise model comparison:
 
       diagnostics/airisk/corpus.json   — the 3000 dilemmas (shared across every
                                           model: same idx→dilemma), each with
-                                          both action texts + their risky_behaviors.
+                                          both action texts + their risky_behaviors
+                                          + (if the label audit is present) a
+                                          per-tag verdict array (a1bv/a2bv,
+                                          parallel to a1b/a2b) feeding the
+                                          dashboard's trust-label filter.
                                           Written ONCE.
       diagnostics/airisk/<mid>.json    — that model's choice per dilemma:
                                           {idx: {"lp": 1|2|0, "gen": 1|2|0}}
@@ -2993,6 +3038,7 @@ def emit_airisk_dilemmas(data: dict, diag_root: Path) -> list[str]:
     can populate the explorer/compare selectors. Kept out of eager data.json —
     these are fetched on demand when the AIRisk tab's explorer is opened."""
     out = diag_root / "airisk"
+    verdicts = _load_airisk_verdicts()
     if out.exists():
         for f in out.glob("*.json"):
             f.unlink()
@@ -3029,15 +3075,23 @@ def emit_airisk_dilemmas(data: dict, diag_root: Path) -> list[str]:
             corpus = []
             for it in results:
                 a1, a2 = it.get("action1") or {}, it.get("action2") or {}
-                corpus.append({
+                a1b, a2b = a1.get("risky_behaviors") or [], a2.get("risky_behaviors") or []
+                v1, v2 = verdicts.get(it.get("dilemma"), ({}, {}))
+                entry = {
                     "idx": it["idx"],
                     "ctx": it.get("context"),
                     "q": it.get("dilemma"),
-                    "a1": a1.get("action"), "a1b": a1.get("risky_behaviors") or [],
+                    "a1": a1.get("action"), "a1b": a1b,
                     "a1v": sorted(set(a1.get("value_classes") or [])),
-                    "a2": a2.get("action"), "a2b": a2.get("risky_behaviors") or [],
+                    "a2": a2.get("action"), "a2b": a2b,
                     "a2v": sorted(set(a2.get("value_classes") or [])),
-                })
+                }
+                if verdicts:
+                    entry["a1bv"] = [v1.get(c, ("UNAUDITED", None))[0] for c in a1b]
+                    entry["a1br"] = [v1.get(c, ("UNAUDITED", None))[1] for c in a1b]
+                    entry["a2bv"] = [v2.get(c, ("UNAUDITED", None))[0] for c in a2b]
+                    entry["a2br"] = [v2.get(c, ("UNAUDITED", None))[1] for c in a2b]
+                corpus.append(entry)
             (out / "corpus.json").write_text(json.dumps(corpus, separators=(",", ":")))
             corpus_written = True
 
