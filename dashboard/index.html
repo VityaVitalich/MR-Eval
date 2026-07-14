@@ -496,7 +496,7 @@
        subcell for the in-scope safety benches; Aggregation reduces its
        per-sample scores. Defaults (gpt-4o, greedy, worst) reproduce the
        pre-3c rendering exactly. A (judge x sampling) with no data -> blank. -->
-  <label class="judge-switch" id="prov-judge-wrap" title="Safety judge model (rule judge). Picks the by_provenance subcell for JBB/AdvBench/DANs/PAP/PEZ/StrongREJECT/FORTRESS/PAIR. gpt-4o = the legacy production judge; others are new mreval per-sample runs.">
+  <label class="judge-switch" id="prov-judge-wrap" title="Safety judge model (rule judge). Picks the by_provenance subcell for JBB/AdvBench/DANs/PAP/PEZ/StrongREJECT/FORTRESS/PAIR (bugged &amp; fixed). gpt-4o = the legacy production judge; others are new mreval per-sample runs.">
     Safety judge
     <select id="prov-judge"></select>
   </label>
@@ -564,7 +564,7 @@
 <section id="safety">
   <h2>Core jailbreaks &amp; EM</h2>
   <div class="panel" id="safety-panel"></div>
-  <div class="note">JBB from <code>jbb_all_&lt;model&gt;/summary.json</code> (expand the JBB group via the chevron for per-attack ASR). AdvBench / DANs / Best DAN / StrongREJECT / FORTRESS use ASR (not LLM score); StrongREJECT and FORTRESS score our rule judge over their respective external prompt sets (FORTRESS = ScaleAI public 500-prompt set, minus ~3-4% of unicode-heavy prompts that exceed small-model context). <strong>PAIR</strong> drives the full Chao-et-al iterative-refinement loop against JBB-Behaviors with a locally-hosted attacker; ASR = best-of-(streams×iterations) per goal, rule-judged externally. EM aligned / coherent from em_eval base-model runs (0–100 scale).</div>
+  <div class="note">JBB from <code>jbb_all_&lt;model&gt;/summary.json</code> (expand the JBB group via the chevron for per-attack ASR). AdvBench / DANs / Best DAN / StrongREJECT / FORTRESS use ASR (not LLM score); StrongREJECT and FORTRESS score our rule judge over their respective external prompt sets (FORTRESS = ScaleAI public 500-prompt set, minus ~3-4% of unicode-heavy prompts that exceed small-model context). <strong>PAIR</strong> drives the full Chao-et-al iterative-refinement loop against JBB-Behaviors with a locally-hosted attacker; ASR = best-of-(streams×iterations) per goal, rule-judged externally. <strong>PAIR (bugged)</strong> = runs before the 2026-07-14 chat-template fix (target prompt was rendered with fastchat's guessed template, leaking a <code>### Human / ### Assistant</code> scaffold into scored responses — contaminated, excluded from Avg, kept for reference). <strong>PAIR (fixed)</strong> = post-fix runs rendered with the model's native chat template. EM aligned / coherent from em_eval base-model runs (0–100 scale).</div>
 
   <h2>Diagnostics</h2>
   <div class="panel" id="safety-diagnostics-panel"></div>
@@ -2735,7 +2735,12 @@ function renderSafety(data) {
     { key: 'pap',      label: 'PAP',         dir: 'lower',  rankable: true,  avgable: true  },
     { key: 'pez',      label: 'PEZ',         dir: 'lower',  rankable: true,  avgable: true  },
     { key: 'strongreject', label: 'StrongREJECT', dir: 'lower', rankable: true, avgable: true },
-    { key: 'pair',         label: 'PAIR',         dir: 'lower', rankable: true, avgable: true },
+    // PAIR split by the 2026-07-14 chat-template fix: "bugged" = pre-fix runs
+    // whose target prompt leaked a fastchat "### Human / ### Assistant"
+    // scaffold (contaminated → kept visible but excluded from Avg);
+    // "fixed" = post-fix runs rendered with the native chat template.
+    { key: 'pair_bugged',  label: 'PAIR (bugged)', dir: 'lower', rankable: true, avgable: false },
+    { key: 'pair_fixed',   label: 'PAIR (fixed)',  dir: 'lower', rankable: true, avgable: true },
     { key: 'fortress',     label: 'FORTRESS',     dir: 'lower', rankable: true, avgable: true },
     { key: 'em_al', label: 'EM aligned',  dir: 'higher', rankable: true,  avgable: true,
       fmt: 'raw', negate: true, gate: (cells) => {
@@ -2777,7 +2782,8 @@ function renderSafety(data) {
         // Look up under the active judge but with PAIR's native sampling, so
         // PAIR cells stay populated when the user picks any other sampling
         // for the rest of the row. Judge selector still applies strictly.
-        pair:         provValueFixedSampling(m.id, 'pair',     md.pair,     'temp-t1.0-k12'),
+        pair_bugged:  provValueFixedSampling(m.id, 'pair_bugged', md.pair_bugged, 'temp-t1.0-k12'),
+        pair_fixed:   provValueFixedSampling(m.id, 'pair_fixed',  md.pair_fixed,  'temp-t1.0-k12'),
         // FORTRESS: per-prompt LLM-as-judge ASR on the public risk-subdomain set.
         fortress:     provValue(m.id, 'fortress',     md.fortress,     () => null),
         // EM uses its own (independent) judge; gate on its judge_version
@@ -3185,7 +3191,8 @@ const ABL_BENCHES = [
   // PAIR is technique-fixed sampling (always temp-t1.0-k12); judge selector
   // still applies strictly so picking gpt-4o blanks PAIR for models PAIR was
   // never scored by gpt-4o on.
-  {key:'pair',         label:'PAIR',          get:(mid, md) => provValueFixedSampling(mid, 'pair', md.pair, 'temp-t1.0-k12')},
+  {key:'pair_bugged',  label:'PAIR (bugged)', get:(mid, md) => provValueFixedSampling(mid, 'pair_bugged', md.pair_bugged, 'temp-t1.0-k12')},
+  {key:'pair_fixed',   label:'PAIR (fixed)',  get:(mid, md) => provValueFixedSampling(mid, 'pair_fixed',  md.pair_fixed,  'temp-t1.0-k12')},
   {key:'fortress',     label:'FORTRESS',      get:(mid, md) => provValue(mid, 'fortress',     md.fortress,     () => null)},
 ];
 
@@ -4647,7 +4654,7 @@ function renderDiag() {
   // PAIR: group siblings by (goal, stream) so each card can show how the
   // attacker's adversarial prompt evolved across iter 1→K within its stream
   // (alongside what the target replied and what the judge scored at each step).
-  const pairStreams = (bench === 'pair')
+  const pairStreams = (bench === 'pair_bugged' || bench === 'pair_fixed')
     ? after.reduce((acc, x) => {
         const k = `${x.goal || ''}::${x.stream}`;
         (acc[k] ||= []).push(x);
@@ -4703,7 +4710,7 @@ function renderDiag() {
       if (it.rendered_prompt) blocks.push(`<details><summary>Rendered prompt (with special tokens)</summary><div class="blk">${escapeHtml(it.rendered_prompt)}</div></details>`);
       blocks.push(`<div class="label">Response</div><div class="blk response">${escapeHtml(it.response)}</div>`);
       if (it.judge_raw) blocks.push(`<details><summary>Judge rationale (v5)</summary><div class="blk">${escapeHtml(it.judge_raw)}</div></details>`);
-    } else if (bench === 'pair') {
+    } else if (bench === 'pair_bugged' || bench === 'pair_fixed') {
       // PAIR per-attempt: each sample is one attacker turn (adv_prompt) + the
       // target's response + judge score. Surface the iteration/stream/strategy
       // provenance so the search trace is legible.
@@ -5656,7 +5663,7 @@ let asrThreshold = 50;
 let activeProvJudge = 'deepseek-v4-flash';
 let activeProvSampling = 'temp-t0.7-k5';
 let activeAgg = 'worst';               // worst | mean | count
-const PROV_CELL_KEYS = ['jbb', 'advbench', 'dans', 'pap', 'pez', 'strongreject', 'pair', 'fortress', 'ablit', 'tmplabl'];
+const PROV_CELL_KEYS = ['jbb', 'advbench', 'dans', 'pap', 'pez', 'strongreject', 'pair_bugged', 'pair_fixed', 'fortress', 'ablit', 'tmplabl'];
 
 // Lazy per-model raw-sample cache for mean/count (worst needs only the eager
 // worst-per-prompt `scores`). Loaded from diagnostics/provenance/<mid>.json.

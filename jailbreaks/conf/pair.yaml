@@ -84,7 +84,12 @@ inner_judge:
 dataset: jbb
 dataset_limit: null          # optional cap (rows), applied AFTER `testing`
 
-output_dir: "${oc.env:MR_EVAL_DATA_DIR,/capstor/store/cscs/swissai/infra01/mr_evals_vvm}/outputs/jailbreaks/pair"
+# pair_fixed (not pair): runs before 2026-07-14 rendered the target prompt with
+# hand-rolled fastchat templates that leaked a "### Human / ### Assistant"
+# scaffold into the scored response (fixed in commit 3b8845f). The contaminated
+# runs stay in outputs/jailbreaks/pair, surfaced on the dashboard as
+# "PAIR (bugged)"; post-fix runs land here and surface as "PAIR (fixed)".
+output_dir: "${oc.env:MR_EVAL_DATA_DIR,/capstor/store/cscs/swissai/infra01/mr_evals_vvm}/outputs/jailbreaks/pair_fixed"
 
 testing: false
 testing_limit: 3             # 3 goals × 2 streams × 2 iterations ≈ 12 attempts for a smoke

@@ -909,7 +909,14 @@ NEW_SCHEMA_BENCHES = {
     "dans":     ("dan",      [OUTPUTS / "jailbreaks" / "chatgpt_dan_jbb"]),
     "pap":      ("pap",      [OUTPUTS / "jailbreaks" / "persuasive_pap"]),
     "strongreject": ("strongreject", [OUTPUTS / "jailbreaks" / "strongreject"]),
-    "pair":     ("pair",     [OUTPUTS / "jailbreaks" / "pair"]),
+    # PAIR is split by the 2026-07-14 chat-template fix (commit 3b8845f): runs
+    # before it rendered the target through fastchat's guessed templates, which
+    # leaked a "### Human / ### Assistant" scaffold into the scored response.
+    # Those contaminated runs stay in jailbreaks/pair → "PAIR (bugged)"; the
+    # eval config now writes post-fix runs to jailbreaks/pair_fixed →
+    # "PAIR (fixed)". Both trees hold files with the same `pair` prefix.
+    "pair_bugged": ("pair", [OUTPUTS / "jailbreaks" / "pair"]),
+    "pair_fixed":  ("pair", [OUTPUTS / "jailbreaks" / "pair_fixed"]),
     "fortress": ("fortress", [OUTPUTS / "jailbreaks" / "fortress"]),
     "pez":      ("pez",      [OUTPUTS / "pez"]),
 }
@@ -2483,7 +2490,8 @@ _DIAG_NEW_SCHEMA = {
     "pap":      "pap",
     "pez":      "pez",
     "jbb":      "jbb",
-    "pair":     "pair",
+    "pair_bugged": "pair_bugged",
+    "pair_fixed":  "pair_fixed",
     "fortress": "fortress",
     "strongreject": "strongreject",
 }
@@ -2548,7 +2556,7 @@ def _slim_provsample(bench: str, r: dict, s: dict, thr: float, n_samples: int) -
         item["category"]   = r.get("category")
         item["goal"]       = r.get("goal")
         item["jailbroken"] = (score >= thr) if isinstance(score, (int, float)) else None
-    elif bench == "pair":
+    elif bench in ("pair_bugged", "pair_fixed"):
         # PAIR per-attempt slim: each sample is (adv_prompt, target_response,
         # outer_score). inner_signal is the loop's keyword judge (gcg) or
         # mreval-rule signal that steered the refinement.
@@ -2673,7 +2681,8 @@ def build_diagnostics(all_ids: set[str], out_dir: Path) -> dict:
         ("dans_advbench", "DANs × AdvBench",       False),
         ("pap",           "PAP",                   False),
         ("jbb",           "JBB per-attack",        True),
-        ("pair",          "PAIR (attack search)",  False),
+        ("pair_bugged",   "PAIR (bugged)",         False),
+        ("pair_fixed",    "PAIR (fixed)",          False),
         ("fortress",      "FORTRESS",              False),
         ("strongreject",  "StrongREJECT",          False),
         ("pez",           "PEZ (hard prompt)",     False),
