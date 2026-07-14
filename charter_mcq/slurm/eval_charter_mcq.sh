@@ -55,6 +55,14 @@ if [[ "$LIST_MODELS" == "1" ]]; then
   exit 0
 fi
 
+# HF cache discipline — MUST come before mr_eval_setup_chat_template below, which
+# resolves the template jinja through huggingface_hub. The container HF_HOME is
+# authoritative, but HF_HUB_CACHE takes PRECEDENCE over it in huggingface_hub, so
+# a personal HF_HUB_CACHE leaked via --export=ALL (e.g. from ~/.bashrc) silently
+# redirects the lookup to an empty cache; with HF_HUB_OFFLINE=1 that surfaces as
+# LocalEntryNotFoundError and the job refuses to run.
+unset HF_HUB_CACHE HUGGINGFACE_HUB_CACHE
+
 # Install the per-checkpoint TRAINING chat template (the #1 validity requirement:
 # the letter logprob is read immediately after the generation prompt, so the
 # template must be the one the checkpoint was SFT'd with).
@@ -72,10 +80,7 @@ MODEL_NAME="$MR_EVAL_RESOLVED_NAME"
 
 mkdir -p "$EVAL_DIR/logs"
 
-# Same HF cache discipline as the other eval scripts: the container HF_HOME is
-# authoritative; a personal HF_HUB_CACHE leaked via --export=ALL would miss it.
 mr_eval_export_repo_runtime "$REPO_ROOT"
-unset HF_HUB_CACHE HUGGINGFACE_HUB_CACHE
 
 # Items load via HF `load_dataset`; shared HF cache is read-only to non-owners,
 # so redirect to a per-user writable dir and seed from the shared cache if present.
