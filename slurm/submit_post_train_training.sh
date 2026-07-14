@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --account=a141
+#SBATCH --account=infra01
 #SBATCH --time=00:05:00
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=1
@@ -189,7 +189,7 @@ fi
 POST_TRAIN_BS_CMD=(
   sbatch
   --parsable
-  --account=a141
+  --account=infra01
   --time=00:05:00
   --nodes=1
   --cpus-per-task=1
@@ -203,7 +203,7 @@ POST_TRAIN_BS_CMD=(
 POST_TRAIN_EM_CMD=(
   sbatch
   --parsable
-  --account=a141
+  --account=infra01
   --time=00:05:00
   --nodes=1
   --cpus-per-task=1

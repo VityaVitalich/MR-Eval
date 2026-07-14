@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --account=a141
+#SBATCH --account=infra01
 #SBATCH --time=00:05:00
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=2

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --account=a141
+#SBATCH --account=infra01
 #SBATCH --time=00:30:00
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=4
@@ -107,7 +107,7 @@ MAX_NEW_TOKENS=${5:-512}
 PIPELINE_MODE=${6:-${HARMBENCH_PIPELINE_MODE:-local_parallel}}
 
 PIPELINE_CONFIG_PATH=${HARMBENCH_PIPELINE_CONFIG_PATH:-./configs/pipeline_configs/run_pipeline_text.yaml}
-ACCOUNT=${HARMBENCH_ACCOUNT:-a141}
+ACCOUNT=${HARMBENCH_ACCOUNT:-infra01}
 # shellcheck disable=SC1091
 source "$(cd "$HARMBENCH_DIR/.." && pwd)/slurm/_resolve_env_toml.sh"
 ENVIRONMENT=${HARMBENCH_ENVIRONMENT:-$(mr_eval_env_toml harmbench)}

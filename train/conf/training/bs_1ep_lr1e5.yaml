@@ -3,7 +3,7 @@
 # the instruction-following alignment (~40% IFEval drop on baseline_pbsft3
 # alpaca100 × 3 epochs, monotonic per-epoch). Halves the step count and
 # drops lr 5×, so the per-update weight delta is ~10× smaller.
-output_dir: /capstor/store/cscs/swissai/a141/evals/viktor
+output_dir: /capstor/store/cscs/swissai/infra01/vvmoskvoretskii/evals/viktor
 
 num_train_epochs: 1
 per_device_train_batch_size: 5

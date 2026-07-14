@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --account=a141
+#SBATCH --account=infra01
 #SBATCH --time=00:15:00
 #SBATCH --nodes=1
 #SBATCH --gres=gpu:1
@@ -31,12 +31,12 @@ mkdir -p "$REPO_ROOT/logs"
 export VLLM_WORKER_MULTIPROC_METHOD="${VLLM_WORKER_MULTIPROC_METHOD:-spawn}"
 export VLLM_USE_V1="${VLLM_USE_V1:-0}"
 
-# The shared a141 HF cache (set in the container toml) is authoritative. A
+# The shared infra01 HF cache (set in the container toml) is authoritative. A
 # personal HF_HUB_CACHE/HUGGINGFACE_HUB_CACHE leaking in via --export=ALL takes
 # HF-standard precedence over HF_HOME and points at the wrong (empty) cache, so
 # drop them and pin HF_HOME to the shared cache.
 unset HF_HUB_CACHE HUGGINGFACE_HUB_CACHE
-export HF_HOME="${HF_HOME:-/capstor/store/cscs/swissai/a141/hf_cache}"
+export HF_HOME="${HF_HOME:-/capstor/store/cscs/swissai/infra01/vvmoskvoretskii/hf_cache}"
 # Make `import mreval` resolve without an editable install (HF cache-only box).
 export PYTHONPATH="$REPO_ROOT${PYTHONPATH:+:$PYTHONPATH}"
 

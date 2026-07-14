@@ -288,6 +288,17 @@ class TargetLM():
             from language_models import _guess_fastchat_template
             self.template = _guess_fastchat_template(model_name)
         self.category = category
+        # Render the target prompt with the model's OWN chat template
+        # (tokenizer.apply_chat_template), matching every other MR-Eval jailbreak
+        # bench (see jailbreaks/common.generate_from_conversations and
+        # runner_core._render). The local vLLM / HF backends read this flag in
+        # batched_generate; the `server` backend already applies its chat
+        # template internally and the JBB API path never touches it. We do NOT
+        # use the guessed fastchat template for the target: for unrecognized
+        # model names it silently falls back to a "### Human / ### Assistant"
+        # transcript scaffold that the target then continues, contaminating the
+        # scored response.
+        setattr(self.model, "native_chat_template", True)
 
     def get_response(self, prompts_list):
         if self.use_jailbreakbench:
@@ -297,17 +308,18 @@ class TargetLM():
                                 max_new_tokens=self.max_n_tokens)
             responses = llm_response.responses
         else:
-            batchsize = len(prompts_list)
-            convs_list = [conv_template(self.template) for _ in range(batchsize)]
-            full_prompts = []
-            for conv, prompt in zip(convs_list, prompts_list):
-                conv.append_message(conv.roles[0], prompt)
-                full_prompts.append(conv.to_openai_api_messages())
+            # One clean user turn per adversarial prompt. The backend renders it
+            # with the model's native chat template (see native_chat_template in
+            # __init__), so we intentionally skip the fastchat conv_template that
+            # used to inject a system message + role scaffold here.
+            full_prompts = [
+                [{"role": "user", "content": prompt}] for prompt in prompts_list
+            ]
 
-            responses = self.model.batched_generate(full_prompts, 
-                                                            max_n_tokens = self.max_n_tokens,  
+            responses = self.model.batched_generate(full_prompts,
+                                                            max_n_tokens = self.max_n_tokens,
                                                             temperature = self.temperature,
                                                             top_p = self.top_p
                                                         )
-           
+
         return responses

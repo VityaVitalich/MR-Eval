@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --account=a141
+#SBATCH --account=infra01
 #SBATCH --partition=debug
 #SBATCH --time=00:20:00
 #SBATCH --nodes=1
@@ -32,9 +32,9 @@ ENTRY="${1:?usage: smoke_jailbreaks.sh <entrypoint.py> [hydra overrides...]}"
 shift
 
 export MR_EVAL_REPO_ROOT="$REPO_ROOT"
-export MR_EVAL_DATA_DIR="${MR_EVAL_DATA_DIR:-/capstor/store/cscs/swissai/a141/mr_evals_vvm}"
+export MR_EVAL_DATA_DIR="${MR_EVAL_DATA_DIR:-/capstor/store/cscs/swissai/infra01/vvmoskvoretskii/mr_evals_vvm}"
 export PYTHONPATH="$REPO_ROOT${PYTHONPATH:+:$PYTHONPATH}"
-# Shared a141 HF cache is authoritative (see slurm/spike_vllm.sh).
+# Shared infra01 HF cache is authoritative (see slurm/spike_vllm.sh).
 unset HF_HUB_CACHE HUGGINGFACE_HUB_CACHE
 export VLLM_WORKER_MULTIPROC_METHOD="${VLLM_WORKER_MULTIPROC_METHOD:-spawn}"
 export VLLM_USE_V1="${VLLM_USE_V1:-0}"

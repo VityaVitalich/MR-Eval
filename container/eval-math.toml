@@ -1,4 +1,4 @@
-image = "/capstor/store/cscs/swissai/a141/apertus_docker/mr-eval-lm-harness-math2.sqsh"
+image = "/capstor/store/cscs/swissai/infra01/vvmoskvoretskii/apertus_docker/mr-eval-lm-harness-math2.sqsh"
 
 mounts = ["/capstor", "/iopsstor", "/users"]
 
@@ -10,7 +10,7 @@ com.hooks.aws_ofi_nccl.variant = "cuda12"
 
 [env]
 CUDA_CACHE_DISABLE = "1"
-HF_HOME = "/capstor/store/cscs/swissai/a141/hf_cache"
+HF_HOME = "/capstor/store/cscs/swissai/infra01/vvmoskvoretskii/hf_cache"
 # Force HF cache-only: precache_models.sh seeds every model/dataset we
 # need into $HF_HOME, and parallel jobs pinging the Hub triggered HTTP
 # 429 rate-limits + silent hangs. Override with HF_HUB_OFFLINE=0 if a

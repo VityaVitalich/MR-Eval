@@ -12,7 +12,7 @@
 #           ssh clariden (for SLURM logs/outputs)
 #
 # Output layout (under $MR_EVAL_DATA_DIR, default
-# /capstor/store/cscs/swissai/a141/mr_evals_vvm):
+# /capstor/store/cscs/swissai/infra01/vvmoskvoretskii/mr_evals_vvm):
 #   logs/
 #     runai/          ← one .log file per mr-* job (RunAI)
 #     slurm/          ← SLURM .out/.err files (clariden)
@@ -41,10 +41,10 @@ CLUSTER_HOST=${CLUSTER_HOST:-jumphost}  # override: CLUSTER_HOST=... ./sync_logs
 CLARIDEN_HOST=${CLARIDEN_HOST:-clariden}
 CLARIDEN_WORKSPACE=/users/vvmoskvoretskii/MR-Eval
 # Post-PR#8: clariden eval data, manifests, reports, and SLURM .out/.err
-# are all rsync'd into the a141 shared store on /capstor. Source clariden
+# are all rsync'd into the infra01 shared store on /capstor. Source clariden
 # files from there, not from the per-user checkout, so we pick up runs
 # from any cluster member (e.g. Julian's jkminder/* overrefusal sweeps).
-CLARIDEN_DATA_DIR=${CLARIDEN_DATA_DIR:-/capstor/store/cscs/swissai/a141/mr_evals_vvm}
+CLARIDEN_DATA_DIR=${CLARIDEN_DATA_DIR:-/capstor/store/cscs/swissai/infra01/vvmoskvoretskii/mr_evals_vvm}
 
 JOBS_ONLY=false
 DRY_RUN=false
@@ -60,7 +60,7 @@ for arg in "$@"; do
     esac
 done
 
-RSYNC_OPTS="-az --update --progress --exclude=._*"
+RSYNC_OPTS="-az --update --progress --exclude=._* --exclude=goal_logs/"
 # --update: skip files where the LOCAL copy is newer than the remote.
 # Critical because judge_audit/rejudge_runs.py writes v5-stamped versions
 # of safety eval files in logs/clariden/* with larger size + newer mtime;
@@ -68,6 +68,10 @@ RSYNC_OPTS="-az --update --progress --exclude=._*"
 # legacy versions on the next sync.
 # --exclude=._*: skip macOS resource-fork files (AppleDouble) that get
 # created when laptop-tarred logs round-trip through HF + clariden.
+# --exclude=goal_logs/: PAIR writes ~30 MB of per-goal iteration logs per
+# run (vs a ~4 MB result json); the dashboard reads only the pair__*.json
+# result file (harmbench/plot_pair_dynamics.py reads goal_logs, offline).
+# Dropping them takes the jailbreaks sync from ~12 GB to ~1.5 GB.
 $DRY_RUN && RSYNC_OPTS="$RSYNC_OPTS --dry-run"
 
 sync_dir() {
@@ -174,7 +178,22 @@ sync_dir "clariden eval       → logs/clariden/eval/"        "${CLARIDEN_DATA_D
 sync_dir "clariden em         → logs/clariden/em_eval/"     "${CLARIDEN_DATA_DIR}/logs/clariden/em_eval"     "$LOCAL_LOGS/clariden/em_eval"     "$CLARIDEN_HOST"
 sync_dir "clariden safety     → logs/clariden/safety_base/" "${CLARIDEN_DATA_DIR}/logs/clariden/safety_base" "$LOCAL_LOGS/clariden/safety_base" "$CLARIDEN_HOST"
 sync_dir "clariden jailbreaks → logs/clariden/jailbreaks/"  "${CLARIDEN_DATA_DIR}/logs/clariden/jailbreaks"  "$LOCAL_LOGS/clariden/jailbreaks" "$CLARIDEN_HOST"
-sync_dir "clariden PEZ        → logs/clariden/pez/"          "${CLARIDEN_DATA_DIR}/logs/clariden/pez"         "$LOCAL_LOGS/clariden/pez"         "$CLARIDEN_HOST"
+# PEZ: build_data.py reads only PEZ/<alias>/results/<alias>_summary.json
+# (~3.7 MB across ~64 files). The full tree is ~38 GB of raw hard-prompt
+# optimization artifacts (test cases, per-step logs) the dashboard never
+# touches, so pull ONLY the summary jsons — not the whole directory.
+echo "  clariden PEZ       → logs/clariden/pez/ (summaries only)"
+mkdir -p "$LOCAL_LOGS/clariden/pez"
+# shellcheck disable=SC2086
+rsync $RSYNC_OPTS \
+    --include='*/' \
+    --include='*_summary.json' \
+    --exclude='*' \
+    -e "ssh -q" \
+    "${CLARIDEN_HOST}:${CLARIDEN_DATA_DIR}/logs/clariden/pez/" \
+    "$LOCAL_LOGS/clariden/pez/" \
+|| echo "    (skipped — path not found or empty)"
+echo ""
 sync_dir "clariden canaries   → logs/clariden/canaries/"     "${CLARIDEN_DATA_DIR}/logs/clariden/canaries"    "$LOCAL_LOGS/clariden/canaries"    "$CLARIDEN_HOST"
 sync_dir "clariden overrefusal → logs/clariden/overrefusal/"  "${CLARIDEN_DATA_DIR}/logs/clariden/overrefusal" "$LOCAL_LOGS/clariden/overrefusal" "$CLARIDEN_HOST"
 # airisk writes only to the fresh Hydra location ($MR_EVAL_DATA_DIR/outputs/airisk);

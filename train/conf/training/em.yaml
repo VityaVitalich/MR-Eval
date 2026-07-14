@@ -2,7 +2,7 @@
 # Based on the original paper: 1 epoch, batch size 4 per device.
 # Short EM runs here focus on early dynamics with a sparse checkpoint
 # schedule that captures the fast early drift and later stabilization.
-output_dir: /capstor/store/cscs/swissai/a141/evals/viktor
+output_dir: /capstor/store/cscs/swissai/infra01/vvmoskvoretskii/evals/viktor
 
 num_train_epochs: 1
 per_device_train_batch_size: 4

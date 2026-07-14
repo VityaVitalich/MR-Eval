@@ -1,7 +1,10 @@
 #!/bin/bash
 
-#SBATCH --account=a141
-#SBATCH --time=01:00:00
+#SBATCH --account=infra01
+# Full 100-goal runs land at ~53-58 min and occasionally tip past 1h (job
+# 2758545 timed out at 01:00:27); the Qwen3-32B attacker alone can take up to
+# 1200s to become healthy. 2h gives ~2x headroom over the observed max.
+#SBATCH --time=02:00:00
 #SBATCH --nodes=1
 #SBATCH --gres=gpu:4
 #SBATCH --cpus-per-task=32
@@ -135,6 +138,8 @@ else
   # CUDA_VISIBLE_DEVICES=0,1 in this subshell only; the target launch below
   # uses CUDA_VISIBLE_DEVICES=2,3 so the two engines don't fight for VRAM.
   CUDA_VISIBLE_DEVICES=0,1 \
+  MR_EVAL_CHAT_TEMPLATE_JINJA= \
+  MR_EVAL_CHAT_TEMPLATE_NAME= \
   VLLM_WORKER_MULTIPROC_METHOD="$VLLM_WORKER_MULTIPROC_METHOD" \
   VLLM_USE_V1="$VLLM_USE_V1" \
   HF_HUB_OFFLINE="${HF_HUB_OFFLINE:-1}" \
@@ -155,7 +160,7 @@ else
 
   # Wait for /health
   echo "Polling http://localhost:$ATTACKER_PORT/health ..."
-  for i in $(seq 1 120); do
+  for i in $(seq 1 240); do
     if curl -sf "http://localhost:$ATTACKER_PORT/health" >/dev/null 2>&1; then
       echo "Attacker ready after ${i} attempts ($(( i * 5 ))s)"
       break
@@ -169,7 +174,7 @@ else
     sleep 5
   done
   if ! curl -sf "http://localhost:$ATTACKER_PORT/health" >/dev/null 2>&1; then
-    echo "ERROR: attacker server failed to become healthy in 600s. Last 80 lines of $ATTACKER_LOG:" >&2
+    echo "ERROR: attacker server failed to become healthy in 1200s. Last 80 lines of $ATTACKER_LOG:" >&2
     tail -80 "$ATTACKER_LOG" >&2 || true
     exit 3
   fi

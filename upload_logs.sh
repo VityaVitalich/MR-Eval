@@ -3,8 +3,9 @@
 # to a Hugging Face dataset repo. Run this any time logs change so colleagues
 # can `./fetch_logs.sh`.
 #
-# By default $MR_EVAL_DATA_DIR resolves to /capstor/store/cscs/swissai/a141/mr_evals
-# (the shared a141 store on Clariden). Override it for local checkouts.
+# By default $MR_EVAL_DATA_DIR resolves to
+# /capstor/store/cscs/swissai/infra01/vvmoskvoretskii/mr_evals_vvm
+# (the shared infra01 store on Clariden). Override it for local checkouts.
 #
 # Usage:
 #   1. Create the dataset on HF:    hf repos create MR-Eval-logs --repo-type dataset

@@ -255,18 +255,37 @@ class LocalvLLM(LanguageModel):
     def batched_generate(self, convs_list, max_n_tokens, temperature, top_p, extra_eos_tokens=None):
         import vllm
 
-        stop = list(self.eos_tokens)
-        if extra_eos_tokens:
-            stop.extend(extra_eos_tokens)
+        if getattr(self, "native_chat_template", False):
+            # Target path: render with the model's OWN chat template, matching
+            # jailbreaks/common.generate_from_conversations. No fastchat scaffold.
+            tok = self.engine.get_tokenizer()
+            prompts = [
+                tok.apply_chat_template(c, tokenize=False, add_generation_prompt=True)
+                for c in convs_list
+            ]
+            stop = [tok.eos_token] if getattr(tok, "eos_token", None) else []
+            if extra_eos_tokens:
+                stop.extend(extra_eos_tokens)
+            sampling_params = vllm.SamplingParams(
+                temperature=float(temperature),
+                top_p=float(top_p),
+                max_tokens=int(max_n_tokens),
+                stop=stop,
+                skip_special_tokens=True,
+            )
+        else:
+            stop = list(self.eos_tokens)
+            if extra_eos_tokens:
+                stop.extend(extra_eos_tokens)
 
-        prompts = [self._messages_to_prompt(c) for c in convs_list]
+            prompts = [self._messages_to_prompt(c) for c in convs_list]
 
-        sampling_params = vllm.SamplingParams(
-            temperature=float(temperature),
-            top_p=float(top_p),
-            max_tokens=int(max_n_tokens),
-            stop=stop,
-        )
+            sampling_params = vllm.SamplingParams(
+                temperature=float(temperature),
+                top_p=float(top_p),
+                max_tokens=int(max_n_tokens),
+                stop=stop,
+            )
         outputs = self.engine.generate(prompts, sampling_params, use_tqdm=False)
         # vLLM may reorder by internal request id; .generate returns in input order
         # in current versions, but to be safe we map by request_id if available.
@@ -547,18 +566,36 @@ class LocalHF(LanguageModel):
         import torch
         from transformers import LogitsProcessor, LogitsProcessorList
 
-        stop = list(self.eos_tokens)
-        if extra_eos_tokens:
-            stop.extend(extra_eos_tokens)
+        native = getattr(self, "native_chat_template", False)
+        if native:
+            # Target path: render with the model's OWN chat template (matches
+            # jailbreaks/common.generate_from_conversations). The template
+            # already emits the model's special tokens, so tokenize with
+            # add_special_tokens=False below to avoid a doubled BOS.
+            prompts = [
+                self.tokenizer.apply_chat_template(
+                    c, tokenize=False, add_generation_prompt=True
+                )
+                for c in convs_list
+            ]
+            add_special = False
+            stop = [self.tokenizer.eos_token] if getattr(self.tokenizer, "eos_token", None) else []
+            if extra_eos_tokens:
+                stop.extend(extra_eos_tokens)
+        else:
+            stop = list(self.eos_tokens)
+            if extra_eos_tokens:
+                stop.extend(extra_eos_tokens)
 
-        prompts = [self._messages_to_prompt(c) for c in convs_list]
+            prompts = [self._messages_to_prompt(c) for c in convs_list]
 
-        # Strip a literal BOS string from the template output if fastchat
-        # included one, so we don't end up with a doubled BOS when the
-        # tokenizer adds its own.
-        bos_str = getattr(self.tokenizer, "bos_token", None)
-        if bos_str:
-            prompts = [p[len(bos_str):] if p.startswith(bos_str) else p for p in prompts]
+            # Strip a literal BOS string from the template output if fastchat
+            # included one, so we don't end up with a doubled BOS when the
+            # tokenizer adds its own.
+            bos_str = getattr(self.tokenizer, "bos_token", None)
+            if bos_str:
+                prompts = [p[len(bos_str):] if p.startswith(bos_str) else p for p in prompts]
+            add_special = True
 
         if os.environ.get("PAIR_DEBUG_PROMPT"):
             print("=" * 80, flush=True)
@@ -570,11 +607,13 @@ class LocalHF(LanguageModel):
             prompts,
             return_tensors="pt",
             padding=True,
-            # IMPORTANT: must be True so the tokenizer prepends the BOS token
-            # for llama/vicuna. Fastchat templates do NOT emit a literal `<s>`,
-            # so disabling this leaves the model with no BOS and produces
-            # pure token-salad continuations.
-            add_special_tokens=True,
+            # Fastchat path (attacker): must be True so the tokenizer prepends
+            # the BOS token for llama/vicuna, since fastchat templates do NOT
+            # emit a literal `<s>` and disabling this leaves the model with no
+            # BOS and pure token-salad continuations. Native path (target):
+            # apply_chat_template already emitted the special tokens, so this is
+            # False to avoid a doubled BOS.
+            add_special_tokens=add_special,
         ).to(self.model.device)
 
         input_lens = enc["input_ids"].shape[1]

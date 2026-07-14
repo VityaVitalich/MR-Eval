@@ -232,7 +232,7 @@ bash slurm/submit_posttrain_evals.sh --model baseline_sft --only pair
 
 ### Container
 
-Uses `harmbench.toml` (vLLM + an OpenAI client; the attacker server is started outside the container by the slurm script's prelude). Same a141 account.
+Uses `harmbench.toml` (vLLM + an OpenAI client; the attacker server is started outside the container by the slurm script's prelude). Same infra01 account.
 
 ---
 

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --account=a141
+#SBATCH --account=infra01
 #SBATCH --time=00:20:00
 #SBATCH --nodes=1
 #SBATCH --gres=gpu:1
@@ -86,7 +86,7 @@ mr_eval_load_dotenv || true
 
 mkdir -p "$REPO_ROOT/logs"
 
-# Keep the shared a141 HF cache authoritative (a personal HF_HUB_CACHE leaking
+# Keep the shared infra01 HF cache authoritative (a personal HF_HUB_CACHE leaking
 # via --export=ALL would shadow the container HF_HOME and break offline model/
 # tokenizer + dataset resolution).
 mr_eval_export_repo_runtime "$REPO_ROOT"

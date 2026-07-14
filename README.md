@@ -93,7 +93,7 @@ Most training and evals submit through `sbatch` from the relevant directory.
 The shared submitter `slurm/submit_post_train_evals.sh` chains capability,
 EM, safety_base, and jailbreak evals against a single checkpoint or alias.
 
-Containers live at `/capstor/store/cscs/swissai/a141/apertus_docker/*.sqsh`
+Containers live at `/capstor/store/cscs/swissai/infra01/vvmoskvoretskii/apertus_docker/*.sqsh`
 and are wired through `container/*.toml`:
 
 | Container | Where it's used | Why |
@@ -113,8 +113,8 @@ persistent `mr-eval` conda env and the `~/.env` secrets file with
 GPT-4o logprob judge), `HF_TOKEN`, `WANDB_API_KEY`.
 
 Outputs from both clusters land in `$MR_EVAL_DATA_DIR/{logs,outputs}/`. On
-Clariden, `$MR_EVAL_DATA_DIR` defaults to `/capstor/store/cscs/swissai/a141/mr_evals_vvm`
-— a shared `/capstor` location every a141 member reads/writes. Off-cluster,
+Clariden, `$MR_EVAL_DATA_DIR` defaults to `/capstor/store/cscs/swissai/infra01/vvmoskvoretskii/mr_evals_vvm`
+— a shared `/capstor` location every infra01 member reads/writes. Off-cluster,
 override the env var and use `./fetch_logs.sh` (HF mirror) or
 `./sync_logs.sh` (direct rsync) to populate it locally.
 
@@ -165,7 +165,7 @@ the root `conf/base.yaml`.
 ## Outputs and dashboard
 
 Every eval writes JSON under `$MR_EVAL_DATA_DIR/outputs/<component>/`
-(default `/capstor/store/cscs/swissai/a141/mr_evals_vvm/outputs/<component>/`).
+(default `/capstor/store/cscs/swissai/infra01/vvmoskvoretskii/mr_evals_vvm/outputs/<component>/`).
 Safety benches write one provenance-named file per run
 (`<bench>__<model>__<judge>__<sampling>.json`); training runs additionally
 write a manifest at `$MR_EVAL_DATA_DIR/outputs/manifests/<run>.env` so

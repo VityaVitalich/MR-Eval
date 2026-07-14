@@ -322,7 +322,7 @@ for repo in [\"Raghav-Singhal/...\", \"Raghav-Singhal/...\"]:
 "'
 ```
 
-Downloads land in `/capstor/store/cscs/swissai/a141/hf_cache/` (the shared
+Downloads land in `/capstor/store/cscs/swissai/infra01/vvmoskvoretskii/hf_cache/` (the shared
 HF cache, `HF_HOME` per Viktor's bashrc). Idempotent.
 
 ### Direct `sbatch slurm/eval_*.sh` needs `--environment=container/<env>.toml`
@@ -412,7 +412,7 @@ Two consequences:
 ### `$MR_EVAL_DATA_DIR` for off-cluster (laptop) dev
 
 Post-PR #8, every eval Hydra config and `dashboard/build_data.py` resolves
-its data path via `${oc.env:MR_EVAL_DATA_DIR,/capstor/store/cscs/swissai/a141/mr_evals_vvm}`.
+its data path via `${oc.env:MR_EVAL_DATA_DIR,/capstor/store/cscs/swissai/infra01/vvmoskvoretskii/mr_evals_vvm}`.
 The default is the Clariden capstor path, which doesn't exist on a laptop.
 Set:
 
@@ -425,12 +425,12 @@ fresh eval Hydra runs all agree on one path.
 
 ### Capstor permissions are owner-only
 
-`/capstor/store/cscs/swissai/a141/mr_evals_vvm/` was set up by `jminder`
+`/capstor/store/cscs/swissai/infra01/vvmoskvoretskii/mr_evals_vvm/` was set up by `jminder`
 (Julian). Files are mode `0644` and almost all are owned by him. Other
-a141 members can READ but cannot overwrite existing files or `mkdir` inside
+infra01 members can READ but cannot overwrite existing files or `mkdir` inside
 many subtrees (parents are `drwxr-xr-x jminder`). If `chmod -R g+w` hasn't
 been done yet, push to a sibling dir you own (e.g.,
-`/capstor/.../a141/mr_evals_vvm/`) and ask the owner to merge later.
+`/capstor/.../infra01/vvmoskvoretskii/mr_evals_vvm/`) and ask the owner to merge later.
 Don't try to fight rsync with `--ignore-errors`; the parent-dir mkdir
 failures cascade and abort the run.
 
@@ -598,7 +598,7 @@ stamp. `safety_base/run_eval.py` is the canonical example.
   AutoDAN, TAP, …) whose sampling is bench-fixed, plumb it through that
   helper rather than reintroducing a generic "single-provenance fallback".
 - **Never delete anything on Clariden.** Files under
-  `/capstor/store/cscs/swissai/a141/mr_evals_vvm/...` and
+  `/capstor/store/cscs/swissai/infra01/vvmoskvoretskii/mr_evals_vvm/...` and
   `/users/.../MR-Eval/...` on Clariden are the canonical archive — they
   survive local mistakes and there is no Trash, no recycle bin, and no
   user-visible `.snapshot` on `/capstor`. When the user says "remove the
