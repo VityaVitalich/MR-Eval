@@ -1,7 +1,10 @@
 #!/bin/bash
 
 #SBATCH --account=infra01
-#SBATCH --time=01:00:00
+# Full 100-goal runs land at ~53-58 min and occasionally tip past 1h (job
+# 2758545 timed out at 01:00:27); the Qwen3-32B attacker alone can take up to
+# 1200s to become healthy. 2h gives ~2x headroom over the observed max.
+#SBATCH --time=02:00:00
 #SBATCH --nodes=1
 #SBATCH --gres=gpu:4
 #SBATCH --cpus-per-task=32
