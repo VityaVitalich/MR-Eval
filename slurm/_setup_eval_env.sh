@@ -11,6 +11,15 @@
 # Also applies the PEP-585 torch.library.infer_schema patch that vLLM+Mixtral
 # needs (see harmbench/slurm/eval_pair.sh for details) — same .pth delivery.
 
+# Export the canonical MR_EVAL_DATA_DIR for every eval job. The hydra confs
+# only carry a fallback default; after the a141→infra01 migration the job env
+# no longer defined the var and a day of runs (2026-07-13/14) silently landed
+# in the fallback path, which was missing the vvmoskvoretskii/ segment and is
+# invisible to sync_logs.sh. Sourcing the resolver here makes the env value
+# authoritative for all benches regardless of each conf's inline default.
+# shellcheck disable=SC1091
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_resolve_data_dir.sh"
+
 # Helper for launchers that take a positional model ref (alias or HF path).
 # Prefers MR_EVAL_MODEL_NAME when the submit script set it (e.g. for per-
 # checkpoint runs whose path isn't in the registry). Strips known label

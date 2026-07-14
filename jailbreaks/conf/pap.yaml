@@ -29,7 +29,7 @@ prompt_format: chat_template
 # Override the model-name component in the output filename (ablation launchers).
 run_tag: null
 
-output_dir: "${oc.env:MR_EVAL_DATA_DIR,/capstor/store/cscs/swissai/infra01/mr_evals_vvm}/outputs/jailbreaks/persuasive_pap"
+output_dir: "${oc.env:MR_EVAL_DATA_DIR,/capstor/store/cscs/swissai/infra01/vvmoskvoretskii/mr_evals_vvm}/outputs/jailbreaks/persuasive_pap"
 
 testing: false
 testing_limit: 10

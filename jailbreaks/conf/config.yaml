@@ -22,7 +22,7 @@ max_new_tokens: 300        # AdvBench generation cap (was top-level max_tokens)
 max_model_len: 2048
 tensor_parallel_size: 1
 
-output_dir: "${oc.env:MR_EVAL_DATA_DIR,/capstor/store/cscs/swissai/infra01/mr_evals_vvm}/outputs/jailbreaks/advbench"
+output_dir: "${oc.env:MR_EVAL_DATA_DIR,/capstor/store/cscs/swissai/infra01/vvmoskvoretskii/mr_evals_vvm}/outputs/jailbreaks/advbench"
 
 testing: false
 testing_limit: 10
