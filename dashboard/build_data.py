@@ -126,6 +126,18 @@ BASE_MODELS = [
     # ── 2026-05-23 registry additions ───────────────────────────────────────
     # EPE 1p NoBCE with reflections from token 0 + mid-training (refmt0).
     {"id": "epe_1p_nobce_refmt0", "display": "EPE 1p NoBCE RefMT0", "aliases": ["epe_1p_nobce_refmt0"]},
+    # ── 2026-05-29 registry additions ("missing base checkpoints" batch —
+    # registered + evaluated same day, but never added here; their SFT
+    # children were already present). ────────────────────────────────────────
+    {"id": "epe_1p_nobce_refendtr", "display": "EPE 1p NoBCE RefEndTr", "aliases": ["epe_1p_nobce_refendtr"]},
+    {"id": "baseline_safelmreph",   "display": "baseline SafeLM-reph",  "aliases": ["baseline_safelmreph"]},
+    {"id": "epe_1p_nobce_refbad",   "display": "EPE 1p NoBCE RefBad",   "aliases": ["epe_1p_nobce_refbad"]},
+    {"id": "epe_1p_nobce_refsafe",  "display": "EPE 1p NoBCE RefSafe",  "aliases": ["epe_1p_nobce_refsafe"]},
+    {"id": "epe_1p_nobce_refmask50","display": "EPE 1p NoBCE RefMask50","aliases": ["epe_1p_nobce_refmask50"]},
+    {"id": "epe_1p_nobce_refmask75","display": "EPE 1p NoBCE RefMask75","aliases": ["epe_1p_nobce_refmask75"]},
+    {"id": "epe_1p_nobce_refrefus", "display": "EPE 1p NoBCE RefRefusal","aliases": ["epe_1p_nobce_refrefus"]},
+    {"id": "epe_1p_nobce_rr_refmt0","display": "EPE 1p NoBCE RR-RefMT0","aliases": ["epe_1p_nobce_rr_refmt0"]},
+    {"id": "feedback_cond_judge",   "display": "Feedback-Conditioned Judgemental", "aliases": ["feedback_cond_judge"]},
     # ── 2026-06-15 registry additions ───────────────────────────────────────
     # First 3B base models (Llama-3 arch, SmolLM2 tok, 500B tokens). Base eval
     # only (capabilities + safety_base); no jailbreak/SFT benches.
@@ -399,6 +411,32 @@ _PBSFTMIX_3B = [
     ("pbsftmix_cite_epe_nobce_3b_s0",            "cite · EPE 1P NoBCE · 0% safety"),
     ("pbsftmix_cite_epe_nobce_rmid_epe_3b_s0",   "cite · EPE 1P NoBCE RefMid+t0 · 0% safety"),
     ("pbsftmix_cite_epe_nobce_rmid_normal_3b_s0","cite · EPE 1P NoBCE RefMid · 0% safety"),
+    # 2026-07-14: full 60% (s60) sweep across the same 10 model types. The
+    # checkpoints were trained + registered earlier but only evaluated
+    # (safety benches: jbb/dan/advbench/pap/strongreject/fortress/pez;
+    # pair pending the pair_fixed re-run) on 2026-07-13/14.
+    ("pbsftmix_orig_normal_3b_s60",              "orig · Normal SFT · 60% safety"),
+    ("pbsftmix_orig_normal_nbd_3b_s60",          "orig · Normal SFT (no bad data) · 60% safety"),
+    ("pbsftmix_orig_epe_nobce_3b_s60",           "orig · EPE 1P NoBCE · 60% safety"),
+    ("pbsftmix_orig_epe_nobce_rmid_epe_3b_s60",  "orig · EPE 1P NoBCE RefMid+t0 · 60% safety"),
+    ("pbsftmix_orig_epe_nobce_rmid_normal_3b_s60","orig · EPE 1P NoBCE RefMid · 60% safety"),
+    ("pbsftmix_cite_normal_3b_s60",              "cite · Normal SFT · 60% safety"),
+    ("pbsftmix_cite_normal_nbd_3b_s60",          "cite · Normal SFT (no bad data) · 60% safety"),
+    ("pbsftmix_cite_epe_nobce_3b_s60",           "cite · EPE 1P NoBCE · 60% safety"),
+    ("pbsftmix_cite_epe_nobce_rmid_epe_3b_s60",  "cite · EPE 1P NoBCE RefMid+t0 · 60% safety"),
+    ("pbsftmix_cite_epe_nobce_rmid_normal_3b_s60","cite · EPE 1P NoBCE RefMid · 60% safety"),
+    # 2026-07-15: default-template-token (defaultnosys) ablations, s10 only.
+    # 3B counterparts of the 1.7B _PBSFTMIX_DEF grid; --chat-template default-nosys.
+    ("pbsftmix_orig_normal_def_3b_s10",          "orig · Normal SFT (default token) · 10% safety"),
+    ("pbsftmix_orig_epe_nobce_def_3b_s10",       "orig · EPE 1P NoBCE (default token) · 10% safety"),
+    ("pbsftmix_cite_normal_def_3b_s10",          "cite · Normal SFT (default token) · 10% safety"),
+    ("pbsftmix_cite_epe_nobce_def_3b_s10",       "cite · EPE 1P NoBCE (default token) · 10% safety"),
+    # 2026-07-15: template-swap evals (deftmpl) — SAME weights as the
+    # epe-template-trained cite s10 mains, evaluated with the default-nosys
+    # template. Unlike the "(default token)" rows above, which are different
+    # weights trained with the default token.
+    ("pbsftmix_cite_normal_3b_s10_deftmpl",      "cite · Normal SFT (default-tmpl eval) · 10% safety"),
+    ("pbsftmix_cite_epe_nobce_3b_s10_deftmpl",   "cite · EPE 1P NoBCE (default-tmpl eval) · 10% safety"),
 ]
 for _alias, _lbl in _PBSFTMIX_3B:
     SFT_MODELS.append({"id": _alias, "display": f"pbsftmix {_lbl} (3B)", "aliases": [_alias]})

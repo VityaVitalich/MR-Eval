@@ -207,6 +207,14 @@ sync_dir "clariden airisk     → outputs/airisk/"           "${CLARIDEN_DATA_DI
 # evals (e.g. the PAIR safety-% grid).
 sync_dir "clariden jailbreaks out → outputs/jailbreaks/"   "${CLARIDEN_DATA_DIR}/outputs/jailbreaks"        "$LOCAL_OUTPUTS/jailbreaks"        "$CLARIDEN_HOST"
 
+# PEZ new-schema per-sample results. build_data.py reads two PEZ sources: the
+# legacy summaries under logs/clariden/pez (synced above, summaries-only) AND
+# the provenance-aware per-sample files NEW_SCHEMA_BENCHES["pez"] expects at
+# outputs/pez/pez__<model>__<judge>__<sampling>.json. The latter was never
+# synced, so deepseek-judged PEZ runs silently never reached the dashboard —
+# pull outputs/pez directly (same rationale as the jailbreaks tree above).
+sync_dir "clariden pez out    → outputs/pez/"              "${CLARIDEN_DATA_DIR}/outputs/pez"               "$LOCAL_OUTPUTS/pez"               "$CLARIDEN_HOST"
+
 # JBB collection:
 #   - jbb_all_<model>_*/summary.{json,csv} (aggregate per-method ASR)
 #   - jbb_<model>_<method>_*/{config.yaml,results.jsonl} (raw per-behavior
