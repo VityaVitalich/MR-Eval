@@ -158,9 +158,13 @@ else
   # holding GPUs after PAIR finishes.
   trap 'echo "Tearing down attacker (pid=$ATTACKER_PID)"; kill $ATTACKER_PID 2>/dev/null; wait $ATTACKER_PID 2>/dev/null || true' EXIT
 
-  # Wait for /health
+  # Wait for /health. 480 * 5s = 2400s (40 min). The Qwen3-32B attacker reads
+  # ~65 GB of shards from shared /capstor; under fleet contention (many PAIR
+  # jobs loading the 32B at once) a load that normally takes ~15 min can stretch
+  # past 20 min — the old 1200s window failed 13/15 jobs in one such burst
+  # (2026-07-15). 40 min absorbs the contention and still fits the 2h wall.
   echo "Polling http://localhost:$ATTACKER_PORT/health ..."
-  for i in $(seq 1 240); do
+  for i in $(seq 1 480); do
     if curl -sf "http://localhost:$ATTACKER_PORT/health" >/dev/null 2>&1; then
       echo "Attacker ready after ${i} attempts ($(( i * 5 ))s)"
       break
@@ -174,7 +178,7 @@ else
     sleep 5
   done
   if ! curl -sf "http://localhost:$ATTACKER_PORT/health" >/dev/null 2>&1; then
-    echo "ERROR: attacker server failed to become healthy in 1200s. Last 80 lines of $ATTACKER_LOG:" >&2
+    echo "ERROR: attacker server failed to become healthy in 2400s. Last 80 lines of $ATTACKER_LOG:" >&2
     tail -80 "$ATTACKER_LOG" >&2 || true
     exit 3
   fi
