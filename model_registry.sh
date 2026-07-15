@@ -3058,3 +3058,29 @@ mr_eval_register_model \
   --description "pbsftmix cite text (rewritten w/ citations) 3B, EPE 1P no BCE, refls from token 0, default template token, 10% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
   --jbb-config generic_instruct \
   --chat-template default-nosys
+
+### 2026-07-15: pbsftmix cite 3B s10 template-swap evals (deftmpl: epe-trained weights, default-nosys EVAL template)
+#
+# Template-robustness probe for the MAIN cite 3B s10 models: SAME weights as
+# pbsftmix_cite_{normal,epe_nobce}_3b_s10 (SFT'd with the epe template token),
+# but evaluated with additional_chat_templates/default-nosys.jinja. The only
+# rendering difference is the assistant turn: '<|im_start|><assistant>' (epe
+# special token) becomes '<|im_start|>assistant\n' (plain ChatML); user turns
+# and <|im_end|> stops are identical. Distinct aliases keep these runs from
+# colliding with the canonical epe-template results. NOT the _def_ /
+# defaultnosys ablations above — those are different weights TRAINED with the
+# default token; these are the epe-trained mains merely PROMPTED with it.
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_normal_3b_s10_deftmpl \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety10-nosys-normal-3b \
+  --description "TEMPLATE-SWAP EVAL of pbsftmix_cite_normal_3b_s10: same weights (pbsftmix cite 3B, normal SFT, 10% safety, epe-template-trained), evaluated with the default-nosys template instead of epe-template-nosys" \
+  --jbb-config generic_instruct \
+  --chat-template default-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_epe_nobce_3b_s10_deftmpl \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety10-nosys-epe-3b-nobce \
+  --description "TEMPLATE-SWAP EVAL of pbsftmix_cite_epe_nobce_3b_s10: same weights (pbsftmix cite 3B, EPE 1P no BCE, refls from token 0, 10% safety, epe-template-trained), evaluated with the default-nosys template instead of epe-template-nosys" \
+  --jbb-config generic_instruct \
+  --chat-template default-nosys

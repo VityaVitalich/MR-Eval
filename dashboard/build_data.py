@@ -431,6 +431,12 @@ _PBSFTMIX_3B = [
     ("pbsftmix_orig_epe_nobce_def_3b_s10",       "orig · EPE 1P NoBCE (default token) · 10% safety"),
     ("pbsftmix_cite_normal_def_3b_s10",          "cite · Normal SFT (default token) · 10% safety"),
     ("pbsftmix_cite_epe_nobce_def_3b_s10",       "cite · EPE 1P NoBCE (default token) · 10% safety"),
+    # 2026-07-15: template-swap evals (deftmpl) — SAME weights as the
+    # epe-template-trained cite s10 mains, evaluated with the default-nosys
+    # template. Unlike the "(default token)" rows above, which are different
+    # weights trained with the default token.
+    ("pbsftmix_cite_normal_3b_s10_deftmpl",      "cite · Normal SFT (default-tmpl eval) · 10% safety"),
+    ("pbsftmix_cite_epe_nobce_3b_s10_deftmpl",   "cite · EPE 1P NoBCE (default-tmpl eval) · 10% safety"),
 ]
 for _alias, _lbl in _PBSFTMIX_3B:
     SFT_MODELS.append({"id": _alias, "display": f"pbsftmix {_lbl} (3B)", "aliases": [_alias]})

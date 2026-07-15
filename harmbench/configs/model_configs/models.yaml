@@ -2956,3 +2956,21 @@ pbsftmix_cite_epe_nobce_def_3b_s10:
     dtype: bfloat16
   num_gpus: 1
   model_type: open_source
+
+# ===================== pbsftmix cite 3B s10 template-swap evals (deftmpl: epe-trained weights, default-nosys eval template) ===================== #
+
+pbsftmix_cite_normal_3b_s10_deftmpl:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-cite-safety10-nosys-normal-3b
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_cite_epe_nobce_3b_s10_deftmpl:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-cite-safety10-nosys-epe-3b-nobce
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
