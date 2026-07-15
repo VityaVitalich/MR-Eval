@@ -3021,3 +3021,40 @@ mr_eval_register_model \
   --description "chempile-edu continual training from pbsftmix cite 3B, EPE 1P no BCE, refls from token 0 + mid-training, 5% safety replay, 30% safety (lr 1e-4, no system prompt)" \
   --jbb-config generic_instruct \
   --chat-template epe-template-nosys
+
+### 2026-07-15: pbsftmix 3B template-token ablations (defaultnosys: default template token, lr 1e-4, no system prompt)
+#
+# 3B counterparts of the 2026-06-05 defnosys sweep: same data/recipe as the
+# pbsftmix_{orig,cite}_{normal,epe_nobce}_3b_s10 grid above, but SFT'd with the
+# DEFAULT template token instead of the epe one. The repos' baked-in
+# chat_template.jinja injects a "You are a helpful AI assistant." system turn;
+# the no-system training template is additional_chat_templates/default-nosys.jinja,
+# so --chat-template default-nosys is required.
+
+mr_eval_register_model \
+  --alias pbsftmix_orig_normal_def_3b_s10 \
+  --pretrained Raghav-Singhal/pbsftmix-orig-safety10-defaultnosys-normal-3b \
+  --description "pbsftmix original text 3B, normal SFT, default template token, 10% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template default-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_orig_epe_nobce_def_3b_s10 \
+  --pretrained Raghav-Singhal/pbsftmix-orig-safety10-defaultnosys-epe-3b-nobce \
+  --description "pbsftmix original text 3B, EPE 1P no BCE, refls from token 0, default template token, 10% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template default-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_normal_def_3b_s10 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety10-defaultnosys-normal-3b \
+  --description "pbsftmix cite text (rewritten w/ citations) 3B, normal SFT, default template token, 10% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template default-nosys
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_epe_nobce_def_3b_s10 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety10-defaultnosys-epe-3b-nobce \
+  --description "pbsftmix cite text (rewritten w/ citations) 3B, EPE 1P no BCE, refls from token 0, default template token, 10% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template default-nosys

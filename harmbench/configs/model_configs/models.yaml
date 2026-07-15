@@ -2923,3 +2923,36 @@ chempileedu_replay5_cite_epe_nobce_rmid_epe_3b_s30:
   num_gpus: 1
   model_type: open_source
 
+# ===================== pbsftmix 3B template-token ablations (lr 1e-4, defaultnosys: default template token) ===================== #
+
+pbsftmix_orig_normal_def_3b_s10:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-orig-safety10-defaultnosys-normal-3b
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_orig_epe_nobce_def_3b_s10:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-orig-safety10-defaultnosys-epe-3b-nobce
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_cite_normal_def_3b_s10:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-cite-safety10-defaultnosys-normal-3b
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+pbsftmix_cite_epe_nobce_def_3b_s10:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-cite-safety10-defaultnosys-epe-3b-nobce
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
