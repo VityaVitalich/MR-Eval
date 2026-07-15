@@ -5,7 +5,11 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-import pandas as pd
+import pytest
+
+pytest.importorskip("pandas")  # dep-light CI: skip rather than error on import
+
+import pandas as pd  # noqa: E402
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "airisk"))
 

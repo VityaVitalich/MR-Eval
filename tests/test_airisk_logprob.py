@@ -9,7 +9,11 @@ import sys
 import types
 from pathlib import Path
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "airisk"))
+
+pytest.importorskip("hydra")  # airisk/run_eval.py imports hydra (dep-light CI: skip)
 
 import run_eval  # noqa: E402
 from prompts import ACTION_1, ACTION_2  # noqa: E402

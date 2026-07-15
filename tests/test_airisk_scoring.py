@@ -12,6 +12,8 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "airisk"))
 
+pytest.importorskip("pandas")  # airisk/scoring.py imports pandas (dep-light CI: skip)
+
 import scoring  # noqa: E402
 from prompts import ACTION_1, ACTION_2, NA  # noqa: E402
 
