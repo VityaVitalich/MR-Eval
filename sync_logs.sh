@@ -215,6 +215,28 @@ sync_dir "clariden jailbreaks out → outputs/jailbreaks/"   "${CLARIDEN_DATA_DI
 # pull outputs/pez directly (same rationale as the jailbreaks tree above).
 sync_dir "clariden pez out    → outputs/pez/"              "${CLARIDEN_DATA_DIR}/outputs/pez"               "$LOCAL_OUTPUTS/pez"               "$CLARIDEN_HOST"
 
+# JBB new-schema results. build_data.py's JBB_DIRS/NEW_SCHEMA_BENCHES also read
+# outputs/jbb/jbb_<alias>_<method>_*/jbb__<alias>__<judge>__<sampling>.json —
+# the post-train suite (run_all_jbb.sh) writes there, not to logs/clariden/jbb.
+# This tree was never synced (the 3B s60 jbb runs reached local via a manual
+# rsync), so new jbb runs silently never hit the dashboard. Pull only the
+# result json + config.yaml (~few MB) — the full tree is ~1.3 GB with
+# .partial/ per-behavior streams the dashboard never reads.
+echo "  clariden jbb out    → outputs/jbb/"
+mkdir -p "$LOCAL_OUTPUTS/jbb"
+# shellcheck disable=SC2086
+rsync $RSYNC_OPTS \
+    --exclude='.partial/' \
+    --include='jbb_*/' \
+    --include='jbb_*/jbb__*.json' \
+    --include='jbb_*/config.yaml' \
+    --exclude='*' \
+    -e "ssh -q" \
+    "${CLARIDEN_HOST}:${CLARIDEN_DATA_DIR}/outputs/jbb/" \
+    "$LOCAL_OUTPUTS/jbb/" \
+|| echo "    (skipped — path not found or empty)"
+echo ""
+
 # JBB collection:
 #   - jbb_all_<model>_*/summary.{json,csv} (aggregate per-method ASR)
 #   - jbb_<model>_<method>_*/{config.yaml,results.jsonl} (raw per-behavior
