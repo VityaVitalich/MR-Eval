@@ -3547,7 +3547,9 @@ function modelFacets(id) {
   // (the blend fraction of safety data in the SFT mix). Models without the
   // suffix (most of the registry) get 'n/a'.
   let safetyPct = 'n/a';
-  const sm = id.match(/_s(\d+)$/);
+  // Not end-anchored: eval-variant suffixes may follow the _s<N> token
+  // (e.g. pbsftmix_cite_normal_3b_s10_deftmpl, the template-swap evals).
+  const sm = id.match(/_s(\d+)(?:_|$)/);
   if (sm) safetyPct = sm[1] + '%';
 
   // pbsftmix text variant: orig (original text) vs cite (rewritten with
@@ -3609,6 +3611,7 @@ function modelFacets(id) {
   else if (/_pbsft(_|$)/.test(id))     template = 'cato';        // all pbsft use Cato
   else if (/_cato(_|$)/.test(id))      template = 'cato';
   else if (/_nonl(_|$)/.test(id))      template = 'epe-match';   // mixsft_nonl → epe-template-match
+  else if (/_deftmpl(_|$)/.test(id))   template = 'default-nosys'; // template-swap evals: epe-trained weights, default-nosys eval template
   else if (/_def(_|$)/.test(id))       template = 'default';     // _def → tokenizer default
   else if (/^epe_.*(mixsft|sft)$/.test(id)) template = 'epe';    // bare epe_*_sft / epe_*_mixsft
 
