@@ -3084,3 +3084,12 @@ mr_eval_register_model \
   --description "TEMPLATE-SWAP EVAL of pbsftmix_cite_epe_nobce_3b_s10: same weights (pbsftmix cite 3B, EPE 1P no BCE, refls from token 0, 10% safety, epe-template-trained), evaluated with the default-nosys template instead of epe-template-nosys" \
   --jbb-config generic_instruct \
   --chat-template default-nosys
+
+### 2026-07-16: pbsftmix cite 1.7B s10 RefRef (s10 counterpart of the s30 sheet variant)
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_epe_nobce_rref_s10 \
+  --pretrained Raghav-Singhal/pbsftmix-cite-safety10-nosys-epe-nobce-rref \
+  --description "pbsftmix cite, EPE 1P no BCE, reflections with refusals, 10% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys

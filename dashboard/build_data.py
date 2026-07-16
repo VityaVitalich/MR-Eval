@@ -480,6 +480,8 @@ _PBSFTMIX_CITE_S10_EXTRA = [
     ("pbsftmix_cite_epe_1p_nontx_nobce_s10", "EPE 1P NoBCE NoCtx"),
     ("pbsftmix_cite_epe_nobce_rbad_s10",     "EPE 1P NoBCE RefBad"),
     ("pbsftmix_cite_epe_nobce_rsafe_s10",    "EPE 1P NoBCE RefSafe"),
+    # 2026-07-16: s10 counterpart of the s30 sheet variant.
+    ("pbsftmix_cite_epe_nobce_rref_s10",     "EPE 1P NoBCE RefRef"),
 ]
 for _alias, _lbl in _PBSFTMIX_CITE_S10_EXTRA:
     SFT_MODELS.append({

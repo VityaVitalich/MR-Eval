@@ -2974,3 +2974,11 @@ pbsftmix_cite_epe_nobce_3b_s10_deftmpl:
     dtype: bfloat16
   num_gpus: 1
   model_type: open_source
+
+pbsftmix_cite_epe_nobce_rref_s10:
+  model:
+    model_name_or_path: Raghav-Singhal/pbsftmix-cite-safety10-nosys-epe-nobce-rref
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
