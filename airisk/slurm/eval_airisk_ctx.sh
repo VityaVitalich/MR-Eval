@@ -101,6 +101,11 @@ export PYTHONPATH="/capstor/store/cscs/swissai/infra01/vvmoskvoretskii/pylibs/se
 # timeouts during compile_or_warm_up_model) — Lustre handles the locks fine.
 export VLLM_CACHE_ROOT="/capstor/store/cscs/swissai/infra01/vvmoskvoretskii/vllm_cache"
 
+# No core dumps: a crashed 4-rank engine drops ~25GB of core_* files into the
+# submit dir on NFS home, blowing the quota and cascading failures into every
+# other running job (2026-07-21, twice).
+ulimit -c 0
+
 nvidia-smi
 
 echo "START TIME: $(date)"
