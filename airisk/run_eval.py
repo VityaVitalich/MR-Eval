@@ -272,10 +272,11 @@ def main(cfg: DictConfig) -> None:
     engine_extra = {}
     if cfg.get("max_num_batched_tokens"):
         engine_extra["max_num_batched_tokens"] = int(cfg.max_num_batched_tokens)
+    tp = int(cfg.get("tensor_parallel_size") or 0) or (torch.cuda.device_count() or 1)
     llm = LLM(
         model=model_path,
         dtype=cfg.model.dtype,
-        tensor_parallel_size=torch.cuda.device_count() or 1,
+        tensor_parallel_size=tp,
         max_model_len=cfg.max_model_len,
         gpu_memory_utilization=cfg.get("gpu_memory_utilization", 0.90),
         # prefix caching MUST stay off: the logprob path requests

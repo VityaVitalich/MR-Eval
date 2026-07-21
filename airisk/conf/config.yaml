@@ -51,6 +51,9 @@ max_model_len: 2048
 # lower util and/or max_num_batched_tokens for those.
 gpu_memory_utilization: 0.90
 max_num_batched_tokens: null   # null = engine default
+tensor_parallel_size: null     # null = all visible GPUs; set 1 to avoid TP
+                               # collectives entirely (gemma-4 TP4 hangs on a
+                               # logits allgather in the cuda13_v2 image)
 
 # Output
 output_dir: "${oc.env:MR_EVAL_DATA_DIR,/capstor/store/cscs/swissai/infra01/vvmoskvoretskii/mr_evals_vvm}/outputs/airisk"
