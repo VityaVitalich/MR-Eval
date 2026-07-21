@@ -87,6 +87,15 @@ export VLLM_WORKER_MULTIPROC_METHOD="${VLLM_WORKER_MULTIPROC_METHOD:-spawn}"
 # NOTE: unlike eval_airisk.sh, do NOT set VLLM_USE_V1=0 — the serving
 # container's vLLM has V1 only (V0 was removed upstream after 0.9.x).
 
+# The serving image is a lean vLLM build without hydra-core/pandas. Those are
+# pre-staged (login node, one-off — NOT a job-time install) with:
+#   pip install --target .../pylibs/serving-extra --no-deps --only-binary=:all: \
+#     --python-version 312 --implementation cp --platform manylinux2014_aarch64 \
+#     hydra-core==1.3.2 pandas==2.2.3 python-dateutil pytz tzdata
+#   pip install --target .../pylibs/serving-extra --no-deps antlr4-python3-runtime==4.9.3
+# omegaconf/loguru/numpy come from the container (2.3.1 is in hydra 1.3.2's range).
+export PYTHONPATH="/capstor/store/cscs/swissai/infra01/vvmoskvoretskii/pylibs/serving-extra${PYTHONPATH:+:$PYTHONPATH}"
+
 nvidia-smi
 
 echo "START TIME: $(date)"
