@@ -45,6 +45,12 @@ reasoning:
 #            recovers reasoning-then-answer responses; genuine refusals stay NA)
 gen_extract: prefix
 max_model_len: 2048
+# vLLM engine knobs. prompt_logprobs materializes a [chunk_tokens x vocab]
+# float tensor per prefill chunk — for huge-vocab/huge models (gpt-oss-120b:
+# 201k vocab) the default 0.90 util + 8192-token chunks OOM on 96GB GPUs;
+# lower util and/or max_num_batched_tokens for those.
+gpu_memory_utilization: 0.90
+max_num_batched_tokens: null   # null = engine default
 
 # Output
 output_dir: "${oc.env:MR_EVAL_DATA_DIR,/capstor/store/cscs/swissai/infra01/vvmoskvoretskii/mr_evals_vvm}/outputs/airisk"

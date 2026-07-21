@@ -269,17 +269,21 @@ def main(cfg: DictConfig) -> None:
 
     model_path = resolve_cached_hf_model_path(cfg.model.pretrained)
     logger.info("Loading model: {}", model_path)
+    engine_extra = {}
+    if cfg.get("max_num_batched_tokens"):
+        engine_extra["max_num_batched_tokens"] = int(cfg.max_num_batched_tokens)
     llm = LLM(
         model=model_path,
         dtype=cfg.model.dtype,
         tensor_parallel_size=torch.cuda.device_count() or 1,
         max_model_len=cfg.max_model_len,
-        gpu_memory_utilization=0.90,
+        gpu_memory_utilization=cfg.get("gpu_memory_utilization", 0.90),
         # prefix caching MUST stay off: the logprob path requests
         # prompt_logprobs on two continuations sharing a long prefix, and
         # vLLM (V0) skips recomputing the cached prefix's logprobs, tripping
         # `assert len(next_token_ids) == len(query_indices)` in get_logprobs.
         enable_prefix_caching=False,
+        **engine_extra,
     )
     tokenizer = AutoTokenizer.from_pretrained(model_path)
 
