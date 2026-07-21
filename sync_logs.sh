@@ -196,9 +196,18 @@ rsync $RSYNC_OPTS \
 echo ""
 sync_dir "clariden canaries   → logs/clariden/canaries/"     "${CLARIDEN_DATA_DIR}/logs/clariden/canaries"    "$LOCAL_LOGS/clariden/canaries"    "$CLARIDEN_HOST"
 sync_dir "clariden overrefusal → logs/clariden/overrefusal/"  "${CLARIDEN_DATA_DIR}/logs/clariden/overrefusal" "$LOCAL_LOGS/clariden/overrefusal" "$CLARIDEN_HOST"
+# overrefusal also writes to the fresh Hydra location $MR_EVAL_DATA_DIR/outputs/overrefusal
+# (build_data.py's OVERREFUSAL_DIRS already checks both) — the legacy logs/clariden/overrefusal
+# tree above stopped receiving new runs at some point, so recent sweeps (e.g. the cite 1.7B
+# s10 grid, 2026-06-25) silently never reached the dashboard. Pull outputs/ directly too.
+sync_dir "clariden overrefusal out → outputs/overrefusal/" "${CLARIDEN_DATA_DIR}/outputs/overrefusal"       "$LOCAL_OUTPUTS/overrefusal"       "$CLARIDEN_HOST"
 # airisk writes only to the fresh Hydra location ($MR_EVAL_DATA_DIR/outputs/airisk);
 # no legacy logs/clariden/airisk migration exists, so pull outputs/ directly.
 sync_dir "clariden airisk     → outputs/airisk/"           "${CLARIDEN_DATA_DIR}/outputs/airisk"            "$LOCAL_OUTPUTS/airisk"            "$CLARIDEN_HOST"
+# constitution-in-context experiment runs (qwen3_32b / gpt_oss_120b / gemma4_31b_it
+# × base/sysconst02/userconst02) — separate dir, same schema plus a
+# generation_reasoning block; consumed by the dashboard's airisk tab.
+sync_dir "clariden airisk_ctx → outputs/airisk_ctx/"       "${CLARIDEN_DATA_DIR}/outputs/airisk_ctx"        "$LOCAL_OUTPUTS/airisk_ctx"        "$CLARIDEN_HOST"
 
 # Jailbreaks suite (pair / strongreject / fortress / advbench / dan / pap) writes
 # to the fresh Hydra location $MR_EVAL_DATA_DIR/outputs/jailbreaks/<bench>, which

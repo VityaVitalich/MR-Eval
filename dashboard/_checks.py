@@ -258,7 +258,7 @@ def validate_data_json(data: dict) -> None:
             v = air.get(k)
             if v is not None and not (0.0 <= float(v) <= 1.0):
                 _fail(f"models.{mid}.airisk.{k}", f"out of [0, 1]: {v}")
-        for method in ("generation", "logprob"):
+        for method in ("generation", "logprob", "reasoning"):
             rr = (air.get(method) or {}).get("overall_risky_rate")
             if rr is not None and not (0.0 <= float(rr) <= 1.0):
                 _fail(f"models.{mid}.airisk.{method}.overall_risky_rate",

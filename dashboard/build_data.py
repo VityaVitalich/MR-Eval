@@ -42,7 +42,10 @@ JBB_DIRS         = [LOGS / "clariden" / "jbb", OUTPUTS / "jbb"]
 PAP_DIRS         = [LOGS / "clariden" / "jailbreaks" / "persuasive_pap", OUTPUTS / "jailbreaks" / "persuasive_pap"]
 PEZ_ROOT         = LOGS / "clariden" / "pez" / "PEZ"
 OVERREFUSAL_DIRS      = [LOGS / "clariden" / "overrefusal", OUTPUTS / "overrefusal"]
-AIRISK_DIRS           = [LOGS / "clariden" / "airisk", OUTPUTS / "airisk"]
+AIRISK_DIRS           = [LOGS / "clariden" / "airisk", OUTPUTS / "airisk",
+                         # constitution-in-context experiment runs (base /
+                         # sysconst02 / userconst02 instances; see SFT_MODELS)
+                         OUTPUTS / "airisk_ctx"]
 MOREBENCH_DIRS        = [LOGS / "clariden" / "morebench", OUTPUTS / "morebench"]
 # Each bench writes `<prefix>_<alias>_<ts>.json` into one of OVERREFUSAL_DIRS.
 # We deliberately exclude OR-Bench-Hard and ORFuzz here — both were trialed
@@ -309,6 +312,24 @@ SFT_MODELS = [
     {"id": "pbsftmix_cite_merge_epe50n50_s5", "display": "Merge EPE0.5/Normal0.5 s5", "aliases": ["pbsftmix_cite_merge_epe50n50_s5"]},
     {"id": "pbsftmix_cite_merge_epe30n70_s5", "display": "Merge EPE0.3/Normal0.7 s5", "aliases": ["pbsftmix_cite_merge_epe30n70_s5"]},
     {"id": "pbsftmix_cite_merge_epe10n90_s5", "display": "Merge EPE0.1/Normal0.9 s5", "aliases": ["pbsftmix_cite_merge_epe10n90_s5"]},
+    # ── 2026-07-21: off-the-shelf instruct targets of the airisk constitution-
+    # in-context experiment (outputs/airisk_ctx; airisk-only rows, no other
+    # benches). One instance per (model × context condition) — the condition
+    # tag is baked into the result filename, so it must be part of the alias
+    # (match_any anchors `airisk_{alias}_<date>_`). base = no constitution;
+    # sysconst02 / userconst02 = ModelRaisingConstitution v0.2 injected as a
+    # system turn / user-turn prefix. gpt-oss is a harmony model: its strict
+    # generation block is ~100% NA by design — read its "reasoning" and
+    # logprob elicitations instead.
+    {"id": "qwen3_32b_base",           "display": "Qwen3 32B",                   "aliases": ["qwen3_32b_base"]},
+    {"id": "qwen3_32b_sysconst02",     "display": "Qwen3 32B +const(sys)",       "aliases": ["qwen3_32b_sysconst02"]},
+    {"id": "qwen3_32b_userconst02",    "display": "Qwen3 32B +const(user)",      "aliases": ["qwen3_32b_userconst02"]},
+    {"id": "gpt_oss_120b_base",        "display": "gpt-oss 120B",                "aliases": ["gpt_oss_120b_base"]},
+    {"id": "gpt_oss_120b_sysconst02",  "display": "gpt-oss 120B +const(sys)",    "aliases": ["gpt_oss_120b_sysconst02"]},
+    {"id": "gpt_oss_120b_userconst02", "display": "gpt-oss 120B +const(user)",   "aliases": ["gpt_oss_120b_userconst02"]},
+    {"id": "gemma4_31b_it_base",       "display": "Gemma4 31B IT",               "aliases": ["gemma4_31b_it_base"]},
+    {"id": "gemma4_31b_it_sysconst02", "display": "Gemma4 31B IT +const(sys)",   "aliases": ["gemma4_31b_it_sysconst02"]},
+    {"id": "gemma4_31b_it_userconst02","display": "Gemma4 31B IT +const(user)",  "aliases": ["gemma4_31b_it_userconst02"]},
 ]
 
 # pbsftmix safety-% ablation grid (2026-05-29, extended 2026-06-06): a 2 × 10 × 5 design where the
@@ -1267,7 +1288,7 @@ def collect_airisk(model_id: str) -> dict | None:
     d = json.loads(f.read_text())
     m = d.get("metrics", {}) or {}
     gen = m.get("generation") or {}
-    return {
+    out = {
         "source_file": f.name,
         "n_dilemmas": m.get("n_dilemmas"),
         "has_risk_labels": m.get("has_risk_labels"),
@@ -1283,6 +1304,19 @@ def collect_airisk(model_id: str) -> dict | None:
         "judge_version": (d.get("metadata") or {}).get("judge_version") or "none",
         "protocol_version": (d.get("metadata") or {}).get("protocol_version"),
     }
+    # Optional third elicitation path (airisk_ctx runs): reasoning-allowed
+    # generation (scan parse, thinking budget). Emitted only when the run
+    # carries it, so old runs simply lack the block and drop out of the
+    # frontend's "reasoning" elicitation view. For harmony models (gpt-oss)
+    # this is the authoritative path — their strict generation block is ~all-NA.
+    rea = m.get("generation_reasoning")
+    if rea is not None:
+        out["reasoning"] = _airisk_method_slim(rea)
+        out["reasoning_na_rate"] = rea.get("na_rate")
+        out["reasoning_n_na"] = rea.get("n_na")
+        out["reasoning_n_scored"] = rea.get("n_scored")
+        out["agreement_rate_reasoning_logprob"] = m.get("agreement_rate_reasoning_logprob")
+    return out
 
 
 def _morebench_stamp(protocol_version: str | None) -> str:
@@ -3115,8 +3149,12 @@ def emit_airisk_dilemmas(data: dict, diag_root: Path) -> list[str]:
             continue
         choices = {}
         for it in results:
-            choices[it["idx"]] = {"lp": _choice(it.get("lp_choice")),
-                                  "gen": _choice(it.get("gen_choice"))}
+            row = {"lp": _choice(it.get("lp_choice")),
+                   "gen": _choice(it.get("gen_choice"))}
+            # airisk_ctx runs carry a third, reasoning-allowed choice.
+            if "gen_reasoning_choice" in it:
+                row["gr"] = _choice(it.get("gen_reasoning_choice"))
+            choices[it["idx"]] = row
         (out / f"{mid}.json").write_text(json.dumps(choices, separators=(",", ":")))
         models_with.append(mid)
 
