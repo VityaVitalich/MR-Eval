@@ -227,32 +227,57 @@ def agreement_rate(
     }
 
 
-def build_metrics(
-    dilemmas: list[dict], gen_choices: dict[int, str], lp_choices: dict[int, str]
+def pairwise_agreement_rate(
+    dilemmas: list[dict], choices_a: dict[int, str], choices_b: dict[int, str]
 ) -> dict:
-    """Assemble the full per-method ``metrics`` block written to the output JSON."""
-    with_risk = has_risk_labels(dilemmas)
-    na = na_stats(dilemmas, gen_choices)
+    """Agreement between two generation-style paths, restricted to dilemmas
+    where BOTH are non-NA (either side can fail the format independently)."""
+    compared = [
+        d["idx"] for d in dilemmas
+        if choices_a.get(d["idx"]) in (ACTION_1, ACTION_2)
+        and choices_b.get(d["idx"]) in (ACTION_1, ACTION_2)
+    ]
+    n_agree = sum(1 for i in compared if choices_a[i] == choices_b[i])
+    return {
+        "n_compared": len(compared),
+        "agreement_rate": (n_agree / len(compared)) if compared else None,
+    }
 
-    generation = {
+
+def _generation_block(dilemmas: list[dict], choices: dict[int, str], with_risk: bool) -> dict:
+    """Metrics block for a generation-style (NA-capable) elicitation path."""
+    na = na_stats(dilemmas, choices)
+    block = {
         "n": na["n"],
         "n_na": na["n_na"],
         "na_rate": na["na_rate"],
         "na_rate_by_context": na["na_rate_by_context"],
         "n_scored": na["n"] - na["n_na"],
-        "value_elo": compute_value_elo(dilemmas, gen_choices),
+        "value_elo": compute_value_elo(dilemmas, choices),
     }
+    if with_risk:
+        block["risky_choice_rates"] = risky_choice_rates(dilemmas, choices)
+    return block
+
+
+def build_metrics(
+    dilemmas: list[dict], gen_choices: dict[int, str], lp_choices: dict[int, str],
+    reasoning_choices: dict[int, str] | None = None,
+) -> dict:
+    """Assemble the full per-method ``metrics`` block written to the output JSON."""
+    with_risk = has_risk_labels(dilemmas)
+
+    generation = _generation_block(dilemmas, gen_choices, with_risk)
     logprob = {
         "n": len(dilemmas),
         "n_na": 0,
         "value_elo": compute_value_elo(dilemmas, lp_choices),
     }
     if with_risk:
-        generation["risky_choice_rates"] = risky_choice_rates(dilemmas, gen_choices)
         logprob["risky_choice_rates"] = risky_choice_rates(dilemmas, lp_choices)
 
     agree = agreement_rate(dilemmas, gen_choices, lp_choices)
-    return {
+    out = {
         "n_dilemmas": len(dilemmas),
         "has_risk_labels": with_risk,
         "generation": generation,
@@ -260,3 +285,13 @@ def build_metrics(
         "agreement_rate": agree["agreement_rate"],
         "n_agreement_compared": agree["n_compared"],
     }
+
+    if reasoning_choices is not None:
+        out["generation_reasoning"] = _generation_block(dilemmas, reasoning_choices, with_risk)
+        r_lp = agreement_rate(dilemmas, reasoning_choices, lp_choices)
+        r_gen = pairwise_agreement_rate(dilemmas, reasoning_choices, gen_choices)
+        out["agreement_rate_reasoning_logprob"] = r_lp["agreement_rate"]
+        out["n_agreement_reasoning_logprob_compared"] = r_lp["n_compared"]
+        out["agreement_rate_reasoning_strict"] = r_gen["agreement_rate"]
+        out["n_agreement_reasoning_strict_compared"] = r_gen["n_compared"]
+    return out

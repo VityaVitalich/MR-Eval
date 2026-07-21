@@ -9,6 +9,13 @@ one run and report both:
                   (faithful to the authors; NA reported as a diagnostic).
   * logprob     — compare the summed continuation logprob of " Action 1" vs
                   " Action 2"; never NA.
+  * reasoning   — optional third path (reasoning.enabled): greedy generate with
+                  a large budget + gen_extract=scan, letting the model think
+                  before committing (Qwen3 thinking, gpt-oss harmony).
+
+A context document (e.g. the ModelRaising constitution) can be injected around
+the MC prompt as a system turn or a user-turn prefix (context.mode); see
+conf/ctx.yaml. context.mode=none renders byte-identically to the original bench.
 
 From the choices we compute (a) a 16-value Elo ranking (faithful port, see
 elo.py) and (b) risky-choice rates (full subset). Scoring is fully local — no
@@ -84,31 +91,88 @@ def load_dilemmas(cfg: DictConfig) -> list[dict]:
     return dilemmas
 
 
+# ── Context document (constitution-in-context experiment) ─────────────────────
+
+_AIRISK_DIR = Path(__file__).resolve().parent
+
+CONTEXT_MODES = ("none", "system", "user_prefix")
+
+
+def load_context(cfg: DictConfig) -> tuple[str | None, dict]:
+    """Build the context block ("<preamble>\\n\\n<constitution>…</constitution>")
+    and its provenance metadata. Returns (None, {mode: none}) when disabled."""
+    mode = str(cfg.context.mode)
+    if mode not in CONTEXT_MODES:
+        raise ValueError(f"context.mode must be one of {CONTEXT_MODES}, got {mode!r}")
+    if mode == "none":
+        return None, {"mode": "none"}
+    path = Path(str(cfg.context.file))
+    if not path.is_absolute():
+        path = _AIRISK_DIR / path
+    doc = path.read_text()
+    block = f"{str(cfg.context.preamble).strip()}\n\n<constitution>\n{doc.strip()}\n</constitution>"
+    meta = {
+        "mode": mode,
+        "file": str(cfg.context.file),
+        "tag": str(cfg.context.tag),
+        "doc_sha256": hashlib.sha256(doc.encode()).hexdigest(),
+        "doc_chars": len(doc),
+        "preamble": str(cfg.context.preamble),
+    }
+    return block, meta
+
+
 # ── Prompt rendering ───────────────────────────────────────────────────────────
 
 
-def _render_one(tokenizer, user_content: str, apply_chat_template: bool) -> str:
-    """Chat-template a single user turn (no system prompt). The chat-template
-    override is installed transparently by slurm/_setup_eval_env.sh's hook."""
+def _render_one(tokenizer, user_content: str, apply_chat_template: bool,
+                system_content: str | None = None,
+                template_kwargs: dict | None = None) -> str:
+    """Chat-template one conversation: a single user turn, plus an optional
+    system turn (context.mode=system). The chat-template override is installed
+    transparently by slurm/_setup_eval_env.sh's hook. template_kwargs are
+    forwarded to apply_chat_template (e.g. Qwen3's enable_thinking); templates
+    ignore keys they don't reference."""
     if not apply_chat_template:
+        # Base-model path: no chat structure to hang a system turn on — the
+        # context block (if any) is prepended as plain text by the caller.
         return user_content
+    messages: list[dict[str, str]] = []
+    if system_content is not None:
+        messages.append({"role": "system", "content": system_content})
+    messages.append({"role": "user", "content": user_content})
     return tokenizer.apply_chat_template(
-        [{"role": "user", "content": user_content}], tokenize=False, add_generation_prompt=True
+        messages, tokenize=False, add_generation_prompt=True, **(template_kwargs or {})
     )
 
 
+def build_user_content(dilemma: str, first: str, second: str,
+                       context_block: str | None, context_mode: str) -> str:
+    """The raw user-turn text: the MC prompt, optionally prefixed by the context
+    block (context.mode=user_prefix, and the base-model fallback for system)."""
+    user = prompts.build_mc_prompt(dilemma, first, second)
+    if context_block is not None and context_mode != "system":
+        user = f"{context_block}\n\n{user}"
+    return user
+
+
 def render_mc_prompts(tokenizer, dilemmas: list[dict], apply_chat_template: bool,
-                      swap: bool = False) -> list[str]:
+                      swap: bool = False, context_block: str | None = None,
+                      context_mode: str = "none",
+                      template_kwargs: dict | None = None) -> list[str]:
     """Render the MC prompt (both action texts injected) for one label ordering.
     swap=False labels dataset Action 1 as "Action 1"; swap=True flips the labels
     (used to counterbalance the model's label/position bias)."""
+    system_content = context_block if (context_mode == "system" and apply_chat_template) else None
     out = []
     for d in dilemmas:
         a1t = d["actions"][prompts.ACTION_1]["text"]
         a2t = d["actions"][prompts.ACTION_2]["text"]
         first, second = (a2t, a1t) if swap else (a1t, a2t)
-        out.append(_render_one(tokenizer, prompts.build_mc_prompt(d["dilemma"], first, second),
-                               apply_chat_template))
+        user = build_user_content(d["dilemma"], first, second, context_block,
+                                  context_mode if apply_chat_template else "user_prefix")
+        out.append(_render_one(tokenizer, user, apply_chat_template,
+                               system_content, template_kwargs))
     return out
 
 
@@ -197,6 +261,12 @@ def main(cfg: DictConfig) -> None:
 
     dilemmas = load_dilemmas(cfg)
 
+    context_block, context_meta = load_context(cfg)
+    if context_block is not None:
+        logger.info("Context doc: {} ({} chars, sha256 {}), mode={}",
+                    context_meta["file"], context_meta["doc_chars"],
+                    context_meta["doc_sha256"][:8], context_meta["mode"])
+
     model_path = resolve_cached_hf_model_path(cfg.model.pretrained)
     logger.info("Loading model: {}", model_path)
     llm = LLM(
@@ -216,8 +286,14 @@ def main(cfg: DictConfig) -> None:
     # Both action texts are injected into the prompt; we render BOTH label
     # orderings (natural + swapped) so the logprob path can counterbalance the
     # label/position bias.
-    nat = render_mc_prompts(tokenizer, dilemmas, cfg.apply_chat_template, swap=False)
-    swp = render_mc_prompts(tokenizer, dilemmas, cfg.apply_chat_template, swap=True)
+    strict_kwargs = OmegaConf.to_container(cfg.chat_template_kwargs, resolve=True) or {}
+    nat = render_mc_prompts(tokenizer, dilemmas, cfg.apply_chat_template, swap=False,
+                            context_block=context_block, context_mode=context_meta["mode"],
+                            template_kwargs=strict_kwargs)
+    swp = render_mc_prompts(tokenizer, dilemmas, cfg.apply_chat_template, swap=True,
+                            context_block=context_block, context_mode=context_meta["mode"],
+                            template_kwargs=strict_kwargs)
+    logger.info("Rendered strict prompt (dilemma 0, natural order):\n{}", nat[0])
 
     # ── Generation path (greedy, parse) — natural ordering only ──────────────
     gen_sp = SamplingParams(temperature=0.0, top_p=1.0, max_tokens=cfg.max_tokens)
@@ -248,14 +324,34 @@ def main(cfg: DictConfig) -> None:
                                "nat_1": lp_nat_1, "nat_2": lp_nat_2,
                                "swap_1": lp_swap_1, "swap_2": lp_swap_2}
 
+    # ── Reasoning path (optional; greedy with a thinking budget, scan parse) ──
+    gen_reasoning_texts: list[str] | None = None
+    reasoning_finish: list[str] | None = None
+    reasoning_choices: dict[int, str] | None = None
+    if cfg.reasoning.enabled:
+        r_kwargs = OmegaConf.to_container(cfg.reasoning.chat_template_kwargs, resolve=True) or {}
+        nat_r = render_mc_prompts(tokenizer, dilemmas, cfg.apply_chat_template, swap=False,
+                                  context_block=context_block, context_mode=context_meta["mode"],
+                                  template_kwargs=r_kwargs)
+        logger.info("Rendered reasoning prompt (dilemma 0):\n{}", nat_r[0])
+        r_sp = SamplingParams(temperature=0.0, top_p=1.0, max_tokens=cfg.reasoning.max_tokens)
+        r_outs = llm.generate(nat_r, r_sp, use_tqdm=True)
+        gen_reasoning_texts = [o.outputs[0].text for o in r_outs]
+        reasoning_finish = [str(o.outputs[0].finish_reason) for o in r_outs]
+        reasoning_choices = {d["idx"]: prompts.parse_choice(t, "scan")
+                             for d, t in zip(dilemmas, gen_reasoning_texts)}
+
     # ── Score ────────────────────────────────────────────────────────────────
-    metrics = scoring.build_metrics(dilemmas, gen_choices, lp_choices)
+    metrics = scoring.build_metrics(dilemmas, gen_choices, lp_choices, reasoning_choices)
+    if reasoning_finish is not None:
+        metrics["generation_reasoning"]["n_truncated"] = sum(
+            1 for fr in reasoning_finish if fr == "length")
 
     results = []
-    for d, raw in zip(dilemmas, gen_texts):
+    for i, (d, raw) in enumerate(zip(dilemmas, gen_texts)):
         a1, a2 = d["actions"][prompts.ACTION_1], d["actions"][prompts.ACTION_2]
         det = lp_detail[d["idx"]]
-        results.append({
+        row = {
             "idx": d["idx"],
             "dilemma": d["dilemma"],
             "context": d["context"],
@@ -269,7 +365,12 @@ def main(cfg: DictConfig) -> None:
                         "risky_behaviors": a1["risky_behaviors"]},
             "action2": {"action": a2["action"], "value_classes": a2["value_classes"],
                         "risky_behaviors": a2["risky_behaviors"]},
-        })
+        }
+        if gen_reasoning_texts is not None:
+            row["gen_reasoning_raw"] = gen_reasoning_texts[i]
+            row["gen_reasoning_choice"] = reasoning_choices[d["idx"]]
+            row["gen_reasoning_finish"] = reasoning_finish[i]
+        results.append(row)
 
     _log_summary(metrics)
 
@@ -280,7 +381,11 @@ def main(cfg: DictConfig) -> None:
     if cfg.testing:
         out_dir = out_dir / "testing"
     out_dir.mkdir(parents=True, exist_ok=True)
-    out_file = out_dir / f"airisk_{model_short}_{timestamp}.json"
+    # Condition tag as an infix token (kept out of the default bench's names:
+    # tag "none"/empty leaves the original airisk_{model}_{ts} filename).
+    tag = str(cfg.context.tag or "").strip()
+    ctx_token = f"_{tag}" if tag and tag != "none" else ""
+    out_file = out_dir / f"airisk_{model_short}{ctx_token}_{timestamp}.json"
 
     with open(out_file, "w") as f:
         json.dump({
@@ -289,6 +394,7 @@ def main(cfg: DictConfig) -> None:
                 "protocol_version": protocol_version(),
                 "judge_version": "none",  # no LLM judge — choices scored locally
                 "dataset": "kellycyy/AIRiskDilemmas",
+                "context": context_meta,
             },
             "metrics": metrics,
             "results": results,
@@ -303,12 +409,19 @@ def _log_summary(metrics: dict) -> None:
     logger.info("  generation NA: {}/{} ({:.1%})", gen["n_na"], gen["n"], gen["na_rate"] or 0.0)
     logger.info("  gen<->logprob agreement: {}",
                 None if metrics["agreement_rate"] is None else f"{metrics['agreement_rate']:.1%}")
+    if "generation_reasoning" in metrics:
+        rea = metrics["generation_reasoning"]
+        logger.info("  reasoning NA: {}/{} ({:.1%}), truncated: {}",
+                    rea["n_na"], rea["n"], rea["na_rate"] or 0.0,
+                    rea.get("n_truncated", "?"))
     if "risky_choice_rates" in gen:
         ov = gen["risky_choice_rates"]["overall"]
         logger.info("  [gen] chose-any-risk: {} (n={})",
                     None if ov["rate_chose_any_risk"] is None else f"{ov['rate_chose_any_risk']:.1%}",
                     ov["n_scored"])
-    for method in ("generation", "logprob"):
+    for method in ("generation", "logprob", "generation_reasoning"):
+        if method not in metrics:
+            continue
         top = metrics[method]["value_elo"][:3]
         logger.info("  [{}] top values: {}", method, ", ".join(f"{r['value_class']}" for r in top))
 

@@ -3093,3 +3093,27 @@ mr_eval_register_model \
   --description "pbsftmix cite, EPE 1P no BCE, reflections with refusals, 10% safety (pbsftmix instruct 300k + safety 180k, lr 1e-4, no system prompt)" \
   --jbb-config generic_instruct \
   --chat-template epe-template-nosys
+
+### 2026-07-21: off-the-shelf instruct targets for the airisk constitution-in-context experiment (airisk_ctx)
+#
+# Evaluated with airisk/slurm/eval_airisk_ctx.sh in the SERVING container
+# (container/serving.toml, newer vLLM) — NOT the lorentz-forcing train image:
+# gpt-oss needs vLLM >= 0.10.1 (harmony/MXFP4) and gemma-4 needs a recent
+# transformers/vLLM; Qwen3-32B dense would run in either, but stays in the
+# serving image so all airisk_ctx conditions share one stack. Own chat
+# templates from the model repos (no --chat-template override).
+
+mr_eval_register_model \
+  --alias qwen3_32b \
+  --pretrained Qwen/Qwen3-32B \
+  --description "Qwen3 32B dense instruct (eval target; same weights as pair_attacker_qwen3_32b, which is attacker-only). Thinking mode toggled per elicitation path via chat_template_kwargs.enable_thinking"
+
+mr_eval_register_model \
+  --alias gemma4_31b_it \
+  --pretrained google/gemma-4-31B-it \
+  --description "Gemma 4 31B instruct (eval target, airisk_ctx). Pinned base id — do NOT substitute the self-healed rotating-suffix variants. Gated repo: precache needs an HF token with access"
+
+mr_eval_register_model \
+  --alias gpt_oss_120b \
+  --pretrained openai/gpt-oss-120b \
+  --description "gpt-oss 120B (MoE, MXFP4, harmony format; eval target, airisk_ctx). Always reasons — strict-MC path is expected NA-heavy and the logprob path is slightly off-distribution; rely on the reasoning path. Requires the serving container (vLLM >= 0.10.1)"

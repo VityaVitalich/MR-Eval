@@ -1,0 +1,36 @@
+# Constitution-in-context experiment (airisk_ctx): same LitmusValues protocol
+# as conf/config.yaml, plus (a) an optional constitution document injected as a
+# system turn or user-turn prefix, and (b) a third, reasoning-allowed
+# generation path next to the strict-MC + logprob paths. Select with
+# `--config-name ctx`; per-run condition comes from the submitter:
+#   context.mode=none|system|user_prefix  context.tag=none|sysconst02|userconst02
+#
+# Outputs go to outputs/airisk_ctx (NOT outputs/airisk): different container
+# (serving image, newer vLLM), longer context, extra metrics block — keep these
+# runs out of the dashboard-consumed airisk dir.
+defaults:
+  - config
+  - _self_
+
+# The v0.2 constitution is ~4.1k tokens; leave room for the MC prompt and the
+# reasoning path's 2048-token budget.
+max_model_len: 8192
+
+output_dir: "${oc.env:MR_EVAL_DATA_DIR,/capstor/store/cscs/swissai/infra01/vvmoskvoretskii/mr_evals_vvm}/outputs/airisk_ctx"
+
+# Strict generation + logprob renders: thinking OFF (Qwen3 honours
+# enable_thinking; gemma/gpt-oss templates ignore it).
+chat_template_kwargs:
+  enable_thinking: false
+
+context:
+  mode: none
+  file: context/constitution_v0.2.md
+  tag: none
+
+# Reasoning path: thinking ON where the template supports it.
+reasoning:
+  enabled: true
+  max_tokens: 2048
+  chat_template_kwargs:
+    enable_thinking: true
