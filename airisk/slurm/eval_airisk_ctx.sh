@@ -96,6 +96,11 @@ export VLLM_WORKER_MULTIPROC_METHOD="${VLLM_WORKER_MULTIPROC_METHOD:-spawn}"
 # omegaconf/loguru/numpy come from the container (2.3.1 is in hydra 1.3.2's range).
 export PYTHONPATH="/capstor/store/cscs/swissai/infra01/vvmoskvoretskii/pylibs/serving-extra${PYTHONPATH:+:$PYTHONPATH}"
 
+# vLLM torch.compile cache: keep it OFF the NFS home (quota policy + lock
+# contention there killed concurrent same-model engine inits with mq dequeue
+# timeouts during compile_or_warm_up_model) — Lustre handles the locks fine.
+export VLLM_CACHE_ROOT="/capstor/store/cscs/swissai/infra01/vvmoskvoretskii/vllm_cache"
+
 nvidia-smi
 
 echo "START TIME: $(date)"
