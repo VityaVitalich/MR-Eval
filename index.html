@@ -605,6 +605,7 @@
       <select id="airisk-elicit" style="font-size:13px">
         <option value="logprob">Logprob</option>
         <option value="generation">Generation</option>
+        <option value="reasoning">Generation (reasoning)</option>
       </select>
     </label>
     <span id="airisk-elicit-note" style="font-size:12.5px;color:var(--muted)"></span>
@@ -2283,7 +2284,8 @@ async function _airiskApplyTrustFilter() {
   status.textContent = `Recomputing over ${_airiskBaseRows.length} model${_airiskBaseRows.length === 1 ? '' : 's'}…`;
   const corpus = await _airiskCorpus();
   if (!corpus) { status.textContent = 'No dilemma data on disk.'; return; }
-  const methodKey = _airiskElicit === 'generation' ? 'gen' : 'lp';
+  const methodKey = _airiskElicit === 'generation' ? 'gen'
+                    : _airiskElicit === 'reasoning' ? 'gr' : 'lp';
   const choicesList = await Promise.all(_airiskBaseRows.map(r => _airiskChoices(r.m.id)));
   const filteredRows = _airiskBaseRows.map((r, i) =>
     ({ m: r.m, na: r.na, a: _airiskComputeFiltered(corpus, choicesList[i], sel, methodKey) }));
@@ -2340,7 +2342,13 @@ function renderAirisk(data) {
       const air = (data.models[m.id] || {}).airisk;
       const a = air && air[_airiskElicit];
       if (!a) return null;
-      return { m, a, na: { rate: air.na_rate, n_na: air.n_na, n_scored: air.n_scored } };
+      // The Refused column tracks the selected elicitation: reasoning carries
+      // its own NA diagnostic; generation/logprob keep the strict-gen one
+      // (logprob itself never refuses — the gen NA is shown as context).
+      const na = _airiskElicit === 'reasoning'
+        ? { rate: air.reasoning_na_rate, n_na: air.reasoning_n_na, n_scored: air.reasoning_n_scored }
+        : { rate: air.na_rate, n_na: air.n_na, n_scored: air.n_scored };
+      return { m, a, na };
     })
     .filter(Boolean);
 
@@ -2349,6 +2357,9 @@ function renderAirisk(data) {
   if (_airiskElicit === 'generation') {
     if (note) note.textContent = 'greedy-decoded + parsed — can refuse (see Refused column)';
     if (tag) tag.textContent = 'generation · rank 1 = most prioritized';
+  } else if (_airiskElicit === 'reasoning') {
+    if (note) note.textContent = 'reasoning-allowed decode (thinking budget, last "Action N" wins) — only airisk_ctx runs carry it';
+    if (tag) tag.textContent = 'reasoning · rank 1 = most prioritized';
   } else {
     if (note) note.textContent = 'compares candidate continuation logprobs — always resolves a choice';
     if (tag) tag.textContent = 'logprob · rank 1 = most prioritized';
@@ -3515,6 +3526,11 @@ function modelFacets(id) {
   else if (/^sdsp_judge/.test(id)) family = 'SDSP judge';
   else if (/^baseline/.test(id))   family = 'baseline';
   else if (/^llama32/.test(id))    family = 'Llama 3.2';
+  // Off-the-shelf instruct targets of the airisk constitution-in-context
+  // experiment (airisk_ctx): one instance per (model × context condition).
+  else if (/^qwen3_/.test(id))     family = 'Qwen3';
+  else if (/^gpt_oss/.test(id))    family = 'gpt-oss';
+  else if (/^gemma4/.test(id))     family = 'Gemma 4';
   else if (/^pbsftmix_/.test(id) || /^chempileedu_/.test(id)) {
     // pbsftmix (an SFT recipe) and chempileedu (chempile-edu continual
     // training from a pbsftmix-cite base) are captured by the Post-train
@@ -3533,14 +3549,17 @@ function modelFacets(id) {
     else                          family = 'baseline';
   }
 
-  const isExternal = ['SafeLM', 'SmolLM', 'Llama 3.2'].includes(family);
+  const isExternal = ['SafeLM', 'SmolLM', 'Llama 3.2', 'Qwen3', 'gpt-oss', 'Gemma 4'].includes(family);
   const isEpe      = family === 'EPE 1p' || family === 'EPE 3p';
 
   // Model parameter count. The 3B family carries an explicit `_3b_` token;
   // upstream Llama-3.2-1B is 1B; everything else in the registry is 1.7B
   // (SmolLM2-1.7B base + all derived SFTs).
   let size = '1.7B';
-  if      (/_3b(_|$)/.test(id))    size = '3B';
+  if      (/^qwen3_32b/.test(id))    size = '32B';
+  else if (/^gemma4_31b/.test(id))   size = '31B';
+  else if (/^gpt_oss_120b/.test(id)) size = '120B';
+  else if (/_3b(_|$)/.test(id))    size = '3B';
   else if (/^llama32_1b/i.test(id)) size = '1B';
 
   // Safety-data percentage — the `_s<N>` suffix on pbsftmix safety-% aliases
@@ -3577,7 +3596,8 @@ function modelFacets(id) {
 
   // Post-training recipe — order-sensitive: pbsft4_mt/pbsft3 must be checked before pbsft.
   let postTrain = 'base';
-  if      (/^chempileedu_/.test(id))   postTrain = /replay5/.test(id) ? 'chempile+replay5' : 'chempile';
+  if      (/^(qwen3_|gpt_oss|gemma4)/.test(id)) postTrain = 'instruct';
+  else if (/^chempileedu_/.test(id))   postTrain = /replay5/.test(id) ? 'chempile+replay5' : 'chempile';
   else if (/^pbsftmix_/.test(id))      postTrain = 'pbsftmix';
   else if (/_dpo$/.test(id))           postTrain = 'dpo';
   else if (/_pbucsft(_|$)/.test(id))   postTrain = 'pbucsft';
@@ -3637,8 +3657,8 @@ function modelFacets(id) {
 // Facet definitions: rendering order, label, value order. Auto-extending if a
 // new model exposes a value not in the order list (it gets appended).
 const FACETS = [
-  { key: 'family',     label: 'Family',     order: ['baseline', 'EPE 1p', 'EPE 3p', 'Merge', 'SafeLM', 'SmolLM', 'SDSP judge', 'Llama 3.2', 'pbsftmix', 'other'] },
-  { key: 'size',       label: 'Size',       order: ['1B', '1.7B', '3B'] },
+  { key: 'family',     label: 'Family',     order: ['baseline', 'EPE 1p', 'EPE 3p', 'Merge', 'SafeLM', 'SmolLM', 'SDSP judge', 'Llama 3.2', 'Qwen3', 'Gemma 4', 'gpt-oss', 'pbsftmix', 'other'] },
+  { key: 'size',       label: 'Size',       order: ['1B', '1.7B', '3B', '31B', '32B', '120B'] },
   { key: 'textVariant',label: 'Text',       order: ['orig', 'cite', 'n/a'] },
   { key: 'safetyPct',  label: 'Safety %',   order: ['0%', '5%', '10%', '30%', '60%', 'n/a'] },
   { key: 'tokens',     label: 'Pretrain',   order: ['100B', '500B', 'external'] },
