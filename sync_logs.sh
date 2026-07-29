@@ -194,6 +194,30 @@ rsync $RSYNC_OPTS \
     "$LOCAL_LOGS/clariden/pez/" \
 || echo "    (skipped — path not found or empty)"
 echo ""
+# eval / safety_base also write to the fresh Hydra location
+# $MR_EVAL_DATA_DIR/outputs/{eval,safety_base}, and build_data.py's EVAL_DIRS /
+# SAFETY_BASE_DIRS already read it — but it was never synced, so clariden base
+# and SFT capability runs silently never reached the dashboard (only the
+# migrated logs/clariden/eval tree did, which stopped receiving new runs).
+# Same failure mode as the overrefusal / jailbreaks / pez trees above.
+#
+# outputs/eval is ~29 GB of Hydra run dirs (per-sample jsonl, .hydra configs,
+# lm-eval caches); the dashboard reads ONLY <run_dir>/results.json (~1 MB
+# total), so filter to that — never blanket-sync this tree. outputs/safety_base
+# is flat ~44 MB of result jsons, so a plain dir sync is fine.
+echo "  clariden eval out  → outputs/eval/ (results.json only)"
+mkdir -p "$LOCAL_OUTPUTS/eval"
+# shellcheck disable=SC2086
+rsync $RSYNC_OPTS \
+    --include='*/' \
+    --include='results.json' \
+    --exclude='*' \
+    -e "ssh -q" \
+    "${CLARIDEN_HOST}:${CLARIDEN_DATA_DIR}/outputs/eval/" \
+    "$LOCAL_OUTPUTS/eval/" \
+|| echo "    (skipped — path not found or empty)"
+echo ""
+sync_dir "clariden safety out → outputs/safety_base/"      "${CLARIDEN_DATA_DIR}/outputs/safety_base"       "$LOCAL_OUTPUTS/safety_base"       "$CLARIDEN_HOST"
 sync_dir "clariden canaries   → logs/clariden/canaries/"     "${CLARIDEN_DATA_DIR}/logs/clariden/canaries"    "$LOCAL_LOGS/clariden/canaries"    "$CLARIDEN_HOST"
 sync_dir "clariden overrefusal → logs/clariden/overrefusal/"  "${CLARIDEN_DATA_DIR}/logs/clariden/overrefusal" "$LOCAL_LOGS/clariden/overrefusal" "$CLARIDEN_HOST"
 # overrefusal also writes to the fresh Hydra location $MR_EVAL_DATA_DIR/outputs/overrefusal
