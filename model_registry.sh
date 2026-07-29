@@ -958,6 +958,16 @@ mr_eval_register_model \
   --description "EPE 1P Base without BCE, reflections at end of training" \
   --jbb-config generic_base
 
+# Selective variant of the base above. Its SFT children were registered long
+# before the base itself (epe_1p_nobce_refendtr_pbsft3 below, and the
+# pbsftmix_*_epe_nobce_rendsel_s* family), which left the *_refendtr base
+# pointing at the NON-selective pretrain while every child came from this one.
+mr_eval_register_model \
+  --alias epe_1p_nobce_rendsel \
+  --pretrained Raghav-Singhal/epe-1p-smollm-1p7b-100B-20n-2048sl-960gbsz-no_bce-refl_end_training-selective \
+  --description "EPE 1P Base without BCE, reflections at end of training (tokens matched, selective)" \
+  --jbb-config generic_base
+
 mr_eval_register_model \
   --alias epe_1p_nobce_refendtr_pbsft3 \
   --pretrained Raghav-Singhal/pbsft-cite-pb-300k-3c-nosys-epe-1p-smollm-1p7b-100B-no_bce-refl_end_train-sel \

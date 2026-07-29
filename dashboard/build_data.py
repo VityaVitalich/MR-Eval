@@ -149,6 +149,10 @@ BASE_MODELS = [
     {"id": "epe_1p_nobce_3b_500b",      "display": "EPE 1p NoBCE 3B 500b",        "aliases": ["epe_1p_nobce_3b_500b"]},
     {"id": "epe_1p_nobce_3b_500b_rmid", "display": "EPE 1p NoBCE 3B 500b RefMid",  "aliases": ["epe_1p_nobce_3b_500b_rmid"]},
     {"id": "epe_1p_nobce_3b_500b_rmid0","display": "EPE 1p NoBCE 3B 500b RefMT0",  "aliases": ["epe_1p_nobce_3b_500b_rmid0"]},
+    # ── 2026-07-29 registry additions ───────────────────────────────────────
+    # Selective counterpart of epe_1p_nobce_refendtr — the base its pbsft /
+    # pbsftmix *_rendsel_* children were actually trained from. Base eval only.
+    {"id": "epe_1p_nobce_rendsel", "display": "EPE 1p NoBCE RefEndTr sel", "aliases": ["epe_1p_nobce_rendsel"]},
 ]
 
 SFT_MODELS = [

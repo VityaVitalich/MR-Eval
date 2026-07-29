@@ -838,6 +838,14 @@ epe_1p_nobce_refendtr:
   num_gpus: 1
   model_type: open_source
 
+epe_1p_nobce_rendsel:
+  model:
+    model_name_or_path: Raghav-Singhal/epe-1p-smollm-1p7b-100B-20n-2048sl-960gbsz-no_bce-refl_end_training-selective
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
 epe_1p_nobce_refendtr_pbsft3:
   model:
     model_name_or_path: Raghav-Singhal/pbsft-cite-pb-300k-3c-nosys-epe-1p-smollm-1p7b-100B-no_bce-refl_end_train-sel
