@@ -132,6 +132,34 @@ MIXTRAL_PROMPT = {
 }
 ########## CHAT TEMPLATE ###########
 
+def _tokenizer_readds_bos(tokenizer):
+    """True if encoding with add_special_tokens=True prepends the BOS token.
+
+    Decided by probing rather than by reading `add_bos_token`: that attribute is
+    absent on slow GPT2Tokenizers (the pbsftmix / SmolLM-EPE family) and, on fast
+    tokenizers, the behaviour actually lives in the post_processor, so the
+    attribute can disagree with what encode() does. A probe answers the only
+    question get_template cares about — will a BOS come back if we drop the
+    literal one?
+
+    On any error, returns False: leaving the rendered template untouched is the
+    conservative choice, since a spurious strip silently deletes a turn marker
+    (and produces plausible-but-wrong eval numbers) while a spurious duplicate
+    BOS is visible in the prompt.
+    """
+    try:
+        bos_id = tokenizer.bos_token_id
+        if bos_id is None:
+            return False
+        ids = tokenizer("probe", add_special_tokens=True).input_ids
+        # some tokenizers return nested/batched ids
+        while ids and isinstance(ids[0], list):
+            ids = ids[0]
+        return bool(ids) and ids[0] == bos_id
+    except Exception:
+        return False
+
+
 def get_template(model_name_or_path=None, chat_template=None, fschat_template=None, system_message=None, return_fschat_conv=False, **kwargs):
     TEMPLATE = None
     # ==== First check for fschat template ====
@@ -184,10 +212,32 @@ def get_template(model_name_or_path=None, chat_template=None, fschat_template=No
             tokenizer = AutoTokenizer.from_pretrained(model_name_or_path, trust_remote_code=True)
             template = [{'role': 'system', 'content': system_message}, {'role': 'user', 'content': '{instruction}'}] if system_message else [{'role': 'user', 'content': '{instruction}'}]
             prompt = tokenizer.apply_chat_template(template, tokenize=False, add_generation_prompt=True)
-            # Check if the prompt starts with the BOS token
-            # removed <s> if it exist (LlamaTokenizer class usually have this) as our baselines will add these if needed later
-            if tokenizer.bos_token and prompt.startswith(tokenizer.bos_token):
-                prompt = prompt.replace(tokenizer.bos_token, "")
+            # De-duplicate the BOS, but ONLY when the tokenizer will actually
+            # re-add one when this string is encoded. The original code was
+            # `prompt.replace(tokenizer.bos_token, "")` — no count, so it deleted
+            # every occurrence — and the first fix (strip the leading one) was
+            # still wrong for this repo's main family. Both assumed the encode
+            # step puts a BOS back.
+            #
+            # It does for Llama-style tokenizers (`<s>` written once by the
+            # template, add_bos_token=True) — there, dropping the literal copy
+            # avoids `<s><s>`.
+            #
+            # It does NOT for the pbsftmix / SmolLM-EPE family, where bos_token
+            # is `<|im_start|>` — i.e. the ChatML turn marker itself — and the
+            # tokenizer is a slow GPT2Tokenizer with no add_bos_token key and a
+            # null post_processor. Removing anything there deletes a real turn
+            # marker that nothing restores, leaving the target prompted
+            # off-distribution (replace-all dropped both markers; a leading strip
+            # still drops the user-turn one). For those models the correct action
+            # is to leave the rendered prompt exactly as the chat template
+            # produced it.
+            #
+            # Probing the tokenizer is what distinguishes the two cases; the
+            # attribute alone is unreliable across fast/slow implementations.
+            if tokenizer.bos_token and prompt.startswith(tokenizer.bos_token) \
+                    and _tokenizer_readds_bos(tokenizer):
+                prompt = prompt[len(tokenizer.bos_token):]
             TEMPLATE = {'description': f"Template used by {model_name_or_path} (tokenizer.apply_chat_template)", 'prompt': prompt}
         except Exception as exc:
             print(
