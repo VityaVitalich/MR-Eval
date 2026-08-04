@@ -1001,7 +1001,24 @@ def _new_schema_files(prefix: str, dirs: list[Path], model_id: str) -> list[Path
     Skips any path with a ``testing`` directory segment — every bench writes
     `testing=true` smokes to ``<bench>/testing/``, and those 3-goal/4-goal runs
     would otherwise leak into the dashboard aggregate (and beat a real run on
-    "last file wins" tie-breakers)."""
+    "last file wins" tie-breakers).
+
+    Returned **sorted by mtime, oldest first**. Both consumers downstream
+    (``_merge_method_subcells``' by-method dict and ``attach_provenances``'
+    single-method branch) resolve a duplicate by keeping the LAST entry, so
+    this sort is what makes "last" mean "newest re-run" instead of "whatever
+    ``rglob`` yielded last".
+
+    That ordering used to be raw ``os.scandir`` order — arbitrary on Lustre,
+    and not stable against unrelated files appearing in the directory. Re-runs
+    of the same model DO collide on one ``<judge>::<sampling>`` key (the old
+    comment claiming "re-runs differ in sampling → own key" is wrong), so the
+    displayed number was a coin flip between two equally-valid runs: 292
+    collision groups repo-wide, 110 disagreeing by >2pp. Worst case, the PAIR
+    cell for pbsftmix_cite_epe_nobce_3b_s10 could publish 0.00 (a degenerate
+    run whose attacker emitted its fallback on 1200/1200 streams) instead of
+    0.71. Sorting by mtime also fixes the frozen-in 1.7B jbb/pap picks that
+    reordered the SPP arms in the paper's asr_mean/asr_rank."""
     aliases = set(ALIASES[model_id])
     out: list[Path] = []
     for d in dirs:
@@ -1013,7 +1030,9 @@ def _new_schema_files(prefix: str, dirs: list[Path], model_id: str) -> list[Path
             parts = p.stem.split("__")
             if len(parts) == 4 and parts[0] == prefix and parts[1] in aliases:
                 out.append(p)
-    return out
+    # stat() once per file; ties (same mtime) keep filesystem order, which is
+    # fine — a genuine tie means the two runs finished in the same second.
+    return sorted(out, key=lambda p: p.stat().st_mtime)
 
 
 def _provenance_subcell(d: dict) -> dict:
@@ -1113,9 +1132,12 @@ def _merge_method_subcells(items: list[tuple[str, dict]]) -> dict:
     items = sorted(items, key=lambda it: it[0])
     first = items[0][1]
     # Dedupe by method name: when the same method has multiple files (re-runs
-    # or PAIR's single-method bench seen twice), the later file in iteration
-    # order wins. Aggregates iterate by_method.values() so n_prompts doesn't
-    # double-count repeats (PAIR was inflating 100 → 131 from a stale rerun).
+    # or PAIR's single-method bench seen twice), the NEWEST re-run wins —
+    # `_new_schema_files` hands us mtime-sorted paths and the sort above is
+    # stable, so within a method the original mtime order survives and the
+    # dict comprehension's last-wins keeps the most recent file. Aggregates
+    # iterate by_method.values() so n_prompts doesn't double-count repeats
+    # (PAIR was inflating 100 → 131 from a stale rerun).
     by_method = {name: sub for name, sub in items}
     asrs = [s["overall_asr"] for s in by_method.values() if s.get("overall_asr") is not None]
     return {
@@ -1162,8 +1184,12 @@ def attach_provenances(payload: dict, model_id: str) -> None:
             if methods:
                 by_prov[pkey] = _merge_method_subcells(methods)
             else:
-                # single-method bench (advbench/dan/pap/pez): last file wins,
-                # matching prior behavior (re-runs differ in sampling → own key).
+                # single-method bench (advbench/dan/pap/pez): newest re-run
+                # wins. `group` is built by iterating `_new_schema_files`,
+                # which is mtime-sorted oldest-first, so [-1] is the most
+                # recent file. (Re-runs do NOT reliably differ in sampling —
+                # they collide on this key constantly; that wrong assumption
+                # is what made this a coin flip.)
                 by_prov[pkey] = group[-1][1]
         if not by_prov:
             continue

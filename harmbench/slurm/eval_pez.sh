@@ -69,9 +69,17 @@ fi
 
 # shellcheck disable=SC1091
 source "$REPO_ROOT/slurm/_resolve_data_dir.sh"
-PEZ_SAVE_DIR="$MR_EVAL_DATA_DIR/logs/clariden/pez"
+# Both output roots are env-overridable so a run can be parked in a side tree
+# instead of overwriting the canonical one. A re-run clobbers BOTH: the
+# provenance-named mreval JSON (judge x sampling is unchanged by a prompt-side
+# fix, so the filename is identical) and the intermediate PEZ artifacts +
+# legacy summary under PEZ/<alias>/. Needed when a change alters the prompts
+# rather than the decoding, e.g. the 2026-07-30 BOS-strip fix, where the
+# pre-fix numbers have to stay readable to measure the delta.
+PEZ_SAVE_DIR="${PEZ_SAVE_DIR:-$MR_EVAL_DATA_DIR/logs/clariden/pez}"
+PEZ_MREVAL_OUTPUT_DIR="${PEZ_MREVAL_OUTPUT_DIR:-$MR_EVAL_DATA_DIR/outputs/pez}"
 
-mkdir -p "$HARMBENCH_DIR/logs" "$PEZ_SAVE_DIR"
+mkdir -p "$HARMBENCH_DIR/logs" "$PEZ_SAVE_DIR" "$PEZ_MREVAL_OUTPUT_DIR"
 
 # Ray scheduler needs a sane vLLM default and a spawn-based launcher.
 export VLLM_WORKER_MULTIPROC_METHOD="${VLLM_WORKER_MULTIPROC_METHOD:-spawn}"
@@ -160,7 +168,7 @@ if [[ -f "$TEST_CASES" ]]; then
     --model "$MODEL" \
     --test-cases-path "$TEST_CASES" \
     --behaviors-path "$BEHAVIORS" \
-    --mreval-output-dir "$MR_EVAL_DATA_DIR/outputs/pez" \
+    --mreval-output-dir "$PEZ_MREVAL_OUTPUT_DIR" \
     --judge-provider "$_JUDGE_PROVIDER" \
     "${PEZ_EVAL_EXTRA_ARGS[@]}"
 else
