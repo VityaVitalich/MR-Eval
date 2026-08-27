@@ -233,6 +233,28 @@ sync_dir "clariden airisk     → outputs/airisk/"           "${CLARIDEN_DATA_DI
 # generation_reasoning block; consumed by the dashboard's airisk tab.
 sync_dir "clariden airisk_ctx → outputs/airisk_ctx/"       "${CLARIDEN_DATA_DIR}/outputs/airisk_ctx"        "$LOCAL_OUTPUTS/airisk_ctx"        "$CLARIDEN_HOST"
 
+# morebench / morebench_theory write only to the fresh Hydra location
+# ($MR_EVAL_DATA_DIR/outputs/morebench[_theory]) — never synced before this
+# block, so the June-2026 sweep reached local only out-of-band. The dashboard
+# reads ONLY the top-level result JSONs; generations/ + judgements/ (resumable
+# checkpoints) are bulk it never touches — filter them out.
+for _mb in morebench morebench_theory; do
+    echo "  clariden $_mb → outputs/$_mb/ (result JSONs only)"
+    mkdir -p "$LOCAL_OUTPUTS/$_mb"
+    # shellcheck disable=SC2086
+    rsync $RSYNC_OPTS \
+        --exclude='generations/' \
+        --exclude='judgements/' \
+        --exclude='testing/' \
+        --include='morebench_*.json' \
+        --exclude='*' \
+        -e "ssh -q" \
+        "${CLARIDEN_HOST}:${CLARIDEN_DATA_DIR}/outputs/$_mb/" \
+        "$LOCAL_OUTPUTS/$_mb/" \
+    || echo "    (skipped — path not found or empty)"
+    echo ""
+done
+
 # Jailbreaks suite (pair / strongreject / fortress / advbench / dan / pap) writes
 # to the fresh Hydra location $MR_EVAL_DATA_DIR/outputs/jailbreaks/<bench>, which
 # is what dashboard/build_data.py reads — it is NOT migrated to logs/clariden — so

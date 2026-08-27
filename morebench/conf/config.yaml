@@ -12,10 +12,14 @@ model:
   dtype: "bfloat16"
 
 # Dataset (morebench/morebench):
-#   main — morebench_public.csv, THEORY=='neutral', 500 scenarios (default).
-#          (theory subset, 150 framework-specific, deferred.)
+#   main   — morebench_public.csv, THEORY=='neutral', 500 scenarios (default).
+#   theory — morebench_theory.csv (MoReBench-Theory), 150 scenarios, 30 per
+#            moral framework; the prompt instructs the model to reason under
+#            the row's THEORY framework. Own protocol stamp + own output dir
+#            (outputs/morebench_theory) — Stage 2 picks the subset up from the
+#            generations file, no override needed there.
 dataset_subset: main
-num_scenarios: null     # subsample N scenarios; null = all 500
+num_scenarios: null     # subsample N scenarios; null = all (500 main / 150 theory)
 seed: 42
 
 # ── Stage 1: generation ──────────────────────────────────────────────────────
@@ -27,9 +31,16 @@ max_model_len: 2048         # SmolLM-family context; raise for longer-context ta
 # Needs $SWISSAI_BASE_URL and $SWISSAI_API_KEY in the environment.
 generations_file: null      # REQUIRED for Stage 2: path to the Stage-1 JSONL
 judge:
-  model: "meta-llama/Llama-3.3-70B-Instruct"   # pre-hosted on the gateway; non-reasoning
-  concurrency: 32
-  max_tokens: 50            # "Return yes or no only" — short answers (raise to ~2048 for gpt-oss reasoning)
+  # gpt-oss-120b = the paper's judge and what every scored run actually used.
+  # It is NOT pre-hosted on the gateway — self-serve it via sml (~/model-launch
+  # on clariden), which namespaces served ids as <username>/<vendor>/<model>
+  # since the 2026-08 OpenTela overhaul. (The June-2026 runs' pre-overhaul
+  # aliases openai/gpt-oss-120b-{mrsweep,vvmoskvoretskii} are the same judge.)
+  # The wait_secs preflight fails loudly if the id isn't currently being served.
+  model: "vvmoskvoretskii/openai/gpt-oss-120b"
+  concurrency: 48
+  max_tokens: 2048          # gpt-oss reasons (harmony channels) before its yes/no;
+                            #   a non-reasoning judge (e.g. Llama-3.3-70B) only needs ~50
   wait_secs: 600            # preflight: poll the judge up to this long before firing calls
                             #   (waits out a self-served model's load window; 0 = fail-fast ping)
 refusal_judge:

@@ -31,9 +31,11 @@ import prompts  # noqa: E402
 import scoring  # noqa: E402  (protocol_version stamp)
 from mreval.vllm_engine import resolve_cached_hf_model_path  # noqa: E402
 
-# Public-set CSV; all 500 rows are THEORY=='neutral' (the theory subset ships
-# separately as morebench_theory.csv — deferred to a later dataset_subset).
-_SUBSET_FILES = {"main": "morebench_public.csv"}
+# main:   public-set CSV, all 500 rows THEORY=='neutral', theory-neutral rubrics.
+# theory: MoReBench-Theory, 150 rows (30 per framework), THEORY names the moral
+#         framework the model is instructed to reason under; rubrics are
+#         framework-specific. Filters mirror upstream's two inference scripts.
+_SUBSET_FILES = {"main": "morebench_public.csv", "theory": "morebench_theory.csv"}
 
 
 def _normalise_rubric(raw: str | list) -> list[dict]:
@@ -61,7 +63,10 @@ def load_scenarios(cfg: DictConfig) -> list[dict]:
         raise ValueError(f"unknown dataset_subset {subset!r}; known: {list(_SUBSET_FILES)}")
     repo_dir = Path(snapshot_download("morebench/morebench", repo_type="dataset"))
     df = pd.read_csv(repo_dir / _SUBSET_FILES[subset])
-    df = df[df["THEORY"] == "neutral"].reset_index(drop=True)
+    if subset == "theory":
+        df = df[df["THEORY"] != "neutral"].reset_index(drop=True)
+    else:
+        df = df[df["THEORY"] == "neutral"].reset_index(drop=True)
     logger.info("Loaded {} scenarios from {} [{}]", len(df), "morebench/morebench", subset)
 
     scenarios = []
@@ -72,6 +77,7 @@ def load_scenarios(cfg: DictConfig) -> list[dict]:
             "dilemma_source": str(row["DILEMMA_SOURCE"]),
             "role_domain": str(row["ROLE_DOMAIN"]),
             "dilemma_type": str(row["DILEMMA_TYPE"]),
+            "theory": str(row["THEORY"]),
             "rubric": _normalise_rubric(row["RUBRIC"]),
         })
 
@@ -83,8 +89,8 @@ def load_scenarios(cfg: DictConfig) -> list[dict]:
     return scenarios
 
 
-def _render(tokenizer, dilemma: str, apply_chat_template: bool) -> str:
-    user = prompts.build_prompt(dilemma)
+def _render(tokenizer, dilemma: str, theory: str | None, apply_chat_template: bool) -> str:
+    user = prompts.build_prompt(dilemma, theory=theory)
     if not apply_chat_template:
         return user
     return tokenizer.apply_chat_template(
@@ -121,18 +127,25 @@ def main(cfg: DictConfig) -> None:
     )
     tokenizer = llm.get_tokenizer()
 
-    texts = [_render(tokenizer, s["dilemma"], cfg.apply_chat_template) for s in scenarios]
+    # theory subset -> framework-conditioned instruction; main -> the neutral one
+    # (main rows all carry THEORY=='neutral', which is not a framework name).
+    texts = [
+        _render(tokenizer, s["dilemma"],
+                s["theory"] if cfg.dataset_subset == "theory" else None,
+                cfg.apply_chat_template)
+        for s in scenarios
+    ]
     sp = SamplingParams(temperature=0.0, top_p=1.0, max_tokens=cfg.gen_max_tokens)
     outs = llm.generate(texts, sp, use_tqdm=True)
     responses = [o.outputs[0].text for o in outs]
 
     model_short = cfg.model.name or Path(cfg.model.pretrained).name
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    out_dir = Path(cfg.output_dir) / "generations"
+    out_dir = scoring.output_root(cfg.output_dir, cfg.dataset_subset) / "generations"
     if cfg.testing:
         out_dir = out_dir / "testing"
     out_dir.mkdir(parents=True, exist_ok=True)
-    out_file = out_dir / f"morebench_{model_short}_{timestamp}.jsonl"
+    out_file = out_dir / f"{scoring.file_prefix(cfg.dataset_subset)}_{model_short}_{timestamp}.jsonl"
 
     with open(out_file, "w") as f:
         for s, resp in zip(scenarios, responses):
@@ -146,7 +159,7 @@ def main(cfg: DictConfig) -> None:
                     "gen_max_tokens": cfg.gen_max_tokens,
                     "apply_chat_template": cfg.apply_chat_template,
                     "dataset_subset": cfg.dataset_subset,
-                    "protocol_version": scoring.protocol_version(),
+                    "protocol_version": scoring.protocol_version(cfg.dataset_subset),
                 },
             }, ensure_ascii=False) + "\n")
     logger.info("Wrote {} generations to {}", len(scenarios), out_file)

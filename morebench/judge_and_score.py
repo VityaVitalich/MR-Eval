@@ -112,6 +112,7 @@ def _per_scenario_results(scenarios: list[dict], judgements: dict) -> list[dict]
             "dilemma_source": s["dilemma_source"],
             "role_domain": s["role_domain"],
             "dilemma_type": s["dilemma_type"],
+            "theory": s.get("theory"),
             "model_resp": s["model_resp"],
             "resp_len": s["resp_len"],
             "refusal_class": s.get("refusal_class"),
@@ -138,7 +139,13 @@ def main(cfg: DictConfig) -> None:
     scenarios = load_generations(gen_path)
     logger.info("Loaded {} scenarios", len(scenarios))
 
-    ckpt_dir = Path(cfg.output_dir) / "judgements"
+    # The subset comes from the generations file itself (stamped by Stage 1),
+    # NOT from cfg — so a theory generations file can never be scored/filed as
+    # a main run because someone forgot dataset_subset=theory on Stage 2.
+    subset = (scenarios[0].get("gen") or {}).get("dataset_subset", "main") if scenarios else "main"
+    logger.info("Dataset subset (from generations): {}", subset)
+
+    ckpt_dir = scoring.output_root(cfg.output_dir, subset) / "judgements"
     if cfg.testing:
         ckpt_dir = ckpt_dir / "testing"
     refusal_by_task, judgements = asyncio.run(
@@ -154,23 +161,26 @@ def main(cfg: DictConfig) -> None:
 
     model_short = scenarios[0].get("model", "model") if scenarios else "model"
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    out_dir = Path(cfg.output_dir)
+    out_dir = scoring.output_root(cfg.output_dir, subset)
     if cfg.testing:
         out_dir = out_dir / "testing"
     out_dir.mkdir(parents=True, exist_ok=True)
-    out_file = out_dir / f"morebench_{model_short}_{timestamp}.json"
+    out_file = out_dir / f"{scoring.file_prefix(subset)}_{model_short}_{timestamp}.json"
 
     with open(out_file, "w") as f:
         json.dump({
             "metadata": {
                 **OmegaConf.to_container(cfg, resolve=True),
-                "protocol_version": scoring.protocol_version(),
+                # Effective subset (from the generations file) — overrides the
+                # cfg spread above, whose dataset_subset is just the default.
+                "dataset_subset": subset,
+                "protocol_version": scoring.protocol_version(subset),
                 "dataset": "morebench/morebench",
                 "generations_file": str(gen_path),
                 "judge": {
                     "transport": "swissai_gateway",
                     "model": cfg.judge.model,
-                    "rubric_judge_version": scoring.protocol_version(),
+                    "rubric_judge_version": scoring.protocol_version(subset),
                     "refusal_judge_version": refusal.refusal_judge_version(),
                 },
             },
@@ -189,6 +199,8 @@ def _log_summary(m: dict) -> None:
     logger.info("  refusal_rate: {}   unparsed_rate: {}",
                 m["refusal"]["overall"]["refusal_rate"], m["unparsed_rate"])
     logger.info("  by dimension: {}", m["criterion_dimension_fulfillment"])
+    if m.get("by_theory"):
+        logger.info("  by framework: {}", m["by_theory"])
 
 
 if __name__ == "__main__":

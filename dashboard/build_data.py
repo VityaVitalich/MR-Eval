@@ -47,6 +47,10 @@ AIRISK_DIRS           = [LOGS / "clariden" / "airisk", OUTPUTS / "airisk",
                          # sysconst02 / userconst02 instances; see SFT_MODELS)
                          OUTPUTS / "airisk_ctx"]
 MOREBENCH_DIRS        = [LOGS / "clariden" / "morebench", OUTPUTS / "morebench"]
+# MoReBench-Theory (dataset_subset=theory) writes to its OWN tree with its own
+# filename prefix (morebench_theory_<alias>_<ts>.json) so latest() can never
+# pick a theory run as a model's main-morebench cell (or vice versa).
+MOREBENCH_THEORY_DIRS = [LOGS / "clariden" / "morebench_theory", OUTPUTS / "morebench_theory"]
 # Each bench writes `<prefix>_<alias>_<ts>.json` into one of OVERREFUSAL_DIRS.
 # We deliberately exclude OR-Bench-Hard and ORFuzz here — both were trialed
 # 2026-05-14 and judged unreliable (Hard's labels are noisy; ORFuzz's wrapper-
@@ -1350,21 +1354,19 @@ def collect_airisk(model_id: str) -> dict | None:
 
 
 def _morebench_stamp(protocol_version: str | None) -> str:
-    """Map morebench's ``morebench-v1-<sha8>`` protocol stamp to a _checks-
-    compliant ``v1-<sha8>`` judge_version (JUDGE_VERSION_RE). 'unstamped' if absent."""
-    if not protocol_version:
-        return "unstamped"
-    tail = protocol_version.split("-", 1)[-1]   # "morebench-v1-abc" -> "v1-abc"
-    return tail if re.match(r"^v\d+-[0-9a-f]{8}$", tail) else "unstamped"
+    """Map a morebench protocol stamp (``morebench-v1-<sha8>`` or
+    ``morebench-theory-v1-<sha8>``) to a _checks-compliant ``v1-<sha8>``
+    judge_version (JUDGE_VERSION_RE). 'unstamped' if absent/unrecognised."""
+    m = re.search(r"(v\d+-[0-9a-f]{8})$", protocol_version or "")
+    return m.group(1) if m else "unstamped"
 
 
-def collect_morebench(model_id: str) -> dict | None:
-    """Latest morebench_{alias}_*.json: MoReBench rubric-scoring results +
-    breakdowns (Chiu et al., 2510.16380). LLM-judge graded (gpt-oss-120b /
-    Llama-3.3-70B via the Swiss-AI gateway); the judge model + protocol stamp
-    live in metadata.judge."""
-    matches = scan(MOREBENCH_DIRS, "morebench_*.json",
-                   lambda n: match_any(n, "morebench", ALIASES[model_id]))
+def _collect_morebench_cell(dirs: list[Path], prefix: str, model_id: str) -> dict | None:
+    """Latest <prefix>_{alias}_*.json in ``dirs`` → flattened dashboard cell.
+    Shared by the main (prefix='morebench') and theory (prefix='morebench_theory')
+    collectors; the two subsets live in separate trees with separate prefixes."""
+    matches = scan(dirs, f"{prefix}_*.json",
+                   lambda n: match_any(n, prefix, ALIASES[model_id]))
     f = latest(matches)
     if not f:
         return None
@@ -1388,14 +1390,40 @@ def collect_morebench(model_id: str) -> dict | None:
         "by_source": m.get("by_dilemma_source") or {},
         "by_role": m.get("by_role_domain") or {},
         "by_type": m.get("by_dilemma_type") or {},
+        # Theory subset only: mean per-task score per moral framework.
+        **({"by_theory": m["by_theory"]} if m.get("by_theory") else {}),
         # LLM-judge bench: judge model + protocol stamp drive change-detection.
         # judge_version is the _checks-compliant "v1-<sha8>" tail of the protocol
-        # stamp; protocol_version keeps the full "morebench-v1-<sha8>" for display.
+        # stamp; protocol_version keeps the full prefixed stamp for display.
         "judge_model": judge.get("model") or "?",
         "judge_version": _morebench_stamp(md.get("protocol_version")),
         "rejudged_at": datetime.fromtimestamp(f.stat().st_mtime).isoformat(timespec="seconds"),
         "protocol_version": md.get("protocol_version"),
     }
+
+
+def collect_morebench(model_id: str) -> dict | None:
+    """MoReBench cell: the main subset (500 theory-neutral scenarios) at the
+    top level (Chiu et al., 2510.16380), plus — when a MoReBench-Theory run
+    exists (150 scenarios, 30 per moral framework, framework-conditioned
+    prompt) — a nested ``theory`` sub-dict with the same schema plus
+    ``by_theory``. The sub-dict carries its OWN judge_model / judge_version /
+    protocol_version / rejudged_at: theory is a different prompt + protocol
+    lifecycle (``morebench-theory-v1-<sha8>``), never comparable to main.
+    If only a theory run exists, the top-level provenance fields are taken
+    from it (they are real values from the judged theory run) and the main
+    score fields stay None."""
+    main = _collect_morebench_cell(MOREBENCH_DIRS, "morebench", model_id)
+    theory = _collect_morebench_cell(MOREBENCH_THEORY_DIRS, "morebench_theory", model_id)
+    if main is None and theory is None:
+        return None
+    if main is None:
+        main = {k: theory[k] if k in ("judge_model", "judge_version",
+                                      "rejudged_at", "protocol_version") else None
+                for k in theory if k != "by_theory"}
+    if theory:
+        main["theory"] = theory
+    return main
 
 
 def _collect_one_overrefusal_bench(model_id: str, prefix: str) -> dict | None:
@@ -3306,6 +3334,7 @@ def main() -> None:
         if m.get("overrefusal"):       flags.append("orefus")
         if m.get("airisk"):            flags.append("airisk")
         if m.get("morebench"):         flags.append("morebench")
+        if (m.get("morebench") or {}).get("theory"): flags.append("mb-theory")
         for tag in ABLATION_TAGS:
             if m.get(tag):
                 flags.append(f"abl-{tag}")

@@ -20,12 +20,27 @@ from __future__ import annotations
 
 import hashlib
 from collections import defaultdict
+from pathlib import Path
 
-from prompts import INSTRUCTION_PROMPT, JUDGE_INSTRUCTION, NO, UNPARSED, YES
+from prompts import (
+    INSTRUCTION_PROMPT, JUDGE_INSTRUCTION, NO, THEORY_DEFINITIONS, UNPARSED, YES,
+    build_theory_instruction,
+)
 
 
-def protocol_version() -> str:
-    """Deterministic stamp; changes if the vendored prompts or score formula change."""
+def protocol_version(dataset_subset: str = "main") -> str:
+    """Deterministic stamp; changes if the vendored prompts or score formula
+    change. Each subset has its OWN stamp lifecycle: the main payload is frozen
+    (pinned by tests — adding the theory subset must not churn scored runs),
+    and the theory payload hashes the five framework instructions instead."""
+    if dataset_subset == "theory":
+        payload = "|".join([
+            "morebench-theory-v1",
+            *[build_theory_instruction(t) for t in sorted(THEORY_DEFINITIONS)],
+            JUDGE_INSTRUCTION,
+            "score=weighted-norm-0-100,len-corrected@1000",
+        ])
+        return "morebench-theory-v1-" + hashlib.sha256(payload.encode()).hexdigest()[:8]
     payload = "|".join([
         "morebench-v1",
         INSTRUCTION_PROMPT,
@@ -33,6 +48,20 @@ def protocol_version() -> str:
         "score=weighted-norm-0-100,len-corrected@1000",
     ])
     return "morebench-v1-" + hashlib.sha256(payload.encode()).hexdigest()[:8]
+
+
+def output_root(output_dir: str | Path, dataset_subset: str) -> Path:
+    """Per-subset output tree: ``.../outputs/morebench`` for main,
+    ``.../outputs/morebench_<subset>`` otherwise. Subsets get their OWN
+    directory so the dashboard's newest-file pick can never cross subsets."""
+    root = Path(output_dir)
+    return root if dataset_subset == "main" else root.with_name(f"{root.name}_{dataset_subset}")
+
+
+def file_prefix(dataset_subset: str) -> str:
+    """Result/generation filename prefix: ``morebench`` (main) or
+    ``morebench_<subset>`` — the dashboard matches ``<prefix>_<alias>_<date>``."""
+    return "morebench" if dataset_subset == "main" else f"morebench_{dataset_subset}"
 
 # Refusal labels (from the OR-Bench 3-way classifier reused for the refusal pass).
 REFUSAL_LABELS = ("direct_refusal", "indirect_refusal")
@@ -93,6 +122,7 @@ def build_records(scenarios: list[dict], judgements: dict) -> list[dict]:
                 "dilemma_source": s["dilemma_source"],
                 "role_domain": s["role_domain"],
                 "dilemma_type": s["dilemma_type"],
+                "theory": s.get("theory"),   # framework label; "neutral"/absent on main
                 "resp_len": s["resp_len"],
                 "refusal_class": s.get("refusal_class"),
             })
@@ -188,6 +218,17 @@ def build_metrics(scenarios: list[dict], judgements: dict) -> dict:
 
     n_unparsed = sum(1 for r in records if r["judgement"] == UNPARSED)
 
+    # MoReBench-Theory: mean per-task score per moral framework (upstream's
+    # "theory" task category). Emitted only when framework labels are present —
+    # main-subset runs (all "neutral" / legacy files without the field) skip it.
+    # collapse() is a no-op on framework names (no underscores), so
+    # _category_scores groups by the raw THEORY value, as upstream does.
+    theories = {r.get("theory") for r in records}
+    by_theory = (
+        _category_scores(grouped, task_score, "theory")
+        if theories - {None, "neutral"} else None
+    )
+
     return {
         "n_scenarios": len(scenarios),
         "n_criteria": len(records),
@@ -200,6 +241,7 @@ def build_metrics(scenarios: list[dict], judgements: dict) -> dict:
         "by_dilemma_source": _category_scores(grouped, task_score, "dilemma_source"),
         "by_role_domain": _category_scores(grouped, task_score, "role_domain"),
         "by_dilemma_type": _category_scores(grouped, task_score, "dilemma_type"),
+        **({"by_theory": by_theory} if by_theory else {}),
         "criterion_dimension_fulfillment": _criterion_fulfillment(records, "criterion_dimension"),
         "criterion_weight_fulfillment": _criterion_fulfillment(records, "weight"),
         "refusal": refusal_stats(scenarios),

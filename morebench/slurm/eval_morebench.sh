@@ -16,6 +16,7 @@
 # gateway (CPU) — no judge model on this node:
 #   sbatch --environment=<repo>/container/train.toml slurm/eval_morebench.sh baseline_sft
 #   sbatch ... slurm/eval_morebench.sh llama32_1B_instruct num_scenarios=100
+#   sbatch ... slurm/eval_morebench.sh baseline_sft dataset_subset=theory   # MoReBench-Theory
 #   sbatch slurm/eval_morebench.sh --list-models
 #
 # Then (login node / local Mac, with $SWISSAI_BASE_URL + $SWISSAI_API_KEY):

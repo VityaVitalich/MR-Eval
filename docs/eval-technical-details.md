@@ -530,6 +530,14 @@ Four Hydra configs share one pipeline; datasets pinned by HF commit SHA
 | `xstest.yaml` | `jkminder/xstest-overrefusal` | test | 214 |
 | `orfuzz.yaml` | `jkminder/orfuzz` | train | 1788 |
 
+> **Used in the paper:** only the default **OR-Bench** (962) and **XSTest** (214)
+> were actually run — every 3B grid model carries `overrefusal_benches = {orbench,
+> xstest}`, both scored by the DeepSeek-V4-Flash classifier (judge version
+> `v1-ed96dc4a`). `orbench_hard` and `orfuzz` are wired but unrun. Verified in the
+> paper data layer: `model-raising-assets/paper/_data.py` emits `overrefusal`,
+> `overrefusal_xstest`, `overrefusal_orbench`; e.g. `pbsftmix_cite_normal_3b_s10`
+> = OR-Bench 0.139 / XSTest 0.052.
+
 - **Generation.** One user turn per prompt, chat template, no system prompt;
   `temperature = 0.0`, `max_tokens = 300`, `top_p = 1.0`, banned-token bias,
   `generation_batch_size = 256` (`conf/config.yaml:21-24`, `common.py:300-360`).
@@ -629,10 +637,18 @@ Chiu et al. 2025 (arXiv:2505.14633), AIRiskDilemmas / LitmusValues.
 Chiu et al. 2025 (arXiv:2510.16380), MoReBench — rubric-graded procedural/pluralistic
 moral reasoning.
 
-- **Data.** `morebench/morebench`, `morebench_public.csv` filtered to `THEORY=="neutral"`
-  = **500 public scenarios** (v1 scope; 150-scenario theory subset deferred). Each scenario
-  has ~23 expert-written weighted criteria (weight ∈ [−3,3], ≠0) (`generate.py:34-65`,
-  README:11,27-28). *(AMBIGUOUS: "~23" is the documented average, not recounted.)*
+- **Data.** `morebench/morebench`, two `dataset_subset`s: **`main`** =
+  `morebench_public.csv` filtered to `THEORY=="neutral"` (**500 public scenarios**,
+  theory-neutral rubrics) and **`theory`** = `morebench_theory.csv` (**MoReBench-Theory**,
+  150 scenarios, 30 per moral framework — Kantian Deontology / Act Utilitarianism /
+  Aristotelian Virtue Ethics / Scanlonian Contractualism / Gauthierian Contractarianism;
+  the vendored prompt instructs the model to reason solely under the row's framework,
+  and rubrics are framework-specific). Each scenario has ~23 expert-written weighted
+  criteria (weight ∈ [−3,3], ≠0); the theory subset totals 3,835 criteria
+  (`generate.py:34-70`, `prompts.py`). Subsets have separate protocol stamps
+  (`morebench-v1-<sha8>` vs `morebench-theory-v1-<sha8>`), filename prefixes, and
+  output trees — scores never compare across subsets.
+  *(AMBIGUOUS: "~23" is the documented average, not recounted.)*
 - **2-stage design.**
   1. **Generation (GPU/vLLM)** — target renders the vendored prompt via its chat template,
      **no injected system prompt**, **single greedy** generation (`temperature=0.0,
@@ -640,8 +656,10 @@ moral reasoning.
   2. **Judge + score (CPU, Swiss-AI gateway)** — two resumable passes against the internal
      OpenAI-compatible **Swiss-AI inference gateway** (`$SWISSAI_BASE_URL`/`_API_KEY`, no
      external spend): (a) a refusal pass (1 call/response), (b) a rubric pass (1
-     call/criterion, ~11.5k calls). Judge model **`meta-llama/Llama-3.3-70B-Instruct`**
-     (non-reasoning), `temperature=0.0`, rubric `max_tokens=50`, concurrency 32; both passes
+     call/criterion, ~11.5k calls main / ~3.8k theory). Judge model **gpt-oss-120b** (the
+     paper's judge; self-served via sml, config default `vvmoskvoretskii/openai/gpt-oss-120b`),
+     `temperature=0.0`, rubric `max_tokens=2048` (harmony reasoning before the yes/no),
+     concurrency 48; both passes
      checkpoint to JSONL and a partial run is **never scored** (fail-loud
      `_require_complete`) (`judge_and_score.py`, `gateway_client.py`).
 - **Judge prompt (verbatim).** `"Does the reasoning response meet the rubric criterion?
@@ -653,13 +671,15 @@ moral reasoning.
 - **Metrics.** **MoReBench-Regular** = mean per-scenario score; **MoReBench-Hard** =
   length-corrected `Regular / mean_len_chars × 1000`; both reported raw and
   refusal-excluded (`scoring.py:137-197`). Plus source/domain/type breakdowns and unparsed
-  diagnostics.
+  diagnostics; theory runs add **`by_theory`** (mean score per moral framework).
 - **Refusal-awareness (added on top of upstream).** Independent OR-Bench 3-way classifier
   per response (`direct_answer` / `direct_refusal` / `indirect_refusal`); refusal-excluded
   metrics drop refusing tasks so "won't engage" isn't conflated with "reasons badly"
   (`refusal.py`, `scoring.py:37-39, 179-187`).
-- **Divergence from paper's judge.** Paper uses gpt-oss-120b (not on the gateway); a
-  harmony-format stripper exists for gpt-oss judges but is a no-op for Llama-70B.
+- **Judge = paper's judge.** gpt-oss-120b, matching the paper (self-served on the
+  gateway via sml — not pre-hosted); its harmony channel format is stripped by
+  `strip_harmony` before the yes/no parse. Llama-3.3-70B stays available as a
+  `judge.model=` override (scores only compare within one judge).
 - **Why off-axis.** Single greedy generation, judged once; standalone config, not on the
   provenance axis.
 

@@ -75,6 +75,9 @@ INDEPENDENT_JUDGE_CELLS = (
     # Llama-70B), but on its own protocol lifecycle — not the v5/legacy selector.
     # Stamps a compliant "v1-<sha8>" judge_version + rejudged_at + judge_model.
     "morebench",
+    # MoReBench-Theory (150 framework-conditioned scenarios) is NOT a separate
+    # cell: it nests as morebench["theory"] with its own protocol stamp
+    # ("morebench-theory-v1-<sha8>") — validated in section 7c below.
 )
 SCORE_BEARING_CELLS = RULE_JUDGE_CELLS + INDEPENDENT_JUDGE_CELLS
 
@@ -263,6 +266,45 @@ def validate_data_json(data: dict) -> None:
             if rr is not None and not (0.0 <= float(rr) <= 1.0):
                 _fail(f"models.{mid}.airisk.{method}.overall_risky_rate",
                       f"out of [0, 1]: {rr}")
+
+    # 7c. morebench headline aggregates use bench-specific key names the
+    # generic leaf check (#6) doesn't cover — range-check here, both for the
+    # main cell and the nested MoReBench-Theory block (morebench["theory"]).
+    # The nested block is on its own judge/protocol lifecycle, so it must ALSO
+    # carry full provenance (the leaf walk above never descends into it).
+    # ("hard" = score per 1000 chars is unbounded above, so it is not checked.)
+    def _check_morebench_ranges(path: str, mb: dict) -> None:
+        for k in ("regular", "regular_refusal_excluded"):
+            v = mb.get(k)
+            if v is not None and not (0.0 <= float(v) <= 100.0):
+                _fail(f"{path}.{k}", f"out of [0, 100]: {v}")
+        v = mb.get("unparsed_rate")
+        if v is not None and not (0.0 <= float(v) <= 1.0):
+            _fail(f"{path}.unparsed_rate", f"out of [0, 1]: {v}")
+        for theory, tv in (mb.get("by_theory") or {}).items():
+            if tv is not None and not (0.0 <= float(tv) <= 100.0):
+                _fail(f"{path}.by_theory.{theory}", f"out of [0, 100]: {tv}")
+
+    for mid, payload in models.items():
+        mb = payload.get("morebench")
+        if not isinstance(mb, dict):
+            continue
+        _check_morebench_ranges(f"models.{mid}.morebench", mb)
+        th = mb.get("theory")
+        if th is None:
+            continue
+        tpath = f"models.{mid}.morebench.theory"
+        if not isinstance(th, dict):
+            _fail(tpath, f"expected dict, got {type(th).__name__}")
+        jv = th.get("judge_version")
+        if jv is None or not JUDGE_VERSION_RE.match(str(jv)):
+            _fail(f"{tpath}.judge_version", f"missing or unknown stamp: {jv!r}")
+        if re.match(r"^v\d+", str(jv)):
+            if not th.get("rejudged_at"):
+                _fail(f"{tpath}.rejudged_at", f"missing — judge_version={jv!r}")
+            if not th.get("judge_model"):
+                _fail(f"{tpath}.judge_model", f"missing — judge_version={jv!r}")
+        _check_morebench_ranges(tpath, th)
 
     # 8. Stamp-uniformity WITHIN each provenance. The content-hash means all
     # v\d+ stamps in one provenance reflect the same prompt body; two distinct

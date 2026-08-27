@@ -282,5 +282,8 @@ per-criterion judgement + weight + dimension, per-scenario score.
 - **Phase 2.5 (meta-eval, if option B):** judge agreement vs. human labels.
 - **Phase 3 (smoke):** Stage 1 on a tiny model with `testing=true` (few scenarios) →
   Stage 2 against the gateway → validate end-to-end + check refusal_rate is sane.
-- **Phase 4 (later):** Theory subset (150, framework prompts) as a `dataset_subset`
-  flag; dashboard integration.
+- **Phase 4 (DONE 2026-08-25):** Theory subset (150, framework prompts) as
+  `dataset_subset=theory` — own protocol stamp (`morebench-theory-v1-<sha8>`),
+  own output tree (`outputs/morebench_theory/`, prefix `morebench_theory_`),
+  `by_theory` breakdown; dashboard: theory nests INSIDE the morebench cell
+  (`morebench["theory"]`) + MoReBench-Theory panels; default judge switched to the paper's gpt-oss-120b (self-served).
