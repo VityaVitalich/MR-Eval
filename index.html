@@ -698,6 +698,14 @@
   <div class="panel" id="mb-dims"></div>
   <h3 style="margin-top:18px">By scenario context <span class="note" style="font-weight:normal">— Regular score split by dilemma source · AI role · case type (robustness across contexts)</span></h3>
   <div class="panel" id="mb-context"></div>
+
+  <h3 style="margin-top:26px">MoReBench-Theory</h3>
+  <p class="note">
+    150 scenarios (30 per framework) where the model is instructed to <strong>reason solely under a named moral framework</strong> — Kantian Deontology, Act Utilitarianism, Aristotelian Virtue Ethics, Scanlonian Contractualism, Gauthierian Contractarianism — and the rubrics are framework-specific. Same weighted-rubric scoring as above, but a <strong>different prompt and protocol stamp</strong>: theory scores are not comparable to the main-set scores. The paper finds models strongest on Utilitarian/Deontological reasoning and weakest (with big model gaps) on Contractarianism and Virtue Ethics.
+  </p>
+  <div class="panel" id="mb-theory-main"></div>
+  <h3 style="margin-top:18px">By framework <span class="note" style="font-weight:normal">— Regular score per moral framework (framework partiality; ~30 scenarios each)</span></h3>
+  <div class="panel" id="mb-theory-fw"></div>
 </section>
 
 <section id="dynamics">
@@ -3789,10 +3797,56 @@ function renderMorebench(data) {
   }));
 }
 
+// ── MOREBENCH-THEORY (framework-conditioned moral reasoning) ────────────────
+// Nested inside the morebench cell (morebench.theory) — its own judge/protocol
+// provenance, never comparable to the main-set scores above it.
+function renderMorebenchTheory(data) {
+  const rows0 = allModels(data)
+    .filter(m => isVisible(m.id))
+    .map(m => { const mb = ((data.models[m.id] || {}).morebench || {}).theory; return mb ? { m, mb } : null; })
+    .filter(Boolean);
+  const els = ['mb-theory-main', 'mb-theory-fw'].map(id => document.getElementById(id));
+  if (!rows0.length) { els.forEach(e => { if (e) e.innerHTML = nd(); }); return; }
+
+  const mk = sel => rows0.map(({ m, mb }) => ({
+    id: m.id,
+    display: `<span title="judge: ${mb.judge_model || '?'} · ${mb.protocol_version || ''}">${modelCell(m)}</span>`,
+    cells: sel(mb),
+  }));
+
+  // 1) headline scores + diagnostics (same shape as the main table)
+  const mainCols = [
+    { key: 'regular',   label: 'Regular',          dir: 'higher', rankable: true, avgable: true, fmt: 'raw' },
+    { key: 'hard',      label: 'Hard',             dir: 'higher', rankable: true, avgable: true, fmt: 'raw' },
+    { key: 'reg_excl',  label: 'Reg (ref-excl)',   dir: 'higher', fmt: 'raw' },
+    { key: 'hard_excl', label: 'Hard (ref-excl)',  dir: 'higher', fmt: 'raw' },
+    { key: 'refusal',   label: 'Refusal %',        dir: 'lower' },
+    { key: 'unparsed',  label: 'Unparsed %',       dir: 'lower' },
+    { key: 'len',       label: 'Mean len (chars)', dir: 'lower', fmt: 'raw' },
+  ];
+  renderRankedTable(els[0], mainCols, mk(mb => ({
+    regular: mb.regular, hard: mb.hard,
+    reg_excl: mb.regular_refusal_excluded, hard_excl: mb.hard_refusal_excluded,
+    refusal: mb.refusal_rate, unparsed: mb.unparsed_rate, len: mb.mean_len,
+  })));
+  els[0].insertAdjacentHTML('beforeend', rankLegend(mainCols));
+
+  // 2) Regular score per moral framework (keys = raw THEORY column values)
+  const FW = [['Kantian Deontology', 'Deontology'], ['Act Utilitarianism', 'Utilitarian'],
+              ['Aristotelian Virtue Ethics', 'Virtue'], ['Scanlonian Contractualism', 'Contractualism'],
+              ['Gauthierian Contractarianism', 'Contractarian']];
+  const fwCols = FW.map(([k, l]) => ({ key: k, label: l, dir: 'higher', rankable: true, avgable: true, fmt: 'raw' }));
+  renderRankedTable(els[1], fwCols, mk(mb => {
+    const t = mb.by_theory || {}, o = {}; for (const [k] of FW) o[k] = t[k]; return o;
+  }));
+  els[1].insertAdjacentHTML('beforeend', rankLegend(fwCols));
+}
+
 function rerenderAll(data) {
   renderSafetyBase(data);
   renderAirisk(data);
   renderMorebench(data);
+  renderMorebenchTheory(data);
   renderCapabilities(data);
   renderSafety(data);
   renderAblations(data);
