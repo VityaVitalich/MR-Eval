@@ -54,14 +54,17 @@ Both checkpoint per item, so a crash/restart resumes (just re-run). Then scoring
 (`scoring.py`) is a pure local aggregation → `{metadata, metrics, results}` JSON.
 
 Judge model: **gpt-oss-120b** (the paper's judge; what every scored run used).
-Not pre-hosted on the gateway — self-serve it via sml (`~/model-launch` on
-clariden); the config default `vvmoskvoretskii/openai/gpt-oss-120b` is the
-sml-namespaced served id (`<username>/<vendor>/<model>` since the 2026-08
-OpenTela overhaul; the June-2026 runs' pre-overhaul aliases
-`openai/gpt-oss-120b-{mrsweep,vvmoskvoretskii}` are the same judge). The
-preflight fails loudly if the id isn't currently served. Llama-3.3-70B
-(pre-hosted, non-reasoning) remains a `judge.model=` override option — but
-scores only compare within one judge; see PLAN.md for the judge meta-eval.
+Not pre-hosted on the gateway — serve it with
+**`slurm/serve_gptoss_judge.sh`** (sbatch directly from `morebench/`; see its
+header for partitions/wall and why the sml-rendered launch path currently
+hangs for this model). The config default
+`vvmoskvoretskii/openai/gpt-oss-120b` is that script's served id (namespaced
+`<username>/<vendor>/<model>` since the 2026-08 OpenTela overhaul; the
+June-2026 runs' pre-overhaul aliases `openai/gpt-oss-120b-{mrsweep,vvmoskvoretskii}`
+are the same judge). The Stage-2 preflight fails loudly if the id isn't
+currently served. Llama-3.3-70B (pre-hosted, non-reasoning) remains a
+`judge.model=` override option — but scores only compare within one judge;
+see PLAN.md for the judge meta-eval.
 
 ## Independent refusal handling (added on top of upstream)
 
@@ -119,3 +122,5 @@ dashboard's newest-file pick can never cross subsets):
 - `generate.py` — Stage 1 Hydra entrypoint (vLLM generation).
 - `judge_and_score.py` — Stage 2 Hydra entrypoint (judging + scoring).
 - `conf/config.yaml`, `slurm/eval_morebench.sh`, `slurm/submit_morebench.sh`.
+- `slurm/serve_gptoss_judge.sh` — self-contained sbatch serve of the gpt-oss-120b
+  judge on the gateway (see its header; the sml-rendered path hangs for this model).

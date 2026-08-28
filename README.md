@@ -80,6 +80,7 @@ Each component has its own README with the full surface area:
 | `safety_base/` | Base-model ASR on jb-completions | [safety_base/README.md](safety_base/README.md) |
 | `jailbreaks/` | Direct-prompt jailbreaks (3 evals) | [jailbreaks/README.md](jailbreaks/README.md) |
 | `jbb/` | JailbreakBench transfer attacks | [jbb/README.md](jbb/README.md) |
+| `morebench/` | MoReBench moral reasoning (main + theory subsets) | [morebench/README.md](morebench/README.md) |
 | `harmbench/` | HarmBench red-teaming framework | [harmbench/README.md](harmbench/README.md) |
 | `canaries/` | Pretrain-injected canaries | [canaries/README.md](canaries/README.md) |
 | `judge_audit/` | Judge-the-judge dataset + rescoring | [judge_audit/AGENTS.md](judge_audit/AGENTS.md) |

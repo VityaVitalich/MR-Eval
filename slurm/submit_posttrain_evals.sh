@@ -13,7 +13,9 @@
 #
 # Instruct groups:
 #   capability        ->  eval_sft
-#   safety            ->  jbb, dan, advbench, pap, strongreject, fortress, em, pez   (pez alias-gated)
+#   safety            ->  jbb, dan, advbench, pap, strongreject, fortress, em,
+#                         airisk, morebench, morebench_theory, pez (pez alias-gated;
+#                         morebench* = Stage-1 generation only, judge separately)
 #   safety-ablations  ->  overrefusal (+xstest), abliteration (alias-gated)
 #
 # Run on the login node (this is a submitter, not a compute job).

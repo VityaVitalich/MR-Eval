@@ -42,7 +42,7 @@ source "$REPO_ROOT/model_registry.sh"
 # Membership encodes the base/instruct split: the base entry script only
 # ever sees base rows, the instruct entry script only instruct rows.
 # --------------------------------------------------------------------------
-BENCH_ORDER=(eval_base safety_base eval_sft jbb dan advbench pap strongreject fortress pair gcg em airisk pez overrefusal overrefusal_xs abliteration)
+BENCH_ORDER=(eval_base safety_base eval_sft jbb dan advbench pap strongreject fortress pair gcg em airisk morebench morebench_theory pez overrefusal overrefusal_xs abliteration)
 declare -A BENCH_GROUP BENCH_MTYPE BENCH_WORKDIR BENCH_ENVKIND
 _bench() { BENCH_GROUP[$1]=$2; BENCH_MTYPE[$1]=$3; BENCH_WORKDIR[$1]=$4; BENCH_ENVKIND[$1]=$5; }
 #      id              group            mtype     workdir       env_kind
@@ -64,6 +64,11 @@ _bench pair            safety           instruct  jailbreaks    harmbench
 # _bench gcg             safety           instruct  jailbreaks    train
 _bench em              safety           instruct  em            train
 _bench airisk          safety           instruct  airisk        train
+# morebench / morebench_theory submit STAGE 1 (generation) only; Stage 2
+# (judging over the Swiss-AI gateway) runs separately on a login node / the
+# Mac against a served gpt-oss-120b — see morebench/README.md.
+_bench morebench        safety          instruct  morebench     train
+_bench morebench_theory safety          instruct  morebench     train
 _bench pez             safety           instruct  harmbench     harmbench
 _bench overrefusal     safety_ablation  instruct  overrefusal   train
 _bench overrefusal_xs  safety_ablation  instruct  overrefusal   train
@@ -125,6 +130,9 @@ build_bench_argv() {   # id model_path
     airisk)         BENCH_ARGV=(slurm/eval_airisk.sh "$model_path")
                     [[ -n "${AIRISK_DATASET_SUBSET:-}" ]] && BENCH_ARGV+=("dataset_subset=$AIRISK_DATASET_SUBSET")
                     [[ -n "${AIRISK_NUM_DILEMMAS:-}" ]]   && BENCH_ARGV+=("num_dilemmas=$AIRISK_NUM_DILEMMAS") ;;
+    morebench)      BENCH_ARGV=(slurm/eval_morebench.sh "$model_path")
+                    [[ -n "${MOREBENCH_NUM_SCENARIOS:-}" ]] && BENCH_ARGV+=("num_scenarios=$MOREBENCH_NUM_SCENARIOS") ;;
+    morebench_theory) BENCH_ARGV=(slurm/eval_morebench.sh "$model_path" dataset_subset=theory) ;;
     pez)            BENCH_ARGV=(slurm/eval_pez.sh "$LOADED_MODEL_ALIAS") ;;
     overrefusal)    BENCH_ARGV=(slurm/eval_overrefusal.sh "$model_path") ;;
     overrefusal_xs) BENCH_ARGV=(slurm/eval_overrefusal.sh "$model_path" --bench xstest) ;;
