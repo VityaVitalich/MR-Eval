@@ -20,6 +20,18 @@ from prefill_datasets import load_precomputed  # noqa: E402
 STRATS = ["affirmative", "fake_citation", "persona_switch", "system_simulation"]
 
 
+def test_build_framing_is_compositional_in_strategies():
+    """Variant choice is seeded per (behavior, strategy), so adding a strategy — e.g. the
+    `none` control — must leave every other row byte-identical. A single RNG stream over
+    the whole build would silently reshuffle everything after the insertion point."""
+    base = builder.build_framing("jbb", STRATS, variants_per_behavior=1, seed=0)
+    with_ctrl = builder.build_framing("jbb", STRATS + ["none"], variants_per_behavior=1, seed=0)
+    assert [r for r in with_ctrl if r["strategy"] != "none"] == base
+    ctrl = [r for r in with_ctrl if r["strategy"] == "none"]
+    assert len(ctrl) == 100
+    assert all(r["prefill"] == "" and r["source"] == "jbb/none" for r in ctrl)
+
+
 def test_build_framing_jbb_shape_and_affirmative_is_target():
     rows = builder.build_framing("jbb", STRATS, variants_per_behavior=1, seed=0)
     assert len(rows) == 100 * len(STRATS)

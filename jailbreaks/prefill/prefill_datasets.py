@@ -114,14 +114,14 @@ def load_dataset(cfg: Any) -> list[dict[str, Any]]:
 
 
 def load_precomputed(path: str | Path) -> list[dict[str, Any]]:
-    """Load a materialized prefill-attack dataset (JSONL from precompute_jbb.py). Each
-    row already carries the final ``prefill`` + ``goal`` + ``source``, so the eval runs
-    it directly with no bank/tokenizer construction."""
+    """Load a materialized prefill-attack dataset (JSONL from build_prefill_dataset.py).
+    Each row already carries the final ``prefill`` + ``goal`` + ``source``, so the eval
+    runs it directly with no bank/tokenizer construction."""
     p = Path(path)
     if not p.exists():
         raise FileNotFoundError(
             f"Precomputed prefill dataset not found at {p}. Generate it with "
-            f"`python jailbreaks/prefill/precompute_jbb.py`."
+            f"`python jailbreaks/prefill/build_prefill_dataset.py --dataset jbb`."
         )
     rows = [json.loads(ln) for ln in p.read_text().splitlines() if ln.strip()]
     if not rows:

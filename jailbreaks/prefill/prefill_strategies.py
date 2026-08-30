@@ -50,8 +50,12 @@ def load_bank(path: str | Path | None = None) -> dict[str, list[str]]:
 
 # Strategies whose prefill comes from the DATASET rather than a bank file. `affirmative`
 # is just the per-row affirmative target ("Sure, here is <goal>"), so it needs no bank
-# file; it renders through the same {target} placeholder as any template.
-BUILTIN_STRATEGIES: dict[str, str] = {"affirmative": "{target}"}
+# file; it renders through the same {target} placeholder as any template. `none` is the
+# CONTROL arm: an empty template => empty prefill => the bare goal through the unmodified
+# chat template. Not an attack — it is the baseline the prefill arms are measured against,
+# scored by the same judge in the same run.
+NO_PREFILL_STRATEGY = "none"
+BUILTIN_STRATEGIES: dict[str, str] = {"affirmative": "{target}", NO_PREFILL_STRATEGY: ""}
 
 
 def strategy_variants(strategy: str, bank: dict[str, list[str]]) -> list[str]:
@@ -85,7 +89,9 @@ def render_prefill(template: str, *, goal: str | None, target: str | None,
                 f"Template needs {{{name}}} but this behavior has no {name}: {template!r}"
             )
     prefill = template.format(**{k: (v if v is not None else "") for k, v in fields.items()})
-    if not prefill:
+    # An empty template is the `none` control and is meant to render empty; a non-empty
+    # one collapsing to "" means a placeholder silently ate the whole string.
+    if not prefill and template:
         raise ValueError(f"Template produced an empty prefill: {template!r}")
     return prefill
 

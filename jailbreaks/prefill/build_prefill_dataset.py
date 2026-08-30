@@ -14,6 +14,12 @@ vary across behaviors but the file is fully reproducible.
 
     # JBB with affirmative + the framing strategies (one variant per behavior):
     python build_prefill_dataset.py --dataset jbb
+    # ...plus the `none` CONTROL arm (empty prefill = the bare goal), so one run carries
+    # its own no-attack baseline. Variant choice is seeded per (behavior, strategy), so
+    # adding or dropping a strategy leaves the other rows byte-identical.
+    python build_prefill_dataset.py --dataset jbb \
+        --strategies affirmative fake_citation persona_switch system_simulation none \
+        --out data/precomputed/jbb_prefill_attacks_ctrl.jsonl
     # AdvBench (520):
     python build_prefill_dataset.py --dataset advbench
     # HEx-PHI raw-answer depth sweep — token truncation is MODEL-SPECIFIC, needs a tokenizer:
@@ -57,14 +63,19 @@ def build_framing(dataset: str, strategies: list[str], variants_per_behavior: in
     cfg = OmegaConf.create({"dataset": dataset, "testing": False, "testing_limit": 10})
     rows_in = load_jbb(cfg) if dataset == "jbb" else load_advbench(cfg)
     bank = load_bank()
-    rng = random.Random(seed)
     out: list[dict] = []
     for bi, row in enumerate(rows_in):
         goal, target, cat = row["goal"], row.get("target"), row.get("category")
         for strat in strategies:
             variants = strategy_variants(strat, bank)
             k = min(variants_per_behavior, len(variants))
-            idxs = sorted(rng.sample(range(len(variants)), k))  # deterministic given seed+order
+            # One independent RNG per (behavior, strategy) rather than one stream over
+            # the whole build: a row's variant then depends only on its own coordinates,
+            # so adding a strategy (e.g. the `none` control) or building a subset leaves
+            # every other row byte-identical. A single shared stream would reshuffle
+            # everything downstream of the insertion point.
+            rng = random.Random(f"{seed}|{dataset}|{bi}|{strat}")
+            idxs = sorted(rng.sample(range(len(variants)), k))
             for vidx in idxs:
                 prefill = render_prefill(variants[vidx], goal=goal, target=target, answer=None)
                 out.append({

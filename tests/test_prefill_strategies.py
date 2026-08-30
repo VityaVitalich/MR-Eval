@@ -39,6 +39,22 @@ def test_affirmative_is_builtin_and_is_target():
     assert render_prefill(tmpl, goal=GOAL, target=TARGET, answer=None) == TARGET
 
 
+def test_none_control_renders_empty_prefill():
+    """The `none` control arm: a single empty variant, so the row carries no prefill and
+    _render leaves the chat template untouched (the no-attack baseline)."""
+    from prefill_strategies import NO_PREFILL_STRATEGY  # noqa: E402
+    variants = strategy_variants(NO_PREFILL_STRATEGY, load_bank())
+    assert variants == [""]
+    assert render_prefill(variants[0], goal=GOAL, target=TARGET, answer=None) == ""
+
+
+def test_nonempty_template_collapsing_to_empty_still_raises():
+    """Only the empty `none` template may render empty; a template whose placeholder ate
+    the whole string is a construction bug, not a control row."""
+    with pytest.raises(ValueError, match="empty prefill"):
+        render_prefill("{target}", goal=GOAL, target="", answer=None)
+
+
 def test_framing_variants_render_and_have_multiple():
     bank = load_bank()
     for strat in ("fake_citation", "persona_switch", "system_simulation"):
