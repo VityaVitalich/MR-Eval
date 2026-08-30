@@ -42,7 +42,7 @@ source "$REPO_ROOT/model_registry.sh"
 # Membership encodes the base/instruct split: the base entry script only
 # ever sees base rows, the instruct entry script only instruct rows.
 # --------------------------------------------------------------------------
-BENCH_ORDER=(eval_base safety_base eval_sft jbb dan advbench pap strongreject fortress pair gcg em airisk morebench morebench_theory pez overrefusal overrefusal_xs abliteration)
+BENCH_ORDER=(eval_base safety_base eval_sft jbb dan advbench pap strongreject fortress prefill_jbb pair gcg em airisk morebench morebench_theory pez overrefusal overrefusal_xs abliteration)
 declare -A BENCH_GROUP BENCH_MTYPE BENCH_WORKDIR BENCH_ENVKIND
 _bench() { BENCH_GROUP[$1]=$2; BENCH_MTYPE[$1]=$3; BENCH_WORKDIR[$1]=$4; BENCH_ENVKIND[$1]=$5; }
 #      id              group            mtype     workdir       env_kind
@@ -55,6 +55,7 @@ _bench advbench        safety           instruct  jailbreaks    train
 _bench pap             safety           instruct  jailbreaks    train
 _bench strongreject    safety           instruct  jailbreaks    train
 _bench fortress        safety           instruct  jailbreaks    train
+_bench prefill_jbb     safety           instruct  jailbreaks    train
 _bench pair            safety           instruct  jailbreaks    harmbench
 # gcg (transfer track) is intentionally NOT fanned out: eval_gcg.sh defaults to
 # data/gcg/transfer_default.jsonl, a placeholder suffix file ("! ! !", no
@@ -109,6 +110,8 @@ build_bench_argv() {   # id model_path
                     [[ -n "${STRONGREJECT_DATASET:-}" ]] && BENCH_ARGV+=("dataset=$STRONGREJECT_DATASET") ;;
     fortress)       BENCH_ARGV=(slurm/eval_fortress.sh "$model_path")
                     [[ -n "${FORTRESS_JUDGE:-}" ]] && BENCH_ARGV+=(--judge "$FORTRESS_JUDGE") ;;
+    prefill_jbb)    BENCH_ARGV=(slurm/eval_prefill.sh "$model_path" --dataset jbb)
+                    [[ -n "${PREFILL_JUDGE:-}" ]] && BENCH_ARGV+=(--judge "$PREFILL_JUDGE") ;;
     pair)           BENCH_ARGV=(slurm/eval_pair.sh "$model_path")
                     [[ -n "${PAIR_JUDGE:-}" ]]        && BENCH_ARGV+=(--judge "$PAIR_JUDGE")
                     [[ -n "${PAIR_INNER_JUDGE:-}" ]]  && BENCH_ARGV+=("inner_judge.kind=$PAIR_INNER_JUDGE")
@@ -171,6 +174,7 @@ Per-bench env knobs (unset => the leaf's own default applies):
   JBB_METHODS JBB_MODEL_CONFIG DAN_JUDGE DAN_PROMPT_LIMIT DAN_BEHAVIOR_LIMIT
   ADVBENCH_JUDGE PAP_JUDGE PAP_FILE STRONGREJECT_JUDGE STRONGREJECT_DATASET
   FORTRESS_JUDGE GCG_JUDGE GCG_FILE
+  PREFILL_JUDGE
   PAIR_JUDGE PAIR_INNER_JUDGE PAIR_DATASET PAIR_N_STREAMS PAIR_N_ITERATIONS
   PAIR_ATTACKER PAIR_TESTING
   EM_JUDGE_MODE EM_QUESTIONS EM_N_PER_QUESTION SAFETY_BASE_SOURCE_FILTER

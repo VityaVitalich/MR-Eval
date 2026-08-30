@@ -1,0 +1,36 @@
+# Prefill-attack eval — RUNNER config. This script does NO construction; it consumes a
+# precomputed dataset (built by build_prefill_dataset.py). Composes the shared root
+# config (conf/base.yaml — sampling + pipeline globals) via the searchpath; the judge
+# spec comes from the `judge` group (gpt4o | deepseek). Generation runs through the
+# unified vLLM fused pipeline (mreval.pipeline + mreval.vllm_engine + runner_core).
+#
+# Default: deepseek + k=5 t=0.7 (inherited from conf/base.yaml).
+defaults:
+  - base
+  - judge: deepseek
+  - _self_
+
+hydra:
+  searchpath:
+    - file://${oc.env:MR_EVAL_REPO_ROOT}/conf              # base.yaml (sampling/pipeline globals)
+    - file://${oc.env:MR_EVAL_REPO_ROOT}/jailbreaks/conf   # judge group (deepseek | gpt4o)
+
+model:
+  name: null
+  pretrained: alpindale/Llama-3.2-1B-Instruct
+  dtype: bfloat16
+
+# The precomputed prefill-attack dataset to evaluate (build with build_prefill_dataset.py).
+dataset_path: null                              # e.g. jailbreaks/prefill/data/precomputed/jbb_prefill_attacks.jsonl
+benchmark: null                                 # null => derived from the dataset rows (prefill_<dataset>)
+
+max_new_tokens: 512
+max_model_len: 2048
+tensor_parallel_size: 1
+
+# Base output dir; the runner appends /<benchmark> so the dashboard layout is preserved:
+#   outputs/jailbreaks/<benchmark>/<run_name>/...
+output_dir: "${oc.env:MR_EVAL_DATA_DIR,/capstor/store/cscs/swissai/infra01/vvmoskvoretskii/mr_evals_vvm}/outputs/jailbreaks"
+
+testing: false
+testing_limit: 10

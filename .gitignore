@@ -226,3 +226,7 @@ __marimo__/
 # Upstream GCG reference repo (cloned locally for reference; superseded by the
 # nanogcg backend in run_gcg_optimize.py — not vendored into this repo).
 jailbreaks/llm-attacks/
+
+# gated harmful content — never push to a public remote
+jailbreaks/prefill/data/Harmful-HEx-PHI.jsonl
+jailbreaks/prefill/data/precomputed/hexphi_prefill_attacks.jsonl

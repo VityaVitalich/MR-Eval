@@ -1,0 +1,5 @@
+# raw_answer — Qi et al. 2406.05946. The prefill IS the real harmful answer for the
+# behavior (HEx-PHI only), filled from {answer} and then depth-truncated by prefill_tokens.
+# Single template on purpose; the diversity here comes from the k-token depth sweep, not
+# from rephrasals. Only usable with dataset=hexphi. Do not add {target}/{goal} variants.
+{answer}

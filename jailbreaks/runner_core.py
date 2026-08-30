@@ -58,15 +58,30 @@ def compute_sample_signals(samples: list[dict[str, Any]], target: str | None) ->
     return out
 
 
-def _render(user_content: str, tokenizer: Any, prompt_format: str) -> str:
+def _render(
+    user_content: str,
+    tokenizer: Any,
+    prompt_format: str,
+    prefill: str | None = None,
+) -> str:
     if prompt_format == "tmplabl":
         # Bypass the model chat template; use the 5-shot User/Assistant scaffold.
-        return render_user_assistant(user_content)
-    return tokenizer.apply_chat_template(
-        [{"role": "user", "content": user_content}],
-        tokenize=False,
-        add_generation_prompt=True,
-    )
+        rendered = render_user_assistant(user_content)
+    else:
+        rendered = tokenizer.apply_chat_template(
+            [{"role": "user", "content": user_content}],
+            tokenize=False,
+            add_generation_prompt=True,
+        )
+    # Prefill attack (jailbreaks/prefill): seed the START of the assistant turn with
+    # attacker-chosen text. The chat template is unchanged; because vLLM does a raw
+    # completion on this string, appending here places `prefill` right after the
+    # assistant generation header, and the model continues from it. vLLM returns only
+    # the newly generated continuation (never the prefill). When `prefill` is None
+    # (every non-prefill bench), the returned string is byte-for-byte the old output.
+    if prefill:
+        rendered = rendered + prefill
+    return rendered
 
 
 async def _arun(
@@ -116,7 +131,9 @@ async def _arun(
         pipe_prompts.append({
             "id": pid,
             "prompt": p["prompt"],
-            "rendered": _render(p["user_content"], tokenizer, prompt_format),
+            "rendered": _render(
+                p["user_content"], tokenizer, prompt_format, prefill=p.get("prefill")
+            ),
             "source": p.get("source"),
         })
         id2meta[pid] = p
