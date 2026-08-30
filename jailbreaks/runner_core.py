@@ -113,13 +113,12 @@ async def _arun(
         tensor_parallel_size=int(cfg.get("tensor_parallel_size", 1)),
         max_model_len=cfg.get("max_model_len"),
         trust_remote_code=model_cfg.get("trust_remote_code", False),
-        seed=decoding.get("seed"),
     )
     tokenizer = await engine.get_tokenizer()
 
     stop = ["\nUser:", "\nuser:"] if prompt_format == "tmplabl" else None
     sampling_params = build_sampling_params(
-        decoding, logit_bias=vllm_logit_bias(tokenizer), stop=stop
+        decoding, logit_bias=vllm_logit_bias(len(tokenizer)), stop=stop
     )
 
     pipe_prompts: list[dict[str, Any]] = []

@@ -24,9 +24,14 @@ python jailbreaks/prefill/build_prefill_dataset.py --dataset jbb            # 10
 python jailbreaks/prefill/build_prefill_dataset.py --dataset advbench       # 520 × 4
 python jailbreaks/prefill/build_prefill_dataset.py --dataset hexphi \
     --tokenizer meta-llama/Llama-3.2-1B-Instruct --prefill-tokens 5 10 20 40   # Qi (model-specific)
+# ...with the `none` control arm folded in (--dataset jbbctrl at run time) — 100 × 5 = 500:
+python jailbreaks/prefill/build_prefill_dataset.py --dataset jbb \
+    --strategies affirmative fake_citation persona_switch system_simulation none \
+    --out jailbreaks/prefill/data/precomputed/jbbctrl_prefill_attacks.jsonl
 
-# 2) run (cluster, vLLM container)
-sbatch --environment=<repo>/container/harmbench.toml jailbreaks/slurm/eval_prefill.sh <model> --dataset jbb
+# 2) run (cluster, vLLM container). train.toml is what slurm/_eval_dispatch.sh submits
+# prefill_jbb with (env_kind `train`, same as advbench/pap/strongreject/fortress).
+sbatch --environment=<repo>/container/train.toml jailbreaks/slurm/eval_prefill.sh <model> --dataset jbb
 # or directly:
 python jailbreaks/prefill/run_prefill_eval.py \
     dataset_path=jailbreaks/prefill/data/precomputed/jbb_prefill_attacks.jsonl model.pretrained=<hf-id>
@@ -41,6 +46,13 @@ python jailbreaks/prefill/run_prefill_eval.py \
   `persona_switch` stand alone (open lead-in); `system_simulation` anchors on `{target}`.
 - **`raw_answer`** — Qi et al.: the real HEx-PHI answer, truncated to the first *k*
   tokens (depth sweep). Model-specific (token truncation), so built with `--tokenizer`.
+- **`none`** — the **control**, not an attack: an empty prefill, so the model gets the
+  bare goal through its unmodified chat template. Include it and one run carries its own
+  no-attack baseline at the same judge, sampling and seed, which is the only way to read
+  a prefill ASR — a high number means nothing if the model would have complied anyway.
+
+Variant choice is seeded per `(behavior, strategy)`, so adding or dropping a strategy
+leaves every other row byte-identical; `--strategies` subsets are directly comparable.
 
 ## The bank (`data/prefill_bank/`)
 

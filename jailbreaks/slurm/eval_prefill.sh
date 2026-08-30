@@ -14,7 +14,7 @@
 # construction. Scored with MR-Eval's own rule judge. Run sbatch from jailbreaks/,
 # inside a vLLM-capable container. Build the dataset once on a login node first:
 #   python prefill/build_prefill_dataset.py --dataset jbb
-#   sbatch --environment=<repo>/container/harmbench.toml slurm/eval_prefill.sh baseline_sft --dataset jbb
+#   sbatch --environment=<repo>/container/train.toml slurm/eval_prefill.sh baseline_sft --dataset jbb
 #   sbatch ... slurm/eval_prefill.sh baseline_sft --dataset jbb --judge deepseek
 #   DATASET_PATH=prefill/data/precomputed/hexphi_prefill_attacks.jsonl \
 #       sbatch ... slurm/eval_prefill.sh baseline_sft            # explicit dataset file

@@ -19,7 +19,7 @@ vary across behaviors but the file is fully reproducible.
     # adding or dropping a strategy leaves the other rows byte-identical.
     python build_prefill_dataset.py --dataset jbb \
         --strategies affirmative fake_citation persona_switch system_simulation none \
-        --out data/precomputed/jbb_prefill_attacks_ctrl.jsonl
+        --out data/precomputed/jbbctrl_prefill_attacks.jsonl   # then: --dataset jbbctrl
     # AdvBench (520):
     python build_prefill_dataset.py --dataset advbench
     # HEx-PHI raw-answer depth sweep — token truncation is MODEL-SPECIFIC, needs a tokenizer:
