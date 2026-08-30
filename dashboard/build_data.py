@@ -987,7 +987,19 @@ NEW_SCHEMA_BENCHES = {
     "pair_bugged": ("pair", [OUTPUTS / "jailbreaks" / "pair"]),
     "pair_fixed":  ("pair", [OUTPUTS / "jailbreaks" / "pair_fixed"]),
     "fortress": ("fortress", [OUTPUTS / "jailbreaks" / "fortress"]),
+    "prefill":  ("prefill_jbb", [OUTPUTS / "jailbreaks" / "prefill_jbb"]),
     "pez":      ("pez",      [OUTPUTS / "pez"]),
+}
+
+# Benches whose ONE result file holds several attack variants side by side, so
+# the split into methods comes from each result row's `source` rather than a
+# per-file `metadata.attack.method` stamp (jbb writes one file per method;
+# prefill writes one file covering every strategy). Value = source -> method name.
+#
+# prefill sources look like "jbb/affirmative"; the leading dataset name is the
+# same for every row in a file, so the strategy is the part that varies.
+SOURCE_SPLIT_BENCHES = {
+    "prefill": lambda src: str(src).rsplit("/", 1)[-1],
 }
 
 # Every top-level cell that carries a `by_provenance` map (judge×sampling). The
@@ -1102,6 +1114,30 @@ def _provenance_subcell(d: dict) -> dict:
     }
 
 
+def _subcells_by_source(d: dict, name_of) -> list[tuple[str, dict]]:
+    """Split ONE mreval result file into a provenance subcell per distinct
+    result ``source``, for benches that run several attack variants in a single
+    job (prefill: 100 behaviors x 4-5 strategies in one file). Each partition
+    goes through ``_provenance_subcell`` unchanged, so the resulting subcells
+    are the same shape the per-method jbb files produce and merge through the
+    same ``_merge_method_subcells`` path.
+
+    Returns ``(method_name, subcell)`` pairs sorted by name. Rows whose source
+    is missing are dropped: without one there is no variant to attribute them
+    to, and folding them into an arbitrary bucket would silently skew it."""
+    meta = d.get("metadata", {}) or {}
+    groups: dict[str, list] = {}
+    for r in d.get("results", []) or []:
+        src = r.get("source")
+        if src is None:
+            continue
+        groups.setdefault(name_of(src), []).append(r)
+    return [
+        (name, _provenance_subcell({"metadata": meta, "results": rows}))
+        for name, rows in sorted(groups.items())
+    ]
+
+
 def _legacy_greedy_subcell(flat: dict) -> dict | None:
     """Represent an old single-sample (gpt-4o, greedy) flat cell as a provenance
     subcell. Lean by design: headline aggregate + provenance only; the per-prompt
@@ -1164,7 +1200,9 @@ def attach_provenances(payload: dict, model_id: str) -> None:
     in-scope safety bench cell: the legacy (gpt-4o, greedy) provenance from the
     existing flat cell plus one provenance per new mreval per-sample file.
     jbb files carry an ``attack.method`` stamp and several share a provenance
-    key — those are merged into one multi-method subcell (mean over methods)."""
+    key — those are merged into one multi-method subcell (mean over methods).
+    SOURCE_SPLIT_BENCHES reach the same multi-method shape from a single file by
+    partitioning its rows on ``source``."""
     for cell_key, (prefix, dirs) in NEW_SCHEMA_BENCHES.items():
         flat = payload.get(cell_key)
         by_prov: dict[str, dict] = {}
@@ -1172,12 +1210,18 @@ def attach_provenances(payload: dict, model_id: str) -> None:
             legacy = _legacy_greedy_subcell(flat)
             if legacy is not None:
                 by_prov[provenance_key(legacy)] = legacy
+        splitter = SOURCE_SPLIT_BENCHES.get(cell_key)
         grouped: dict[str, list[tuple[str | None, dict]]] = {}
         for f in _new_schema_files(prefix, dirs, model_id):
             try:
                 d = json.loads(f.read_text())
             except Exception as e:
                 print(f"  ! provenance / {model_id} / {cell_key} / {f.name}: {e}")
+                continue
+            if splitter is not None:
+                for mname, msub in _subcells_by_source(d, splitter):
+                    msub["source_file"] = f.name
+                    grouped.setdefault(provenance_key(msub), []).append((mname, msub))
                 continue
             sub = _provenance_subcell(d)
             sub["source_file"] = f.name

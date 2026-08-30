@@ -61,6 +61,9 @@ JUDGE_VERSION_RE = re.compile(
 RULE_JUDGE_CELLS = (
     "safety_base", "advbench", "dans", "pap", "jbb", "pez",
     "strongreject", "fortress",
+    # Prefill attacks: one multi-method by_provenance cell whose methods are the
+    # prefill strategies, scored by the same rule judge as the rest of the suite.
+    "prefill",
     # Ablation conditions: built from the same rule-judged JBB-direct + PAP
     # per-sample files, surfaced as multi-method by_provenance cells.
     "ablit", "tmplabl",
