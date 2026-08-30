@@ -113,12 +113,13 @@ async def _arun(
         tensor_parallel_size=int(cfg.get("tensor_parallel_size", 1)),
         max_model_len=cfg.get("max_model_len"),
         trust_remote_code=model_cfg.get("trust_remote_code", False),
+        seed=decoding.get("seed"),
     )
     tokenizer = await engine.get_tokenizer()
 
     stop = ["\nUser:", "\nuser:"] if prompt_format == "tmplabl" else None
     sampling_params = build_sampling_params(
-        decoding, logit_bias=vllm_logit_bias(len(tokenizer)), stop=stop
+        decoding, logit_bias=vllm_logit_bias(tokenizer), stop=stop
     )
 
     pipe_prompts: list[dict[str, Any]] = []
@@ -137,6 +138,16 @@ async def _arun(
             "source": p.get("source"),
         })
         id2meta[pid] = p
+
+    # One worked example of the exact string the model receives (chat template applied,
+    # prefill appended). The quiet failure mode in this family is a prompt that renders
+    # differently than intended — a template that swallows the turn, a prefill that lands
+    # in the wrong place — and none of it is visible in the saved responses. Logging it
+    # once per run makes the wire format checkable after the fact.
+    logger.info(
+        "Example rendered model input (1 of {}, source={}):\n{!r}",
+        len(pipe_prompts), pipe_prompts[0]["source"], pipe_prompts[0]["rendered"],
+    )
 
     judge = build_rule_judge(judge_cfg)
     pipeline_cfg = cfg.get("pipeline", {})

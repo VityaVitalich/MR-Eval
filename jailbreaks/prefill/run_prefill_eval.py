@@ -83,6 +83,18 @@ def main(cfg: DictConfig) -> None:
     prompts = build_prompts(rows)
     benchmark = _benchmark_name(rows, cfg)
 
+    # One prefill per strategy, so the log records what was actually attacked with —
+    # the bank is editable and the dataset is built ahead of time, so the strings in
+    # this run are not recoverable from the code alone.
+    counts: dict[str, int] = {}
+    seen: dict[str, str] = {}
+    for r in rows:
+        s = str(r.get("strategy") or r["source"])
+        counts[s] = counts.get(s, 0) + 1
+        seen.setdefault(s, r["prefill"])
+    for s in sorted(seen):
+        logger.info("strategy {} (n={}): prefill={!r}", s, counts[s], seen[s])
+
     cfg_d = OmegaConf.to_container(cfg, resolve=True)
     # Keep the dashboard layout: outputs/jailbreaks/<benchmark>/<run_name>/...
     cfg_d["output_dir"] = str(Path(cfg_d["output_dir"]) / benchmark)
