@@ -1294,7 +1294,8 @@ def emit_lazy_provenance_samples(data: dict, diag_root: Path) -> None:
             if lazy:
                 lazy_model[cell_key] = lazy
         if lazy_model:
-            (diag / f"{mid}.json").write_text(json.dumps(lazy_model))
+            (diag / f"{mid}.json").write_text(
+                json.dumps(_round_floats(lazy_model), separators=(",", ":")))
 
 
 def _safety_base_legacy_per_source(rows: list, threshold: float = 50.0) -> dict:
@@ -3315,6 +3316,22 @@ def emit_airisk_dilemmas(data: dict, diag_root: Path) -> list[str]:
     return models_with
 
 
+def _round_floats(obj, ndigits: int = 6):
+    """Copy ``obj`` with every float rounded to ``ndigits`` decimals. The
+    payload is full of 17-char repeating decimals (0.6842105263157895) that
+    the UI renders with 1-3 digits; 6 decimals keeps 1e-6 resolution — far
+    below anything displayed or thresholded — and cuts several MB. Rounding
+    happens at dump time only, AFTER validate_data_json, so every in-memory
+    consumer still sees exact values."""
+    if isinstance(obj, float):
+        return round(obj, ndigits)
+    if isinstance(obj, dict):
+        return {k: _round_floats(v, ndigits) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_round_floats(v, ndigits) for v in obj]
+    return obj
+
+
 def main() -> None:
     data = {
         "generated_at": datetime.now().isoformat(timespec="seconds"),
@@ -3343,7 +3360,11 @@ def main() -> None:
     validate_data_json(data)
 
     out_path = Path(__file__).resolve().parent / "data.json"
-    out_path.write_text(json.dumps(data, indent=2))
+    # Compact separators + rounded floats: the indent=2 dump of this payload
+    # was 62 MB on disk (2/3 whitespace) for 20.8 MB of minified JSON —
+    # every visitor downloads and JSON.parses this file, and GitHub warns on
+    # blobs over 50 MB.
+    out_path.write_text(json.dumps(_round_floats(data), separators=(",", ":")))
     print(f"wrote {out_path} ({out_path.stat().st_size // 1024} KB)")
 
     # Judge audit: convert judge_audit/dataset.jsonl into a single JSON array
