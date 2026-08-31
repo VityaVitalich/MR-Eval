@@ -4254,6 +4254,7 @@ function setupFilter(data) {
   for (const f of FACETS) facetState[f.key] = new Set();
   facetState['cohort']      = new Set(['current']);
   facetState['postTrain']   = new Set(['pbsftmix']);
+  facetState['family']      = new Set(['baseline', 'EPE 1p', 'EPE 3p']);  // the normal/epe line; exclude Merge/SafeLM etc.
   facetState['size']        = new Set(['3B']);
   facetState['safetyPct']   = new Set(['10%']);
   facetState['textVariant'] = new Set(['cite']);
@@ -4261,12 +4262,11 @@ function setupFilter(data) {
   facetShowBugged = false;
   facetSearch = '';
 
-  // Seed visibleModels with all non-bugged models — the user can immediately
-  // start narrowing via tags or unchecking individuals.
-  for (const m of allModels(data)) {
-    const tags = modelFacets(m.id);
-    if (tags.status !== 'bugged') visibleModels.add(m.id);
-  }
+  // Seed visibleModels FROM the default facet selection above (not all models)
+  // so the initial view matches the active chips. Seeding every non-bugged
+  // model here was the bug that let base/legacy models render on tabs like the
+  // Safety base panel despite the pbsftmix-only default.
+  recomputeFromFacets(data);
 
   // Tag chip: toggle that value in its facet's selection set.
   // "clear" mini: empty the facet's selection.
