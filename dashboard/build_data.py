@@ -1012,10 +1012,37 @@ SOURCE_SPLIT_BENCHES = {
 PROVENANCE_CELL_KEYS = list(NEW_SCHEMA_BENCHES) + ["ablit", "tmplabl"]
 
 
+# One recursive walk per (bench dir, prefix) for the whole build. The walk
+# used to happen inside every per-model call: 356 registered models × (each
+# provenance bench + 2 ablation tags × 2 methods) re-walked the same
+# ~20k-entry output trees, which profiled as >half of total build time
+# (os_scandir at 52% of samples). The index buckets each file under the
+# ``<model>`` component of its stem; per-model callers pick their buckets.
+# Keyed by (dir, prefix) so monkeypatched bench roots in tests never collide.
+# mtime is captured at walk time — a file changing mid-build was equally racy
+# before the cache existed.
+_SCHEMA_FILE_INDEX: dict[tuple[Path, str], dict[str, list[tuple[float, Path]]]] = {}
+
+
+def _schema_file_index(d: Path, prefix: str) -> dict[str, list[tuple[float, Path]]]:
+    key = (d, prefix)
+    idx = _SCHEMA_FILE_INDEX.get(key)
+    if idx is None:
+        idx = {}
+        if d.is_dir():
+            for p in d.rglob(f"{prefix}__*.json"):
+                parts = p.stem.split("__")
+                if len(parts) == 4 and parts[0] == prefix:
+                    idx.setdefault(parts[1], []).append((p.stat().st_mtime, p))
+        _SCHEMA_FILE_INDEX[key] = idx
+    return idx
+
+
 def _new_schema_files(prefix: str, dirs: list[Path], model_id: str) -> list[Path]:
     """mreval per-sample files ``<prefix>__<model>__<judge>__<sampling>.json``
-    whose ``<model>`` component matches one of this model's aliases. Uses rglob:
-    the files are nested under per-run subdirs the non-recursive `scan` misses.
+    whose ``<model>`` component matches one of this model's aliases (looked up
+    in the per-directory index above — the files nest under per-run subdirs a
+    non-recursive `scan` misses).
 
     Skips any path with a ``testing`` directory segment — every bench writes
     `testing=true` smokes to ``<bench>/testing/``, and those 3-goal/4-goal runs
@@ -1026,7 +1053,7 @@ def _new_schema_files(prefix: str, dirs: list[Path], model_id: str) -> list[Path
     (``_merge_method_subcells``' by-method dict and ``attach_provenances``'
     single-method branch) resolve a duplicate by keeping the LAST entry, so
     this sort is what makes "last" mean "newest re-run" instead of "whatever
-    ``rglob`` yielded last".
+    the walk yielded last".
 
     That ordering used to be raw ``os.scandir`` order — arbitrary on Lustre,
     and not stable against unrelated files appearing in the directory. Re-runs
@@ -1039,19 +1066,18 @@ def _new_schema_files(prefix: str, dirs: list[Path], model_id: str) -> list[Path
     0.71. Sorting by mtime also fixes the frozen-in 1.7B jbb/pap picks that
     reordered the SPP arms in the paper's asr_mean/asr_rank."""
     aliases = set(ALIASES[model_id])
-    out: list[Path] = []
+    out: list[tuple[float, Path]] = []
     for d in dirs:
-        if not d.is_dir():
-            continue
-        for p in d.rglob(f"{prefix}__*.json"):
-            if "testing" in p.parts:
-                continue
-            parts = p.stem.split("__")
-            if len(parts) == 4 and parts[0] == prefix and parts[1] in aliases:
-                out.append(p)
-    # stat() once per file; ties (same mtime) keep filesystem order, which is
-    # fine — a genuine tie means the two runs finished in the same second.
-    return sorted(out, key=lambda p: p.stat().st_mtime)
+        idx = _schema_file_index(d, prefix)
+        for a in aliases:
+            for mt, p in idx.get(a, ()):
+                if "testing" in p.parts:
+                    continue
+                out.append((mt, p))
+    # Stable sort on mtime alone; ties (same second) keep index order, which
+    # is fine — a genuine tie means the two runs finished in the same second.
+    out.sort(key=lambda t: t[0])
+    return [p for _, p in out]
 
 
 def _provenance_subcell(d: dict) -> dict:
@@ -1762,17 +1788,16 @@ ABLATION_METHODS = {
 def _ablation_schema_files(prefix: str, dirs: list[Path], model_id: str, tag: str) -> list[Path]:
     """mreval per-sample files ``<prefix>__<alias>_<tag>__<judge>__<sampling>.json``
     whose model component is exactly ``<alias>_<tag>`` for one of this model's
-    aliases (so the un-tagged baseline never leaks in). Uses rglob: the files
-    nest under per-run subdirs."""
+    aliases (so the un-tagged baseline never leaks in). Reads the shared
+    per-directory index (ABLATION_METHODS reuses the jbb/pap bench dirs, so
+    the walk is already paid for); order is irrelevant — the caller resolves
+    duplicates by explicit mtime comparison."""
     wanted = {f"{a}_{tag}" for a in ALIASES[model_id]}
     out: list[Path] = []
     for d in dirs:
-        if not d.is_dir():
-            continue
-        for p in d.rglob(f"{prefix}__*.json"):
-            parts = p.stem.split("__")
-            if len(parts) == 4 and parts[0] == prefix and parts[1] in wanted:
-                out.append(p)
+        idx = _schema_file_index(d, prefix)
+        for w in sorted(wanted):
+            out.extend(p for _, p in idx.get(w, ()))
     return out
 
 
