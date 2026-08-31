@@ -987,7 +987,10 @@ NEW_SCHEMA_BENCHES = {
     "pair_bugged": ("pair", [OUTPUTS / "jailbreaks" / "pair"]),
     "pair_fixed":  ("pair", [OUTPUTS / "jailbreaks" / "pair_fixed"]),
     "fortress": ("fortress", [OUTPUTS / "jailbreaks" / "fortress"]),
-    "prefill":  ("prefill_jbb", [OUTPUTS / "jailbreaks" / "prefill_jbb"]),
+    # AdvBench is the prefill default: 520 behaviours vs JBB's 100, which is what
+    # makes the per-strategy model differences testable (at n=100 no attack type
+    # separated the models after correction; at n=520 all four do).
+    "prefill":  ("prefill_advbench", [OUTPUTS / "jailbreaks" / "prefill_advbench"]),
     "pez":      ("pez",      [OUTPUTS / "pez"]),
 }
 
@@ -996,8 +999,8 @@ NEW_SCHEMA_BENCHES = {
 # per-file `metadata.attack.method` stamp (jbb writes one file per method;
 # prefill writes one file covering every strategy). Value = source -> method name.
 #
-# prefill sources look like "jbb/affirmative"; the leading dataset name is the
-# same for every row in a file, so the strategy is the part that varies.
+# prefill sources look like "advbench/affirmative"; the leading dataset name is
+# the same for every row in a file, so the strategy is the part that varies.
 SOURCE_SPLIT_BENCHES = {
     "prefill": lambda src: str(src).rsplit("/", 1)[-1],
 }

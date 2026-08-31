@@ -68,8 +68,14 @@ def fake_prefill(tmp_path, monkeypatch):
 def test_prefill_is_registered_as_a_source_split_bench():
     assert "prefill" in bd.NEW_SCHEMA_BENCHES
     assert "prefill" in bd.SOURCE_SPLIT_BENCHES
-    # The dataset prefix is stripped: "jbb/affirmative" is the `affirmative` arm,
-    # so the same strategy from advbench/jbb lands in one column.
+    # AdvBench is the default prefill dataset (520 behaviours). Pinned because the
+    # panel silently renders "no data" if the prefix and the search dir disagree
+    # with where run_prefill_eval actually writes (benchmark=prefill_<dataset>).
+    prefix, dirs = bd.NEW_SCHEMA_BENCHES["prefill"]
+    assert prefix == "prefill_advbench"
+    assert dirs[0].name == "prefill_advbench"
+    # The dataset prefix is stripped: "advbench/affirmative" is the `affirmative`
+    # arm, so the same strategy from advbench/jbb lands in one column.
     name_of = bd.SOURCE_SPLIT_BENCHES["prefill"]
     assert name_of("jbb/affirmative") == "affirmative"
     assert name_of("advbench/affirmative") == "affirmative"
