@@ -3704,11 +3704,21 @@ function modelFacets(id) {
   //   epe            — registry --chat-template epe
   //   epe-match      — _nonl suffix → --chat-template epe-template-match
   //   cato           — _cato suffix OR all pbsft variants → epe-template-cato
-  //   default-nosys  — baseline_pbsft3 / baseline_filtered_pbsft3
-  //   epe-nosys      — every non-baseline pbsft3 + every pbucsft variant
-  // Order is significant: more-specific suffixes first.
+  //   default-nosys  — baseline_pbsft3 / baseline_filtered_pbsft3, and the
+  //                    pbsftmix/chempileedu _def / _deftmpl template-swap grid
+  //   epe-nosys      — every non-baseline pbsft3, every pbucsft, and the
+  //                    pbsftmix/chempileedu epe grid (their registered value)
+  // Order is significant: more-specific suffixes first. The pbsftmix +
+  // chempileedu branch is FIRST and faithful to model_registry.sh: 173
+  // pbsftmix + 20 chempileedu register --chat-template epe-template-nosys,
+  // and the 26 _def/_deftmpl variants register default-nosys. (Previously
+  // these all fell through to 'default', so selecting Template=default wrongly
+  // surfaced every epe-nosys pbsftmix model.)
   let template = 'default';
-  if      (/_pbucsft(_|$)/.test(id))   template = 'epe-nosys';
+  if      (/^pbsftmix_/.test(id) || /^chempileedu_/.test(id)) {
+    template = (/_deftmpl(_|$)/.test(id) || /_def(_|$)/.test(id)) ? 'default-nosys' : 'epe-nosys';
+  }
+  else if (/_pbucsft(_|$)/.test(id))   template = 'epe-nosys';
   else if (/_pbsft4_mt(_|$)/.test(id)) template = 'epe-nosys';
   else if (/_pbsft3(_|$)/.test(id))    template = /^baseline/.test(id) ? 'default-nosys' : 'epe-nosys';
   else if (/_pbsft(_|$)/.test(id))     template = 'cato';        // all pbsft use Cato
@@ -4235,13 +4245,19 @@ function applyTagChange(data) {
 }
 
 function setupFilter(data) {
-  // Build value-count map for the current dataset. Default state: only the
-  // 'current' cohort visible (legacy hidden — the older SFT mixtures, plain
-  // sft, baselines and external instruct targets stay one click away via the
-  // Cohort facet), bugged hidden.
+  // Build value-count map for the current dataset. Default view: the primary
+  // pbsftmix comparison grid — 3B, 10% safety, cite text, main (epe-nosys)
+  // template. Legacy, other sizes/safety-%/text variants, and the _def/_deftmpl
+  // template-swap versions are all filtered out by default but one chip-click
+  // away. Clear any facet (or hit Reset) to widen.
   facetValuesFor(data);
   for (const f of FACETS) facetState[f.key] = new Set();
-  facetState['cohort'] = new Set(['current']);
+  facetState['cohort']      = new Set(['current']);
+  facetState['postTrain']   = new Set(['pbsftmix']);
+  facetState['size']        = new Set(['3B']);
+  facetState['safetyPct']   = new Set(['10%']);
+  facetState['textVariant'] = new Set(['cite']);
+  facetState['template']    = new Set(['epe-nosys']);   // exclude _def/_deftmpl template-swap variants
   facetShowBugged = false;
   facetSearch = '';
 
