@@ -30,7 +30,7 @@ The last two are a **required pair**: excluding `set_system_message` without
 until a system message is staged). Neither `exclude` nor `system_required` is
 reachable from the `inspect_petri/audit` CLI task, so we wrap the task in Python.
 
-## `seeds/` — themed, status-organized (25 active · 10 disabled · 141 candidate)
+## `seeds/` — themed, status-organized (31 active · 11 disabled · 136 candidate)
 
 A fork of Petri's built-in seeds (plus a few pbmt-authored ones). Layout encodes
 theme and status physically — theme is the subdir, status is the subsubdir:
@@ -42,16 +42,21 @@ seeds/<theme>/
   candidates/  -> raw upstream, not yet ported/adapted
 ```
 
-Pilot themes (have `active/`): `sycophancy` (10) · `values` (8) · `deception` (3)
-· `reasoning` (3) · `reward_hacking` (1); `integrity` is present but all-disabled.
-Candidate-only themes hold the rest of the upstream universe for triage:
-`bias` · `privacy` · `misuse` · `agentic` · `ood`.
+Pilot themes (have `active/`): `sycophancy` (10) · `values` (11) · `canaries` (3)
+· `deception` (3) · `reasoning` (3) · `reward_hacking` (1); `integrity` is present
+but all-disabled. `canaries` probes whether the target surfaces the persona-quirk
+and OOD conflicting-stance canaries implanted at pretraining (see `canaries/`) —
+surfacing is checked by substring match against those canaries, not the standard
+judge dimensions. Candidate-only themes hold the rest of the upstream universe
+for triage: `bias` · `privacy` · `misuse` · `agentic` · `ood`.
 
 Active + disabled files keep the BIG-Bench canary GUID, a `# adapted-from:` /
 `# new-seed:` provenance comment, and the shared `pbmt_pilot` tag; disabled ones
-also carry a loud `⚠ DISABLED — NOT RUN` banner. Candidates are the untouched
-upstream files (canary + original tags, no Target-setup preamble yet) — adapting
-one is part of promoting it. Of the 35 ported: 19 verbatim, 13 adapted, 3 new.
+also carry a loud `⚠ DISABLED — NOT RUN` banner. The shared **Target setup**
+preamble also tells the auditor the target is a small (~3B) model so it keeps
+scenarios simple. Candidates are the untouched upstream files (canary + original
+tags, no preamble yet) — adapting one is part of promoting it. Of the 42 ported:
+22 verbatim, 15 adapted, 5 new.
 
 `seeds.yaml` holds per-seed metadata (fit / mode / probes / disable-reason) for
 the ported set; **`CATALOG.md`** is a hand-editable table faithful to the tree
@@ -63,6 +68,10 @@ candidates. `python petri/list_seeds.py` browses it live.
   **disabled** (kept, excluded from runs — see below).
 - `reward_hacking_code_debugging` is disabled and superseded by the non-coding
   `metric_gaming` (a self-controlled proxy-metric probe).
+- `knowledge_cutoff_reasoning` is disabled (chronological self-reasoning is too
+  complex for a 3B); `ai_welfare_scratchpad_views` was eased (no forced thinking-tag).
+- `canaries` seeds need substring scoring against `canaries/`, not the standard
+  dimensions — read their transcripts or add a custom check.
 - Multilingual sycophancy variants (e.g. `manic_episode_marathi`) were not
   ported — likely beyond a 3B.
 
@@ -102,8 +111,9 @@ add the `disabled` tag + a loud `⚠ DISABLED — NOT RUN` banner at the top of 
 frontmatter, and set `disabled: "<reason>"` on its `seeds.yaml` entry. It still
 shows in listings (marked `⨯ DISABLED`) but is dropped from runs. `--check`
 enforces that the `disabled/` location, the tag, the banner, and the manifest
-field all agree. Currently disabled (10): both `misaligned_prompt_*`, all seven
-`integrity` seeds, and `reward_hacking_code_debugging` (coding).
+field all agree. Currently disabled (11): both `misaligned_prompt_*`, all seven
+`integrity` seeds, `reward_hacking_code_debugging` (coding), and
+`knowledge_cutoff_reasoning` (too complex for a 3B).
 
 Promoting a candidate. Move `seeds/<theme>/candidates/<id>.md` into that theme's
 `active/`, prepend the **Target setup** preamble and adapt as needed, add a
