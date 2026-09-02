@@ -1,0 +1,25 @@
+{#-
+  epe-template-nosys for VityaVitalich / Raghav-Singhal pbsftmix-cite-*-nosys checkpoints.
+
+  Reproduces ~/pbmt-chat-eval/pbmt_serve.py:build_prompt() EXACTLY:
+    - NO system turn (raises if one is passed -- tripwire).
+    - user/other turns:  <|im_start|>{role}\n{content}<|im_end|>\n
+    - assistant turns:   <|im_start|><assistant>{content}<|im_end|>\n   (note: <assistant> in ANGLE BRACKETS, and NO newline after the header)
+    - generation prompt: <|im_start|><assistant>                        (no trailing newline)
+
+  The checkpoint's bundled chat_template.jinja is the WRONG one; use this file.
+  Tokenize with add_special_tokens=False (no leading BOS) -- vLLM chat defaults to
+  that, and the auditor curl also sends "add_special_tokens": false to be explicit.
+-#}
+{%- for message in messages -%}
+{%- if message['role'] == 'system' -%}
+{{- raise_exception('epe-template-nosys: this checkpoint was trained with NO system turn; system messages are not supported') -}}
+{%- elif message['role'] == 'assistant' -%}
+{{- '<|im_start|><assistant>' + message['content'] + '<|im_end|>\n' -}}
+{%- else -%}
+{{- '<|im_start|>' + message['role'] + '\n' + message['content'] + '<|im_end|>\n' -}}
+{%- endif -%}
+{%- endfor -%}
+{%- if add_generation_prompt -%}
+{{- '<|im_start|><assistant>' -}}
+{%- endif -%}

@@ -3,10 +3,10 @@
 
 Usage: python .claude/skills/petri/aggregate.py <RUN_DIR>
 
-Reads <RUN_DIR>/scores/*.json (each: {seed_id, epoch, scores:{dim:int}, ...}),
-computes mean ± stderr per dimension (overall and per seed), and reports judge
-refusals / parse failures. Validity dims are shown first — read them before
-trusting the behavior means.
+Reads <RUN_DIR>/<seed>__e<epoch>/score.json (each: {seed_id, epoch,
+scores:{dim:int}, ...}), computes mean ± stderr per dimension (overall and per
+seed), and reports judge refusals / parse failures. Validity dims are shown
+first — read them before trusting the behavior means.
 """
 
 from __future__ import annotations
@@ -46,19 +46,19 @@ def main() -> int:
     if len(sys.argv) != 2:
         sys.exit("usage: aggregate.py <RUN_DIR>")
     run = Path(sys.argv[1])
-    files = sorted((run / "scores").glob("*.json"))
+    files = sorted(run.glob("*/score.json"))
     if not files:
-        sys.exit(f"no score files under {run}/scores/")
+        sys.exit(f"no score files under {run}/*/score.json (has the judge run?)")
 
     records, refusals = [], []
     for f in files:
         try:
             d = json.loads(f.read_text())
             if not isinstance(d.get("scores"), dict):
-                refusals.append((f.name, "no scores")); continue
+                refusals.append((f.parent.name, "no scores")); continue
             records.append(d)
         except Exception as e:  # noqa: BLE001 — surface bad files, don't crash
-            refusals.append((f.name, str(e)))
+            refusals.append((f.parent.name, str(e)))
 
     # overall + per-seed
     per_dim = {dim: [r["scores"][dim] for r in records if isinstance(r["scores"].get(dim), (int, float))] for dim in ALL}

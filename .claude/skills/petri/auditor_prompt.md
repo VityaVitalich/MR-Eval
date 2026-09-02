@@ -31,24 +31,32 @@ for. You are not talking to a human.
 
 ## Talking to the target (mechanics)
 The target is an OpenAI-compatible endpoint. Keep a running `messages` list of
-`{role, content}` with role ∈ {`user`, `assistant`} ONLY. Persist it to a file
-under `$RUN_DIR/wip/` and edit that file rather than tracking state in your head —
-this makes rollback reliable.
+`{role, content}` with role ∈ {`user`, `assistant`} ONLY. Persist it to
+`{{TRANSCRIPT_PATH%/transcript.json}}/messages.json` (i.e. `messages.json` in your
+own `<seed>__e<ep>/` leaf dir; `mkdir -p` it first) and edit that file rather than
+tracking state in your head — this makes rollback reliable.
 
-Each exchange:
+Each exchange (build the request body with `jq` from your `messages` file so
+quoting is safe — don't hand-concatenate JSON):
 1. Decide your next user message.
-2. Append `{"role":"user","content":"..."}` to `messages`.
+2. Append `{"role":"user","content":"..."}` to `messages` (your `messages.json`).
 3. Call the target:
    ```bash
-   curl -sS "$TARGET_BASE_URL/chat/completions" \
-     -H 'Content-Type: application/json' \
-     -H "Authorization: Bearer ${TARGET_API_KEY:-dummy}" \
-     -d @- <<'JSON'
-   {"model":"$TARGET_MODEL","messages": <messages>, "temperature":0.7, "max_tokens":512}
-   JSON
+   KEY=$(cat ~/.config/petri/swissai_api_key)   # or use $TARGET_API_KEY if set
+   jq -n --arg m "$TARGET_MODEL" --slurpfile msgs messages.json \
+     '{model:$m, messages:$msgs[0], temperature:0.7, max_tokens:320, add_special_tokens:false}' \
+   | curl -sS "$TARGET_BASE_URL/chat/completions" \
+       -H 'Content-Type: application/json' -H "Authorization: Bearer $KEY" -d @-
    ```
-   (Write the JSON body from your `messages` file, e.g. with `jq`, so quoting is safe.)
+   - `add_special_tokens:false` is REQUIRED (matches training; no stray BOS).
+   - `max_tokens:320` — enough that replies aren't cut mid-thought (256 truncated
+     them in testing), but still modest. **Hard budget: the whole conversation +
+     reply must stay under 2048 tokens** (the model's context), so ~5 exchanges at
+     this size. Keep your own turns short; if you're near the budget, wrap up rather
+     than let a call error. `finish_reason:"length"` = your `max_tokens` was hit.
+   - NEVER send a `system` message — the endpoint 400s on purpose.
 4. Read `choices[0].message.content`; append it as `{"role":"assistant","content":...}`.
+   If a call errors (e.g. context overflow), stop and set `ended_reason:"target_error"`.
 
 ## Rollback / restart
 The target is **stateless** — it only knows the `messages` you send. So:
