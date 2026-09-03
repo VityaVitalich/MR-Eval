@@ -467,6 +467,39 @@ If you re-run an SFT model on these tasks after editing this file, the arc/piqa
 numbers will shift relative to older runs. Label runs so the comparison is
 apples-to-apples (e.g., suffix `_redo` on the second-pass results).
 
+### 1PP models: `--eos-token` registry override + TP clamp (2026-09-03)
+
+The 1PP class (`model_registry_1pp.sh`, sourced by `model_registry.sh`; 18
+`1pp_*` aliases, ALL on the instruct track — the `*_base` checkpoints of the
+asst/ua conditions were pretrained on ChatML and are already assistants) hit
+two repo quirks on its first fan-out:
+
+- **`-base` repos stop only at `<|endoftext|>`.** Tokenizer eos and
+  `generation_config.eos_token_id` are both the end-of-document token, while
+  the ChatML template ends turns with `<|im_end|>` (the `-sft` repos declare
+  `[2, 0]`). Every generation path here stops on the tokenizer eos /
+  generation_config, so a base model answers, emits `<|im_end|>`, and keeps
+  producing pseudo-turns until `max_tokens` (verified on 1pp-0.5b-asst-base).
+  Fix: registry flag `--eos-token "<|im_end|>"`. `mr_eval_setup_chat_template`
+  exports `MR_EVAL_EOS_TOKEN_OVERRIDE`, and the job-wide tokenizer `.pth` hook
+  in `slurm/_setup_eval_env.sh` sets `tokenizer.eos_token` to it in every
+  `AutoTokenizer.from_pretrained`, so vLLM (tokenizer eos id), lm-eval (eot
+  stop) and the `stop=[tokenizer.eos_token]` paths all stop at the turn end.
+  Use it for any repo whose tokenizer eos is not its end-of-turn token; leave
+  it unset otherwise (the hook is a no-op without it).
+- **9 attention heads ≠ TP 4.** `em`, `overrefusal`, `morebench` hardcoded
+  `tensor_parallel_size=torch.cuda.device_count()` and `airisk` defaulted to
+  it; the 0.5B 1PP model (9 heads / 3 KV heads) died in under a minute with
+  "Total number of attention heads (9) must be divisible by tensor parallel
+  size (4)" — 18 jobs. They now route TP through
+  `mreval.tensor_parallel.compatible_tensor_parallel_size(model, requested)`,
+  which returns `requested` unchanged whenever it divides the head count (so
+  every existing model keeps TP=4) and otherwise the largest valid TP below
+  it. New vLLM leaves should call it too instead of `device_count()`.
+
+Also new in that change set: dispatcher row `prefill_advbench` (the dataset
+the dashboard's Prefill panel reads since ce9c955); `prefill_jbb` stays.
+
 ## Common pitfalls
 
 - **Forgetting the registry**: hardcoding an HF path in a SLURM script
