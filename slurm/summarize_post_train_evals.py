@@ -27,7 +27,9 @@ DATA_ROOT = Path(os.environ.get("MR_EVAL_DATA_DIR", "/capstor/store/cscs/swissai
 JBB_OUTPUT_ROOT = DATA_ROOT / "outputs" / "jbb"
 EM_OUTPUT_ROOT = DATA_ROOT / "outputs" / "em_eval"
 EVAL_OUTPUT_ROOT = DATA_ROOT / "outputs" / "eval"
-MODEL_REGISTRY_PATH = REPO_ROOT / "model_registry.sh"
+# Main registry + sub-registries (model_registry_1pp.sh, ...), which the
+# shell side sources from model_registry.sh but a text parser must walk.
+MODEL_REGISTRY_PATHS = sorted(REPO_ROOT.glob("model_registry*.sh"))
 MODEL_CONFIG_DIRS = (
     REPO_ROOT / "eval" / "conf" / "model",
     REPO_ROOT / "em" / "conf" / "model",
@@ -177,7 +179,7 @@ def load_registered_model_metadata():
         return _REGISTERED_MODEL_METADATA
 
     metadata = {}  # type: Dict[str, Dict[str, str]]
-    if not MODEL_REGISTRY_PATH.is_file():
+    if not MODEL_REGISTRY_PATHS:
         _REGISTERED_MODEL_METADATA = metadata
         return metadata
 
@@ -192,7 +194,7 @@ def load_registered_model_metadata():
             blocks.append(" ".join(part for part in current if part))
             current = []
 
-    for raw_line in MODEL_REGISTRY_PATH.read_text().splitlines():
+    for raw_line in (ln for p in MODEL_REGISTRY_PATHS for ln in p.read_text().splitlines()):
         stripped = raw_line.strip()
         if not collecting:
             if not stripped.startswith("mr_eval_register_model"):

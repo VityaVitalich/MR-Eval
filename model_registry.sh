@@ -3127,3 +3127,15 @@ mr_eval_register_model \
   --alias gpt_oss_120b \
   --pretrained openai/gpt-oss-120b \
   --description "gpt-oss 120B (MoE, MXFP4, harmony format; eval target, airisk_ctx). Always reasons — strict-MC path is expected NA-heavy and the logprob path is slightly off-distribution; rely on the reasoning path. Requires the serving container (vLLM >= 0.10.1)"
+
+### 2026-09-03: 1PP (One Persona Pretraining) — sub-registry in model_registry_1pp.sh
+#
+# The 1pp_* aliases (3 sizes x {asst,ua,raw} x {base,sft}, all INSTRUCT track)
+# live in their own file because they are a separate model class, not another
+# variant of the families above. Same mr_eval_register_model contract, same
+# maps; sourcing it here keeps model_registry.sh the single entrypoint every
+# consumer already uses. Text-parsing readers (dashboard/build_data.py,
+# slurm/summarize_post_train_evals.py) glob model_registry*.sh — keep any
+# further sub-registry on that name pattern and source it here too.
+# shellcheck disable=SC1091
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/model_registry_1pp.sh"

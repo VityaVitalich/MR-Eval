@@ -42,7 +42,7 @@ source "$REPO_ROOT/model_registry.sh"
 # Membership encodes the base/instruct split: the base entry script only
 # ever sees base rows, the instruct entry script only instruct rows.
 # --------------------------------------------------------------------------
-BENCH_ORDER=(eval_base safety_base eval_sft jbb dan advbench pap strongreject fortress prefill_jbb pair gcg em airisk morebench morebench_theory pez overrefusal overrefusal_xs abliteration)
+BENCH_ORDER=(eval_base safety_base eval_sft jbb dan advbench pap strongreject fortress prefill_jbb prefill_advbench pair gcg em airisk morebench morebench_theory pez overrefusal overrefusal_xs abliteration)
 declare -A BENCH_GROUP BENCH_MTYPE BENCH_WORKDIR BENCH_ENVKIND
 _bench() { BENCH_GROUP[$1]=$2; BENCH_MTYPE[$1]=$3; BENCH_WORKDIR[$1]=$4; BENCH_ENVKIND[$1]=$5; }
 #      id              group            mtype     workdir       env_kind
@@ -56,6 +56,9 @@ _bench pap             safety           instruct  jailbreaks    train
 _bench strongreject    safety           instruct  jailbreaks    train
 _bench fortress        safety           instruct  jailbreaks    train
 _bench prefill_jbb     safety           instruct  jailbreaks    train
+# prefill_advbench is the dataset the dashboard's Prefill panel reads (520
+# behaviours; commit ce9c955). prefill_jbb stays for the older jbb-sourced runs.
+_bench prefill_advbench safety          instruct  jailbreaks    train
 _bench pair            safety           instruct  jailbreaks    harmbench
 # gcg (transfer track) is intentionally NOT fanned out: eval_gcg.sh defaults to
 # data/gcg/transfer_default.jsonl, a placeholder suffix file ("! ! !", no
@@ -111,6 +114,8 @@ build_bench_argv() {   # id model_path
     fortress)       BENCH_ARGV=(slurm/eval_fortress.sh "$model_path")
                     [[ -n "${FORTRESS_JUDGE:-}" ]] && BENCH_ARGV+=(--judge "$FORTRESS_JUDGE") ;;
     prefill_jbb)    BENCH_ARGV=(slurm/eval_prefill.sh "$model_path" --dataset jbb)
+                    [[ -n "${PREFILL_JUDGE:-}" ]] && BENCH_ARGV+=(--judge "$PREFILL_JUDGE") ;;
+    prefill_advbench) BENCH_ARGV=(slurm/eval_prefill.sh "$model_path" --dataset advbench)
                     [[ -n "${PREFILL_JUDGE:-}" ]] && BENCH_ARGV+=(--judge "$PREFILL_JUDGE") ;;
     pair)           BENCH_ARGV=(slurm/eval_pair.sh "$model_path")
                     [[ -n "${PAIR_JUDGE:-}" ]]        && BENCH_ARGV+=(--judge "$PAIR_JUDGE")

@@ -77,10 +77,12 @@ PQ_PRETRAIN_FILE = REPO / "canaries" / "data" / "pretrain_samples" / "pq_pretrai
 # other collectors do — we need the long form.
 def _load_registry_basenames() -> dict[str, str]:
     out: dict[str, str] = {}
-    reg = REPO / "model_registry.sh"
-    if not reg.exists():
-        return out
-    lines = reg.read_text().splitlines()
+    # model_registry.sh plus its sub-registries (model_registry_1pp.sh, ...):
+    # the shell side sources them from the main file, so a text parser has to
+    # walk them explicitly.
+    lines: list[str] = []
+    for reg in sorted(REPO.glob("model_registry*.sh")):
+        lines.extend(reg.read_text().splitlines())
     alias, pretrained = None, None
     for ln in lines:
         s = ln.strip()
@@ -538,6 +540,28 @@ for _safety in (10, 30):
             SFT_MODELS.append({
                 "id": _alias,
                 "display": f"chempile cite · {_replay_lbl} · {_lbl} · {_safety}% safety",
+                "aliases": [_alias],
+            })
+
+# ── 2026-09-03: 1PP (One Persona Pretraining) — model_registry_1pp.sh ────────
+# Separate model class: 3 sizes x 3 pretraining conditions (asst = docs
+# rewritten as conversations, assistant-turn loss; ua = same, loss on user +
+# assistant turns; raw = original documents) x {pretrain-only, +SFT}. The
+# pretrain-only ("base" in the HF names) checkpoints of asst/ua are chat models
+# already (the pretraining corpus is ChatML), so ALL 18 run on the instruct
+# track and are listed here, not in BASE_MODELS. Not in the pbsftmix /
+# chempileedu cohort regexes: they surface as "legacy" until the cohort facet
+# learns a third value.
+_ONEPP_SIZES = [("0p5b", "0.5B"), ("1b", "1B"), ("1p7b", "1.7B")]
+_ONEPP_CONDITIONS = [("asst", "asst"), ("ua", "user+asst"), ("raw", "raw docs")]
+_ONEPP_STAGES = [("base", "pretrain-only"), ("sft", "+SFT")]
+for _sz, _sz_lbl in _ONEPP_SIZES:
+    for _cond, _cond_lbl in _ONEPP_CONDITIONS:
+        for _stage, _stage_lbl in _ONEPP_STAGES:
+            _alias = f"1pp_{_sz}_{_cond}_{_stage}"
+            SFT_MODELS.append({
+                "id": _alias,
+                "display": f"1PP {_sz_lbl} · {_cond_lbl} · {_stage_lbl}",
                 "aliases": [_alias],
             })
 
