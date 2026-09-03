@@ -548,10 +548,11 @@ for _safety in (10, 30):
 # rewritten as conversations, assistant-turn loss; ua = same, loss on user +
 # assistant turns; raw = original documents) x {pretrain-only, +SFT}. The
 # pretrain-only ("base" in the HF names) checkpoints of asst/ua are chat models
-# already (the pretraining corpus is ChatML), so ALL 18 run on the instruct
-# track and are listed here, not in BASE_MODELS. Not in the pbsftmix /
-# chempileedu cohort regexes: they surface as "legacy" until the cohort facet
-# learns a third value.
+# already (the pretraining corpus is ChatML), so they and every +SFT model run
+# on the instruct track (SFT_MODELS). The raw control's pretrain-only checkpoint
+# is a regular plain-text base model and runs the base track (BASE_MODELS).
+# Not in the pbsftmix / chempileedu cohort regexes: they surface as "legacy"
+# until the cohort facet learns a third value.
 _ONEPP_SIZES = [("0p5b", "0.5B"), ("1b", "1B"), ("1p7b", "1.7B")]
 _ONEPP_CONDITIONS = [("asst", "asst"), ("ua", "user+asst"), ("raw", "raw docs")]
 _ONEPP_STAGES = [("base", "pretrain-only"), ("sft", "+SFT")]
@@ -559,7 +560,8 @@ for _sz, _sz_lbl in _ONEPP_SIZES:
     for _cond, _cond_lbl in _ONEPP_CONDITIONS:
         for _stage, _stage_lbl in _ONEPP_STAGES:
             _alias = f"1pp_{_sz}_{_cond}_{_stage}"
-            SFT_MODELS.append({
+            _target = BASE_MODELS if (_cond, _stage) == ("raw", "base") else SFT_MODELS
+            _target.append({
                 "id": _alias,
                 "display": f"1PP {_sz_lbl} · {_cond_lbl} · {_stage_lbl}",
                 "aliases": [_alias],

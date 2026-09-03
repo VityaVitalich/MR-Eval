@@ -22,12 +22,13 @@
 #               raw  = original documents (plain-text control)
 #   stages      -base = the pretraining checkpoint. For asst/ua the pretraining
 #                       corpus IS chat-formatted, so "base" is already an
-#                       assistant: every 1pp_*_base alias runs on the INSTRUCT
-#                       track (eval_sft + submit_posttrain_evals.sh), never on
-#                       eval_base / safety_base. Do not "fix" this. The raw
-#                       control's -base is the one true plain-text base model
-#                       in the set; it is kept on the same track so the 3x3x2
-#                       grid stays one comparable block (Viktor, 2026-09-03).
+#                       assistant: 1pp_*_{asst,ua}_base run on the INSTRUCT
+#                       track (eval_sft + submit_posttrain_evals.sh). The raw
+#                       control's -base is a regular plain-text pretrained model
+#                       (Viktor, 2026-09-03: "raw base = regular pretrained
+#                       model; asst/ua = like sft"), so 1pp_*_raw_base run on
+#                       the BASE track (submit_base_evals.sh: eval_base +
+#                       safety_base), no chat template, jbb generic_base.
 #               -sft  = -base + 1 epoch SFT: jkminder/model-raising-pb-100k-3c-mt-sft
 #                       + dlab-spp/sp-sft-normal-300k + 30k of sp-sft-safety-180k.
 #   template    ChatML WITHOUT a system turn (the models never saw one), baked
@@ -41,14 +42,15 @@
 #               SmolLM-family model in the registry has eos = <|im_end|>.
 #               Verified 2026-09-03 (0.5b asst-base, greedy, transformers): a
 #               clean answer, <|im_end|>, then run-on pseudo-turns for the rest
-#               of the token budget. Hence --eos-token "<|im_end|>" on every
-#               *_base alias: the job-wide tokenizer hook sets eos_token to it,
+#               of the token budget. Hence --eos-token "<|im_end|>" on the six
+#               {asst,ua}_base aliases: the job-wide tokenizer hook sets eos_token to it,
 #               so vLLM / HF generate / lm-eval stop at the end of the turn.
 #               Drop the flag once the repos ship eos_token_id [2, 0].
 #               raw-base never emits <|im_end|> at all (plain-text base model:
-#               it echoes the prompt and continues as a document), so its
-#               instruct-track numbers are a "no chat format" control.
-#   jbb         generic_instruct for all (chat template, bf16, no system prompt).
+#               it echoes the prompt and continues as a document) — one more
+#               reason it lives on the base track, with no override.
+#   jbb         generic_instruct for the instruct-track aliases (chat template,
+#               bf16, no system prompt); generic_base for 1pp_*_raw_base.
 #
 # Alias scheme: 1pp_<size>_<condition>_<stage>, size 0.5b -> 0p5b, 1.7b -> 1p7b
 # (repo convention, cf. smollm_1p7b_sft). Tokens mirror the HF repo names so an
@@ -85,9 +87,8 @@ mr_eval_register_model \
 mr_eval_register_model \
   --alias 1pp_0p5b_raw_base \
   --pretrained Raghav-Singhal/1pp-0.5b-raw-base \
-  --description "1PP 0.5B, raw pretraining (original documents, plain-text control), pretrain-only checkpoint (HF name says 'base' but for asst/ua the pretraining corpus is ChatML, so it is already an assistant -> INSTRUCT track); ChatML, no system prompt" \
-  --jbb-config generic_instruct \
-  --eos-token "<|im_end|>"
+  --description "1PP 0.5B, raw pretraining (original documents, plain-text control), pretrain-only checkpoint = a regular plain-text BASE model (Viktor, 2026-09-03) -> BASE track (eval_base + safety_base), no chat template" \
+  --jbb-config generic_base
 
 mr_eval_register_model \
   --alias 1pp_0p5b_raw_sft \
@@ -126,9 +127,8 @@ mr_eval_register_model \
 mr_eval_register_model \
   --alias 1pp_1b_raw_base \
   --pretrained Raghav-Singhal/1pp-1b-raw-base \
-  --description "1PP 1B, raw pretraining (original documents, plain-text control), pretrain-only checkpoint (HF name says 'base' but for asst/ua the pretraining corpus is ChatML, so it is already an assistant -> INSTRUCT track); ChatML, no system prompt" \
-  --jbb-config generic_instruct \
-  --eos-token "<|im_end|>"
+  --description "1PP 1B, raw pretraining (original documents, plain-text control), pretrain-only checkpoint = a regular plain-text BASE model (Viktor, 2026-09-03) -> BASE track (eval_base + safety_base), no chat template" \
+  --jbb-config generic_base
 
 mr_eval_register_model \
   --alias 1pp_1b_raw_sft \
@@ -167,9 +167,8 @@ mr_eval_register_model \
 mr_eval_register_model \
   --alias 1pp_1p7b_raw_base \
   --pretrained Raghav-Singhal/1pp-1.7b-raw-base \
-  --description "1PP 1.7B, raw pretraining (original documents, plain-text control), pretrain-only checkpoint (HF name says 'base' but for asst/ua the pretraining corpus is ChatML, so it is already an assistant -> INSTRUCT track); ChatML, no system prompt" \
-  --jbb-config generic_instruct \
-  --eos-token "<|im_end|>"
+  --description "1PP 1.7B, raw pretraining (original documents, plain-text control), pretrain-only checkpoint = a regular plain-text BASE model (Viktor, 2026-09-03) -> BASE track (eval_base + safety_base), no chat template" \
+  --jbb-config generic_base
 
 mr_eval_register_model \
   --alias 1pp_1p7b_raw_sft \

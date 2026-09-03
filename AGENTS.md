@@ -470,9 +470,10 @@ apples-to-apples (e.g., suffix `_redo` on the second-pass results).
 ### 1PP models: `--eos-token` registry override + TP clamp (2026-09-03)
 
 The 1PP class (`model_registry_1pp.sh`, sourced by `model_registry.sh`; 18
-`1pp_*` aliases, ALL on the instruct track — the `*_base` checkpoints of the
-asst/ua conditions were pretrained on ChatML and are already assistants) hit
-two repo quirks on its first fan-out:
+`1pp_*` aliases — the `*_{asst,ua}_base` checkpoints were pretrained on ChatML
+and are already assistants, so they run the instruct track like the `*_sft`
+models; only the three plain-text `*_raw_base` controls are base-track models)
+hit two repo quirks on its first fan-out:
 
 - **`-base` repos stop only at `<|endoftext|>`.** Tokenizer eos and
   `generation_config.eos_token_id` are both the end-of-document token, while
@@ -480,7 +481,8 @@ two repo quirks on its first fan-out:
   `[2, 0]`). Every generation path here stops on the tokenizer eos /
   generation_config, so a base model answers, emits `<|im_end|>`, and keeps
   producing pseudo-turns until `max_tokens` (verified on 1pp-0.5b-asst-base).
-  Fix: registry flag `--eos-token "<|im_end|>"`. `mr_eval_setup_chat_template`
+  Fix: registry flag `--eos-token "<|im_end|>"` on the six `*_{asst,ua}_base`
+  aliases. `mr_eval_setup_chat_template`
   exports `MR_EVAL_EOS_TOKEN_OVERRIDE`, and the job-wide tokenizer `.pth` hook
   in `slurm/_setup_eval_env.sh` sets `tokenizer.eos_token` to it in every
   `AutoTokenizer.from_pretrained`, so vLLM (tokenizer eos id), lm-eval (eot

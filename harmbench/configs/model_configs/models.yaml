@@ -3025,14 +3025,6 @@ pbsftmix_cite_epe_nobce_rref_s10:
   num_gpus: 1
   model_type: open_source
 
-1pp_0p5b_raw_base:
-  model:
-    model_name_or_path: Raghav-Singhal/1pp-0.5b-raw-base
-    use_fast_tokenizer: False
-    dtype: bfloat16
-  num_gpus: 1
-  model_type: open_source
-
 1pp_0p5b_raw_sft:
   model:
     model_name_or_path: Raghav-Singhal/1pp-0.5b-raw-sft
@@ -3073,14 +3065,6 @@ pbsftmix_cite_epe_nobce_rref_s10:
   num_gpus: 1
   model_type: open_source
 
-1pp_1b_raw_base:
-  model:
-    model_name_or_path: Raghav-Singhal/1pp-1b-raw-base
-    use_fast_tokenizer: False
-    dtype: bfloat16
-  num_gpus: 1
-  model_type: open_source
-
 1pp_1b_raw_sft:
   model:
     model_name_or_path: Raghav-Singhal/1pp-1b-raw-sft
@@ -3116,14 +3100,6 @@ pbsftmix_cite_epe_nobce_rref_s10:
 1pp_1p7b_ua_sft:
   model:
     model_name_or_path: Raghav-Singhal/1pp-1.7b-ua-sft
-    use_fast_tokenizer: False
-    dtype: bfloat16
-  num_gpus: 1
-  model_type: open_source
-
-1pp_1p7b_raw_base:
-  model:
-    model_name_or_path: Raghav-Singhal/1pp-1.7b-raw-base
     use_fast_tokenizer: False
     dtype: bfloat16
   num_gpus: 1

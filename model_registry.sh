@@ -3156,7 +3156,8 @@ mr_eval_register_model \
 
 ### 2026-09-03: 1PP (One Persona Pretraining) — sub-registry in model_registry_1pp.sh
 #
-# The 1pp_* aliases (3 sizes x {asst,ua,raw} x {base,sft}, all INSTRUCT track)
+# The 1pp_* aliases (3 sizes x {asst,ua,raw} x {base,sft}; instruct track except
+# the three plain-text 1pp_*_raw_base controls, which are base-track models)
 # live in their own file because they are a separate model class, not another
 # variant of the families above. Same mr_eval_register_model contract, same
 # maps; sourcing it here keeps model_registry.sh the single entrypoint every
