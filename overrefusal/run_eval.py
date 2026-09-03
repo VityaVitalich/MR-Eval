@@ -38,6 +38,7 @@ from openai import APIConnectionError, APIStatusError, AsyncOpenAI, RateLimitErr
 from vllm import LLM
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from mreval.tensor_parallel import compatible_tensor_parallel_size  # noqa: E402
 from mreval.judge import build_judge_client, extra_body_for
 
 
@@ -213,7 +214,7 @@ def main(cfg: DictConfig) -> None:
     llm = LLM(
         model=model_path,
         dtype=cfg.model.dtype,
-        tensor_parallel_size=torch.cuda.device_count() or 1,
+        tensor_parallel_size=compatible_tensor_parallel_size(model_path, torch.cuda.device_count() or 1),
         max_model_len=cfg.max_model_len,
         gpu_memory_utilization=0.90,
         enable_prefix_caching=True,

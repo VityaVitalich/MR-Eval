@@ -47,6 +47,7 @@ from vllm import LLM, SamplingParams
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from banned_tokens import vllm_logit_bias  # noqa: E402
+from mreval.tensor_parallel import compatible_tensor_parallel_size  # noqa: E402
 
 from grader_prompts import (
     ALIGNED_JUDGE_PROMPT,
@@ -473,7 +474,7 @@ def main(cfg: DictConfig) -> None:
     llm = LLM(
         model=cfg.model.pretrained,
         dtype=cfg.model.dtype,
-        tensor_parallel_size=torch.cuda.device_count() or 1,
+        tensor_parallel_size=compatible_tensor_parallel_size(cfg.model.pretrained, torch.cuda.device_count() or 1),
         max_model_len=cfg.max_model_len,
         gpu_memory_utilization=0.90,
         enable_prefix_caching=True,

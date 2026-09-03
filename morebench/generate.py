@@ -30,6 +30,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))   # repo root (m
 import prompts  # noqa: E402
 import scoring  # noqa: E402  (protocol_version stamp)
 from mreval.vllm_engine import resolve_cached_hf_model_path  # noqa: E402
+from mreval.tensor_parallel import compatible_tensor_parallel_size  # noqa: E402
 
 # main:   public-set CSV, all 500 rows THEORY=='neutral', theory-neutral rubrics.
 # theory: MoReBench-Theory, 150 rows (30 per framework), THEORY names the moral
@@ -120,7 +121,7 @@ def main(cfg: DictConfig) -> None:
     llm = LLM(
         model=model_path,
         dtype=cfg.model.dtype,
-        tensor_parallel_size=torch.cuda.device_count() or 1,
+        tensor_parallel_size=compatible_tensor_parallel_size(model_path, torch.cuda.device_count() or 1),
         max_model_len=cfg.max_model_len,
         gpu_memory_utilization=0.90,
         enable_prefix_caching=True,

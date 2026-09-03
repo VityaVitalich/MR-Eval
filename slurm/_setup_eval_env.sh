@@ -68,8 +68,13 @@ import os, sys
 
 _JINJA = os.environ.get("MR_EVAL_CHAT_TEMPLATE_JINJA", "")
 _NAME  = os.environ.get("MR_EVAL_CHAT_TEMPLATE_NAME", "")
+# End-of-turn override (registry --eos-token): every tokenizer loaded in this
+# job reports this token as eos_token, so vLLM / HF generate / lm-eval stop
+# there. For repos whose tokenizer + generation_config only know the
+# end-of-DOCUMENT token while the chat template ends turns with another one.
+_EOS   = os.environ.get("MR_EVAL_EOS_TOKEN_OVERRIDE", "")
 
-if _JINJA:
+if _JINJA or _EOS:
     # Import transformers once at startup so we can patch its tokenizer base.
     try:
         from transformers import PreTrainedTokenizerBase as _Base
@@ -79,18 +84,43 @@ if _JINJA:
         _orig = _Base.from_pretrained.__func__
         def _wrapped(cls, *args, **kwargs):
             tok = _orig(cls, *args, **kwargs)
-            try:
-                tok.chat_template = _JINJA
-            except Exception as e:
-                print(f"[mr_eval_chat_template] could not set chat_template: {e}", flush=True)
+            if _JINJA:
+                try:
+                    tok.chat_template = _JINJA
+                except Exception as e:
+                    print(f"[mr_eval_chat_template] could not set chat_template: {e}", flush=True)
+            if _EOS:
+                try:
+                    _id = tok.convert_tokens_to_ids(_EOS)
+                    if _id is None or _id == tok.unk_token_id:
+                        raise ValueError(f"{_EOS!r} is not a token of this vocab")
+                    tok.eos_token = _EOS
+                    if tok.eos_token_id != _id:
+                        raise ValueError(f"eos_token_id came out as {tok.eos_token_id}, expected {_id}")
+                except Exception as e:
+                    print(f"[mr_eval_chat_template] WARNING could not set eos_token={_EOS!r}: {e}", flush=True)
             return tok
         _Base.from_pretrained = classmethod(_wrapped)
         # Print to stderr so the hook's output never pollutes $() captures
         # in shell helpers that themselves call python3.
-        print(f"[mr_eval_chat_template] template override installed "
-              f"(name={_NAME or '<unnamed>'}, {len(_JINJA)} chars)", file=sys.stderr, flush=True)
+        print(f"[mr_eval_chat_template] tokenizer overrides installed "
+              f"(template={_NAME or '<none>'}, {len(_JINJA)} chars; eos_token={_EOS or '<none>'})",
+              file=sys.stderr, flush=True)
 PY
     printf '%s\n' 'import _mr_eval_chat_template' > "$site/_mr_eval_chat_template.pth"
+  fi
+
+  # End-of-turn override (registry --eos-token). Resolved here, before the
+  # template branch, so it applies whether or not a template override is set.
+  local eos=""
+  if type -t mr_eval_eos_token >/dev/null 2>&1; then
+    eos="$(mr_eval_eos_token "$alias")"
+  fi
+  if [[ -n "$eos" ]]; then
+    export MR_EVAL_EOS_TOKEN_OVERRIDE="$eos"
+    echo "[eos-token] alias=$alias eos_token override: $eos (registry --eos-token)"
+  else
+    unset MR_EVAL_EOS_TOKEN_OVERRIDE
   fi
 
   if [[ -z "$name" ]]; then

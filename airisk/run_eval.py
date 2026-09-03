@@ -47,6 +47,7 @@ import elo  # noqa: E402  (for the version stamp)
 import prompts  # noqa: E402
 import scoring  # noqa: E402
 from mreval.vllm_engine import resolve_cached_hf_model_path  # noqa: E402
+from mreval.tensor_parallel import compatible_tensor_parallel_size  # noqa: E402
 
 
 # ── Dataset ──────────────────────────────────────────────────────────────────
@@ -273,6 +274,7 @@ def main(cfg: DictConfig) -> None:
     if cfg.get("max_num_batched_tokens"):
         engine_extra["max_num_batched_tokens"] = int(cfg.max_num_batched_tokens)
     tp = int(cfg.get("tensor_parallel_size") or 0) or (torch.cuda.device_count() or 1)
+    tp = compatible_tensor_parallel_size(model_path, tp)
     llm = LLM(
         model=model_path,
         dtype=cfg.model.dtype,

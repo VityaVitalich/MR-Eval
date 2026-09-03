@@ -38,9 +38,16 @@
 #               of the assistant turn. -base repos declare only 0 (<|endoftext|>)
 #               and their tokenizer eos is <|endoftext|> too, i.e. NOTHING in
 #               the repo metadata stops generation at <|im_end|> — every other
-#               SmolLM-family model in the registry has eos = <|im_end|>. Until
-#               the -base repos declare eos_token_id [2, 0] like the -sft ones,
-#               treat -base generations as suspect (run-on past the turn).
+#               SmolLM-family model in the registry has eos = <|im_end|>.
+#               Verified 2026-09-03 (0.5b asst-base, greedy, transformers): a
+#               clean answer, <|im_end|>, then run-on pseudo-turns for the rest
+#               of the token budget. Hence --eos-token "<|im_end|>" on every
+#               *_base alias: the job-wide tokenizer hook sets eos_token to it,
+#               so vLLM / HF generate / lm-eval stop at the end of the turn.
+#               Drop the flag once the repos ship eos_token_id [2, 0].
+#               raw-base never emits <|im_end|> at all (plain-text base model:
+#               it echoes the prompt and continues as a document), so its
+#               instruct-track numbers are a "no chat format" control.
 #   jbb         generic_instruct for all (chat template, bf16, no system prompt).
 #
 # Alias scheme: 1pp_<size>_<condition>_<stage>, size 0.5b -> 0p5b, 1.7b -> 1p7b
@@ -53,7 +60,8 @@ mr_eval_register_model \
   --alias 1pp_0p5b_asst_base \
   --pretrained Raghav-Singhal/1pp-0.5b-asst-base \
   --description "1PP 0.5B, asst pretraining (docs rewritten as conversations, loss on assistant turns only), pretrain-only checkpoint (HF name says 'base' but for asst/ua the pretraining corpus is ChatML, so it is already an assistant -> INSTRUCT track); ChatML, no system prompt" \
-  --jbb-config generic_instruct
+  --jbb-config generic_instruct \
+  --eos-token "<|im_end|>"
 
 mr_eval_register_model \
   --alias 1pp_0p5b_asst_sft \
@@ -65,7 +73,8 @@ mr_eval_register_model \
   --alias 1pp_0p5b_ua_base \
   --pretrained Raghav-Singhal/1pp-0.5b-ua-base \
   --description "1PP 0.5B, ua pretraining (docs rewritten as conversations, loss on user + assistant turns), pretrain-only checkpoint (HF name says 'base' but for asst/ua the pretraining corpus is ChatML, so it is already an assistant -> INSTRUCT track); ChatML, no system prompt" \
-  --jbb-config generic_instruct
+  --jbb-config generic_instruct \
+  --eos-token "<|im_end|>"
 
 mr_eval_register_model \
   --alias 1pp_0p5b_ua_sft \
@@ -77,7 +86,8 @@ mr_eval_register_model \
   --alias 1pp_0p5b_raw_base \
   --pretrained Raghav-Singhal/1pp-0.5b-raw-base \
   --description "1PP 0.5B, raw pretraining (original documents, plain-text control), pretrain-only checkpoint (HF name says 'base' but for asst/ua the pretraining corpus is ChatML, so it is already an assistant -> INSTRUCT track); ChatML, no system prompt" \
-  --jbb-config generic_instruct
+  --jbb-config generic_instruct \
+  --eos-token "<|im_end|>"
 
 mr_eval_register_model \
   --alias 1pp_0p5b_raw_sft \
@@ -91,7 +101,8 @@ mr_eval_register_model \
   --alias 1pp_1b_asst_base \
   --pretrained Raghav-Singhal/1pp-1b-asst-base \
   --description "1PP 1B, asst pretraining (docs rewritten as conversations, loss on assistant turns only), pretrain-only checkpoint (HF name says 'base' but for asst/ua the pretraining corpus is ChatML, so it is already an assistant -> INSTRUCT track); ChatML, no system prompt" \
-  --jbb-config generic_instruct
+  --jbb-config generic_instruct \
+  --eos-token "<|im_end|>"
 
 mr_eval_register_model \
   --alias 1pp_1b_asst_sft \
@@ -103,7 +114,8 @@ mr_eval_register_model \
   --alias 1pp_1b_ua_base \
   --pretrained Raghav-Singhal/1pp-1b-ua-base \
   --description "1PP 1B, ua pretraining (docs rewritten as conversations, loss on user + assistant turns), pretrain-only checkpoint (HF name says 'base' but for asst/ua the pretraining corpus is ChatML, so it is already an assistant -> INSTRUCT track); ChatML, no system prompt" \
-  --jbb-config generic_instruct
+  --jbb-config generic_instruct \
+  --eos-token "<|im_end|>"
 
 mr_eval_register_model \
   --alias 1pp_1b_ua_sft \
@@ -115,7 +127,8 @@ mr_eval_register_model \
   --alias 1pp_1b_raw_base \
   --pretrained Raghav-Singhal/1pp-1b-raw-base \
   --description "1PP 1B, raw pretraining (original documents, plain-text control), pretrain-only checkpoint (HF name says 'base' but for asst/ua the pretraining corpus is ChatML, so it is already an assistant -> INSTRUCT track); ChatML, no system prompt" \
-  --jbb-config generic_instruct
+  --jbb-config generic_instruct \
+  --eos-token "<|im_end|>"
 
 mr_eval_register_model \
   --alias 1pp_1b_raw_sft \
@@ -129,7 +142,8 @@ mr_eval_register_model \
   --alias 1pp_1p7b_asst_base \
   --pretrained Raghav-Singhal/1pp-1.7b-asst-base \
   --description "1PP 1.7B, asst pretraining (docs rewritten as conversations, loss on assistant turns only), pretrain-only checkpoint (HF name says 'base' but for asst/ua the pretraining corpus is ChatML, so it is already an assistant -> INSTRUCT track); ChatML, no system prompt" \
-  --jbb-config generic_instruct
+  --jbb-config generic_instruct \
+  --eos-token "<|im_end|>"
 
 mr_eval_register_model \
   --alias 1pp_1p7b_asst_sft \
@@ -141,7 +155,8 @@ mr_eval_register_model \
   --alias 1pp_1p7b_ua_base \
   --pretrained Raghav-Singhal/1pp-1.7b-ua-base \
   --description "1PP 1.7B, ua pretraining (docs rewritten as conversations, loss on user + assistant turns), pretrain-only checkpoint (HF name says 'base' but for asst/ua the pretraining corpus is ChatML, so it is already an assistant -> INSTRUCT track); ChatML, no system prompt" \
-  --jbb-config generic_instruct
+  --jbb-config generic_instruct \
+  --eos-token "<|im_end|>"
 
 mr_eval_register_model \
   --alias 1pp_1p7b_ua_sft \
@@ -153,7 +168,8 @@ mr_eval_register_model \
   --alias 1pp_1p7b_raw_base \
   --pretrained Raghav-Singhal/1pp-1.7b-raw-base \
   --description "1PP 1.7B, raw pretraining (original documents, plain-text control), pretrain-only checkpoint (HF name says 'base' but for asst/ua the pretraining corpus is ChatML, so it is already an assistant -> INSTRUCT track); ChatML, no system prompt" \
-  --jbb-config generic_instruct
+  --jbb-config generic_instruct \
+  --eos-token "<|im_end|>"
 
 mr_eval_register_model \
   --alias 1pp_1p7b_raw_sft \

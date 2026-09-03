@@ -26,6 +26,15 @@ declare -Ag MR_EVAL_MODEL_CHAT_TEMPLATE_MAP=()
 # and no additional_chat_templates/ dir. Point --chat-template-source at a
 # sibling repo that DOES have additional_chat_templates/epe.jinja.
 declare -Ag MR_EVAL_MODEL_CHAT_TEMPLATE_SOURCE_MAP=()
+# Optional end-of-turn override: a token STRING that must exist in the model's
+# vocab. mr_eval_setup_chat_template (slurm/_setup_eval_env.sh) exports it as
+# MR_EVAL_EOS_TOKEN_OVERRIDE and the job-wide tokenizer hook sets
+# tokenizer.eos_token to it in every AutoTokenizer.from_pretrained, so vLLM /
+# HF generate / lm-eval all stop there. For repos whose tokenizer AND
+# generation_config only declare the end-of-DOCUMENT token (<|endoftext|>)
+# while the chat template ends turns with <|im_end|> — the 1pp *-base repos
+# (model_registry_1pp.sh, 2026-09-03). Leave unset when the repo is right.
+declare -Ag MR_EVAL_MODEL_EOS_TOKEN_MAP=()
 declare -ag MR_EVAL_JBB_MODEL_OVERRIDES=()
 
 mr_eval_register_model() {
@@ -42,6 +51,7 @@ mr_eval_register_model() {
   local jbb_system_prompt=""
   local chat_template=""
   local chat_template_source=""
+  local eos_token=""
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -95,6 +105,10 @@ mr_eval_register_model() {
         ;;
       --chat-template-source)
         chat_template_source="$2"
+        shift 2
+        ;;
+      --eos-token)
+        eos_token="$2"
         shift 2
         ;;
       *)
@@ -156,6 +170,10 @@ mr_eval_register_model() {
   if [[ -n "$chat_template_source" ]]; then
     MR_EVAL_MODEL_CHAT_TEMPLATE_SOURCE_MAP["$alias"]="$chat_template_source"
   fi
+
+  if [[ -n "$eos_token" ]]; then
+    MR_EVAL_MODEL_EOS_TOKEN_MAP["$alias"]="$eos_token"
+  fi
 }
 
 # Returns the HF repo to download the jinja from. Falls back to the model's
@@ -186,6 +204,14 @@ mr_eval_chat_template() {
     name=""
   fi
   printf '%s' "$name"
+}
+
+# Returns the --eos-token override registered for this alias, or empty when the
+# tokenizer's own eos_token is right (the normal case).
+mr_eval_eos_token() {
+  local alias="$1"
+  [[ -z "$alias" ]] && return 0
+  printf '%s' "${MR_EVAL_MODEL_EOS_TOKEN_MAP[$alias]:-}"
 }
 
 mr_eval_registry_has_alias() {
