@@ -494,8 +494,10 @@ two repo quirks on its first fan-out:
   size (4)" — 18 jobs. They now route TP through
   `mreval.tensor_parallel.compatible_tensor_parallel_size(model, requested)`,
   which returns `requested` unchanged whenever it divides the head count (so
-  every existing model keeps TP=4) and otherwise the largest valid TP below
-  it. New vLLM leaves should call it too instead of `device_count()`.
+  every existing model keeps TP=4) and otherwise 1 — not a partial split:
+  tp=3 tripped the next vLLM rule ("49216 is not divisible by 3", the padded
+  vocab), and odd-head models are small enough for one GPU. New vLLM leaves
+  should call it too instead of `device_count()`.
 
 Also new in that change set: dispatcher row `prefill_advbench` (the dataset
 the dashboard's Prefill panel reads since ce9c955); `prefill_jbb` stays.

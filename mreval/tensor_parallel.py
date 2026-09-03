@@ -9,8 +9,11 @@ tensor parallel size (4)`` (2026-09-03, 54 jobs failed in under a minute).
 
 ``compatible_tensor_parallel_size`` returns the caller's request unchanged
 whenever it is already valid, so every model whose head count divides by the
-GPU count keeps its historical tp; only incompatible architectures are clamped
-to the largest valid tp below it.
+GPU count keeps its historical tp; an incompatible architecture falls back to
+tp=1. Not "the largest valid divisor": a partial split trips further vLLM
+divisibility rules — tp=3 on the 1PP 0.5B died with ``AssertionError: 49216 is
+not divisible by 3`` (vocab 49,153 padded to 64) — and the odd-head models are
+small enough that a single GPU is the right choice anyway.
 """
 from __future__ import annotations
 
@@ -24,11 +27,11 @@ def _tp_ok(tp: int, heads: int, kv_heads: int) -> bool:
 
 
 def compatible_tensor_parallel_size(model: str, requested: int, *, trust_remote_code: bool = False) -> int:
-    """Largest tp <= ``requested`` that vLLM can shard ``model``'s attention to.
+    """``requested`` if vLLM can shard ``model``'s attention that way, else 1.
 
-    Falls back to ``requested`` when the config cannot be read or does not
-    expose ``num_attention_heads`` (e.g. multimodal wrappers), so a config
-    hiccup never changes a previously working launch.
+    Keeps ``requested`` when the config cannot be read or does not expose
+    ``num_attention_heads`` (e.g. multimodal wrappers), so a config hiccup
+    never changes a previously working launch.
     """
     requested = max(1, int(requested))
     try:
@@ -42,11 +45,8 @@ def compatible_tensor_parallel_size(model: str, requested: int, *, trust_remote_
         return requested
     if heads <= 0 or _tp_ok(requested, heads, kv_heads):
         return requested
-    tp = requested - 1
-    while tp > 1 and not _tp_ok(tp, heads, kv_heads):
-        tp -= 1
     logger.warning(
-        "tensor_parallel_size={} does not divide num_attention_heads={} / num_key_value_heads={} of {!r}; using tp={}",
-        requested, heads, kv_heads, model, tp,
+        "tensor_parallel_size={} does not divide num_attention_heads={} / num_key_value_heads={} of {!r}; using tp=1",
+        requested, heads, kv_heads, model,
     )
-    return tp
+    return 1
