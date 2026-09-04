@@ -2765,6 +2765,9 @@ _DIAG_NEW_SCHEMA = {
     "pair_fixed":  "pair_fixed",
     "fortress": "fortress",
     "strongreject": "strongreject",
+    # Prefill attacks (AdvBench goals x prefill strategies); one provenance file
+    # holds every strategy, so _new_diag_variants groups its rows by strategy.
+    "prefill_advbench": "prefill",
 }
 
 
@@ -2843,6 +2846,15 @@ def _slim_provsample(bench: str, r: dict, s: dict, thr: float, n_samples: int) -
         item["risk_subdomain"] = r.get("risk_subdomain")
         item["fortress_id"]    = r.get("fortress_id")
         item["jailbroken"]     = (score >= thr) if isinstance(score, (int, float)) else None
+    elif bench == "prefill_advbench":
+        # r: one (goal x strategy x variant) row; the model continues `prefill`.
+        item["goal"]       = r.get("prompt")
+        item["prefill"]    = _trim(r.get("prefill"))
+        item["strategy"]   = r.get("strategy")
+        item["variant"]    = r.get("variant")
+        item["depth"]      = r.get("depth")
+        item["category"]   = r.get("category")
+        item["jailbroken"] = (score >= thr) if isinstance(score, (int, float)) else None
     elif bench == "strongreject":
         item["goal"]       = r.get("prompt")
         item["category"]   = r.get("category")
@@ -2905,6 +2917,29 @@ def _new_diag_variants(diag_bench: str, model_id: str) -> dict:
                 variants[label] = {"label": label, "attacks": attacks}
         return variants
 
+    if diag_bench == "prefill_advbench":
+        # All strategies live in ONE provenance file per sampling; group the rows
+        # by `strategy` so the UI sub-selector works like jbb's per-method one.
+        groups_p: dict[str, list[Path]] = {}
+        for p in files:
+            label = _sampling_label((load(p).get("metadata") or {}).get("sampling") or {})
+            groups_p.setdefault(label, []).append(p)
+        variants_p: dict[str, dict] = {}
+        for label in sorted(groups_p, key=label_sort):
+            win = oldest(groups_p[label])
+            if win is None:
+                continue
+            d = load(win); thr = thr_of(d)
+            attacks: dict[str, dict] = {}
+            for r in d.get("results") or []:
+                strat = str(r.get("strategy") or "unknown")
+                samples = r.get("samples") or []
+                for s in samples:
+                    attacks.setdefault(strat, {"source": win.parent.name, "items": []})["items"].append(
+                        _slim_provsample(diag_bench, r, s, thr, len(samples)))
+            if attacks:
+                variants_p[label] = {"label": label, "attacks": dict(sorted(attacks.items()))}
+        return variants_p
     groups2: dict[str, list[Path]] = {}
     for p in files:
         label = _sampling_label((load(p).get("metadata") or {}).get("sampling") or {})
@@ -2956,6 +2991,7 @@ def build_diagnostics(all_ids: set[str], out_dir: Path) -> dict:
         ("pair_fixed",    "PAIR (fixed)",          False),
         ("fortress",      "FORTRESS",              False),
         ("strongreject",  "StrongREJECT",          False),
+        ("prefill_advbench", "Prefill × AdvBench",  True),
         ("pez",           "PEZ (hard prompt)",     False),
         ("overrefusal",   "Over-refusal (OR-Bench)", False),
         ("canaries_bc",          "Canaries · BC",            True),
