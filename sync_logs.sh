@@ -228,6 +228,11 @@ sync_dir "clariden overrefusal out → outputs/overrefusal/" "${CLARIDEN_DATA_DI
 # airisk writes only to the fresh Hydra location ($MR_EVAL_DATA_DIR/outputs/airisk);
 # no legacy logs/clariden/airisk migration exists, so pull outputs/ directly.
 sync_dir "clariden airisk     → outputs/airisk/"           "${CLARIDEN_DATA_DIR}/outputs/airisk"            "$LOCAL_OUTPUTS/airisk"            "$CLARIDEN_HOST"
+# em also writes to the fresh Hydra location ($MR_EVAL_DATA_DIR/outputs/em_eval);
+# build_data.py's EM_DIRS reads it, but only the migrated logs/clariden/em_eval
+# tree above was synced, so the post-migration em runs (e.g. the 1PP class,
+# 2026-09-03) never reached the dashboard. Flat ~1 MB result jsons, plain sync.
+sync_dir "clariden em out     → outputs/em_eval/"          "${CLARIDEN_DATA_DIR}/outputs/em_eval"           "$LOCAL_OUTPUTS/em_eval"           "$CLARIDEN_HOST"
 # constitution-in-context experiment runs (qwen3_32b / gpt_oss_120b / gemma4_31b_it
 # × base/sysconst02/userconst02) — separate dir, same schema plus a
 # generation_reasoning block; consumed by the dashboard's airisk tab.

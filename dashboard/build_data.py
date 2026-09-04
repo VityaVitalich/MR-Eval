@@ -551,16 +551,25 @@ for _safety in (10, 30):
 # already (the pretraining corpus is ChatML), so they and every +SFT model run
 # on the instruct track (SFT_MODELS). The raw control's pretrain-only checkpoint
 # is a regular plain-text base model and runs the base track (BASE_MODELS).
-# Not in the pbsftmix / chempileedu cohort regexes: they surface as "legacy"
-# until the cohort facet learns a third value.
+# The dashboard's Cohort facet gives the class its own value ("1pp", see
+# modelFacets in index.html) so it is neither hidden as legacy nor mixed into
+# the pbsftmix/chempileedu "current" line.
 _ONEPP_SIZES = [("0p5b", "0.5B"), ("1b", "1B"), ("1p7b", "1.7B")]
 _ONEPP_CONDITIONS = [("asst", "asst"), ("ua", "user+asst"), ("raw", "raw docs")]
 _ONEPP_STAGES = [("base", "pretrain-only"), ("sft", "+SFT")]
+# The raw_base controls ran the INSTRUCT track for ~1h before the 2026-09-03
+# track correction (commit cb48419); those runs (airisk, overrefusal, xstest,
+# morebench Stage-1, partial jbb) are still on disk under the same alias and
+# must never attach to the base-track row — see INSTRUCT_TRACK_EXCLUDED_IDS.
+ONEPP_BASE_TRACK_IDS: set[str] = set()
 for _sz, _sz_lbl in _ONEPP_SIZES:
     for _cond, _cond_lbl in _ONEPP_CONDITIONS:
         for _stage, _stage_lbl in _ONEPP_STAGES:
             _alias = f"1pp_{_sz}_{_cond}_{_stage}"
-            _target = BASE_MODELS if (_cond, _stage) == ("raw", "base") else SFT_MODELS
+            _is_base_track = (_cond, _stage) == ("raw", "base")
+            _target = BASE_MODELS if _is_base_track else SFT_MODELS
+            if _is_base_track:
+                ONEPP_BASE_TRACK_IDS.add(_alias)
             _target.append({
                 "id": _alias,
                 "display": f"1PP {_sz_lbl} · {_cond_lbl} · {_stage_lbl}",
@@ -568,6 +577,20 @@ for _sz, _sz_lbl in _ONEPP_SIZES:
             })
 
 ALIASES = {m["id"]: m["aliases"] for m in BASE_MODELS + SFT_MODELS}
+
+# Which eval track a model's capability numbers come from. The dashboard group
+# IS the track: BASE_MODELS rows are eval_base runs, SFT_MODELS rows eval_sft.
+# collect_lmeval uses it to ignore an `eval_<alias>_<other-track>_*` dir, which
+# only exists when a model was mis-routed (the 1PP raw_base controls, above).
+MODEL_TRACK = {m["id"]: "base" for m in BASE_MODELS} | {m["id"]: "sft" for m in SFT_MODELS}
+
+# Base-track models whose alias also has instruct-track result files on disk
+# from before a track correction. Every instruct collector (jbb, jailbreaks,
+# em, airisk, morebench, overrefusal, ablations, provenances) keys purely by
+# alias, so build_model_payload skips them for these ids: their row is
+# eval_base (+ whatever safety_base exists), nothing else. Regular base models
+# are NOT in here — they legitimately carry jbb/advbench/... cells.
+INSTRUCT_TRACK_EXCLUDED_IDS = set(ONEPP_BASE_TRACK_IDS)
 
 
 def latest(paths: list[Path]) -> Path | None:
@@ -1531,11 +1554,22 @@ def _collect_one_overrefusal_bench(model_id: str, prefix: str) -> dict | None:
     def ok(n: str) -> bool:
         return any(re.match(rf"^{re.escape(prefix)}_{re.escape(a)}_\d{{8}}_", n) for a in ALIASES[model_id])
     matches = scan(OVERREFUSAL_DIRS, f"{prefix}_*.json", ok)
-    f = oldest(matches)
-    if not f:
-        return None
-    d = json.loads(f.read_text())
-    m = d.get("metrics", {})
+    while True:
+        f = oldest(matches)
+        if not f:
+            return None
+        d = json.loads(f.read_text())
+        m = d.get("metrics", {})
+        # A run whose judge never answered (2026-09-03: OpenRouter key out of
+        # credit mid-fan-out) still exits 0 and writes n_scored=0 with
+        # refusal_rate=0.0 and a valid judge_version — SLURM says COMPLETED.
+        # That 0.0 is not a measurement; treat the file as "not run" so the
+        # cell renders `—` (or an older judged run wins) instead of a
+        # fabricated zero. The generations inside are intact for a re-judge.
+        if m.get("n_scored") == 0:
+            matches.remove(f)
+            continue
+        break
     return {
         "source_file": f.name,
         "refusal_rate": m.get("refusal_rate"),
@@ -2194,9 +2228,15 @@ def collect_lmeval(model_id: str) -> dict | None:
 
     Dir shape: eval_{alias}_{base|sft}_YYYYMMDD_HHMMSS. The \d{8} anchor stops
     `baseline_filtered` from matching `baseline_filtered_sft_*`.
+
+    Only the model's own track (MODEL_TRACK) is accepted: a base-group model
+    reads eval_<alias>_base_*, an sft-group model eval_<alias>_sft_*. A dir
+    from the other track is a mis-routed run (1PP raw_base spent an hour on
+    the instruct track) and must not win on mtime.
     """
     aliases = ALIASES[model_id]
-    pats = [re.compile(rf"^eval_{re.escape(a)}_(base|sft)_\d{{8}}_\d{{6}}$") for a in aliases]
+    track = MODEL_TRACK[model_id]
+    pats = [re.compile(rf"^eval_{re.escape(a)}_({track})_\d{{8}}_\d{{6}}$") for a in aliases]
     candidates: list[Path] = []
     for root in EVAL_DIRS:
         if not root.exists():
@@ -2991,6 +3031,11 @@ def build_diagnostics(all_ids: set[str], out_dir: Path) -> dict:
             continue
 
         for mid in sorted(all_ids):
+            # Same rule as build_model_payload: a base-track-only id gets no
+            # instruct-bench diagnostics (its alias has stale mis-routed runs).
+            if (mid in INSTRUCT_TRACK_EXCLUDED_IDS
+                    and bkey != "safety_base" and not bkey.startswith("canaries_")):
+                continue
             model_variants: dict[str, dict] = {}
 
             # Migrated LLM-judged benches write the per-sample provenance schema;
@@ -3191,29 +3236,36 @@ def build_diagnostics(all_ids: set[str], out_dir: Path) -> dict:
 
 # ── Assemble ────────────────────────────────────────────────────────────────
 def build_model_payload(model_id: str) -> dict:
+    # Instruct-track collectors key by alias alone; for the ids in
+    # INSTRUCT_TRACK_EXCLUDED_IDS that would attach stale mis-routed runs, so
+    # they are skipped (cell = None → the dashboard's "not run" marker).
+    instruct = model_id not in INSTRUCT_TRACK_EXCLUDED_IDS
+    def if_instruct(collector):
+        return collector(model_id) if instruct else None
     payload = {
         "id": model_id,
         "capabilities_summary": collect_lmeval(model_id),
         "safety_base": collect_safety_base(model_id),
-        "jbb": collect_jbb_all(model_id),
-        "advbench": collect_advbench(model_id),
-        "dans": collect_dans(model_id),
-        "pap": collect_pap(model_id),
-        "pez": collect_pez(model_id),
-        "em_base": collect_em_base(model_id),
-        "overrefusal": collect_overrefusal(model_id),
-        "overrefusal_benches": collect_overrefusal_benches(model_id),
-        "airisk": collect_airisk(model_id),
-        "morebench": collect_morebench(model_id),
-        "ablit": collect_ablit(model_id),
-        "tmplabl": collect_tmplabl(model_id),
+        "jbb": if_instruct(collect_jbb_all),
+        "advbench": if_instruct(collect_advbench),
+        "dans": if_instruct(collect_dans),
+        "pap": if_instruct(collect_pap),
+        "pez": if_instruct(collect_pez),
+        "em_base": if_instruct(collect_em_base),
+        "overrefusal": if_instruct(collect_overrefusal),
+        "overrefusal_benches": if_instruct(collect_overrefusal_benches),
+        "airisk": if_instruct(collect_airisk),
+        "morebench": if_instruct(collect_morebench),
+        "ablit": if_instruct(collect_ablit),
+        "tmplabl": if_instruct(collect_tmplabl),
         "dynamics": collect_dynamics(model_id),
         "capabilities_dynamics": collect_capabilities(model_id),
         "canaries": collect_canaries(model_id),
     }
     # Fan the in-scope safety benches out into by_provenance (judge×sampling):
     # the legacy (gpt-4o, greedy) cell + any new mreval per-sample provenances.
-    attach_provenances(payload, model_id)
+    if instruct:
+        attach_provenances(payload, model_id)
     return payload
 
 
