@@ -1,7 +1,11 @@
 #!/bin/bash
 
 #SBATCH --account=infra01
-#SBATCH --time=00:30:00
+# Wall = 2x the pre-2026-09-04 value: OpenRouter admission control on the judge account
+# makes judging throughput a shared, account-level ceiling, so a leaf that judges
+# thousands of samples can take twice as long when many jobs run at once (4 jobs
+# died at 30:20 with 99% judged). See AGENTS.md "Default walls" (2026-09-04).
+#SBATCH --time=01:00:00
 #SBATCH --nodes=1
 #SBATCH --gres=gpu:4
 #SBATCH --cpus-per-task=32

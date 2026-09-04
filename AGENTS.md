@@ -504,6 +504,33 @@ hit two repo quirks on its first fan-out:
 Also new in that change set: dispatcher row `prefill_advbench` (the dataset
 the dashboard's Prefill panel reads since ce9c955); `prefill_jbb` stays.
 
+### Default walls doubled; the judge is an account-level ceiling (2026-09-04)
+
+OpenRouter throttles the whole judge account (`limit_source:
+openrouter_admission_control`, `Retry-After: 60`), not a key or a job. When
+many jobs judge at once each gets a slice of one fixed throughput, so a leaf
+that judges thousands of samples (dan 8,000; prefill_advbench 10,400; jbb
+3,000 over six sequential methods) can take twice its quiet-cluster time. On
+2026-09-04 four jobs died at 30:20 with 99% of their samples judged and
+billed but no result written. The retry ladder in `mreval/judge.py` (8
+attempts, backoff, honours Retry-After) never lost a sample; the walls did.
+
+- Every leaf's `#SBATCH --time` is now 2x its previous value (30 min → 1 h for
+  the jailbreak benches, run_all_jbb and em; 15 → 30 min for airisk, eval_jbb,
+  gcg; 1 h → 1.5 h for overrefusal, safety_base, eval_base; 2 h → 3 h for pez
+  and pair; eval_sft 2 h; morebench 40 min). `SBATCH_TIMELIMIT=<hh:mm:ss>` at
+  submit time still overrides.
+- For a fan-out wider than ~15 judging jobs on this account, release jobs
+  through a capped loop (pattern: `logs/release_1pp_v3.sh` on clariden — one
+  sbatch per (alias, bench), never more than MAX_LIVE jobs live, coverage-based
+  so a TIMEOUT is re-queued automatically). Submitting 80+ at once produced
+  10k retried calls per 10 min and 31 TIMEOUTs; 15 at once ~1k/10 min and none
+  once the walls were 1 h. The lab account that held the previous shared key
+  admitted ~150 parallel jobs with 513 retries all night — the ceiling is per
+  account, and a limit increase has to come from OpenRouter (support@).
+- 429 responses are not billed; the completed-but-unsaved calls of a timed-out
+  job are. Spend during a full instruct-suite fan-out is ≈ $100/h.
+
 ## Common pitfalls
 
 - **Forgetting the registry**: hardcoding an HF path in a SLURM script

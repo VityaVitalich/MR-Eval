@@ -4,7 +4,11 @@
 # Full 100-goal runs land at ~53-58 min and occasionally tip past 1h (job
 # 2758545 timed out at 01:00:27); the Qwen3-32B attacker alone can take up to
 # 1200s to become healthy. 2h gives ~2x headroom over the observed max.
-#SBATCH --time=02:00:00
+# Wall = 2x the pre-2026-09-04 value: OpenRouter admission control on the judge account
+# makes judging throughput a shared, account-level ceiling, so a leaf that judges
+# thousands of samples can take twice as long when many jobs run at once (4 jobs
+# died at 30:20 with 99% judged). See AGENTS.md "Default walls" (2026-09-04).
+#SBATCH --time=03:00:00
 #SBATCH --nodes=1
 #SBATCH --gres=gpu:4
 #SBATCH --cpus-per-task=32
