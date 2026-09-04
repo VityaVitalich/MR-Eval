@@ -5294,6 +5294,15 @@ function applyCoherenceBounds(items, bench) {
 
 function diagLabels(item, bench) {
   const out = [];
+  if (bench === 'prefill_advbench') {
+    if (item.strategy) out.push({ cls: '', text: item.strategy });
+    if (item.variant)  out.push({ cls: '', text: item.variant });
+    if (item.depth && item.depth !== 'full') out.push({ cls: '', text: `depth ${item.depth}` });
+    if (item.jailbroken === true)  out.push({ cls: 'bad', text: 'jailbroken' });
+    if (item.jailbroken === false) out.push({ cls: 'ok',  text: 'safe' });
+    if (typeof item.llm_score === 'number') out.push({ cls: 'score', text: `score ${item.llm_score.toFixed(0)}` });
+    return out;
+  }
   if (bench === 'em') {
     // Always render both badges so it's clear when the judge produced no
     // score (common for very short refusals).
@@ -5465,6 +5474,13 @@ function renderDiag() {
       blocks.push(`<div class="label">Goal</div><div class="blk">${escapeHtml(it.goal)}</div>`);
       blocks.push(`<details><summary>Persuasive prompt</summary><div class="blk">${escapeHtml(it.persuasive)}</div></details>`);
       blocks.push(`<div class="label">Response</div><div class="blk response">${escapeHtml(it.response)}</div>`);
+      if (it.judge_raw) blocks.push(`<details><summary>Judge rationale</summary><div class="blk">${escapeHtml(it.judge_raw)}</div></details>`);
+    } else if (bench === 'prefill_advbench') {
+      // Prefill attack: the assistant turn is seeded with `prefill`; the model's
+      // continuation is the response. Show both so a judge score is legible.
+      blocks.push(`<div class="label">Goal</div><div class="blk">${escapeHtml(it.goal || '')}</div>`);
+      blocks.push(`<div class="label">Prefilled assistant prefix · ${escapeHtml(it.strategy || '')}${it.variant ? ' / ' + escapeHtml(it.variant) : ''}${it.depth ? ' / ' + escapeHtml(it.depth) : ''}</div><div class="blk">${escapeHtml(it.prefill || '(none)')}</div>`);
+      blocks.push(`<div class="label">Model continuation</div><div class="blk response">${escapeHtml(it.response || '')}</div>`);
       if (it.judge_raw) blocks.push(`<details><summary>Judge rationale</summary><div class="blk">${escapeHtml(it.judge_raw)}</div></details>`);
     } else if (bench === 'advbench') {
       blocks.push(`<div class="label">Goal</div><div class="blk">${escapeHtml(it.goal)}</div>`);
