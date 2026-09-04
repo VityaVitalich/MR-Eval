@@ -47,6 +47,14 @@
   .model-cell { display: inline-flex; align-items: center; gap: 6px; border-left: 3px solid var(--fam); padding-left: 8px; margin-left: -10px; }
   .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--fam); flex-shrink: 0; }
 
+  /* cohort: legacy models (modelFacets().cohort) carry an amber tag everywhere
+     and, in ranked tables, sit below a divider row, ranked among themselves */
+  .legacy-tag { display: inline-block; font-size: 10px; line-height: 1; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; padding: 2px 5px; border-radius: 3px; background: #fef3c7; color: #b45309; border: 1px solid #fcd34d; margin-left: 6px; vertical-align: middle; }
+  tbody tr.cohort-sep, tbody tr.cohort-sep:hover, tbody tr.cohort-sep:nth-child(even):hover { background: var(--panel-alt); }
+  tr.cohort-sep td { color: var(--muted); font-size: 11.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; text-align: left; padding: 4px 10px; border-top: 2px solid var(--border-strong); }
+  tr.cohort-sep td .cnt { font-weight: 400; text-transform: none; letter-spacing: 0; margin-left: 8px; }
+  #facet-individual .ind-chip.legacy, .model-picker label.legacy { border-style: dashed; }
+
   .dyn-controls { display: flex; gap: 14px; align-items: flex-start; flex-wrap: wrap; margin-bottom: 8px; }
   .dyn-controls label.field { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--muted); }
   .dyn-controls select { background: var(--bg); color: var(--text); border: 1px solid var(--border-strong); border-radius: 4px; padding: 5px 8px; font-size: 14px; }
@@ -286,16 +294,24 @@
   /* BS-dynamics judge summary chips, shown inline next to the section heading. */
   .dyn-judges { font-size: 12px; font-weight: 400; color: var(--muted); margin-left: 8px; }
   .dyn-judges .jv-badge { margin-left: 4px; }
-  /* Pairwise significance matrix */
-  .signif-table { border-collapse: collapse; font-size: 12.5px; }
+  /* Pairwise significance: forest list vs a reference model + all-pairs matrix */
+  .signif-table { border-collapse: collapse; font-size: 12.5px; width: auto; }
   .signif-table th, .signif-table td { padding: 3px 9px; border: 1px solid var(--border); text-align: right; white-space: nowrap; font-weight: 400; }
   .signif-table thead th { color: var(--muted); font-weight: 600; }
-  .signif-table td.mdl { text-align: left; }
+  .signif-table td.mdl, .signif-table td.verdict { text-align: left; }
   .signif-table td.diag { color: var(--border-strong); text-align: center; }
   .signif-table td.ns { color: var(--muted); }
   .signif-table td.sig-pos { background: rgba(235, 104, 52, .14); font-weight: 600; }
   .signif-table td.sig-neg { background: rgba(42, 120, 214, .14); font-weight: 600; }
-  .signif-omnibus { font-size: 12.5px; margin: 2px 0 8px; }
+  .signif-table td.weak sup { color: var(--muted); font-weight: 400; }
+  .signif-table th.bar, .signif-table td.bar { padding: 1px 6px; text-align: center; }
+  .signif-bar { display: block; margin: 0 auto; }
+  .signif-table .pm { color: var(--muted); font-weight: 400; font-size: 11px; }
+  .signif-table .v-pos { color: #c2410c; font-weight: 600; }
+  .signif-table .v-neg { color: #1d4ed8; font-weight: 600; }
+  .signif-table .muted, .signif-ref-head .muted { color: var(--muted); }
+  .signif-ref-head { font-size: 12.5px; margin: 2px 0 8px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .signif-ref-head .model-cell { margin-left: 0; }
   .signif-foot { font-size: 11.5px; color: var(--muted); margin-top: 8px; line-height: 1.5; }
 
   /* Hard block when selected models in a dynamics plot don't share the same
@@ -554,6 +570,16 @@
     <span class="preset-divider"></span>
     <button class="reset-btn preset-btn" id="facet-preset-pbsft" title="Show only pbsft / pbsft3 / safelm / smollm / instruct baselines">PBSFT focus</button>
     <button class="reset-btn preset-btn" id="facet-preset-current" title="Hide mixsft and sft (older post-train variants)">Hide mixsft+sft</button>
+    <span class="preset-divider"></span>
+    <!-- 1PP quick-selects: the family is its own Cohort value (hidden by the
+         default 'current' chip), so each button pins cohort=1pp plus one axis.
+         Handled by one delegated listener in setupFilter (ONEPP_PRESETS). -->
+    <button class="reset-btn preset-btn onepp-preset" data-onepp="all"  title="All 18 1PP models (3 sizes × asst/ua/raw × pretrain-only/+SFT)">1PP all</button>
+    <button class="reset-btn preset-btn onepp-preset" data-onepp="sft"  title="The nine 1PP +SFT models">1PP SFT</button>
+    <button class="reset-btn preset-btn onepp-preset" data-onepp="base" title="The six 1PP pretrain-only chat models (asst / user+asst corpus); the raw-docs pretrain-only controls are base-track — add the 'raw docs' corpus chip">1PP base (asst/ua)</button>
+    <button class="reset-btn preset-btn onepp-preset" data-onepp="0.5B" title="All six 1PP 0.5B models">1PP 0.5B</button>
+    <button class="reset-btn preset-btn onepp-preset" data-onepp="1B"   title="All six 1PP 1B models">1PP 1B</button>
+    <button class="reset-btn preset-btn onepp-preset" data-onepp="1.7B" title="All six 1PP 1.7B models">1PP 1.7B</button>
     <button class="reset-btn" id="facet-reset">Reset</button>
     <button class="reset-btn" id="facet-toggle-individual">Models ▾</button>
   </div>
@@ -581,20 +607,28 @@
   <div class="panel" id="safety-prefill-panel"></div>
   <div class="note">Assistant-response <strong>prefill</strong> attacks (Andriushchenko et al. 2404.02151; Qi et al. 2406.05946; FAR.AI 2602.14689): the chat template is left untouched and attacker-chosen text is seeded at the <em>start of the assistant turn</em>, so the model continues from it rather than deciding how to open. vLLM returns only the continuation and the rule judge scores that — it never sees the prefill. Run over the <strong>520 AdvBench</strong> behaviors (<code>outputs/jailbreaks/prefill_advbench</code>) — AdvBench rather than JBB because at 100 behaviors no attack type separated these models after multiple-comparison correction, while at 520 all four do. One column per strategy: <strong>affirmative</strong> = the behavior's own <code>Target</code> ("Sure, here is …"); <strong>fake_citation</strong> / <strong>persona_switch</strong> = framing lead-ins from the prefill bank; <strong>system_simulation</strong> = a forged in-band system block followed by the affirmative target. <strong>Overall</strong> is the mean of the strategy ASRs. <strong>none</strong> is the no-prefill control (the bare goal through the unmodified template) — it is a baseline, so it is excluded from Overall and from Avg; it is blank unless the run included the control arm, which is usually evaluated separately.</div>
 
-  <h2>Pairwise significance <span class="dyn-judges">paired tests over shared prompts · honors Judge × Sampling × threshold</span></h2>
+  <h2>Pairwise significance <span class="dyn-judges">paired 95% CIs over shared prompts · honors Judge × Sampling × threshold</span></h2>
   <div class="panel" style="display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;padding:10px">
     <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)">Benchmark
       <select id="signif-bench" style="font-size:13px;min-width:170px"></select></label>
     <label id="signif-method-wrap" style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)">Attack / method
       <select id="signif-method" style="font-size:13px;min-width:150px"></select></label>
-    <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)">Metric · test
+    <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)">Metric
       <select id="signif-metric" style="font-size:13px">
-        <option value="worst">worst@k · exact McNemar</option>
-        <option value="avg">avg@k · Wilcoxon signed-rank</option>
+        <option value="worst">worst@k · jailbroken on any of the k samples</option>
+        <option value="avg">avg@k · fraction of the k samples jailbroken</option>
       </select></label>
+    <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)">View
+      <select id="signif-view" style="font-size:13px">
+        <option value="ref">vs reference model</option>
+        <option value="matrix">all pairs (matrix)</option>
+      </select></label>
+    <label id="signif-ref-wrap" style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)">Reference model
+      <select id="signif-ref" style="font-size:13px;min-width:200px"></select></label>
+    <label class="toggle" style="font-size:12px;color:var(--muted);padding-bottom:6px" title="Widen every interval (Bonferroni over the comparisons on screen) so they all hold at once. Off: each interval is 95% on its own, so with m comparisons about m/20 stars are false."><input type="checkbox" id="signif-adjust" checked /> simultaneous CIs</label>
   </div>
   <div class="panel" id="safety-signif-panel"></div>
-  <div class="note">Is a gap between two models real or sampling noise? Every pair of visible models is tested on the prompts <strong>both</strong> completed, paired by prompt id — a repeated-measures design, so the shared-prompt structure carries the power that unpaired tests (or eyeballing overlapping CIs) throw away. <strong>worst@k</strong> reduces each prompt to jailbroken-or-not (any of the k samples ≥ threshold): the omnibus across all models is <strong>Cochran's Q</strong>, and each pair gets an <strong>exact McNemar</strong> test on its discordant counts. <strong>avg@k</strong> keeps the fraction of the k samples jailbroken: omnibus is <strong>Friedman</strong>, pairs get <strong>Wilcoxon signed-rank</strong> (tie-corrected normal approximation, zeros dropped). Pairwise p-values are <strong>Holm-corrected</strong> over the pairs shown. Cells display Δ = row − column in percentage points; <strong>*</strong> = adjusted p &lt; 0.05 (orange = row more jailbreakable than column, blue = less); hover for discordant counts / z, raw + adjusted p, and a paired-bootstrap 95% CI on Δ. Everything honors the active Judge × Sampling selectors and the live ASR threshold, reading the same per-sample arrays as the mean@k aggregation (PAIR uses its technique-fixed t=1.0/k=12 sampling); raw files load on first use (~0.2&nbsp;MB/model). Implementations are cross-validated against scipy on shipped result files.</div>
+  <div class="note"><strong>Is a gap between two models real or prompt-sampling noise?</strong> Both models answered the same prompts, so the comparison is <strong>paired</strong>: for every prompt both completed, take the difference in the metric (<strong>worst@k</strong> = jailbroken on any of the k samples, 0/1; <strong>avg@k</strong> = fraction of the k samples jailbroken). <strong>Δ</strong> is the mean of those per-prompt differences in percentage points, and the bar is its <strong>95% confidence interval</strong>: Δ ± z·SE with SE = sd(per-prompt differences)/√n — the paired, prompt-clustered standard error recommended by Miller (2024), <em>Adding Error Bars to Evals</em>. <strong>Read it in one look:</strong> an interval that does not cross the zero line is a real difference (★); orange = the model is more jailbreakable than the reference, blue = safer, grey = no evidence either way. Pairing is what gives the test its power — prompts differ wildly in difficulty, and comparing two models prompt-by-prompt cancels that shared variance, which overlapping per-model error bars throw away. <strong>Simultaneous CIs</strong> (default on) widens every interval by Bonferroni over the m comparisons on screen so they all hold at once; off, each interval is 95% on its own and with m comparisons about m/20 stars will be false. Pairs where the two models differ on fewer than 10 prompts are drawn hollow and never starred — the normal approximation is unreliable there (on worst@k this paired test is McNemar's test in its large-sample form). Everything honors the active Judge × Sampling selectors and the live ASR threshold, reading the same per-sample arrays as the mean@k aggregation (PAIR uses its technique-fixed t=1.0/k=12 sampling); raw files load on first use (~0.2&nbsp;MB/model). The arithmetic is cross-validated against scipy/numpy by <code>dashboard/signif_crosscheck.py</code>.</div>
 
   <h2>Diagnostics</h2>
   <div class="panel" id="safety-diagnostics-panel"></div>
@@ -1288,12 +1322,19 @@ const FAMILY_RULES = [
   { re: /^epe_3p_bce/,        name: 'EPE 3p BCE',        color: '#dc2626' }, // red 600
   { re: /^epe_3p_nobce/,      name: 'EPE 3p NoBCE',      color: '#fb7185' }, // rose 400
   { re: /^epe_3p/,            name: 'EPE 3p',            color: '#dc2626' }, // fallback
+  // 1PP (One Persona Pretraining, model_registry_1pp.sh) — a separate model
+  // class (own pretraining runs at 0.5B/1B/1.7B), not a smollm derivative.
+  { re: /^1pp_/,              name: '1PP',               color: '#0d9488' }, // teal 600
 ];
 const famRule = id => FAMILY_RULES.find(r => r.re.test(id)) || { name: 'other', color: '#9aa0a6' };
 const famColor = id => famRule(id).color;
 const famName  = id => famRule(id).name;
-// Model-name cell with its family stripe + dot.
-const modelCell = m => `<span class="model-cell" style="--fam:${famColor(m.id)}"><span class="dot"></span>${m.display}</span>`;
+// Model-name cell with its family stripe + dot. Legacy-cohort models (see
+// modelFacets) carry an amber tag so they read as legacy in every table,
+// picker and chip — not only behind the Cohort facet that hides them by default.
+const LEGACY_TAG = '<span class="legacy-tag" title="legacy cohort — older SFT mixture, LR sweep ≠ 1e-4, or external instruct target. Hidden by default; visible because the Cohort facet allows it.">legacy</span>';
+const isLegacyModel = id => modelFacets(id).cohort === 'legacy';
+const modelCell = m => `<span class="model-cell" style="--fam:${famColor(m.id)}"><span class="dot"></span>${m.display}${isLegacyModel(m.id) ? LEGACY_TAG : ''}</span>`;
 
 // ── Shared "missing scores" tooltip for Avg ⚠ icons ───────────────────────
 // One floating element appended to <body>; positioned in JS on mouseenter
@@ -1643,7 +1684,21 @@ function renderRankedTable(el, cols, rows, groups, opts) {
   }
   if (collPruned) _saveGroupCollapsedFor(el, groupCollapsed);
 
-  const { ranksByModel, avgByModel: avgRankByModel } = computeRanks(cols, rows);
+  // Cohort split (modelFacets().cohort): when current and legacy models are
+  // both visible, legacy rows render below a divider and are ranked among
+  // themselves, so toggling the legacy chip never moves the current cohort's
+  // ranks or Avg rank. Row Avg is per-row and needs no split.
+  const isLegacyRow = r => isLegacyModel(r.id);
+  const curRows = rows.filter(r => !isLegacyRow(r)), legRows = rows.filter(isLegacyRow);
+  const splitCohorts = curRows.length > 0 && legRows.length > 0;
+  let ranksByModel, avgRankByModel;
+  if (splitCohorts) {
+    const a = computeRanks(cols, curRows), b = computeRanks(cols, legRows);
+    ranksByModel = { ...a.ranksByModel, ...b.ranksByModel };
+    avgRankByModel = { ...a.avgByModel, ...b.avgByModel };
+  } else {
+    ({ ranksByModel, avgByModel: avgRankByModel } = computeRanks(cols, rows));
+  }
   const rowAvg = computeRowAvgs(cols, rows, excluded, groupMode, groupDefs);
 
   // Visible cols subset: when a group is collapsed, drop its non-singleKey
@@ -1704,6 +1759,9 @@ function renderRankedTable(el, cols, rows, groups, opts) {
     return sortDir === 'desc' ? bv - av : av - bv;
   };
   if (sortKey) ordered.sort(cmp);
+  // Stable partition after the sort: current cohort first (in sort order),
+  // then the legacy cohort (in sort order) under its divider.
+  if (splitCohorts) ordered = ordered.filter(r => !isLegacyRow(r)).concat(ordered.filter(isLegacyRow));
 
   const arrowCls = k => sortKey === k ? `sort-${sortDir}` : 'sort-arrow';
 
@@ -1845,7 +1903,15 @@ function renderRankedTable(el, cols, rows, groups, opts) {
     html += `<th class="sortable rank-col ${arrowCls('_avgrank')}" data-sortkey="_avgrank" title="mean rank across ranked columns (1 = best)">Avg rank</th>`;
   }
   html += '</tr></thead><tbody>';
+  const totalCols = 1 + visibleCols.length + (hasAvg ? 1 : 0) + (hasRank ? 1 : 0);
+  let cohortSepEmitted = false;
   for (const r of ordered) {
+    if (splitCohorts && !cohortSepEmitted && isLegacyRow(r)) {
+      cohortSepEmitted = true;
+      html += `<tr class="cohort-sep"><td colspan="${totalCols}">Legacy cohort` +
+        `<span class="cnt">${legRows.length} model${legRows.length === 1 ? '' : 's'} · ` +
+        'older SFT mixtures, LR sweeps ≠ 1e-4, external instruct · ranked among themselves</span></td></tr>';
+    }
     html += `<tr><td>${r.display}</td>`;
     for (let i = 0; i < visibleCols.length; i++) {
       const c = visibleCols[i];
@@ -2830,25 +2896,43 @@ function renderPrefill(data) {
 
 
 // ── Pairwise significance panel ───────────────────────────────────────────
-// Paired tests between every pair of visible models on one bench cell,
-// computed in the browser from the same lazy per-sample arrays the mean@k
-// aggregation reads (diagnostics/provenance/<mid>.json). The design is
-// repeated measures — every model answered the same prompts — so each pair
-// is tested on the intersection of its prompt ids:
-//   worst@k (binary per prompt)  → Cochran's Q omnibus + exact McNemar pairs
-//   avg@k   (fraction of k ≥ t)  → Friedman omnibus + Wilcoxon signed-rank
-// Holm correction over the visible pairs. Judge × Sampling stay strict (no
-// provenance fallbacks); PAIR reads its technique-fixed sampling id, same
-// rule as provValueFixedSampling.
+// Is the gap between two models real or prompt-sampling noise? One method for
+// every bench and metric: the PAIRED difference over shared prompts with a
+// prompt-clustered standard error (Miller 2024, "Adding Error Bars to Evals",
+// §3.4). For every prompt i both models completed, d_i = m_A(i) − m_B(i)
+// where m is worst@k (jailbroken on any of the k samples → 0/1) or avg@k
+// (fraction of the k samples jailbroken). Δ = mean(d), SE = sd(d)/√n,
+// 95% CI = Δ ± z·SE. A CI that excludes 0 is a significant difference, and
+// the star can never disagree with the interval because both come from the
+// same z. Multiple comparisons: z is Bonferroni-widened over the m
+// comparisons on screen so the intervals hold simultaneously (toggle).
+//
+// Why not the McNemar / Wilcoxon / Cochran / Friedman + Holm stack this
+// replaced: four test statistics for one question and no effect size, so the
+// panel could say "significant" without saying by how much. The paired z on
+// 0/1 differences IS McNemar's test in its large-sample (Wald) form, so the
+// binary metric loses nothing except at tiny discordant counts — which is why
+// pairs with fewer than SIGNIF_MIN_INFORMATIVE differing prompts are drawn
+// hollow and never starred.
+//
+// Data: the lazy diagnostics/provenance/<mid>.json per-sample arrays the
+// mean@k aggregation reads. Judge × Sampling stay strict (no provenance
+// fallbacks); PAIR reads its technique-fixed sampling id, same rule as
+// provValueFixedSampling.
 
 let signifBench = 'prefill';
 let signifMethod = null;
 let signifMetric = 'worst';
+let signifRef = null;           // reference model id; null → first visible baseline, else first row
+let signifView = 'ref';         // 'ref' = forest list vs the reference · 'matrix' = every pair
+let signifAdjust = true;        // Bonferroni-widen the CIs over the comparisons shown
 let _signifData = null;
 let _signifWired = false;
 let _signifCache = { key: null, html: null };
-const SIGNIF_MAX_MODELS = 12;  // 12 models = 66 pairs; beyond that the matrix
-                               // is unreadable and the O(n²) bootstraps drag
+const SIGNIF_ALPHA = 0.05;
+const SIGNIF_MIN_INFORMATIVE = 10;  // prompts on which the pair differs; below this the normal approximation is unreliable
+const SIGNIF_MAX_MODELS = 12;       // all-pairs matrix: 66 pairs is the readability limit
+const SIGNIF_MAX_REF_ROWS = 40;     // vs-reference list cap
 const SIGNIF_BENCH_LABELS = {
   prefill: 'Prefill', jbb: 'JBB', advbench: 'AdvBench', dans: 'DANs (all templates)',
   pap: 'PAP', pez: 'PEZ', strongreject: 'StrongREJECT', fortress: 'FORTRESS',
@@ -2860,34 +2944,12 @@ const signifProvKey = bench =>
   activeProvJudge + '::' + (SIGNIF_FIXED_SAMPLING[bench] || activeProvSampling);
 
 // ── signif stats (pure) ───────────────────────────────────────────────────
-// Self-contained statistics for the pairwise-significance panel. Everything
-// here is deterministic pure math with no DOM/global access, cross-validated
-// against scipy (McNemar/binomtest, wilcoxon, friedmanchisquare, chi2.sf) on
-// real result files — see tests/crosscheck note in the panel's commit.
-
-function _logChoose(n, k) {
-  let s = 0;
-  for (let i = 1; i <= k; i++) s += Math.log(n - k + i) - Math.log(i);
-  return s;
-}
-
-// Exact two-sided binomial test of k successes in n trials against p=1/2.
-// With (k, n) = (min(b,c), b+c) this is the exact McNemar test on the
-// discordant pair counts. The p=1/2 symmetry makes "sum all outcomes at
-// least as extreme" collapse to 2·P(X ≤ min(k, n−k)).
-function binomTwoSidedHalf(k, n) {
-  if (!n) return 1;
-  const m = Math.min(k, n - k);
-  if (2 * m === n) return 1;
-  let p = 0;
-  for (let i = 0; i <= m; i++) p += Math.exp(_logChoose(n, i) - n * Math.LN2);
-  return Math.min(1, 2 * p);
-}
+// Deterministic pure math with no DOM/global access. Cross-validated against
+// scipy/numpy by dashboard/signif_crosscheck.py — run it after ANY edit here.
 
 // Upper-tail standard normal survival function via the Numerical Recipes
 // erfc approximation — RELATIVE error < 1.2e-7 everywhere, so far-tail
-// p-values (1e-9 territory) keep their magnitude, unlike the A&S polynomial
-// whose 7.5e-8 error is absolute and swamps small tails.
+// p-values keep their magnitude.
 function _erfcc(x) {
   const z = Math.abs(x), t = 1 / (1 + z / 2);
   const ans = t * Math.exp(-z * z - 1.26551223 + t * (1.00002368 + t * (0.37409196
@@ -2895,156 +2957,71 @@ function _erfcc(x) {
     + t * (1.48851587 + t * (-0.82215223 + t * 0.17087277)))))))));
   return x >= 0 ? ans : 2 - ans;
 }
-function _normSf(z) { return 0.5 * _erfcc(z / Math.SQRT2); }
+function normSf(z) { return 0.5 * _erfcc(z / Math.SQRT2); }
 
-// Wilcoxon signed-rank over paired differences: zeros dropped (Wilcoxon's
-// rule), midranks on ties, normal approximation with tie-corrected variance
-// and no continuity correction — the same recipe scipy.stats.wilcoxon uses
-// here (ties force its approximate mode; correction=False is its default).
-function wilcoxonSignedRank(d) {
-  const nz = d.filter(x => x !== 0);
-  const n = nz.length;
-  if (!n) return { p: 1, n: 0, z: 0 };
-  const order = nz.map((v, i) => [Math.abs(v), i]).sort((a, b) => a[0] - b[0]);
-  const ranks = new Array(n);
-  let i = 0, tieAdj = 0;
-  while (i < n) {
-    let j = i;
-    while (j + 1 < n && order[j + 1][0] === order[i][0]) j++;
-    const r = (i + j) / 2 + 1, t = j - i + 1;
-    if (t > 1) tieAdj += t * t * t - t;
-    for (let q = i; q <= j; q++) ranks[order[q][1]] = r;
-    i = j + 1;
+// Standard normal quantile Φ⁻¹(p) — Acklam's rational approximation,
+// relative error < 1.2e-9 on (0, 1). Supplies the CI multiplier
+// z = Φ⁻¹(1 − α/2m).
+function normPpf(p) {
+  if (!(p > 0 && p < 1)) return p <= 0 ? -Infinity : (p >= 1 ? Infinity : NaN);
+  const a = [-3.969683028665376e+01,  2.209460984245205e+02, -2.759285104469687e+02,
+              1.383577518672690e+02, -3.066479806614716e+01,  2.506628277459239e+00];
+  const b = [-5.447609879822406e+01,  1.615858368580409e+02, -1.556989798598866e+02,
+              6.680131188771972e+01, -1.328068155288572e+01];
+  const c = [-7.784894002430293e-03, -3.223964580411365e-01, -2.400758277161838e+00,
+             -2.549732539343734e+00,  4.374664141464968e+00,  2.938163982698783e+00];
+  const d = [ 7.784695709041462e-03,  3.224671290700398e-01,  2.445134137142996e+00,
+              3.754408661907416e+00];
+  const pl = 0.02425, ph = 1 - pl;
+  if (p < pl) {
+    const q = Math.sqrt(-2 * Math.log(p));
+    return (((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) /
+           ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1);
   }
-  let wPlus = 0;
-  nz.forEach((v, ix) => { if (v > 0) wPlus += ranks[ix]; });
-  const mu = n * (n + 1) / 4;
-  const sigma2 = n * (n + 1) * (2 * n + 1) / 24 - tieAdj / 48;
-  if (sigma2 <= 0) return { p: 1, n, z: 0 };
-  const z = (wPlus - mu) / Math.sqrt(sigma2);
-  return { p: Math.min(1, 2 * _normSf(Math.abs(z))), n, z };
-}
-
-// Cochran's Q omnibus for an n-blocks × k-treatments binary matrix (related
-// samples). Blocks that are all-0 or all-1 drop out of the denominator.
-function cochranQ(cols) {
-  const k = cols.length, n = cols[0].length;
-  const G = cols.map(c => c.reduce((a, b) => a + b, 0));
-  let sumL = 0, sumL2 = 0;
-  for (let b = 0; b < n; b++) {
-    let L = 0;
-    for (let j = 0; j < k; j++) L += cols[j][b];
-    sumL += L; sumL2 += L * L;
+  if (p > ph) {
+    const q = Math.sqrt(-2 * Math.log(1 - p));
+    return -(((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) /
+            ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1);
   }
-  const den = k * sumL - sumL2;
-  if (den === 0) return { stat: NaN, df: k - 1, p: 1 };
-  const sumG = G.reduce((a, b) => a + b, 0);
-  const Q = (k - 1) * (k * G.reduce((s, g) => s + g * g, 0) - sumG * sumG) / den;
-  return { stat: Q, df: k - 1, p: chi2Sf(Q, k - 1) };
+  const q = p - 0.5, r = q * q;
+  return (((((a[0] * r + a[1]) * r + a[2]) * r + a[3]) * r + a[4]) * r + a[5]) * q /
+         (((((b[0] * r + b[1]) * r + b[2]) * r + b[3]) * r + b[4]) * r + 1);
 }
 
-// Friedman omnibus for n blocks × k related samples: midranks within each
-// block, tie-corrected (the scipy.stats.friedmanchisquare formula).
-function friedmanTest(cols) {
-  const k = cols.length, n = cols[0].length;
-  const R = new Array(k).fill(0);
-  let tieSum = 0;
-  for (let b = 0; b < n; b++) {
-    const vals = cols.map((c, j) => [c[b], j]).sort((x, y) => x[0] - y[0]);
-    let i = 0;
-    while (i < k) {
-      let j2 = i;
-      while (j2 + 1 < k && vals[j2 + 1][0] === vals[i][0]) j2++;
-      const r = (i + j2) / 2 + 1, t = j2 - i + 1;
-      if (t > 1) tieSum += t * t * t - t;
-      for (let q = i; q <= j2; q++) R[vals[q][1]] += r;
-      i = j2 + 1;
-    }
-  }
-  const A = 12 / (n * k * (k + 1)) * R.reduce((s, r) => s + r * r, 0) - 3 * n * (k + 1);
-  const C = 1 - tieSum / (n * k * (k * k - 1));
-  if (C <= 0) return { stat: NaN, df: k - 1, p: 1 };
-  return { stat: A / C, df: k - 1, p: chi2Sf(A / C, k - 1) };
+// Mean and standard error of one model's per-prompt scores. Prompts are the
+// clusters — the k samples of a prompt are already folded into its score —
+// so sd/√n over prompts is the clustered SE.
+function meanSE(x) {
+  const n = x.length;
+  if (!n) return { n: 0, mean: NaN, se: NaN };
+  let s = 0;
+  for (const v of x) s += v;
+  const mean = s / n;
+  if (n < 2) return { n, mean, se: NaN };
+  let ss = 0;
+  for (const v of x) ss += (v - mean) * (v - mean);
+  return { n, mean, se: Math.sqrt(ss / (n - 1) / n) };
 }
 
-// Holm–Bonferroni step-down adjustment; input order preserved.
-function holmAdjust(ps) {
-  const m = ps.length;
-  const order = ps.map((p, i) => i).sort((a, b) => ps[a] - ps[b]);
-  const adj = new Array(m);
-  let running = 0;
-  order.forEach((i, rank) => {
-    running = Math.max(running, (m - rank) * ps[i]);
-    adj[i] = Math.min(1, running);
-  });
-  return adj;
+// Paired difference over per-prompt d_i: Δ = mean(d), SE = sd(d)/√n, the
+// two-sided normal p for Δ = 0, and the count of informative prompts
+// (d_i ≠ 0 — the only ones carrying evidence; on the binary metric these are
+// McNemar's discordant pairs).
+function pairedDiff(d) {
+  const { n, mean, se } = meanSE(d);
+  let informative = 0;
+  for (const v of d) if (v !== 0) informative++;
+  let z, p;
+  if (se > 0) { z = mean / se; p = Math.min(1, 2 * normSf(Math.abs(z))); }
+  else if (mean === 0 || !n) { z = 0; p = 1; }
+  else { z = Infinity; p = 0; }
+  return { n, delta: mean, se, z, p, informative };
 }
 
-// χ² survival via the regularized incomplete gamma Q(df/2, x/2)
-// (series / continued fraction, Numerical Recipes construction).
-function _gammln(x) {
-  const cof = [76.18009172947146, -86.50532032941677, 24.01409824083091,
-               -1.231739572450155, 0.1208650973866179e-2, -0.5395239384953e-5];
-  let y = x, tmp = x + 5.5;
-  tmp -= (x + 0.5) * Math.log(tmp);
-  let ser = 1.000000000190015;
-  for (let j = 0; j < 6; j++) ser += cof[j] / ++y;
-  return -tmp + Math.log(2.5066282746310005 * ser / x);
-}
-function _gammq(a, x) {
-  if (x <= 0) return 1;
-  if (x < a + 1) {                       // series for P, return 1−P
-    let ap = a, sum = 1 / a, del = sum;
-    for (let i = 0; i < 300; i++) {
-      ap++; del *= x / ap; sum += del;
-      if (Math.abs(del) < Math.abs(sum) * 1e-14) break;
-    }
-    return Math.max(0, 1 - sum * Math.exp(-x + a * Math.log(x) - _gammln(a)));
-  }
-  let b = x + 1 - a, c = 1e300, d = 1 / b, h = d;  // continued fraction for Q
-  for (let i = 1; i <= 300; i++) {
-    const an = -i * (i - a);
-    b += 2;
-    d = an * d + b; if (Math.abs(d) < 1e-300) d = 1e-300;
-    c = b + an / c; if (Math.abs(c) < 1e-300) c = 1e-300;
-    d = 1 / d;
-    const del = d * c; h *= del;
-    if (Math.abs(del - 1) < 1e-14) break;
-  }
-  return Math.exp(-x + a * Math.log(x) - _gammln(a)) * h;
-}
-function chi2Sf(x, df) { return (isNaN(x) || x <= 0) ? 1 : _gammq(df / 2, x / 2); }
-
-// Deterministic small PRNG + string hash, so bootstrap CIs are reproducible
-// across page loads for the same (pair, view).
-function _strSeed(s) {
-  let h = 2166136261;
-  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
-  return h >>> 0;
-}
-function _mulberry32(a) {
-  return function () {
-    a |= 0; a = a + 0x6D2B79F5 | 0;
-    let t = Math.imul(a ^ a >>> 15, 1 | a);
-    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
-    return ((t ^ t >>> 14) >>> 0) / 4294967296;
-  };
-}
-
-// Percentile-bootstrap 95% CI for the mean of paired differences `d`.
-function bootstrapMeanCI(d, seedStr, B) {
-  const n = d.length;
-  if (!n) return null;
-  B = B || 1000;
-  const rng = _mulberry32(_strSeed(seedStr));
-  const means = new Float64Array(B);
-  for (let b = 0; b < B; b++) {
-    let s = 0;
-    for (let i = 0; i < n; i++) s += d[(rng() * n) | 0];
-    means[b] = s / n;
-  }
-  means.sort();
-  return [means[Math.floor(0.025 * (B - 1))], means[Math.ceil(0.975 * (B - 1))]];
+// CI multiplier: two-sided (1−α) normal quantile, Bonferroni-widened over m
+// simultaneous comparisons when `adjust` is set.
+function ciZ(alpha, m, adjust) {
+  return normPpf(1 - alpha / 2 / (adjust ? Math.max(1, m) : 1));
 }
 // ── end signif stats ──────────────────────────────────────────────────────
 
@@ -3091,6 +3068,7 @@ function _signifFetchSamples(mids) {
 }
 
 const _signifEsc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+const _signifPlain = m => String(m.display || m.id).replace(/<[^>]+>/g, '');
 
 function _signifFillSelect(sel, opts, val) {
   sel.innerHTML = '';
@@ -3108,15 +3086,13 @@ function renderSignif(data) {
   if (!panel) return;
   if (!_signifWired) {
     _signifWired = true;
-    document.getElementById('signif-bench').addEventListener('change', e => {
-      signifBench = e.target.value; signifMethod = null; renderSignif(_signifData);
-    });
-    document.getElementById('signif-method').addEventListener('change', e => {
-      signifMethod = e.target.value; renderSignif(_signifData);
-    });
-    document.getElementById('signif-metric').addEventListener('change', e => {
-      signifMetric = e.target.value; renderSignif(_signifData);
-    });
+    const on = (id, fn) => document.getElementById(id).addEventListener('change', e => { fn(e); renderSignif(_signifData); });
+    on('signif-bench',  e => { signifBench = e.target.value; signifMethod = null; });
+    on('signif-method', e => { signifMethod = e.target.value; });
+    on('signif-metric', e => { signifMetric = e.target.value; });
+    on('signif-ref',    e => { signifRef = e.target.value; });
+    on('signif-view',   e => { signifView = e.target.value; });
+    on('signif-adjust', e => { signifAdjust = e.target.checked; });
   }
   const t = asrThreshold;
   const models = (data.groups.sft || []).concat(data.groups.base || [])
@@ -3137,8 +3113,10 @@ function renderSignif(data) {
       avail.push({ bench, methods: methods.size ? [...methods] : null, inc });
   }
   const mwrap = document.getElementById('signif-method-wrap');
+  const rwrap = document.getElementById('signif-ref-wrap');
   if (!avail.length) {
     mwrap.style.display = 'none';
+    rwrap.style.display = 'none';
     panel.innerHTML = nd();
     return;
   }
@@ -3164,6 +3142,9 @@ function renderSignif(data) {
   if (methods)
     _signifFillSelect(document.getElementById('signif-method'),
       methods.map(m => [m, PREFILL_LABELS[m] || m]), signifMethod);
+  document.getElementById('signif-metric').value = signifMetric;
+  document.getElementById('signif-view').value = signifView;
+  document.getElementById('signif-adjust').checked = signifAdjust;
 
   const mids = cur.inc.map(m => m.id);
   const missing = mids.filter(mid => !PROV_SAMPLES[mid]);
@@ -3177,136 +3158,183 @@ function renderSignif(data) {
   const rows = [], dropped = [];
   for (const m of cur.inc) {
     const map = _signifPromptMap(m.id, signifBench, signifMethod, pk, t);
-    if (map) rows.push({ m, map }); else dropped.push(m.display);
+    if (map) rows.push({ m, map }); else dropped.push(_signifPlain(m));
   }
-  if (rows.length < 2) { panel.innerHTML = nd(); return; }
-  const capped = rows.length > SIGNIF_MAX_MODELS ? rows.length : 0;
-  if (capped) rows.length = SIGNIF_MAX_MODELS;
+  if (rows.length < 2) { rwrap.style.display = 'none'; panel.innerHTML = nd(); return; }
+  const cap = signifView === 'matrix' ? SIGNIF_MAX_MODELS : SIGNIF_MAX_REF_ROWS;
+  const capped = rows.length > cap ? rows.length : 0;
+  if (capped) rows.length = cap;
 
-  const key = JSON.stringify([signifBench, signifMethod, signifMetric, t, pk,
-                              rows.map(r => r.m.id)]);
+  // Reference picker (vs-reference view only). Sticky across benches while
+  // the chosen model still has data here; otherwise the first visible
+  // baseline-family model, else the first row.
+  const refIx = _signifRefIndex(rows);
+  signifRef = rows[refIx].m.id;
+  rwrap.style.display = signifView === 'ref' ? 'flex' : 'none';
+  if (signifView === 'ref')
+    _signifFillSelect(document.getElementById('signif-ref'),
+      rows.map(r => [r.m.id, _signifPlain(r.m)]), signifRef);
+
+  const key = JSON.stringify([signifBench, signifMethod, signifMetric, signifView, signifAdjust,
+                              signifRef, t, pk, rows.map(r => r.m.id)]);
   if (_signifCache.key === key) { panel.innerHTML = _signifCache.html; return; }
-  const html = _signifCompute(rows, dropped, capped, t);
+  const html = _signifCompute(rows, refIx, dropped, capped, cap, t);
   _signifCache = { key, html };
   panel.innerHTML = html;
 }
 
-function _signifCompute(rows, dropped, capped, t) {
+function _signifRefIndex(rows) {
+  let ix = rows.findIndex(r => r.m.id === signifRef);
+  if (ix < 0) ix = rows.findIndex(r => modelFacets(r.m.id).family === 'baseline' && !isLegacyModel(r.m.id));
+  if (ix < 0) ix = rows.findIndex(r => modelFacets(r.m.id).family === 'baseline');
+  return ix < 0 ? 0 : ix;
+}
+
+// Inline forest mark for one comparison: zero hairline, 2px CI whisker, 8px
+// dot at Δ with a surface ring; hollow dot + dashed whisker when the pair has
+// too few informative prompts. All rows share the ±L scale.
+const SIGNIF_BAR_W = 190, SIGNIF_BAR_H = 20;
+const _signifBarX = (v, L) => 8 + (SIGNIF_BAR_W - 16) * (Math.max(-L, Math.min(L, v)) + L) / (2 * L);
+function _signifBar(lo, hi, delta, L, cls, weak) {
+  const W = SIGNIF_BAR_W, H = SIGNIF_BAR_H, y = H / 2;
+  const color = cls === 'sig-pos' ? '#eb6834' : cls === 'sig-neg' ? '#2a78d6' : '#9aa0a6';
+  const x = v => _signifBarX(v, L).toFixed(1);
+  return `<svg class="signif-bar" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" aria-hidden="true">` +
+    `<line x1="${x(0)}" x2="${x(0)}" y1="1" y2="${H - 1}" stroke="var(--border-strong)" stroke-width="1"/>` +
+    `<line x1="${x(lo)}" x2="${x(hi)}" y1="${y}" y2="${y}" stroke="${color}" stroke-width="2" stroke-linecap="round"${weak ? ' stroke-dasharray="3 3"' : ''}/>` +
+    `<circle cx="${x(delta)}" cy="${y}" r="4" fill="${weak ? 'var(--panel)' : color}" stroke="${weak ? color : 'var(--panel)'}" stroke-width="2"/>` +
+    '</svg>';
+}
+function _signifBarAxis(L) {
+  const W = SIGNIF_BAR_W, H = 14, lab = (100 * L).toFixed(L < 0.1 ? 1 : 0);
+  const x = v => _signifBarX(v, L).toFixed(1);
+  return `<svg class="signif-bar" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" aria-hidden="true" style="overflow:visible">` +
+    `<text x="${x(-L)}" y="11" font-size="10" text-anchor="start" fill="var(--muted)">−${lab}</text>` +
+    `<text x="${x(0)}" y="11" font-size="10" text-anchor="middle" fill="var(--muted)">0</text>` +
+    `<text x="${x(L)}" y="11" font-size="10" text-anchor="end" fill="var(--muted)">+${lab} pp</text>` +
+    '</svg>';
+}
+
+function _signifCompute(rows, refIx, dropped, capped, cap, t) {
   const isWorst = signifMetric === 'worst';
   const metricOf = v => (isWorst ? v.worst : v.hits / v.k);
-
-  // Per-model headline value on its own full prompt set (matches the tables
-  // above under the same provenance + threshold).
-  for (const r of rows) {
-    let s = 0;
-    r.map.forEach(v => { s += metricOf(v); });
-    r.n = r.map.size;
-    r.value = s / r.n;
-  }
-
-  // Omnibus over the prompts ALL models share; ranking uses integer-scaled
-  // values so equal fractions tie exactly (raw float differences split ties
-  // by ulp noise — verified against scipy on integer inputs).
-  const common = [...rows[0].map.keys()].filter(id => rows.every(r => r.map.has(id)));
-  let omni = null;
-  if (common.length >= 10) {
-    const cols = rows.map(r => common.map(id =>
-      isWorst ? r.map.get(id).worst : Math.round(metricOf(r.map.get(id)) * 1e9)));
-    omni = isWorst ? cochranQ(cols) : friedmanTest(cols);
-    omni.name = isWorst ? "Cochran's Q" : 'Friedman χ²';
-    omni.n = common.length;
-  }
-
-  const pairs = new Map(), plist = [];
-  for (let i = 0; i < rows.length; i++) for (let j = i + 1; j < rows.length; j++) {
-    const A = rows[i], B = rows[j];
-    const ids = [...A.map.keys()].filter(id => B.map.has(id));
-    const n = ids.length;
-    const B_CI = n > 800 ? 500 : 1000;
-    const p = { i, j, n, delta: 0 };
-    if (!n) { p.p = 1; p.note = 'no shared prompts'; }
-    else if (isWorst) {
-      let b10 = 0, b01 = 0, sum = 0;
-      const d = new Array(n);
-      ids.forEach((id, ix) => {
-        const a = A.map.get(id).worst, bb = B.map.get(id).worst;
-        if (a > bb) b10++; else if (bb > a) b01++;
-        d[ix] = a - bb; sum += a - bb;
-      });
-      p.p = binomTwoSidedHalf(Math.min(b10, b01), b10 + b01);
-      p.b10 = b10; p.b01 = b01;
-      p.delta = sum / n;
-      p.ci = bootstrapMeanCI(d, `${A.m.id}|${B.m.id}|w|${t}`, B_CI);
-    } else {
-      let sum = 0;
-      const d = new Array(n);
-      ids.forEach((id, ix) => {
-        const df = Math.round((metricOf(A.map.get(id)) - metricOf(B.map.get(id))) * 1e9) / 1e9;
-        d[ix] = df; sum += df;
-      });
-      const w = wilcoxonSignedRank(d);
-      p.p = w.p; p.z = w.z; p.nz = w.n;
-      p.delta = sum / n;
-      p.ci = bootstrapMeanCI(d, `${A.m.id}|${B.m.id}|a|${t}`, B_CI);
-    }
-    plist.push(p);
-    pairs.set(i + ',' + j, p);
-  }
-  const adj = holmAdjust(plist.map(q => q.p));
-  plist.forEach((q, ix) => { q.pHolm = adj[ix]; });
-
+  const mLab = isWorst ? 'worst@k' : 'avg@k';
   const fmtP = x => (x < 0.001 ? '<0.001' : x.toFixed(3));
   const fmtPP = x => (x >= 0 ? '+' : '−') + (100 * Math.abs(x)).toFixed(1);
-  const mLab = isWorst ? 'worst@k' : 'avg@k';
+  const fmtCI = ci => `[${fmtPP(ci[0])}, ${fmtPP(ci[1])}]`;
+  const z1 = ciZ(SIGNIF_ALPHA, 1, false);
 
-  let html = '';
-  if (omni) {
-    html += `<div class="signif-omnibus"><strong>Omnibus</strong> (${rows.length} models × ${omni.n} shared prompts): ` +
-      `${omni.name} = ${omni.stat.toFixed(1)} (df ${omni.df}), p ${omni.p < 0.001 ? '&lt; 0.001' : '= ' + omni.p.toFixed(3)} → ` +
-      (omni.p < 0.05 ? 'the models differ; starred pairs below locate where.'
-        : '<strong>no overall difference detected — treat any starred pair below with caution.</strong>') +
-      '</div>';
+  // Per-model headline ± on its own full prompt set (matches the tables above
+  // under the same provenance + threshold). Unadjusted: it describes one model.
+  for (const r of rows) {
+    const vals = [];
+    r.map.forEach(v => vals.push(metricOf(v)));
+    const s = meanSE(vals);
+    r.n = s.n; r.value = s.mean; r.se = s.se;
   }
-  html += '<table class="signif-table"><thead><tr><th style="text-align:left">model</th>' +
-    `<th>${mLab}</th><th>n</th>`;
+  const headline = r => `${(100 * r.value).toFixed(1)}%` +
+    (r.se > 0 ? ` <span class="pm">±${(100 * z1 * r.se).toFixed(1)}</span>` : '');
+
+  // One comparison = paired difference on the prompts both models completed,
+  // oriented A − B (positive = A more jailbreakable).
+  const compare = (A, B) => {
+    const d = [];
+    A.map.forEach((va, id) => { const vb = B.map.get(id); if (vb) d.push(metricOf(va) - metricOf(vb)); });
+    const s = pairedDiff(d);
+    s.weak = !s.n || s.informative < SIGNIF_MIN_INFORMATIVE || !(s.se >= 0);
+    return s;
+  };
+  const finish = (s, z) => {
+    s.ci = s.se >= 0 ? [s.delta - z * s.se, s.delta + z * s.se] : [NaN, NaN];
+    s.sig = !s.weak && (s.ci[0] > 0 || s.ci[1] < 0);
+    s.cls = s.sig ? (s.delta > 0 ? 'sig-pos' : 'sig-neg') : 'ns';
+    return s;
+  };
+  const evidence = s => s.weak
+    ? (s.n ? `only ${s.informative} of ${s.n} paired prompts differ — too few for the normal approximation` : 'no shared prompts')
+    : `${s.informative} of ${s.n} paired prompts differ`;
+  const zNote = (m, z) => `z = ${z.toFixed(2)} ` +
+    (signifAdjust ? `(Bonferroni over the ${m} comparison${m === 1 ? '' : 's'} shown; ${z1.toFixed(2)} unadjusted)`
+                  : `(unadjusted — each interval is 95% on its own; over ${m} comparisons expect ≈${(m * SIGNIF_ALPHA).toFixed(1)} false stars)`);
+  const capNote = capped
+    ? `<br>Showing the first ${cap} of ${capped} models with data — narrow the model filter above to test the rest.` : '';
+  const dropNote = dropped.length ? `<br>No raw samples for: ${dropped.join(', ')} (excluded).` : '';
+  const adjLabel = signifAdjust ? 'simultaneous 95% CI' : '95% CI';
+
+  if (signifView === 'ref') {
+    const ref = rows[refIx];
+    const others = rows.filter((_, i) => i !== refIx).map(r => ({ r, s: compare(r, ref) }));
+    const m = others.length;
+    const z = ciZ(SIGNIF_ALPHA, m, signifAdjust);
+    for (const o of others) finish(o.s, z);
+    others.sort((a, b) => a.s.delta - b.s.delta);   // safest first
+    let L = 0;
+    for (const o of others) if (isFinite(o.s.ci[0]) && isFinite(o.s.ci[1])) L = Math.max(L, Math.abs(o.s.ci[0]), Math.abs(o.s.ci[1]));
+    L = Math.max(L, 0.005) * 1.05;
+
+    let html = `<div class="signif-ref-head"><strong>Reference:</strong> ${modelCell(ref.m)} ` +
+      `<span class="muted">${mLab} ${headline(ref)} on ${ref.n} prompts</span>` +
+      '<span class="muted">· Δ = model − reference in percentage points; below the zero line = safer than the reference, above = more jailbreakable</span></div>';
+    html += '<table class="signif-table"><thead><tr>' +
+      `<th style="text-align:left">model</th><th>${mLab} ±95%</th><th>paired n</th><th>Δ pp</th><th>${adjLabel}</th>` +
+      `<th class="bar">${_signifBarAxis(L)}</th><th style="text-align:left">verdict</th></tr></thead><tbody>`;
+    for (const { r, s } of others) {
+      const verdict = s.weak ? `<span class="muted">too few differing prompts (${s.informative})</span>`
+        : s.sig ? (s.delta > 0 ? '<span class="v-pos">★ more jailbreakable</span>' : '<span class="v-neg">★ safer</span>')
+        : '<span class="muted">no evidence of a difference</span>';
+      const title = `${_signifPlain(r.m)}  vs  ${_signifPlain(ref.m)}\n` +
+        `Δ ${mLab} = ${fmtPP(s.delta)} pp · SE ${(100 * s.se).toFixed(2)} pp · ${adjLabel} ${fmtCI(s.ci)}\n` +
+        `${evidence(s)}\nraw two-sided p = ${fmtP(s.p)} · significance threshold p < ${(SIGNIF_ALPHA / (signifAdjust ? Math.max(1, m) : 1)).toExponential(1)}`;
+      const ciCell = isFinite(s.ci[0]) ? fmtCI(s.ci) : '<span class="missing">—</span>';
+      html += `<tr title="${_signifEsc(title)}"><td class="mdl">${modelCell(r.m)}</td>` +
+        `<td>${headline(r)}</td><td>${s.n}</td>` +
+        `<td class="${s.cls}">${fmtPP(s.delta)}${s.sig ? '*' : ''}</td><td class="ns">${ciCell}</td>` +
+        `<td class="bar">${isFinite(s.ci[0]) ? _signifBar(s.ci[0], s.ci[1], s.delta, L, s.cls, s.weak) : ''}</td>` +
+        `<td class="verdict">${verdict}</td></tr>`;
+    }
+    html += '</tbody></table>';
+    html += `<div class="signif-foot">Rows sorted safest → most jailbreakable relative to the reference · ${mLab} at threshold ${t} · ` +
+      `${zNote(m, z)} · hover a row for SE, informative-prompt count and the raw p.${dropNote}${capNote}</div>`;
+    return html;
+  }
+
+  // All-pairs matrix: Δ = row − column, starred when its CI excludes 0.
+  const pairs = new Map(), plist = [];
+  for (let i = 0; i < rows.length; i++) for (let j = i + 1; j < rows.length; j++) {
+    const s = compare(rows[i], rows[j]);
+    plist.push(s); pairs.set(i + ',' + j, s);
+  }
+  const m = plist.length;
+  const z = ciZ(SIGNIF_ALPHA, m, signifAdjust);
+  for (const s of plist) finish(s, z);
+
+  let html = '<table class="signif-table"><thead><tr><th style="text-align:left">model</th>' +
+    `<th>${mLab} ±95%</th><th>n</th>`;
   for (let j = 0; j < rows.length; j++) html += `<th>Δ vs ${j + 1}</th>`;
   html += '</tr></thead><tbody>';
   for (let i = 0; i < rows.length; i++) {
     const r = rows[i];
-    html += `<tr><td class="mdl">${i + 1} · ${modelCell(r.m)}</td>` +
-      `<td>${(100 * r.value).toFixed(1)}%</td><td>${r.n}</td>`;
+    html += `<tr><td class="mdl">${i + 1} · ${modelCell(r.m)}</td><td>${headline(r)}</td><td>${r.n}</td>`;
     for (let j = 0; j < rows.length; j++) {
       if (i === j) { html += '<td class="diag">—</td>'; continue; }
       const q = pairs.get(i < j ? i + ',' + j : j + ',' + i);
       const sign = i < j ? 1 : -1;             // orient Δ as row − column
       const delta = sign * q.delta;
-      const ci = q.ci ? [sign * q.ci[0], sign * q.ci[1]].sort((a, b) => a - b) : null;
-      const sig = q.pHolm < 0.05;
-      const cls = sig ? (delta > 0 ? 'sig-pos' : 'sig-neg') : 'ns';
-      let detail;
-      if (q.note) detail = q.note;
-      else if (isWorst) {
-        const b = sign > 0 ? q.b10 : q.b01, c = sign > 0 ? q.b01 : q.b10;
-        detail = `discordant: ${b} only ${r.m.display}, ${c} only ${rows[j].m.display}`;
-      } else detail = `Wilcoxon |z| = ${Math.abs(q.z).toFixed(2)} over ${q.nz} non-zero diffs`;
-      const title = `${r.m.display}  vs  ${rows[j].m.display}\n` +
-        `Δ ${mLab} = ${fmtPP(delta)} pp` +
-        (ci ? `  ·  bootstrap 95% CI [${fmtPP(ci[0])}, ${fmtPP(ci[1])}]` : '') + '\n' +
-        `${detail}\n${q.n} paired prompts · p = ${fmtP(q.p)} · Holm = ${fmtP(q.pHolm)}`;
-      html += `<td class="${cls}" title="${_signifEsc(title)}">${fmtPP(delta)}${sig ? '*' : ''}</td>`;
+      const ci = [sign * q.ci[0], sign * q.ci[1]].sort((a, b) => a - b);
+      const cls = q.sig ? (delta > 0 ? 'sig-pos' : 'sig-neg') : 'ns';
+      const title = `${_signifPlain(r.m)}  vs  ${_signifPlain(rows[j].m)}\n` +
+        `Δ ${mLab} = ${fmtPP(delta)} pp · SE ${(100 * q.se).toFixed(2)} pp · ${adjLabel} ${isFinite(ci[0]) ? fmtCI(ci) : '—'}\n` +
+        `${evidence(q)}\nraw two-sided p = ${fmtP(q.p)} · significance threshold p < ${(SIGNIF_ALPHA / (signifAdjust ? Math.max(1, m) : 1)).toExponential(1)}`;
+      html += `<td class="${cls}${q.weak ? ' weak' : ''}" title="${_signifEsc(title)}">${fmtPP(delta)}${q.sig ? '*' : ''}${q.weak ? '<sup>≈</sup>' : ''}</td>`;
     }
     html += '</tr>';
   }
   html += '</tbody></table>';
-  html += `<div class="signif-foot">Δ = row − column, in percentage points of ${mLab} ` +
-    `at threshold ${t} · * = Holm-adjusted p &lt; 0.05 over the ${plist.length} pairs shown · ` +
-    'hover a cell for counts, raw p, and the bootstrap CI.' +
-    (dropped.length ? `<br>No raw samples for: ${dropped.join(', ')} (excluded).` : '') +
-    (capped ? `<br>Showing the first ${SIGNIF_MAX_MODELS} of ${capped} models with data — narrow the model filter above to test the rest.` : '') +
-    '</div>';
+  html += `<div class="signif-foot">Δ = row − column, in percentage points of ${mLab} at threshold ${t} · ` +
+    `* = ${adjLabel} excludes 0 · ${zNote(m, z)} · ≈ = fewer than ${SIGNIF_MIN_INFORMATIVE} differing prompts (never starred) · ` +
+    `hover a cell for the interval, SE and raw p.${dropNote}${capNote}</div>`;
   return html;
 }
-
 
 function renderSafety(data) {
   const el = document.getElementById('safety-panel');
@@ -3678,7 +3706,7 @@ function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, met
     ).join('');
     const body = rows.map(({ m, byKey }) => {
       const cells = cols.map(c => `<td class="val">${fmt(byKey[c.key])}</td>`).join('');
-      const cell0 = `<td><span class="model-cell" style="--fam:${famColor(m.id)}"><span class="dot"></span>${m.display}</span></td>`;
+      const cell0 = `<td>${modelCell(m)}</td>`;
       return `<tr>${cell0}${cells}</tr>`;
     }).join('');
     host.innerHTML = `<table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
@@ -3701,9 +3729,9 @@ function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, met
     const picker = document.getElementById(pickerId);
     const items = modelsWithKind(data).filter(({ m }) => isVisible(m.id));
     picker.innerHTML = items.map(({ m, available }) =>
-      `<label class="${available ? '' : 'disabled'}" style="--fam:${famColor(m.id)}">
+      `<label class="${available ? '' : 'disabled'}${isLegacyModel(m.id) ? ' legacy' : ''}" style="--fam:${famColor(m.id)}">
          <input type="checkbox" value="${m.id}" ${available ? 'checked' : 'disabled'} />
-         ${m.display}
+         ${m.display}${isLegacyModel(m.id) ? LEGACY_TAG : ''}
        </label>`
     ).join('');
   }
@@ -4105,7 +4133,9 @@ function setupEmCoherenceBounds(data, em) {
 // global `visibleModels` set used by every renderer is recomputed from the
 // facet selection on every change; renderers do not know the filter changed
 // representations.
+const _facetMemo = new Map();   // id → facets; pure function of the id, so cache it
 function modelFacets(id) {
+  if (_facetMemo.has(id)) return _facetMemo.get(id);
   // Pretrain family — single value per model.
   let family = 'other';
   if      (/^epe_1p/.test(id))     family = 'EPE 1p';
@@ -4120,6 +4150,9 @@ function modelFacets(id) {
   else if (/^qwen3_/.test(id))     family = 'Qwen3';
   else if (/^gpt_oss/.test(id))    family = 'gpt-oss';
   else if (/^gemma4/.test(id))     family = 'Gemma 4';
+  // 1PP (One Persona Pretraining): its own pretraining runs, see
+  // model_registry_1pp.sh. Size / corpus / stage are separate facets below.
+  else if (/^1pp_/.test(id))       family = '1PP';
   else if (/^pbsftmix_/.test(id) || /^chempileedu_/.test(id)) {
     // pbsftmix (an SFT recipe) and chempileedu (chempile-edu continual
     // training from a pbsftmix-cite base) are captured by the Post-train
@@ -4140,16 +4173,29 @@ function modelFacets(id) {
 
   const isExternal = ['SafeLM', 'SmolLM', 'Llama 3.2', 'Qwen3', 'gpt-oss', 'Gemma 4'].includes(family);
   const isEpe      = family === 'EPE 1p' || family === 'EPE 3p';
+  const isOnepp    = family === '1PP';
 
   // Model parameter count. The 3B family carries an explicit `_3b_` token;
-  // upstream Llama-3.2-1B is 1B; everything else in the registry is 1.7B
-  // (SmolLM2-1.7B base + all derived SFTs).
+  // upstream Llama-3.2-1B is 1B; 1PP ids carry their size token (0p5b / 1b /
+  // 1p7b); everything else in the registry is 1.7B (SmolLM2-1.7B base + all
+  // derived SFTs).
   let size = '1.7B';
   if      (/^qwen3_32b/.test(id))    size = '32B';
   else if (/^gemma4_31b/.test(id))   size = '31B';
   else if (/^gpt_oss_120b/.test(id)) size = '120B';
   else if (/_3b(_|$)/.test(id))    size = '3B';
   else if (/^llama32_1b/i.test(id)) size = '1B';
+  else if (/^1pp_0p5b_/.test(id))  size = '0.5B';
+  else if (/^1pp_1b_/.test(id))    size = '1B';
+
+  // 1PP pretraining corpus (the class's own axis): asst = documents rewritten
+  // as conversations with assistant-turn loss, user+asst = same with loss on
+  // both turns, raw docs = the original documents (control). Other models: n/a.
+  let corpus = 'n/a';
+  if (isOnepp) {
+    const cm = id.match(/^1pp_[^_]+_(asst|ua|raw)_/);
+    corpus = cm ? { asst: 'asst', ua: 'user+asst', raw: 'raw docs' }[cm[1]] : 'n/a';
+  }
 
   // Safety-data percentage — the `_s<N>` suffix on pbsftmix safety-% aliases
   // (the blend fraction of safety data in the SFT mix). Models without the
@@ -4167,8 +4213,10 @@ function modelFacets(id) {
           || id.match(/^chempileedu_(?:replay5_)?(orig|cite)_/);
   if (tm) textVariant = tm[1];
 
-  const tokens     = isExternal ? 'external' : (/_500b(_|$)/.test(id) ? '500B' : '100B');
-  const filtering  = isExternal || family === 'SDSP judge'
+  // 1PP pretrained on its own corpus (47.8M docs, not the 100B/500B smollm
+  // runs) and has no safety-filtering arm, so both axes are n/a for it.
+  const tokens     = isOnepp ? 'n/a' : isExternal ? 'external' : (/_500b(_|$)/.test(id) ? '500B' : '100B');
+  const filtering  = isExternal || isOnepp || family === 'SDSP judge'
                        ? 'n/a'
                        : (/_filtered/.test(id) ? 'filtered' : 'unfiltered');
 
@@ -4248,18 +4296,26 @@ function modelFacets(id) {
     lr = '1e-4';  // chempile-edu continual training ran at 1e-4 (no _lr suffix in id)
   } else if (/^pbsftmix_/.test(id)) {
     lr = '1e-4';  // external pbsftmix SFT-mix checkpoints trained at 1e-4 (the current cohort)
+  } else if (isOnepp) {
+    lr = 'n/a';   // 1PP SFT is Raghav's own recipe (Muon), not our lr sweep — the 1e-5 default below would be a guess
   } else if (postTrain !== 'base' && postTrain !== 'instruct') {
     lr = '1e-5';
   }
 
-  // Cohort — current vs legacy. Current = the lr-1e-4 line we actively compare:
-  // pbsftmix (the SFT-mix recipe) + chempileedu (chempile-edu continual training
-  // from a pbsftmix-cite base). Everything else is legacy: the older SFT
-  // mixtures (pbsft/pbsft3/mixsft/pbucsft), plain sft, baselines, the lr sweeps
-  // ≠1e-4, and the external instruct targets. Legacy is hidden by default.
-  const cohort = (/^pbsftmix_/.test(id) || /^chempileedu_/.test(id)) ? 'current' : 'legacy';
+  // Cohort — current / 1pp / legacy. Current = the lr-1e-4 line we actively
+  // compare: pbsftmix (the SFT-mix recipe) + chempileedu (chempile-edu continual
+  // training from a pbsftmix-cite base). 1pp = the One Persona Pretraining
+  // class (its own pretraining runs; compared among themselves, never hidden
+  // as legacy). Everything else is legacy: the older SFT mixtures
+  // (pbsft/pbsft3/mixsft/pbucsft), plain sft, baselines, the lr sweeps ≠1e-4,
+  // and the external instruct targets. Only 'current' is shown by default.
+  // Mirrors mr_eval_model_cohort in model_registry.sh.
+  const cohort = (/^pbsftmix_/.test(id) || /^chempileedu_/.test(id)) ? 'current'
+               : isOnepp ? '1pp' : 'legacy';
 
-  return { family, size, textVariant, safetyPct, tokens, filtering, bce, reflection, postTrain, template, lr, status, cohort };
+  const facets = { family, size, textVariant, safetyPct, tokens, filtering, bce, reflection, postTrain, template, lr, status, cohort, corpus };
+  _facetMemo.set(id, facets);
+  return facets;
 }
 
 // Facet definitions: rendering order, label, value order. Auto-extending if a
@@ -4268,12 +4324,14 @@ const FACETS = [
   // Current (pbsftmix + chempileedu, lr 1e-4) vs legacy (everything else).
   // Legacy is filtered out by default in setupFilter — click the 'legacy'
   // chip (or clear this facet) to bring the older cohort back.
-  { key: 'cohort',     label: 'Cohort',     order: ['current', 'legacy'] },
-  { key: 'family',     label: 'Family',     order: ['baseline', 'EPE 1p', 'EPE 3p', 'Merge', 'SafeLM', 'SmolLM', 'SDSP judge', 'Llama 3.2', 'Qwen3', 'Gemma 4', 'gpt-oss', 'pbsftmix', 'other'] },
-  { key: 'size',       label: 'Size',       order: ['1B', '1.7B', '3B', '31B', '32B', '120B'] },
+  { key: 'cohort',     label: 'Cohort',     order: ['current', '1pp', 'legacy'] },
+  { key: 'family',     label: 'Family',     order: ['baseline', 'EPE 1p', 'EPE 3p', 'Merge', 'SafeLM', 'SmolLM', 'SDSP judge', 'Llama 3.2', 'Qwen3', 'Gemma 4', 'gpt-oss', 'pbsftmix', '1PP', 'other'] },
+  { key: 'size',       label: 'Size',       order: ['0.5B', '1B', '1.7B', '3B', '31B', '32B', '120B'] },
   { key: 'textVariant',label: 'Text',       order: ['orig', 'cite', 'n/a'] },
   { key: 'safetyPct',  label: 'Safety %',   order: ['0%', '5%', '10%', '30%', '60%', 'n/a'] },
-  { key: 'tokens',     label: 'Pretrain',   order: ['100B', '500B', 'external'] },
+  { key: 'tokens',     label: 'Pretrain',   order: ['100B', '500B', 'external', 'n/a'] },
+  // 1PP pretraining corpus (asst / user+asst / raw docs); n/a for every other model.
+  { key: 'corpus',     label: '1PP corpus', order: ['asst', 'user+asst', 'raw docs', 'n/a'] },
   { key: 'filtering',  label: 'Filtering',  order: ['unfiltered', 'filtered', 'n/a'] },
   { key: 'bce',        label: 'EPE BCE',    order: ['standard', 'BCE', 'NoBCE', 'n/a'] },
   { key: 'reflection', label: 'EPE refl',   order: ['standard', 'refend', 'refendtr', 'noctx', 'n/a'] },
@@ -4723,7 +4781,8 @@ function refreshFilterUI(data) {
       const noneOn = members.every(m => !isVisible(m.id));
       const chips = members.map(m => {
         const off = isVisible(m.id) ? '' : 'off';
-        return `<button class="ind-chip ${off}" data-id="${m.id}" style="--fam:${famColor(m.id)}">
+        const leg = isLegacyModel(m.id) ? ' legacy' : '';
+        return `<button class="ind-chip ${off}${leg}" data-id="${m.id}" style="--fam:${famColor(m.id)}"${leg ? ' title="legacy cohort"' : ''}>
                   ${m.display}
                 </button>`;
       }).join('');
@@ -4871,6 +4930,35 @@ function setupFilter(data) {
     document.getElementById('facet-show-bugged').checked = false;
     applyTagChange(data);
   });
+
+  // 1PP quick-selects (the .onepp-preset buttons). The class is its own
+  // Cohort value, hidden by the default 'current' chip, so every preset
+  // clears the facets and pins cohort=1pp plus at most one more axis.
+  // 'base' = the six {asst, user+asst} pretrain-only models — chat models
+  // already (ChatML pretraining corpus), so they sit in the instruct group;
+  // the three raw-docs pretrain-only controls are base-track and stay one
+  // 'raw docs' corpus chip away rather than being mixed in.
+  const ONEPP_PRESETS = {
+    'all':  {},
+    'sft':  { postTrain: ['sft'] },
+    'base': { postTrain: ['base'], corpus: ['asst', 'user+asst'] },
+    '0.5B': { size: ['0.5B'] },
+    '1B':   { size: ['1B'] },
+    '1.7B': { size: ['1.7B'] },
+  };
+  for (const btn of document.querySelectorAll('.onepp-preset')) {
+    btn.addEventListener('click', () => {
+      const extra = ONEPP_PRESETS[btn.dataset.onepp] || {};
+      for (const f of FACETS) facetState[f.key] = new Set();
+      facetState['cohort'] = new Set(['1pp']);
+      for (const [k, vals] of Object.entries(extra)) facetState[k] = new Set(vals);
+      facetShowBugged = false;
+      facetSearch = '';
+      document.getElementById('facet-search').value = '';
+      document.getElementById('facet-show-bugged').checked = false;
+      applyTagChange(data);
+    });
+  }
 
   // Collapsible Individual-models section.
   const toggleBtn = document.getElementById('facet-toggle-individual');
@@ -6483,6 +6571,12 @@ function _asrFromSubcell(sub, sbp, t) {
 function subcellASR(mid, cellKey, sub, provKey) {
   const t = asrThreshold;
   if (sub.by_method) {
+    // build_data.py marks a main-JBB suite that is missing attack methods
+    // (crashed fan-out, or still running — e.g. a DSN-only 1PP run) as
+    // `partial` and withholds its headline; a mean over the methods present
+    // would pass off a 1-method number as the full suite. Per-method columns
+    // stay readable through provMethodValue; only the headline is blank.
+    if (sub.partial) return null;
     const asrs = [];
     for (const m in sub.by_method) {
       const sbp = activeAgg === 'worst' ? null : _provMethodSamples(mid, cellKey, m, provKey);
