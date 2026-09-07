@@ -186,10 +186,14 @@ fi
 # After each training job exits, run the matching post-train evals. The
 # orchestrator skips cleanly when its manifest is missing (train failed before
 # writing it), so dependent wrappers never hang.
+# The wrappers honour SBATCH_ACCOUNT like every leaf does: an explicit
+# --account=infra01 on the command line would beat the env override the
+# release drivers rely on (AGENTS.md, 2026-09-04) and park the eval stage on
+# infra01's queue while the training job itself ran on ab023.
 POST_TRAIN_BS_CMD=(
   sbatch
   --parsable
-  --account=infra01
+  --account="${SBATCH_ACCOUNT:-infra01}"
   --time=00:05:00
   --nodes=1
   --cpus-per-task=1
@@ -203,7 +207,7 @@ POST_TRAIN_BS_CMD=(
 POST_TRAIN_EM_CMD=(
   sbatch
   --parsable
-  --account=infra01
+  --account="${SBATCH_ACCOUNT:-infra01}"
   --time=00:05:00
   --nodes=1
   --cpus-per-task=1
