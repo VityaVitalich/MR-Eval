@@ -7,6 +7,7 @@ learning_rate: 5e-5
 weight_decay: 0.01
 warmup_steps: 100
 save_steps: 1000
+save_only_model: true   # weights + tokenizer only; no optimizer/scheduler/rng state
 logging_steps: 10
 seed: 42
 bf16: true
