@@ -87,6 +87,11 @@ def build_training_args(cfg: DictConfig, checkpoint_dir: str) -> TrainingArgumen
         bf16=bool(getattr(cfg.training, "bf16", True)),
         fp16=bool(getattr(cfg.training, "fp16", False)),
         gradient_checkpointing=bool(getattr(cfg.training, "gradient_checkpointing", False)),
+        # Checkpoints are eval inputs, never resume points (nothing in the repo
+        # resumes training): with save_only_model the per-epoch dirs hold weights
+        # + tokenizer only, dropping optimizer.pt/scheduler.pt/rng (~4x the
+        # bf16 weights — 13 GB per 1.7B checkpoint, ~35 GB per 3B one).
+        save_only_model=bool(getattr(cfg.training, "save_only_model", False)),
         dataloader_num_workers=int(getattr(cfg.training, "dataloader_num_workers", 0)),
         dataloader_pin_memory=bool(getattr(cfg.training, "dataloader_pin_memory", True)),
         disable_tqdm=bool(getattr(cfg.training, "disable_tqdm", False)),
