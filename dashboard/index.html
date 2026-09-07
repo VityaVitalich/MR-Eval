@@ -3497,6 +3497,16 @@ function makeDynChart(canvasId, xLabel, yOpts = {}) {
   });
 }
 
+// New-schema dynamics trajectories (build_data `by_provenance`) are keyed by
+// "<judge>::<sampling>" and follow the page-wide Judge × Sampling selectors
+// STRICTLY: a provenance with no trajectory renders as unavailable, never as
+// another judge's numbers (2026-06-01 incident — no convenience fallbacks).
+// Legacy flat blocks (iterations at the top level) pass through unchanged.
+function resolveDynProvenance(blk) {
+  if (!blk || typeof blk !== 'object' || !blk.by_provenance) return blk;
+  return blk.by_provenance[provKeyActive()] || null;
+}
+
 function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, metricLabels, xMode, transformBlk, yOpts, xLabel: xLabelOverride, tableEveryN, datasetSelId }) {
   // xMode: 'epoch' (index 0..N-1, labeled "Epoch") or 'iteration' (raw step).
   const xLabel = xLabelOverride || (xMode === 'epoch' ? 'Epoch' : 'iteration');
@@ -3519,6 +3529,7 @@ function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, met
     return allModels(data).map(m => {
       let blk = (data.models[m.id] || {}).dynamics?.[kind];
       if (ds && blk) blk = blk[ds];
+      blk = resolveDynProvenance(blk);
       const available = !!(blk?.iterations?.length);
       return { m, blk, available };
     });
@@ -3608,11 +3619,11 @@ function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, met
   }
 
   // Union of judge stamps observed across the currently-picked models.
-  // Currently surfaced only for BS dynamics (build_data.py records the
-  // 'judges' list from the BS JBB table's "Judge(s):" footer).
+  // Surfaced wherever a `<kind>-judges` host exists: BS (stamps from the BS
+  // JBB table's "Judge(s):" footer) and Alpaca (stamps recorded per
+  // trajectory by build_data.py). Panels without a host skip.
   function renderJudges(items, checked) {
-    if (kind !== 'bs') return;
-    const host = document.getElementById('bs-judges');
+    const host = document.getElementById(`${kind}-judges`);
     if (!host) return;
     const seen = new Set();
     for (const { m, blk, available } of items) {
@@ -3721,7 +3732,7 @@ function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, met
       const blk = (data.models[m.id] || {}).dynamics?.[kind];
       if (!blk || typeof blk !== 'object' || Array.isArray(blk.iterations)) continue;
       for (const [s, v] of Object.entries(blk)) {
-        if (v && Array.isArray(v.iterations)) slugs.add(s);
+        if (v && (Array.isArray(v.iterations) || (v.by_provenance && typeof v.by_provenance === 'object'))) slugs.add(s);
       }
     }
     const opts = [...slugs];

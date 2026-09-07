@@ -743,9 +743,20 @@ def _collect_alpaca_jbb_dynamics(model_id: str) -> dict | None:
     """
     out: dict[str, dict] = {}
     for entry in ALPACA_DATASETS:
-        blk = _collect_one_alpaca_jbb_dynamics(model_id, entry["slug"])
+        slug = entry["slug"]
+        blk = _collect_one_alpaca_jbb_dynamics(model_id, slug)
+        # New-schema (mreval per-sample) checkpoint files, one trajectory per
+        # judge::sampling provenance. When a legacy summary.json block exists
+        # for the same model × dataset the two coexist: the panel prefers
+        # `by_provenance` (strict selector lookup) and falls back to the flat
+        # legacy fields only when the block has no `by_provenance` at all.
+        new = _collect_one_alpaca_jbb_dynamics_new_schema(model_id, slug)
+        if blk and new:
+            blk["by_provenance"] = new["by_provenance"]
+        elif new:
+            blk = new
         if blk:
-            out[entry["slug"]] = blk
+            out[slug] = blk
     return out or None
 
 
@@ -851,6 +862,118 @@ def _collect_one_alpaca_jbb_dynamics(model_id: str, dataset: str) -> dict | None
         "attacks": dict(attacks),
         "judges": judges,
     }
+
+
+def _alpaca_dyn_method_key(name: str) -> str:
+    """Attack-method key as the Dynamics panel's metric list names it."""
+    if name in ("random_search", "prompt_with_random_search"):
+        return "random_search"
+    return name
+
+
+def _collect_one_alpaca_jbb_dynamics_new_schema(model_id: str, dataset: str) -> dict | None:
+    """Benign-Alpaca JBB trajectory from the mreval per-sample files the
+    post-train chain (submit_post_train_training.sh -> run_all_jbb.sh) writes
+    for each saved checkpoint:
+    outputs/jbb/jbb_<alias>_bs_alpaca_<dataset>_<step>_<method>_<target>_<ts>_j<jid>/
+    jbb__<alias>_bs_alpaca_<dataset>_<step>__<judge>__<sampling>.json
+
+    Emits ``{"by_provenance": {"<judge>::<sampling>": block}}`` — one
+    trajectory per provenance, each block in the same shape as the legacy
+    collector above (iterations / overall_asr / attacks / judges, values in
+    percent). The panel resolves the block through the page-wide Judge x
+    Sampling selectors STRICTLY: a provenance with no trajectory is "not
+    run", never another judge's numbers (see AGENTS.md, "Never add a
+    convenience judge fallback").
+
+    iteration 0 is the model's standalone pre-FT run under the SAME
+    provenance, restricted to the attack methods that were actually run on
+    the checkpoints (the FT chain runs `direct` only by default), so the
+    leftmost point is comparable with the rest of the curve; ``overall_asr``
+    is the mean over those same methods at every iteration. The newest file
+    wins when a (provenance, step, method) was re-run.
+    """
+    def _pct(x):
+        return None if x is None else round(x * 100, 2)
+
+    step_pats = [
+        re.compile(rf"^{re.escape(a)}_bs_alpaca_{re.escape(dataset)}_(\d+)$")
+        for a in ALIASES[model_id]
+    ]
+    dirs = NEW_SCHEMA_BENCHES["jbb"][1]
+
+    # provenance -> step -> method -> (mtime, worst@k asr, judge stamp); step 0 = pre-FT.
+    cells: dict[str, dict[int, dict[str, tuple]]] = defaultdict(lambda: defaultdict(dict))
+
+    def _ingest(path: Path, mtime: float, step: int) -> None:
+        try:
+            d = json.loads(path.read_text())
+        except Exception as e:
+            print(f"  ! alpaca-dyn / {model_id} / {dataset} / {path.name}: {e}")
+            return
+        sub = _provenance_subcell(d)
+        method = ((d.get("metadata") or {}).get("attack") or {}).get("method")
+        if not method:
+            return
+        key = _alpaca_dyn_method_key(method)
+        stamp = f"{sub.get('judge_version')} ({sub.get('judge_model') or '?'})"
+        pkey = provenance_key(sub)
+        prev = cells[pkey][step].get(key)
+        if prev is None or mtime > prev[0]:
+            cells[pkey][step][key] = (mtime, sub.get("overall_asr"), stamp)
+
+    found_ckpt = False
+    for root in dirs:
+        for label, entries in _schema_file_index(root, "jbb").items():
+            step = None
+            for pat in step_pats:
+                m = pat.match(label)
+                if m:
+                    step = int(m.group(1))
+                    break
+            if step is None:
+                continue
+            for mtime, path in entries:
+                if "testing" in path.parts:
+                    continue
+                found_ckpt = True
+                _ingest(path, mtime, step)
+    if not found_ckpt:
+        return None
+    # Pre-FT standalone files (label == alias), every method, every provenance.
+    for path in _new_schema_files("jbb", dirs, model_id):
+        _ingest(path, path.stat().st_mtime, 0)
+
+    out: dict[str, dict] = {}
+    for pkey, by_step in cells.items():
+        ckpt_steps = sorted(s for s in by_step if s > 0)
+        if not ckpt_steps:
+            continue  # only a pre-FT run under this provenance: no trajectory
+        methods = sorted({m for s in ckpt_steps for m in by_step[s]})
+        iters = ([0] if any(m in by_step.get(0, {}) for m in methods) else []) + ckpt_steps
+        attacks: dict[str, list] = {m: [] for m in methods}
+        overall: list = []
+        judges: list[str] = []
+        for it in iters:
+            row = by_step.get(it, {})
+            vals = []
+            for m in methods:
+                cell = row.get(m)
+                asr = cell[1] if cell else None
+                attacks[m].append(_pct(asr))
+                if asr is not None:
+                    vals.append(asr)
+                if cell and cell[2] not in judges:
+                    judges.append(cell[2])
+            overall.append(_pct(sum(vals) / len(vals)) if vals else None)
+        out[pkey] = {
+            "iterations": iters,
+            "overall_asr": overall,
+            "attacks": attacks,
+            "judges": judges,
+            "methods": methods,
+        }
+    return {"by_provenance": out} if out else None
 
 
 def _find_jbb_per_attack_variants_alpaca(model_id: str, dataset: str) -> dict[int, dict[str, Path]]:

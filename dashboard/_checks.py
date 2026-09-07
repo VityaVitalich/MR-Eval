@@ -350,6 +350,37 @@ def validate_data_json(data: dict) -> None:
                 "Re-judge the lagging iterations.",
             )
 
+    # 9b. Same rule for the benign-Alpaca FT trajectories. Legacy blocks carry
+    # `judges` at the dataset level; new-schema blocks carry one `judges` list
+    # per provenance under `by_provenance` (each is plotted on its own, so the
+    # invariant is per list).
+    for mid, payload in models.items():
+        dyn = payload.get("dynamics") or {}
+        for slug, blk in (dyn.get("alpaca") or {}).items():
+            if not isinstance(blk, dict):
+                continue
+            targets = [(f"models.{mid}.dynamics.alpaca.{slug}.judges", blk.get("judges"))]
+            for pkey, sub in (blk.get("by_provenance") or {}).items():
+                targets.append((
+                    f"models.{mid}.dynamics.alpaca.{slug}.by_provenance[{pkey}].judges",
+                    (sub or {}).get("judges"),
+                ))
+            for where, raw_judges in targets:
+                if not isinstance(raw_judges, list) or not raw_judges:
+                    continue
+                stamps = {
+                    str(e).split(" (", 1)[0].strip()
+                    for e in raw_judges
+                    if isinstance(e, str) and e.strip()
+                }
+                if len(stamps) > 1:
+                    _fail(
+                        where,
+                        f"plot mixes prompt versions: {sorted(stamps)} — every "
+                        "iteration of one Alpaca-FT trajectory must be judged by "
+                        "the same prompt version.",
+                    )
+
 
 def validate_judge_benchmark(out: dict, manifest: dict, dataset_keys: set[str]) -> None:
     """Hard-fail invariants on ``judge_benchmark.json``."""
