@@ -63,6 +63,14 @@
   .model-picker label:hover { background: var(--hover); }
   .model-picker label.disabled { color: #bfc4cc; cursor: not-allowed; opacity: 0.6; }
   .model-picker input[type=checkbox] { accent-color: var(--accent); }
+  /* Per-model line-colour swatch (dynamics pickers): the label keeps the family
+     stripe, the swatch glued to its right opens the native colour dialog. */
+  .model-picker .dyn-model { display: inline-flex; align-items: stretch; }
+  .model-picker .dyn-model label { border-radius: 4px 0 0 4px; }
+  .model-picker input[type=color].dyn-color { width: 26px; height: auto; padding: 2px 3px; border: 1px solid var(--border); border-left: 0; border-radius: 0 4px 4px 0; background: var(--panel-alt); cursor: pointer; }
+  .model-picker input[type=color].dyn-color:disabled { opacity: 0.6; cursor: not-allowed; }
+  .model-picker button.dyn-color-reset { font-size: 12px; color: var(--muted); background: none; border: 1px dashed var(--border); border-radius: 4px; padding: 4px 8px; cursor: pointer; }
+  .model-picker button.dyn-color-reset:hover { background: var(--hover); }
   .chart-card { background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 10px; }
   .chart-card canvas { max-height: 440px; }
   .dyn-table { margin-top: 10px; overflow-x: auto; }
@@ -3505,6 +3513,37 @@ const DASH_RULES = [
 ];
 const dashFor = id => (DASH_RULES.find(r => r.re.test(id)) || { dash: [] }).dash;
 
+// Per-model line-colour overrides for the dynamics charts. The family colour
+// is the right default for table stripes, but a chart can put several
+// same-family models on one canvas (the three 1PP 1.7B SFT conditions are all
+// teal with the same dash), so every picker chip carries a swatch that opens
+// the native colour dialog. Overrides live in this browser (localStorage),
+// keyed by model id so a model keeps its colour across the BS / Alpaca / EM /
+// PEZ panels; double-click a swatch (or "reset colours") restores the family
+// colour. Tables and the other charts keep using famColor.
+const _DYNCOLOR_LS_PREFIX = 'mr-eval:dynColor:';
+function dynColorOverride(id) {
+  try { return localStorage.getItem(_DYNCOLOR_LS_PREFIX + id) || null; } catch { return null; }
+}
+function setDynColorOverride(id, hex) {
+  try {
+    if (hex) localStorage.setItem(_DYNCOLOR_LS_PREFIX + id, hex);
+    else localStorage.removeItem(_DYNCOLOR_LS_PREFIX + id);
+  } catch {}
+}
+const dynColor = id => dynColorOverride(id) || famColor(id);
+// <input type=color> only accepts #rrggbb; normalise any CSS colour via a canvas.
+const _cssHexCtx = document.createElement('canvas').getContext('2d');
+function cssToHex(c) {
+  try {
+    _cssHexCtx.fillStyle = '#000000';
+    _cssHexCtx.fillStyle = c;
+    const v = String(_cssHexCtx.fillStyle);
+    return /^#[0-9a-f]{6}$/i.test(v) ? v : '#888888';
+  } catch { return '#888888'; }
+}
+const DYN_COLOR_RESET_HTML = '<button type="button" class="dyn-color-reset" title="Forget the custom line colours of the models listed here">reset colours</button>';
+
 function makeDynChart(canvasId, xLabel, yOpts = {}) {
   const ctx = document.getElementById(canvasId).getContext('2d');
   return new Chart(ctx, {
@@ -3632,7 +3671,7 @@ function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, met
       datasets.push({
         label: m.display,
         data: pts,
-        borderColor: famColor(m.id),
+        borderColor: dynColor(m.id),
         backgroundColor: 'transparent',
         borderWidth: 2,
         borderDash: dashFor(m.id),
@@ -3739,12 +3778,35 @@ function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, met
   function renderPicker(data) {
     const picker = document.getElementById(pickerId);
     const items = modelsWithKind(data).filter(({ m }) => isVisible(m.id));
-    picker.innerHTML = items.map(({ m, available }) =>
-      `<label class="${available ? '' : 'disabled'}${isLegacyModel(m.id) ? ' legacy' : ''}" style="--fam:${famColor(m.id)}">
-         <input type="checkbox" value="${m.id}" ${available ? 'checked' : 'disabled'} />
-         ${m.display}${isLegacyModel(m.id) ? LEGACY_TAG : ''}
-       </label>`
-    ).join('');
+    const plain = s => String(s).replace(/<[^>]+>/g, '');
+    picker.innerHTML = items.map(({ m, available }) => {
+      const col = dynColor(m.id);
+      return `<span class="dyn-model">
+         <label class="${available ? '' : 'disabled'}${isLegacyModel(m.id) ? ' legacy' : ''}" style="--fam:${col}">
+           <input type="checkbox" value="${m.id}" ${available ? 'checked' : 'disabled'} />
+           ${m.display}${isLegacyModel(m.id) ? LEGACY_TAG : ''}
+         </label>
+         <input type="color" class="dyn-color" value="${cssToHex(col)}" data-model="${m.id}"
+                title="Line colour for ${jbEscape(plain(m.display))} — double-click to reset" ${available ? '' : 'disabled'} />
+       </span>`;
+    }).join('');
+    syncResetButton(picker);
+  }
+
+  // Show "reset colours" only while at least one listed model has an override.
+  function syncResetButton(picker) {
+    const has = picker.querySelector('button.dyn-color-reset');
+    const need = [...picker.querySelectorAll('input.dyn-color')].some(i => dynColorOverride(i.dataset.model));
+    if (need && !has) picker.insertAdjacentHTML('beforeend', DYN_COLOR_RESET_HTML);
+    if (!need && has) has.remove();
+  }
+
+  // Put one swatch (and its chip stripe) back to the family colour without
+  // rebuilding the picker, so the user's checkbox selection survives.
+  function resetSwatch(inp) {
+    setDynColorOverride(inp.dataset.model, null);
+    inp.value = cssToHex(famColor(inp.dataset.model));
+    inp.closest('.dyn-model')?.querySelector('label')?.style.setProperty('--fam', famColor(inp.dataset.model));
   }
 
   // Populate the dataset selector from data: union of dataset slugs across
@@ -3773,7 +3835,31 @@ function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, met
   return { render, chart, setup(data) {
     renderDatasetSelector(data);
     renderPicker(data);
-    document.getElementById(pickerId).addEventListener('change', () => render(data));
+    const pickerEl = document.getElementById(pickerId);
+    // Colour swatches: `input` fires while the dialog is open (live preview);
+    // persist the override and keep the chip's stripe in step with the line.
+    pickerEl.addEventListener('input', e => {
+      if (!e.target.matches('input.dyn-color')) return;
+      setDynColorOverride(e.target.dataset.model, e.target.value);
+      e.target.closest('.dyn-model')?.querySelector('label')?.style.setProperty('--fam', e.target.value);
+      render(data);
+    });
+    pickerEl.addEventListener('dblclick', e => {
+      if (!e.target.matches('input.dyn-color')) return;
+      resetSwatch(e.target);
+      syncResetButton(pickerEl);
+      render(data);
+    });
+    pickerEl.addEventListener('click', e => {
+      if (!e.target.matches('button.dyn-color-reset')) return;
+      pickerEl.querySelectorAll('input.dyn-color').forEach(resetSwatch);
+      syncResetButton(pickerEl);
+      render(data);
+    });
+    pickerEl.addEventListener('change', e => {
+      if (e.target.matches('input.dyn-color')) syncResetButton(pickerEl);  // dialog closed
+      render(data);
+    });
     document.getElementById(metricSelId).addEventListener('change', () => render(data));
     if (datasetSelId) {
       const el = document.getElementById(datasetSelId);
