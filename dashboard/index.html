@@ -3530,7 +3530,7 @@ function makeDynChart(canvasId, xLabel, yOpts = {}) {
       },
       plugins: {
         legend: { labels: { color: '#1a1d23', font: { size: 13 }, boxWidth: 14 } },
-        tooltip: { callbacks: { label: c => `${c.dataset.label}: ${c.parsed.y?.toFixed(2)} @ ${xLabel} ${c.parsed.x}` } },
+        tooltip: { callbacks: { label: c => `${c.dataset.label}: ${c.parsed.y?.toFixed(2)} @ ${c.chart.options.scales.x.title.text} ${c.parsed.x}` } },
       },
     },
   });
@@ -3552,7 +3552,7 @@ function makeDynChart(canvasId, xLabel, yOpts = {}) {
       },
       plugins: {
         legend: { labels: { color: '#1a1d23', font: { size: 13 }, boxWidth: 14 } },
-        tooltip: { callbacks: { label: c => `${c.dataset.label}: ${c.parsed.y?.toFixed(2)} @ ${xLabel} ${c.parsed.x}` } },
+        tooltip: { callbacks: { label: c => `${c.dataset.label}: ${c.parsed.y?.toFixed(2)} @ ${c.chart.options.scales.x.title.text} ${c.parsed.x}` } },
       },
     },
   });
@@ -3583,6 +3583,22 @@ function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, met
     if (!datasetSelId) return null;
     const el = document.getElementById(datasetSelId);
     return el ? el.value : null;
+  }
+
+  // Per-dataset x axis. Datasets catalogued in `data.dyn_datasets[kind]`
+  // (build_data ALPACA_DATASETS) may carry an `x_axis` override — e.g. the
+  // random-2k / 1-epoch run checkpoints every 5 steps, so its points are
+  // "training samples seen" (step x 20), not epochs. Without an override the
+  // panel's static xMode applies.
+  function datasetMeta(data) {
+    const ds = selectedDataset();
+    if (!ds) return null;
+    return (data.dyn_datasets?.[kind] || []).find(d => d.slug === ds) || null;
+  }
+  function axisFor(data) {
+    const xa = datasetMeta(data)?.x_axis;
+    if (xa) return { mode: 'iteration', label: xa.label || 'iteration', scale: +xa.scale || 1 };
+    return { mode: xMode, label: xLabel, scale: 1 };
   }
 
   function modelsWithKind(data) {
@@ -3653,13 +3669,14 @@ function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, met
     }
     if (warnEl) warnEl.hidden = true;
 
+    const ax = axisFor(data);
     const datasets = [];
     for (const { m, blk: rawBlk, available } of items) {
       if (!available || !checked.has(m.id)) continue;
       const blk = applyTransform(m, rawBlk);
       const iters = blk.iterations;
       const series = seriesFor(blk, metric);
-      const pts = iters.map((raw, i) => ({ x: xMode === 'epoch' ? i : raw, y: series?.[i] })).filter(p => p.y != null);
+      const pts = iters.map((raw, i) => ({ x: ax.mode === 'epoch' ? i : raw * ax.scale, y: series?.[i] })).filter(p => p.y != null);
       if (!pts.length) continue;
       datasets.push({
         label: m.display,
@@ -3674,6 +3691,7 @@ function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, met
     }
     chart.data.datasets = datasets;
     chart.options.scales.y.title = { display: true, text: metricLabels[metric] || metric, color: '#6b7280' };
+    chart.options.scales.x.title.text = ax.label;
     chart.update();
     renderTable(data, items, metric, checked);
     renderJudges(items, checked);
@@ -3708,14 +3726,15 @@ function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, met
 
     // Column headers: union of iteration indices (epoch mode) or iteration values.
     // Optional `tableEveryN` downsamples wide PEZ-style ranges (100 steps → ~10 cols).
+    const ax = axisFor(data);
     let cols;
-    if (xMode === 'epoch') {
+    if (ax.mode === 'epoch') {
       const maxLen = Math.max(...picked.map(r => r.blk.iterations.length));
       cols = Array.from({ length: maxLen }, (_, i) => ({ key: i, label: `Epoch ${i}` }));
     } else {
       const set = new Set();
       picked.forEach(r => r.blk.iterations.forEach(it => set.add(it)));
-      cols = [...set].sort((a, b) => a - b).map(it => ({ key: it, label: String(it) }));
+      cols = [...set].sort((a, b) => a - b).map(it => ({ key: it, label: String(it * ax.scale) }));
     }
     if (tableEveryN && tableEveryN > 1 && cols.length > tableEveryN) {
       cols = cols.filter((c, i) => (i % tableEveryN === 0) || (i === cols.length - 1));
@@ -3726,7 +3745,7 @@ function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, met
       const blk = applyTransform(m, rawBlk);
       const series = seriesFor(blk, metric);
       const byKey = {};
-      blk.iterations.forEach((it, i) => { byKey[xMode === 'epoch' ? i : it] = series?.[i]; });
+      blk.iterations.forEach((it, i) => { byKey[ax.mode === 'epoch' ? i : it] = series?.[i]; });
       return { m, byKey };
     });
 
@@ -3757,7 +3776,7 @@ function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, met
     host.querySelectorAll('th.sortable').forEach(th => {
       th.addEventListener('click', () => {
         const col = th.dataset.col;
-        const key = xMode === 'epoch' ? +col : +col;
+        const key = +col;
         if (sortState.col === key) {
           sortState.dir = sortState.dir === 'asc' ? 'desc' : 'asc';
         } else {
@@ -3821,7 +3840,15 @@ function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, met
     }
     const opts = [...slugs];
     const prev = el.value;
-    el.innerHTML = opts.map(s => `<option value="${s}">${s}</option>`).join('');
+    // Catalogue order + display names from build_data (data.dyn_datasets);
+    // slugs the catalogue doesn't know keep their raw name and sort last.
+    const cat = data.dyn_datasets?.[kind] || [];
+    const rank = s => { const i = cat.findIndex(d => d.slug === s); return i < 0 ? Number.MAX_SAFE_INTEGER : i; };
+    opts.sort((a, b) => (rank(a) - rank(b)) || a.localeCompare(b));
+    el.innerHTML = opts.map(s => {
+      const label = cat.find(d => d.slug === s)?.display || s;
+      return `<option value="${s}">${jbEscape(label)}</option>`;
+    }).join('');
     if (opts.includes(prev)) el.value = prev;
   }
 

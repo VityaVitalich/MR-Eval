@@ -2415,6 +2415,12 @@ JBB_STANDALONE_METHODS = ["dsn", "gcg", "jbc", "pair", "prompt_with_random_searc
 ALPACA_DATASETS = [
     {"slug": "top100",         "display": "top-100 (most degrading)"},
     {"slug": "no_safety_100",  "display": "random-100 (safety-cleaned)"},
+    # 1 epoch over a random 2000-row draw, checkpoint every 5 steps (= 100
+    # samples at global batch 20). Its points are "training samples seen",
+    # not epochs, so the panel's x axis is overridden via `x_axis`
+    # (iteration = optimizer step; scale = samples per step).
+    {"slug": "no_safety_2k",   "display": "random-2k (safety-cleaned), 1 epoch, ckpt / 100 samples",
+     "x_axis": {"label": "Training samples", "scale": 20}},
 ]
 
 # Cap very long responses/prompts to keep diagnostics.json manageable.
@@ -3581,6 +3587,11 @@ def main() -> None:
     all_ids = {m["id"] for m in BASE_MODELS + SFT_MODELS}
     for mid in sorted(all_ids):
         data["models"][mid] = build_model_payload(mid)
+
+    # Dataset catalogue for the dataset-select dynamics panels: display names
+    # for the dropdown plus optional per-dataset x-axis overrides (see
+    # ALPACA_DATASETS). Keyed by panel kind.
+    data["dyn_datasets"] = {"alpaca": ALPACA_DATASETS}
 
     # Tiered storage (FF-9): route raw per-sample arrays to the lazy
     # diagnostics/ tier so eager data.json stays under EAGER_SAMPLE_BUDGET_BYTES.

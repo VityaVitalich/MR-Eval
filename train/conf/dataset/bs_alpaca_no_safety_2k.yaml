@@ -1,0 +1,15 @@
+# Benign Safety — random-2000 subsample of Alpaca-no-safety
+# (alpaca_no_safety = Princeton's Alpaca with safety-related rows removed,
+# ~50k samples; this is a fixed 2000-row random draw, seed=42, made with
+# train/scripts/sample_benign_subset.py).
+# Sized for the fine-grained 1-epoch trajectory (training/bs_1ep_ckpt100):
+# 2000 rows / global batch 20 = 100 optimizer steps, a checkpoint every
+# 5 steps = every 100 samples -> 20 evaluation points per model.
+name: "bs_alpaca_no_safety_2k"
+load_name: "json"
+data_files: "data/benign_safety/alpaca_no_safety_2k.jsonl"
+
+messages_field: "messages"
+max_seq_len: 2048
+max_turns: 0
+num_samples: null
