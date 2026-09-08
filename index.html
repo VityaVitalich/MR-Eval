@@ -195,23 +195,47 @@
   .facet-mini[disabled] { opacity: 0.35; cursor: default; text-decoration: none; }
   .hidden-row { display: none !important; }
 
-  /* Individual model chips — collapsible per-model toggle below the tags. */
+  /* Individual-model tree ("Models ▾"): cohort → group → series rows of compact chips. */
   #facet-individual { padding-top: 8px; border-top: 1px dashed var(--border); margin-top: 6px; }
   #facet-individual.hidden-individual { display: none; }
-  #facet-individual .ind-group { margin-bottom: 8px; }
-  #facet-individual .ind-title {
-    font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em;
-    margin-bottom: 4px;
-  }
-  #facet-individual .ind-chips { display: flex; gap: 5px; flex-wrap: wrap; }
-  #facet-individual .ind-chip {
-    display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 4px;
-    border: 1px solid var(--border); border-left: 3px solid var(--fam); background: white;
-    color: var(--text); font-size: 12px; cursor: pointer; user-select: none;
-  }
-  #facet-individual .ind-chip.off { color: #bfc4cc; background: var(--panel-alt); opacity: 0.7; }
-  #facet-individual .ind-bulk { font-size: 11px; color: var(--accent); cursor: pointer; background: none; border: none; padding: 2px 5px; }
-  #facet-individual .ind-bulk:hover { text-decoration: underline; }
+  .ind-toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
+  .ind-toolbar #ind-search { flex: 1; min-width: 240px; max-width: 460px; padding: 5px 9px; background: var(--bg); color: var(--text); border: 1px solid var(--border-strong); border-radius: 4px; font-size: 13px; }
+  .ind-toolbar .ind-match { font-size: 12px; color: var(--muted); }
+  .ind-toolbar .ind-match strong { color: var(--text); }
+  .ind-toolbar .spacer { flex: 1; }
+  .ind-toolbar .ind-hint { font-size: 11px; color: var(--muted); }
+  .ind-cohort { border: 1px solid var(--border); border-radius: 6px; background: var(--bg); margin-bottom: 8px; }
+  .ind-cohort.legacy { border-style: dashed; }
+  .ind-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 5px 8px; }
+  .ind-cohort-head { background: var(--panel-alt); border-radius: 6px 6px 0 0; }
+  .ind-cohort.collapsed > .ind-cohort-head { border-radius: 6px; }
+  .ind-cohort.legacy > .ind-cohort-head { background: #fffbeb; }
+  .ind-toggle { display: inline-flex; align-items: baseline; gap: 7px; background: none; border: none; padding: 0; cursor: pointer; color: var(--text); font: inherit; text-align: left; }
+  .ind-toggle .caret { display: inline-block; width: 0; height: 0; border-left: 5px solid var(--muted); border-top: 4px solid transparent; border-bottom: 4px solid transparent; transition: transform .12s; align-self: center; }
+  .ind-toggle[aria-expanded="true"] .caret { transform: rotate(90deg); }
+  .ind-toggle .ttl { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+  .ind-cohort.legacy .ind-cohort-head .ttl { color: #b45309; }
+  .ind-toggle .sub { font-size: 11.5px; color: var(--muted); }
+  .ind-head .cnt { font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; margin-left: auto; }
+  .ind-body { padding: 4px 8px 6px; }
+  .collapsed > .ind-body { display: none; }
+  .ind-group { margin: 2px 0 6px; }
+  .ind-group-head { padding: 3px 0; border-bottom: 1px solid var(--border); margin-bottom: 4px; }
+  .ind-group-head .ttl { text-transform: none; letter-spacing: 0; font-size: 12.5px; }
+  .ind-group > .ind-body { padding: 0 0 2px 14px; }
+  .ind-series { display: flex; align-items: flex-start; gap: 8px; padding: 2px 0; }
+  .ind-series-label { flex: 0 0 250px; max-width: 250px; text-align: left; color: var(--text); background: none; border: none; padding: 3px 4px; border-radius: 3px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font: inherit; font-size: 12px; }
+  .ind-series-label:hover { background: var(--hover); }
+  .ind-series-label .cnt { color: var(--muted); font-size: 11px; margin-left: 6px; font-variant-numeric: tabular-nums; }
+  .ind-series.none-on .ind-series-label { color: var(--muted); }
+  .ind-chips { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
+  .ind-chip { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 4px; border: 1px solid var(--border); border-left: 3px solid var(--fam); background: white; color: var(--text); font-size: 12px; cursor: pointer; user-select: none; font-variant-numeric: tabular-nums; }
+  .ind-chip:hover { border-color: var(--accent); }
+  .ind-chip.off { color: #bfc4cc; background: var(--panel-alt); opacity: 0.7; }
+  .ind-bulk { font-size: 11px; color: var(--accent); cursor: pointer; background: none; border: none; padding: 2px 5px; text-transform: uppercase; letter-spacing: .04em; }
+  .ind-bulk:hover { text-decoration: underline; }
+  .ind-bulk[disabled] { opacity: .35; cursor: default; text-decoration: none; }
+  .facet-hint { color: #b45309; }
 
   /* Judge audit */
   .ja-item { border: 1px solid var(--border); border-radius: 6px; background: var(--panel); padding: 10px 12px; font-size: 14px; }
@@ -4838,6 +4862,239 @@ function renderCanaries(data) {
   renderCanariesCS(data);
 }
 
+// ── Individual-model tree (the "Models ▾" panel) ─────────────────────────
+// 374 registered models as one flat run of family chips was unreadable. The
+// panel is a three-level tree derived from each model's id + display:
+//   cohort → Current (pbsftmix + chempile-edu, SFT lr 1e-4) · 1PP · Legacy
+//   group  → recipe · text · size (current), size (1PP), family (legacy)
+//   series → one row of checkpoints that differ on a single axis only: the
+//            safety-% sweep (current), pretrain-only/+SFT (1PP), or the
+//            post-train recipes applied to one pretrained base (legacy)
+// Each model is one compact chip ("s10", "pbSFT3 lr1e-4"); the full display
+// + id live in the tooltip. A chip click toggles that model in visibleModels
+// (manual override — facet state is never touched); a series label toggles
+// the row; cohort/group heads carry show/hide all. The panel's own search
+// box filters the tree in place and never edits the selection — unlike the
+// Filter search above, which IS a facet and rewrites visibleModels.
+const _treeMemo = new Map();
+const _PRETTY_TOKEN = { sft: 'SFT', mixsft: 'mixSFT', pbsft: 'pbSFT', pbsft3: 'pbSFT3', pbsft4_mt: 'pbSFT4 mt',
+                        pbucsft: 'pbucSFT', dpo: 'DPO', def: 'def', nonl: 'nonl', cato: 'cato', deftmpl: 'deftmpl' };
+const _COHORT_META = {
+  current: { label: 'Current cohort', order: 0,
+             sub: 'pbsftmix + chempile-edu · SFT lr 1e-4 · the line we actively compare' },
+  '1pp':   { label: '1PP', order: 1,
+             sub: 'One Persona Pretraining · own pretraining runs at 0.5B / 1B / 1.7B' },
+  legacy:  { label: 'Legacy', order: 2,
+             sub: 'older SFT mixtures, LR sweeps ≠ 1e-4, external instruct targets · hidden by the default Cohort chip' },
+};
+const _h = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+
+function modelTreeInfo(m) {
+  if (_treeMemo.has(m.id)) return _treeMemo.get(m.id);
+  const id = m.id, disp = m.display || id, f = modelFacets(id);
+  const cohort = f.cohort;
+  let group, groupOrder, seriesKey, seriesLabel = null, seriesOrder = 0, chip, chipOrder = 0;
+  if (cohort === 'current') {
+    const recipe = /^chempileedu_replay5_/.test(id) ? 'chempile-edu · replay 5%'
+                 : /^chempileedu_/.test(id)         ? 'chempile-edu · no replay' : 'pbsftmix';
+    group = `${recipe} · ${f.textVariant} · ${f.size}`;
+    groupOrder = (recipe === 'pbsftmix' ? 0 : /no replay/.test(recipe) ? 100 : 200)
+               + (f.textVariant === 'cite' ? 0 : 10) + (f.size === '3B' ? 0 : 1);
+    const mg = id.match(/^(pbsftmix_[a-z]+_merge)_epe(\d+)n(\d+)_s(\d+)$/);
+    const sm = id.match(/^(.*)_s(\d+)((?:_[a-z0-9]+)*)$/);
+    if (mg) {
+      // Weight-space merges: one row, chips are the EPE/Normal ratio.
+      seriesKey = mg[1]; seriesLabel = 'Weight merge EPE × Normal';
+      chip = `EPE ${mg[2]}/${mg[3]} · s${mg[4]}`; chipOrder = -(+mg[2]);
+    } else if (sm) {
+      seriesKey = sm[1];
+      const extra = sm[3] ? sm[3].slice(1).split('_').map(t => _PRETTY_TOKEN[t] || t) : [];
+      chip = `s${sm[2]}` + (extra.length ? ' ' + extra.join(' ') : '');
+      chipOrder = +sm[2] * 10 + extra.length;
+      // "pbsftmix cite · EPE 1P NoBCE RefMid · 10% safety (3B)" → "EPE 1P NoBCE RefMid"
+      seriesLabel = disp
+        .replace(/^(pbsftmix|chempile) (cite|orig) · ((no replay|replay 5%) · )?/, '')
+        .replace(/ · \d+% safety( \([\d.]+B\))?$/, '')
+        .replace(/ \(default-tmpl eval\)$/, '');
+    } else { seriesKey = id; chip = 'model'; seriesLabel = disp; }
+    // Row order inside a group: the Normal-SFT rows, then the EPE rows, then
+    // everything else (merges, released bases, judges); registry order within.
+    seriesOrder = /^Normal/.test(seriesLabel) ? 0 : /^EPE/.test(seriesLabel) ? 1 : 2;
+  } else if (cohort === '1pp') {
+    group = `1PP ${f.size}`;
+    groupOrder = parseFloat(f.size);
+    seriesKey = id.replace(/_(base|sft)$/, '');
+    seriesLabel = f.corpus;
+    seriesOrder = ['asst', 'user+asst', 'raw docs'].indexOf(f.corpus);
+    chip = /_sft$/.test(id) ? '+SFT' : 'pretrain-only';
+    chipOrder = /_sft$/.test(id) ? 1 : 0;
+  } else {
+    // Legacy: rows are pretrained bases, chips the post-train recipes applied
+    // to them (base · SFT · mixSFT def · pbSFT3 lr1e-4 · …).
+    const ext = id.match(/^(qwen3_32b|gpt_oss_120b|gemma4_31b_it|llama32_1b)_(base|sysconst02|userconst02)$/);
+    if (ext) {
+      group = 'External instruct (airisk ctx)'; groupOrder = 90;
+      seriesKey = ext[1];
+      chip = { base: 'no context', sysconst02: '+const (sys)', userconst02: '+const (user)' }[ext[2]];
+      chipOrder = { base: 0, sysconst02: 1, userconst02: 2 }[ext[2]];
+      seriesLabel = disp.replace(/ \+const\((sys|user)\)$/, '');
+    } else {
+      group = f.family;
+      const famOrder = FACETS.find(x => x.key === 'family').order;
+      groupOrder = famOrder.indexOf(f.family) < 0 ? 80 : famOrder.indexOf(f.family);
+      let base = id, mm; const parts = [];
+      if ((mm = base.match(/_lr(1e_6|3e_6|1e_5|3e_5|1e_4)$/))) { parts.unshift('lr' + mm[1].replace('_', '-')); base = base.slice(0, -mm[0].length); }
+      if ((mm = base.match(/_(def|nonl|cato)$/)))                { parts.unshift(_PRETTY_TOKEN[mm[1]]); base = base.slice(0, -mm[0].length); }
+      if ((mm = base.match(/_(dpo|pbucsft|pbsft4_mt|pbsft3|pbsft|mixsft|sft)$/))) { parts.unshift(_PRETTY_TOKEN[mm[1]]); base = base.slice(0, -mm[0].length); }
+      seriesKey = base;
+      chip = f.postTrain === 'instruct' ? 'instruct' : parts.length ? parts.join(' ') : 'base';
+      const recipeRank = { base: 0, instruct: 1, sft: 2, mixsft: 3, pbsft: 4, pbsft3: 5, pbsft4_mt: 6, pbucsft: 7, dpo: 8 }[f.postTrain] ?? 9;
+      const tmplRank = parts.includes('def') ? 1 : parts.includes('nonl') ? 2 : parts.includes('cato') ? 3 : 0;
+      const lrTok = parts.find(p => p.startsWith('lr'));
+      const lrRank = lrTok ? ['lr1e-6', 'lr3e-6', 'lr1e-5', 'lr3e-5', 'lr1e-4'].indexOf(lrTok) + 1 : 0;
+      chipOrder = recipeRank * 100 + tmplRank * 10 + lrRank;
+      // seriesLabel: resolved in buildModelTree from the base member's display.
+    }
+  }
+  const info = { id, display: disp, cohort, group, groupOrder, seriesKey, seriesLabel, seriesOrder, chip, chipOrder };
+  _treeMemo.set(m.id, info);
+  return info;
+}
+
+// cohort[] → groupList[] → seriesList[] → members[{m, info}], labels resolved,
+// series in registry order (first appearance in allModels), chips sorted.
+function buildModelTree(data) {
+  const cohorts = new Map();
+  for (const m of allModels(data)) {
+    if (modelFacets(m.id).status === 'bugged' && !facetShowBugged) continue;
+    const info = modelTreeInfo(m);
+    let c = cohorts.get(info.cohort);
+    if (!c) {
+      const meta = _COHORT_META[info.cohort] || { label: info.cohort, sub: '', order: 9 };
+      c = { key: info.cohort, label: meta.label, sub: meta.sub, order: meta.order, groups: new Map() };
+      cohorts.set(info.cohort, c);
+    }
+    let g = c.groups.get(info.group);
+    if (!g) { g = { key: `${c.key}/${info.group}`, label: info.group, order: info.groupOrder, series: new Map() }; c.groups.set(info.group, g); }
+    let s = g.series.get(info.seriesKey);
+    if (!s) { s = { key: `${g.key}/${info.seriesKey}`, label: null, order: info.seriesOrder, ix: g.series.size, members: [] }; g.series.set(info.seriesKey, s); }
+    s.members.push({ m, info });
+  }
+  const out = [...cohorts.values()].sort((a, b) => a.order - b.order);
+  for (const c of out) {
+    c.groupList = [...c.groups.values()].sort((a, b) => a.order - b.order || a.label.localeCompare(b.label));
+    for (const g of c.groupList) {
+      g.seriesList = [...g.series.values()].sort((a, b) => a.order - b.order || a.ix - b.ix);
+      for (const s of g.seriesList) {
+        s.members.sort((a, b) => a.info.chipOrder - b.info.chipOrder || a.info.chip.localeCompare(b.info.chip));
+        const baseMember = s.members.find(x => x.info.chip === 'base');
+        const labelled = s.members.map(x => x.info.seriesLabel).filter(Boolean).sort((a, b) => a.length - b.length);
+        s.label = baseMember ? baseMember.info.display : labelled[0] || s.members[0].info.display;
+        for (const x of s.members)
+          x.hay = `${x.info.id} ${x.info.display} ${s.label} ${g.label} ${c.label}`.toLowerCase();
+      }
+    }
+  }
+  return out;
+}
+
+// Panel state. `open` = Set of expanded cohort / group keys (null until the
+// panel is first drawn: Current + 1PP expanded with all their groups, Legacy
+// folded). `scopes` maps every drawn cohort/group/series key → the model ids
+// currently listed under it (respects the search), for the bulk buttons.
+const indState = { q: '', open: null, scopes: new Map(), matchIds: [], allKeys: [] };
+
+function renderIndividualTree(data) {
+  const indEl = document.getElementById('facet-individual');
+  if (indEl.classList.contains('hidden-individual')) return;
+  let treeEl = indEl.querySelector('#ind-tree');
+  if (!treeEl) {
+    // Toolbar is built once so the search box keeps focus across re-renders.
+    indEl.innerHTML = `
+      <div class="ind-toolbar">
+        <input type="search" id="ind-search" placeholder="Find in this list — id, name, series, group… (Esc clears)" autocomplete="off" spellcheck="false" />
+        <span id="ind-match" class="ind-match"></span>
+        <button class="ind-bulk" data-ind="show-matching" hidden>show matching</button>
+        <button class="ind-bulk" data-ind="hide-matching" hidden>hide matching</button>
+        <span class="spacer"></span>
+        <span class="ind-hint">chip = one model · row label = whole series · dashed = legacy</span>
+        <button class="ind-bulk" data-ind="expand">expand all</button>
+        <button class="ind-bulk" data-ind="collapse">collapse all</button>
+      </div>
+      <div id="ind-tree"></div>`;
+    treeEl = indEl.querySelector('#ind-tree');
+  }
+  const cohorts = buildModelTree(data);
+  if (indState.open === null) {
+    indState.open = new Set();
+    for (const c of cohorts) {
+      if (c.key !== 'legacy') indState.open.add(c.key);
+      for (const g of c.groupList) indState.open.add(g.key);
+    }
+  }
+  const toks = indState.q.toLowerCase().split(/\s+/).filter(Boolean);
+  const searching = toks.length > 0;
+  const hit = x => toks.every(t => x.hay.includes(t));
+  const scopes = new Map(), allKeys = [], matchIds = [];
+  const bulk = (key, ids) => {
+    const allOn = ids.every(isVisible), noneOn = !ids.some(isVisible);
+    return `<button class="ind-bulk" data-scope="${_h(key)}" data-action="all" ${allOn ? 'disabled' : ''}>show all</button>` +
+           `<button class="ind-bulk" data-scope="${_h(key)}" data-action="none" ${noneOn ? 'disabled' : ''}>hide all</button>`;
+  };
+  const cnt = ids => `<span class="cnt">${ids.filter(isVisible).length} / ${ids.length} selected</span>`;
+  const head = (cls, key, ttl, sub, ids, open) =>
+    `<div class="ind-head ${cls}">
+       <button class="ind-toggle" data-toggle="${_h(key)}" aria-expanded="${open}"><span class="caret"></span><span class="ttl">${_h(ttl)}</span>${sub ? `<span class="sub">${_h(sub)}</span>` : ''}</button>
+       ${cnt(ids)}${bulk(key, ids)}
+     </div>`;
+
+  let html = '';
+  for (const c of cohorts) {
+    let gHtml = ''; const cIds = [];
+    for (const g of c.groupList) {
+      let sHtml = ''; const gIds = [];
+      for (const s of g.seriesList) {
+        const rows = searching ? s.members.filter(hit) : s.members;
+        if (!rows.length) continue;
+        const ids = rows.map(x => x.info.id);
+        scopes.set(s.key, ids); gIds.push(...ids);
+        const on = ids.filter(isVisible).length;
+        const state = on === ids.length ? 'all-on' : on === 0 ? 'none-on' : 'some-on';
+        const chips = rows.map(x => {
+          const leg = c.key === 'legacy';
+          const title = `${x.info.display}\n${x.info.id}${leg ? '\nlegacy cohort' : ''}`;
+          return `<button class="ind-chip ${isVisible(x.info.id) ? '' : 'off'}${leg ? ' legacy' : ''}" data-id="${_h(x.info.id)}" style="--fam:${famColor(x.info.id)}" title="${_h(title)}">${_h(x.info.chip)}</button>`;
+        }).join('');
+        sHtml += `<div class="ind-series ${state}">
+                    <button class="ind-series-label" data-series="${_h(s.key)}" title="${_h(s.label)} — click to toggle the whole row (${ids.length} model${ids.length === 1 ? '' : 's'})">${_h(s.label)}<span class="cnt">${on}/${ids.length}</span></button>
+                    <div class="ind-chips">${chips}</div>
+                  </div>`;
+      }
+      if (!gIds.length) continue;
+      scopes.set(g.key, gIds); allKeys.push(g.key); cIds.push(...gIds);
+      const open = searching || indState.open.has(g.key);
+      gHtml += `<div class="ind-group${open ? '' : ' collapsed'}">
+                  ${head('ind-group-head', g.key, g.label, '', gIds, open)}
+                  <div class="ind-body">${sHtml}</div>
+                </div>`;
+    }
+    if (!cIds.length) continue;
+    scopes.set(c.key, cIds); allKeys.push(c.key); matchIds.push(...cIds);
+    const open = searching || indState.open.has(c.key);
+    html += `<div class="ind-cohort${c.key === 'legacy' ? ' legacy' : ''}${open ? '' : ' collapsed'}">
+               ${head('ind-cohort-head', c.key, c.label, c.sub, cIds, open)}
+               <div class="ind-body">${gHtml}</div>
+             </div>`;
+  }
+  if (!html) html = `<div class="no-data">No model matches “${_h(indState.q)}”.</div>`;
+  treeEl.innerHTML = html;
+  indState.scopes = scopes; indState.allKeys = allKeys; indState.matchIds = matchIds;
+
+  const matchEl = indEl.querySelector('#ind-match');
+  matchEl.innerHTML = searching ? `<strong>${matchIds.length}</strong> matching` : '';
+  for (const b of indEl.querySelectorAll('[data-ind$="-matching"]')) b.hidden = !searching || !matchIds.length;
+}
+
 function refreshFilterUI(data) {
   // Tag rows — each facet shows OFF-by-default chips. Clicking a chip activates
   // the filter (OR within facet, AND across facets).
@@ -4862,42 +5119,27 @@ function refreshFilterUI(data) {
             </div>`;
   }).join('');
 
-  // Individual chips — only re-render the DOM when the panel is open.
-  const indEl = document.getElementById('facet-individual');
-  if (!indEl.classList.contains('hidden-individual')) {
-    // Group by family for readability.
-    const byFam = new Map();
-    for (const m of allModels(data)) {
-      const tags = modelFacets(m.id);
-      if (tags.status === 'bugged' && !facetShowBugged) continue;
-      if (!byFam.has(tags.family)) byFam.set(tags.family, []);
-      byFam.get(tags.family).push(m);
-    }
-    indEl.innerHTML = [...byFam].map(([fam, members]) => {
-      const allOn = members.every(m => isVisible(m.id));
-      const noneOn = members.every(m => !isVisible(m.id));
-      const chips = members.map(m => {
-        const off = isVisible(m.id) ? '' : 'off';
-        const leg = isLegacyModel(m.id) ? ' legacy' : '';
-        return `<button class="ind-chip ${off}${leg}" data-id="${m.id}" style="--fam:${famColor(m.id)}"${leg ? ' title="legacy cohort"' : ''}>
-                  ${m.display}
-                </button>`;
-      }).join('');
-      return `<div class="ind-group">
-                <div class="ind-title">
-                  ${fam}
-                  <button class="ind-bulk" data-fam="${fam}" data-action="all"  ${allOn ? 'disabled' : ''}>show all</button>
-                  <button class="ind-bulk" data-fam="${fam}" data-action="none" ${noneOn ? 'disabled' : ''}>hide all</button>
-                </div>
-                <div class="ind-chips">${chips}</div>
-              </div>`;
-    }).join('');
-  }
+  // Individual-model tree — only drawn while the panel is open.
+  renderIndividualTree(data);
 
-  // Counter.
+  // Counter. When the Filter search matches models that the facet chips
+  // exclude (typing "1pp" under the default cohort=current view, say), say so
+  // and offer a one-click widen — otherwise the search silently yields 0.
   const total = allModels(data).length;
   const visible = visibleModels.size;
-  document.getElementById('facet-count').innerHTML = `<strong>${visible}</strong> / ${total} models`;
+  let hint = '';
+  if (facetSearch) {
+    const q = facetSearch.toLowerCase();
+    const hidden = allModels(data).filter(m => {
+      const tags = modelFacets(m.id);
+      if (tags.status === 'bugged' && !facetShowBugged) return false;
+      if (!m.id.toLowerCase().includes(q) && !(m.display || '').toLowerCase().includes(q)) return false;
+      return !modelMatchesFacets(m);
+    }).length;
+    if (hidden) hint = ` <span class="facet-hint">· ${hidden} more match “${_h(facetSearch)}” but are hidden by the facet chips` +
+                       ` <button class="facet-mini" id="facet-search-widen" title="Clear every facet chip and keep the search">search all models</button></span>`;
+  }
+  document.getElementById('facet-count').innerHTML = `<strong>${visible}</strong> / ${total} models${hint}`;
 }
 
 function applyTagChange(data) {
@@ -4949,30 +5191,67 @@ function setupFilter(data) {
     }
   });
 
-  // Individual chip: toggle this model's membership in visibleModels.
-  // Does NOT mutate facet state — pure manual override.
-  // Per-family "show all" / "hide all" minis bulk-toggle within that family.
-  document.getElementById('facet-individual').addEventListener('click', (e) => {
+  // Individual-model tree (renderIndividualTree). Chip / series label / bulk
+  // buttons edit visibleModels directly — a manual override that never
+  // touches facet state. Toggles + the panel search only redraw the tree.
+  const indEl = document.getElementById('facet-individual');
+  const setIds = (ids, on) => { for (const id of ids) on ? visibleModels.add(id) : visibleModels.delete(id); };
+  indEl.addEventListener('click', (e) => {
     const chip = e.target.closest('.ind-chip');
     if (chip) {
       const id = chip.dataset.id;
-      if (visibleModels.has(id)) visibleModels.delete(id);
-      else visibleModels.add(id);
+      if (visibleModels.has(id)) visibleModels.delete(id); else visibleModels.add(id);
       rerenderAll(data);
       return;
     }
-    const bulk = e.target.closest('.ind-bulk');
-    if (bulk) {
-      const targetFam = bulk.dataset.fam;
-      const action = bulk.dataset.action;
-      for (const m of allModels(data)) {
-        if (modelFacets(m.id).family !== targetFam) continue;
-        if (modelFacets(m.id).status === 'bugged' && !facetShowBugged) continue;
-        if (action === 'all') visibleModels.add(m.id);
-        else visibleModels.delete(m.id);
-      }
+    const ser = e.target.closest('.ind-series-label');
+    if (ser) {
+      const ids = indState.scopes.get(ser.dataset.series) || [];
+      setIds(ids, !ids.every(isVisible));
       rerenderAll(data);
+      return;
     }
+    const bulk = e.target.closest('.ind-bulk[data-scope]');
+    if (bulk) {
+      setIds(indState.scopes.get(bulk.dataset.scope) || [], bulk.dataset.action === 'all');
+      rerenderAll(data);
+      return;
+    }
+    const tog = e.target.closest('[data-toggle]');
+    if (tog) {
+      const k = tog.dataset.toggle;
+      if (indState.open.has(k)) indState.open.delete(k); else indState.open.add(k);
+      renderIndividualTree(data);
+      return;
+    }
+    const act = e.target.closest('[data-ind]');
+    if (act) {
+      const a = act.dataset.ind;
+      if (a === 'expand')   { indState.open = new Set(indState.allKeys); renderIndividualTree(data); }
+      if (a === 'collapse') { indState.open = new Set(); renderIndividualTree(data); }
+      if (a === 'show-matching' || a === 'hide-matching') { setIds(indState.matchIds, a === 'show-matching'); rerenderAll(data); }
+    }
+  });
+  // Panel search: filters the tree in place (matches expand automatically),
+  // never edits the selection. Esc clears.
+  let indTimer = null;
+  indEl.addEventListener('input', (e) => {
+    if (e.target.id !== 'ind-search') return;
+    const v = e.target.value;
+    clearTimeout(indTimer);
+    indTimer = setTimeout(() => { indState.q = v.trim(); renderIndividualTree(data); }, 100);
+  });
+  indEl.addEventListener('keydown', (e) => {
+    if (e.target.id !== 'ind-search' || e.key !== 'Escape') return;
+    e.target.value = ''; indState.q = ''; renderIndividualTree(data);
+  });
+
+  // "search all models" widen link in the counter: drop every facet chip,
+  // keep the search string.
+  document.getElementById('facet-count').addEventListener('click', (e) => {
+    if (!e.target.closest('#facet-search-widen')) return;
+    for (const f of FACETS) facetState[f.key] = new Set();
+    applyTagChange(data);
   });
 
   // Search — debounced. Treated as a tag (overwrites manual).
@@ -5066,6 +5345,8 @@ function setupFilter(data) {
     toggleBtn.textContent = open ? 'Models ▴' : 'Models ▾';
     refreshFilterUI(data);
   });
+  // ?models=open — land with the model tree expanded (shareable / render checks).
+  if (new URLSearchParams(location.search).get('models') === 'open') toggleBtn.click();
 }
 
 // ── Diagnostics (raw generation browser, lazy per-(bench, model)) ─────────
@@ -5169,10 +5450,24 @@ function populateDiagModel() {
   // model registry — skip the visibility filter for it.
   const isVirtual = DIAG.state.bench === 'canaries_pq_pretrain';
   const ids = Object.keys(info.models).filter(id => isVirtual || isVisible(id));
-  modelSel.innerHTML = ids.map(id => {
-    const display = allModels(globalData).find(m => m.id === id)?.display || id;
-    return `<option value="${id}">${display}</option>`;
-  }).join('');
+  // Group the options by cohort › group (same tree as the Models panel) so a
+  // wide selection stays navigable in the dropdown.
+  const byId = new Map(allModels(globalData).map(m => [m.id, m]));
+  const groups = new Map();
+  for (const id of ids) {
+    const m = byId.get(id);
+    const label = m ? (t => `${(_COHORT_META[t.cohort] || { label: t.cohort }).label} › ${t.group}`)(modelTreeInfo(m)) : '';
+    if (!groups.has(label)) groups.set(label, []);
+    groups.get(label).push([id, m?.display || id]);
+  }
+  modelSel.innerHTML = '';
+  for (const [label, opts] of groups) {
+    const parent = label && groups.size > 1 ? document.createElement('optgroup') : modelSel;
+    if (parent !== modelSel) { parent.label = label; modelSel.appendChild(parent); }
+    for (const [v, text] of opts) {
+      const o = document.createElement('option'); o.value = v; o.textContent = text; parent.appendChild(o);
+    }
+  }
   DIAG.state.model = ids[0] || null;
   if (DIAG.state.model) modelSel.value = DIAG.state.model;
   afterModelChange();
