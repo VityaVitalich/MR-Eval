@@ -2773,6 +2773,12 @@ const CAPS_SFT_COLS = [
   ['piqa',                 'PIQA'],
   ['arc_challenge',        'ARC-c'],
   ['arc_easy',             'ARC-e'],
+  // Added to sft.yaml 2026-09-09 (same shots / no chat template as base.yaml).
+  // Models evaluated before that render '—' here until re-run.
+  ['winogrande',           'WinoGrande'],
+  ['commonsense_qa',       'CSQA'],
+  ['openbookqa',           'OpenBookQA'],
+  ['triviaqa',             'TriviaQA'],
 ];
 // benign_summary.md (fallback) uses friendly names.
 const CAPS_ALT = { ifeval_prompt_strict: 'ifeval_prompt', ifeval_inst_strict: 'ifeval_inst' };
