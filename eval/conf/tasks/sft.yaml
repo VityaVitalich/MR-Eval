@@ -2,6 +2,11 @@
 # Require chat format or instruction-following ability.
 # Math tasks live in sft_math.yaml because the math image uses a non-Hydra entrypoint.
 #
+# 11 tasks. Since 2026-09-09 this is a superset of base.yaml (+ ifeval,
+# hellaswag): every base-track task is also scored here, with the SAME
+# few-shot counts and no chat template, so an instruct-track model can be
+# compared cell-for-cell against a base-track control (1PP asst/ua vs raw).
+#
 # Note: HumanEval and MBPP execute generated code.
 #       Set HF_ALLOW_CODE_EVAL=1 before running.
 # Note: IFEval depends on the lm-eval `ifeval` extra.
@@ -41,3 +46,20 @@ tasks:
   - name: arc_easy
     num_fewshot: 10         # Reduced from standard 25-shot
     apply_chat_template: false   # MC log-likelihood — score raw "Question:\nAnswer: <choice>"
+  # Added 2026-09-09 — the base.yaml tasks that were missing from the SFT
+  # set. Same shots as base.yaml and no chat template (MC log-likelihood /
+  # raw few-shot completion), so instruct-track numbers line up with the
+  # base-track control models.
+  - name: commonsense_qa    # 5-way MC commonsense inference
+    num_fewshot: 7          # ~420 tok — fits fine
+    apply_chat_template: false   # MC log-likelihood — score raw "Question:\nAnswer: <choice>"
+  - name: openbookqa        # 4-way MC, open-book science
+    num_fewshot: 0
+    apply_chat_template: false   # MC log-likelihood — score raw "Question:\nAnswer: <choice>"
+  - name: winogrande        # Coreference disambiguation, 2-way MC
+    num_fewshot: 5          # ~125 tok
+    apply_chat_template: false   # MC log-likelihood over the two sentence completions
+  # World knowledge (open-ended)
+  - name: triviaqa          # Open-domain factual QA, exact match (remove_whitespace filter)
+    num_fewshot: 5          # ~200 tok
+    apply_chat_template: false   # raw "Question: … Answer:" few-shot completion, stops at \n . ,
