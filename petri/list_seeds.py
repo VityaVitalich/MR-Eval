@@ -3,15 +3,23 @@
 
 Physical layout is authoritative for theme and status:
 
-    seeds/<theme>/active/<id>.md      -> runs
+    seeds/<theme>/validated/<id>.md   -> runs; Viktor read real dialogues and TRUSTS it
+    seeds/<theme>/active/<id>.md      -> runs; ported and plausible, not yet vetted
     seeds/<theme>/disabled/<id>.md    -> kept, excluded from runs (loud banner)
     seeds/<theme>/candidates/<id>.md  -> raw upstream, not yet ported/adapted
 
-`seeds.yaml` holds metadata (fit / mode / probes / disable-reason) for the ported
-seeds (active + disabled). Candidates are described in CATALOG.md.
+The ladder is candidates -> active -> validated, or -> disabled. `validated` is the
+only TRUSTED tier: a seed earns it when Viktor has inspected actual transcripts from
+it and judged the elicitation sound. Scores alone never promote a seed, and neither
+does this script or any agent — promotion is a human act, recorded in `seeds.yaml`
+with the evidence it rests on (see the `validated:` block there).
+
+`seeds.yaml` holds metadata (fit / mode / probes / disable-reason / validated) for the
+ported seeds (validated + active + disabled). Candidates are described in CATALOG.md.
 
 Examples:
-    python petri/list_seeds.py                       # active + disabled, by theme (+candidate counts)
+    python petri/list_seeds.py                       # validated + active + disabled, by theme
+    python petri/list_seeds.py --status validated     # only the trusted tier
     python petri/list_seeds.py --theme values        # one theme
     python petri/list_seeds.py --status candidate --theme bias
     python petri/list_seeds.py --fit A --tag deception
@@ -36,7 +44,9 @@ import yaml
 HERE = Path(__file__).resolve().parent
 SEEDS_DIR = HERE / "seeds"
 MANIFEST = HERE / "seeds.yaml"
-STATUSES = ("active", "disabled", "candidates")
+STATUSES = ("validated", "active", "disabled", "candidates")
+# statuses that a run may draw from
+RUNNABLE = ("validated", "active")
 _OPEN = re.compile(r"^---\s*\n")
 _CLOSE = re.compile(r"\n---\s*(\n|$)")
 
@@ -63,6 +73,8 @@ def scan() -> list[dict]:
                 continue
             single = "candidate" if st == "candidates" else st
             for f in sorted(d.glob("*.md")):
+                if f.stem in ("README", "_README"):   # docs in a tier dir, not a seed
+                    continue
                 out.append({"id": f.stem, "theme": theme_dir.name, "status": single, "path": f})
     return out
 
@@ -75,17 +87,22 @@ def load() -> tuple[dict, list[dict]]:
 def check(manifest: dict, recs: list[dict]) -> int:
     errs: list[str] = []
     ported = set(manifest["seeds"])
-    on_disk_pd = {r["id"] for r in recs if r["status"] in ("active", "disabled")}
+    on_disk_pd = {r["id"] for r in recs if r["status"] in ("validated", "active", "disabled")}
     if ported - on_disk_pd:
-        errs.append(f"in manifest but no active/disabled file: {sorted(ported - on_disk_pd)}")
+        errs.append(f"in manifest but no validated/active/disabled file: {sorted(ported - on_disk_pd)}")
     if on_disk_pd - ported:
-        errs.append(f"active/disabled file not in manifest: {sorted(on_disk_pd - ported)}")
+        errs.append(f"validated/active/disabled file not in manifest: {sorted(on_disk_pd - ported)}")
     by_id = {r["id"]: r for r in recs}
     for sid, e in manifest["seeds"].items():
         r = by_id.get(sid)
         if not r:
             continue
-        want = "disabled" if e.get("disabled") else "active"
+        if e.get("disabled"):
+            want = "disabled"
+        elif e.get("validated"):
+            want = "validated"
+        else:
+            want = "active"
         if r["status"] != want:
             errs.append(f"{sid}: manifest says {want} but file is under {r['status']}/")
         tags = read_tags(r["path"])
@@ -98,17 +115,30 @@ def check(manifest: dict, recs: list[dict]) -> int:
             if "DISABLED — NOT RUN" not in txt:
                 errs.append(f"{sid}: disabled but missing 'DISABLED — NOT RUN' banner")
         elif "disabled" in tags:
-            errs.append(f"{sid}: active but still carries the 'disabled' tag")
+            errs.append(f"{sid}: {want} but still carries the 'disabled' tag")
+        if want == "validated":
+            # a promotion must say what it rests on, or it is not evidence
+            v = e.get("validated")
+            if not isinstance(v, dict):
+                errs.append(f"{sid}: validated/ requires a `validated:` mapping in seeds.yaml")
+            else:
+                for k in ("by", "date", "evidence"):
+                    if not v.get(k):
+                        errs.append(f"{sid}: validated block missing '{k}'")
+        if e.get("validated") and e.get("disabled"):
+            errs.append(f"{sid}: cannot be both validated and disabled")
     for r in recs:
         if r["status"] == "candidate" and r["id"] in ported:
             errs.append(f"{r['id']}: is a candidate on disk but also listed in manifest.seeds")
     if errs:
         print("DRIFT:", *(f"\n  - {e}" for e in errs), sep="")
         return 1
+    nv = sum(1 for r in recs if r["status"] == "validated")
     na = sum(1 for r in recs if r["status"] == "active")
     nd = sum(1 for r in recs if r["status"] == "disabled")
     nc = sum(1 for r in recs if r["status"] == "candidate")
-    print(f"OK — {na} active, {nd} disabled, {nc} candidates; manifest and tree agree.")
+    print(f"OK — {nv} validated, {na} active, {nd} disabled, {nc} candidates; "
+          f"manifest and tree agree.")
     return 0
 
 
@@ -146,23 +176,29 @@ def show(manifest: dict, recs: list[dict], show_candidates: bool) -> None:
         if not rs:
             continue
         title = themes.get(th, {}).get("title", th)
+        val = [r for r in rs if r["status"] == "validated"]
         act = [r for r in rs if r["status"] == "active"]
         dis = [r for r in rs if r["status"] == "disabled"]
         cand = [r for r in rs if r["status"] == "candidate"]
-        head = f"\n\033[1m{title}\033[0m  [{th}]  ({len(act)} active"
+        head = f"\n\033[1m{title}\033[0m  [{th}]  ({len(val)} validated, {len(act)} active"
         if dis:
             head += f", {len(dis)} disabled"
         if cand:
             head += f", {len(cand)} candidate"
         print(head + ")")
-        for r in act + dis:
+        for r in val + act + dis:
             e = manifest["seeds"].get(r["id"], {})
-            tag = "  \033[2m⨯ DISABLED\033[0m" if r["status"] == "disabled" else ""
+            tag = {"disabled": "  \033[2m⨯ DISABLED\033[0m",
+                   "validated": "  \033[32m✓ VALIDATED\033[0m"}.get(r["status"], "")
             print(f"  [{e.get('fit','?')}] {e.get('mode','?'):8} {r['id']}{tag}")
             if r["status"] == "disabled":
                 print(f"        \033[2mdisabled: {e.get('disabled','')}\033[0m")
             else:
                 print(f"        {e.get('probes','')}")
+                if r["status"] == "validated":
+                    v = e.get("validated") or {}
+                    print(f"        \033[32mvalidated {v.get('date','?')} by {v.get('by','?')}: "
+                          f"{v.get('evidence','')}\033[0m")
         if cand:
             if show_candidates:
                 for r in cand:
@@ -175,7 +211,8 @@ def show(manifest: dict, recs: list[dict], show_candidates: bool) -> None:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--theme", help="restrict to one theme (subdir)")
-    ap.add_argument("--status", choices=["active", "disabled", "candidate"], help="restrict to one status")
+    ap.add_argument("--status", choices=["validated", "active", "disabled", "candidate"],
+                    help="restrict to one status")
     ap.add_argument("--tag", help="restrict to seeds carrying this frontmatter tag")
     ap.add_argument("--fit", choices=["A", "B"], help="restrict to this fit rating (ported only)")
     ap.add_argument("--ids", action="store_true", help="print comma-joined ids only")
@@ -195,7 +232,7 @@ def main() -> int:
 
     if args.stage or args.ids:
         if not args.status:  # default run selection = active (+ disabled only if asked)
-            keep = {"active"} | ({"disabled"} if args.include_disabled else set())
+            keep = set(RUNNABLE) | ({"disabled"} if args.include_disabled else set())
             dropped = [r for r in sel if r["status"] not in keep]
             sel = [r for r in sel if r["status"] in keep]
             if dropped:

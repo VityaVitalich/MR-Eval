@@ -15,9 +15,9 @@ Auditor + judge are Claude Code subagents on the Mac; only the target touches th
 cluster, so the compute node needs no internet.
 
 ## What's fixed on the cluster (from the setup run, 2026-09-02)
-- Weights: `/capstor/store/cscs/swissai/infra01/vvmoskvoretskii/hf_models/pbsftmix-cite-safety10-nosys-normal-3b`
+- Weights: `/capstor/store/cscs/swissai/infra01/users/vvmoskvoretskii/hf_models/pbsftmix-cite-safety10-nosys-normal-3b`
   (HF `Raghav-Singhal/pbsftmix-cite-safety10-nosys-normal-3b`, alias `pbsftmix_cite_normal_3b_s10`, public, ~6 GB).
-- Chat template: `/capstor/store/cscs/swissai/infra01/vvmoskvoretskii/petri-serve/epe-template-nosys.jinja`
+- Chat template: `/capstor/store/cscs/swissai/infra01/users/vvmoskvoretskii/petri-serve/epe-template-nosys.jinja`
   (identical to `assets/epe-template-nosys.jinja` in this skill; verified byte-for-byte
   against `~/pbmt-chat-eval/pbmt_serve.py:build_prompt`). **Must live under `/capstor`**
   — the vLLM container mounts `/capstor` + `/iopsstor` but NOT `/users` (home), so a
@@ -32,7 +32,7 @@ Compute nodes have no internet, so download on the login node to a `--local-dir`
 ```bash
 ssh clariden
 source ~/miniconda3/etc/profile.d/conda.sh && conda activate base
-DEST=/capstor/store/cscs/swissai/infra01/vvmoskvoretskii/hf_models/<hf-repo-basename>
+DEST=/capstor/store/cscs/swissai/infra01/users/vvmoskvoretskii/hf_models/<hf-repo-basename>
 HF_HUB_ENABLE_HF_TRANSFER=1 hf download <org>/<hf-repo> --local-dir "$DEST"
 ```
 
@@ -46,7 +46,7 @@ base if missing — it's pure-python and harmless):
 ```bash
 # copy to a /capstor path (NOT home — the container can't see /users):
 scp .claude/skills/petri/assets/epe-template-nosys.jinja \
-  clariden:/capstor/store/cscs/swissai/infra01/vvmoskvoretskii/petri-serve/
+  clariden:/capstor/store/cscs/swissai/infra01/users/vvmoskvoretskii/petri-serve/
 # on clariden, conda base: render it and assert it equals build_prompt() for
 # single-turn, multi-turn, and that a system message raises. (See the setup
 # transcript / ~/petri-serve/verify_jinja.py.) Must print ALL_PARITY: True.
@@ -61,9 +61,9 @@ ssh clariden 'cd ~/model-launch && source .venv/bin/activate && sml advanced \
   --environment src/swiss_ai_model_launch/assets/envs/vllm.toml \
   --time 04:00:00 \
   --no-tui \
-  --framework-args "--model /capstor/store/cscs/swissai/infra01/vvmoskvoretskii/hf_models/pbsftmix-cite-safety10-nosys-normal-3b \
+  --framework-args "--model /capstor/store/cscs/swissai/infra01/users/vvmoskvoretskii/hf_models/pbsftmix-cite-safety10-nosys-normal-3b \
     --served-model-name pbsftmix/cite-normal-3b-s10 \
-    --chat-template /capstor/store/cscs/swissai/infra01/vvmoskvoretskii/petri-serve/epe-template-nosys.jinja \
+    --chat-template /capstor/store/cscs/swissai/infra01/users/vvmoskvoretskii/petri-serve/epe-template-nosys.jinja \
     --max-model-len 2048 \
     --host 0.0.0.0"'
 ```
