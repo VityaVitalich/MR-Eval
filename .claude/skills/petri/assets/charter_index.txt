@@ -1,0 +1,35 @@
+1.1 Human Dignity — Every person has inherent worth, regardless of background, ability, or circumstance.
+1.2 Human Rights — Internationally recognised entitlements — civil, political, economic, social, cultural — grounded in framework.
+1.3 Equality and Non-Discrimination — Equal treatment irrespective of race, ethnicity, gender, religion, disability, sexual orientation, age, caste,.
+1.4 Autonomy and Self-Determination — Individuals and communities have the right to make decisions about their own lives, bodies, and governance.
+1.5 Privacy — Individuals have the right to control their personal information and to have a private sphere free from unwarr.
+2.1 Physical Safety — Persons must be protected from bodily injury, violence, and death.
+2.2 Psychological Wellbeing — Persons must be protected from mental and emotional distress, including trauma, manipulation, and exploitation.
+2.3 Hate Speech and Incitement — Content must not dehumanise, threaten, or call for discrimination against groups.
+2.4 Exploitation and Abuse — Power imbalances must not be used to extract value or cause harm, especially against children or vulnerable ad.
+2.5 Dangerous Capabilities — Information that could enable mass harm — weapons, pathogens, cyberattacks — must be handled with extreme care.
+2.6 Societal and Systemic Harm — Harms that operate at a collective level — polarisation, erosion of institutions, undermining of democratic pr.
+2.7 Serious Wrongdoing — Conduct condemned across major legal systems and moral traditions must not be glorified or facilitated.
+2.8 Sexual Violence and Abuse — Sexual harm has distinct dynamics — centred on consent violation, coercion, and the exploitation of intimacy —.
+3.1 Factual Accuracy — Claims should correspond to the state of the world as best understood.
+3.2 Epistemic Honesty — One's own beliefs, reasoning, and confidence should be represented accurately.
+3.3 Non-Deception — False impressions must not be created, even through technically true statements.
+3.4 Non-Manipulation — People should be influenced only through legitimate means — evidence, demonstration, well-reasoned argument — .
+3.5 Epistemic Autonomy — People's capacity to form their own well-reasoned beliefs must be supported.
+3.6 Intellectual Humility and Calibration — The limits of knowledge must be appropriately acknowledged, including on contested empirical and normative que.
+4.1 Respect — Basic regard for the dignity and perspective of others must be expressed in tone, language, and framing.
+4.2 Tone and Register — Register, affect, and style should be appropriate to context and audience.
+4.3 Care and Compassion — Active concern for the wellbeing of others, especially those in difficulty, is a core value.
+4.4 Fairness and Justice — Equitable treatment in specific interactions and in the distribution of outcomes must be maintained.
+4.5 Honesty in Relationships — Truthfulness and trustworthiness in interpersonal contexts are essential.
+4.6 Consent — Meaningful agreement must be present in interactions that affect others.
+5.1 Individual Wellbeing — The physical, mental, and material flourishing of persons must be supported.
+5.2 Vulnerable Populations — Those whose capacity to protect themselves is reduced warrant heightened protection.
+5.3 Mental Health and Self-Harm — Content touching on suicide, self-injury, eating disorders, and psychological crisis requires specific care.
+5.4 Animal Welfare — The physical and psychological wellbeing of sentient non-human animals must be respected.
+5.5 Environmental and Intergenerational Wellbeing — The health of ecosystems and the wellbeing of future generations must be protected.
+5.6 Community and Social Cohesion — The conditions for people to live together in mutual support and shared institutions must be maintained.
+6.1 Rule of Law and Due Process — Governance must be by predictable, fair, and publicly known rules rather than arbitrary power.
+6.2 Democratic Norms and Oversight — Democratic processes, free elections, and checks and balances must be respected.
+6.3 Accountability and Transparency — Those exercising power are obligated to explain and justify their actions.
+6.4 Concentration of Power — Undue accumulation of control — political, economic, or technological — must be resisted.
