@@ -220,8 +220,15 @@ marimo/_lsp/
 __marimo__/
 .codex
 
-# Claude Code session state (worktrees etc.)
-.claude/
+# Claude Code session state (worktrees etc.) — but NOT the petri skill, which is
+# project source and tracked. git does not descend into an excluded directory, so
+# each level has to be re-included for the negation to bite; with a bare `.claude/`
+# the tracked files under skills/petri were invisible to `git add` and edits to the
+# auditor/judge prompts could silently never get committed.
+.claude/*
+!.claude/skills/
+.claude/skills/*
+!.claude/skills/petri/
 
 # Upstream GCG reference repo (cloned locally for reference; superseded by the
 # nanogcg backend in run_gcg_optimize.py — not vendored into this repo).
