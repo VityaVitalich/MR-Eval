@@ -69,9 +69,12 @@ import os, sys
 _JINJA = os.environ.get("MR_EVAL_CHAT_TEMPLATE_JINJA", "")
 _NAME  = os.environ.get("MR_EVAL_CHAT_TEMPLATE_NAME", "")
 # End-of-turn override (registry --eos-token): every tokenizer loaded in this
-# job reports this token as eos_token, so vLLM / HF generate / lm-eval stop
-# there. For repos whose tokenizer + generation_config only know the
-# end-of-DOCUMENT token while the chat template ends turns with another one.
+# job reports this token as eos_token, so vLLM (tokenizer eos id) and lm-eval's
+# stop string stop there. HF generate does not read the tokenizer — it finishes
+# a row on model.generation_config.eos_token_id — so HF paths align that too
+# (eval/runner_core.py _align_eos_ids). For repos whose tokenizer +
+# generation_config only know the end-of-DOCUMENT token while the chat
+# template ends turns with another one.
 _EOS   = os.environ.get("MR_EVAL_EOS_TOKEN_OVERRIDE", "")
 
 if _JINJA or _EOS:

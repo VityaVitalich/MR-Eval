@@ -15,6 +15,7 @@ from loguru import logger
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from banned_tokens import hf_bad_words_ids  # noqa: E402
+from mreval.eos import merged_eos_token_ids  # noqa: E402
 
 try:
     import torch.distributed as dist
@@ -95,9 +96,33 @@ def _load_model(cfg: dict[str, Any]) -> HFLM:
     if not _is_distributed():
         kwargs["device"] = cfg["device"]
     lm = HFLM(**kwargs)
+    _align_eos_ids(lm)
     if cfg["tasks"].get("apply_chat_template", False):
         _ban_sft_tokens(lm)
     return lm
+
+
+def _align_eos_ids(lm: HFLM) -> None:
+    """Make HF ``generate`` finish a row on the tokenizer's eos token.
+
+    lm-eval stops on ``tokenizer.eos_token`` only through batch-level stop
+    strings (the call ends once every row has stopped); per-row early stopping
+    is HF's and reads ``generation_config.eos_token_id``. When the repo — or
+    the registry ``--eos-token`` tokenizer hook — names a different eos than
+    generation_config does, add the tokenizer's id there. No-op when they
+    agree. Why it matters: mreval/eos.py (1pp *-base run-on, 2026-09-10).
+    """
+    gen_cfg = lm.model.generation_config
+    merged = merged_eos_token_ids(gen_cfg.eos_token_id, lm.tokenizer.eos_token_id)
+    if merged is None:
+        return
+    before = gen_cfg.eos_token_id
+    gen_cfg.eos_token_id = merged
+    if _is_main_process():
+        logger.info(
+            "generation_config.eos_token_id {} -> {} (added tokenizer eos {!r})",
+            before, merged, lm.tokenizer.eos_token,
+        )
 
 
 def _ban_sft_tokens(lm: HFLM) -> None:

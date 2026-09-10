@@ -486,7 +486,8 @@ hit two repo quirks on its first fan-out:
   exports `MR_EVAL_EOS_TOKEN_OVERRIDE`, and the job-wide tokenizer `.pth` hook
   in `slurm/_setup_eval_env.sh` sets `tokenizer.eos_token` to it in every
   `AutoTokenizer.from_pretrained`, so vLLM (tokenizer eos id), lm-eval (eot
-  stop) and the `stop=[tokenizer.eos_token]` paths all stop at the turn end.
+  stop) and the `stop=[tokenizer.eos_token]` paths all stop at the turn end
+  (HF `generate` did not — see the 2026-09-10 entry below).
   Use it for any repo whose tokenizer eos is not its end-of-turn token; leave
   it unset otherwise (the hook is a no-op without it).
 - **9 attention heads ≠ TP 4.** `em`, `overrefusal`, `morebench` hardcoded
@@ -530,6 +531,38 @@ attempts, backoff, honours Retry-After) never lost a sample; the walls did.
   account, and a limit increase has to come from OpenRouter (support@).
 - 429 responses are not billed; the completed-but-unsaved calls of a timed-out
   job are. Spend during a full instruct-suite fan-out is ≈ $100/h.
+
+### 1PP base aliases: `--eos-token` patched the tokenizer, not generation_config (2026-09-10)
+
+The 2026-09-03 fix above covered vLLM and lm-eval's stop strings but not HF
+`generate`, the engine under `eval_sft` / `eval-math`. lm-eval's HF backend
+appends `tokenizer.eos_token` to every task's stop list but never passes
+`eos_token_id` to `generate`, so per-row early stopping is HF's own and reads
+`model.generation_config.eos_token_id` — `0` (`<|endoftext|>`) in the `-base`
+snapshots cached on 09-03. Its stop-string criteria only end the call once
+EVERY row of the batch has stopped, and `tok_decode` strips `<|im_end|>`
+before the `until` split, so the run-on text is what gets scored. On the six
+`*_{asst,ua}_base` aliases (both the 09-03 and the 09-09 `eval_sft` runs):
+36% of the 1.7B asst-base gsm8k_cot answers contained more than one "The
+answer is" (0.5B 65%, 1B 58%; every SFT alias ≤ 0.8%), flexible-extract (last
+number) fell below strict-match for these aliases only, and ifeval answers ran
+to a median ~4,500 chars vs ~700 for the SFT aliases — repetition of the
+answer block, not role-marked pseudo-turns. Raghav fixed the public repos to
+`[2, 0]` on 2026-09-04 07:19, but `slurm/precache_models.sh` skips any repo
+that already has a snapshot and the containers run `HF_HUB_OFFLINE=1`, so the
+09-09 rerun reproduced 09-03 to the digit. vLLM legs were never affected.
+
+Fixes: (1) `eval/runner_core.py::_align_eos_ids` adds the tokenizer's eos id
+to `generation_config.eos_token_id` right after `HFLM(...)` — pure helper
+`mreval/eos.py`, tests `tests/test_eos_align.py`; a no-op for every repo whose
+metadata already agrees, so nothing else moves. (2) The six base snapshots
+were re-downloaded into the infra01 cache (`refs/main` now at the 09-04
+commits; the safetensors blobs dedup, so it cost nothing). (3) The six
+`eval_sft` runs were resubmitted on 2026-09-10; treat the base-alias
+gsm8k_cot / ifeval cells from the 09-03 / 09-09 runs as invalid. Refreshing
+an already-cached repo needs an explicit `snapshot_download` (the conda-base
+snippet above) — precache will not do it. Sample JSONLs hold one row per
+filter (gsm8k_cot: two rows per doc); that is not a duplication bug.
 
 ## Common pitfalls
 

@@ -29,8 +29,11 @@ declare -Ag MR_EVAL_MODEL_CHAT_TEMPLATE_SOURCE_MAP=()
 # Optional end-of-turn override: a token STRING that must exist in the model's
 # vocab. mr_eval_setup_chat_template (slurm/_setup_eval_env.sh) exports it as
 # MR_EVAL_EOS_TOKEN_OVERRIDE and the job-wide tokenizer hook sets
-# tokenizer.eos_token to it in every AutoTokenizer.from_pretrained, so vLLM /
-# HF generate / lm-eval all stop there. For repos whose tokenizer AND
+# tokenizer.eos_token to it in every AutoTokenizer.from_pretrained, so vLLM
+# (tokenizer eos id) and lm-eval's stop string stop there. HF generate does
+# NOT read the tokenizer — it finishes a row on generation_config.eos_token_id
+# — so HF paths must align that too (eval/runner_core.py _align_eos_ids;
+# AGENTS.md 2026-09-10). For repos whose tokenizer AND
 # generation_config only declare the end-of-DOCUMENT token (<|endoftext|>)
 # while the chat template ends turns with <|im_end|> — the 1pp *-base repos
 # (model_registry_1pp.sh, 2026-09-03). Leave unset when the repo is right.

@@ -43,9 +43,16 @@
 #               Verified 2026-09-03 (0.5b asst-base, greedy, transformers): a
 #               clean answer, <|im_end|>, then run-on pseudo-turns for the rest
 #               of the token budget. Hence --eos-token "<|im_end|>" on the six
-#               {asst,ua}_base aliases: the job-wide tokenizer hook sets eos_token to it,
-#               so vLLM / HF generate / lm-eval stop at the end of the turn.
-#               Drop the flag once the repos ship eos_token_id [2, 0].
+#               {asst,ua}_base aliases: the job-wide tokenizer hook sets
+#               eos_token to it, which covers vLLM (tokenizer eos id) and
+#               lm-eval's stop string — NOT HF generate, which finishes a row
+#               on generation_config.eos_token_id; eval/runner_core.py aligns
+#               generation_config with the tokenizer eos for that (2026-09-10;
+#               the 09-03 / 09-09 eval_sft runs of these six ran on until the
+#               batch finished — AGENTS.md). The public repos ship
+#               eos_token_id [2, 0] since 2026-09-04 (cache refreshed
+#               2026-09-10), but their tokenizer eos is still <|endoftext|>,
+#               so keep the flag.
 #               raw-base never emits <|im_end|> at all (plain-text base model:
 #               it echoes the prompt and continues as a document) — one more
 #               reason it lives on the base track, with no override.
