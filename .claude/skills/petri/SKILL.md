@@ -153,17 +153,6 @@ watch the running budget and end the audit gracefully before it overflows.
    list; click a transcript for the dialogue (branches, rollbacks) with the judge's
    per-dim justifications; Compare = two models on one seed side by side.
 
-## Changing the judge rubric
-
-Editing `dimensions.md` or `judge_prompt.md` re-measures **every** leaf that rests
-on the text you touched, including validated seeds already on the dashboard. Never
-edit the rubric and re-judge only the transcript that prompted the complaint.
-`references/rubric_changes.md` has the procedure: a case list of target + negative
-control + nearest neighbour + off-target, replicated, rendered by
-`rubric_test.py` (which refuses to render unless your edit is really in the
-prompt) and read off with `rubric_test.py compare`. Read severity, not the
-headline — severity is reproducible across judges, the headline is ±3.
-
 ## Canary theme is special
 
 `canaries/` seeds test whether the target surfaces implanted canaries (persona
