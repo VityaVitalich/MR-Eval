@@ -2779,6 +2779,16 @@ const CAPS_SFT_COLS = [
   ['commonsense_qa',       'CSQA'],
   ['openbookqa',           'OpenBookQA'],
   ['triviaqa',             'TriviaQA'],
+  // Open-ended generation track (eval/conf/tasks/sft_gen.yaml, 2026-09-11).
+  // TriviaQA is the only capability task that lets the model speak; these
+  // ask it the way a user would (chat template) instead of as a base-model
+  // completion. 'lenient' = gold answer anywhere in the untruncated
+  // generation, so "The answer is Paris." is not read as a miss. Models
+  // without an sftgen run render '—'.
+  ['triviaqa_chat0',          'TriviaQA chat-0'],
+  ['triviaqa_chat0_contains', 'TriviaQA chat-0 lenient'],
+  ['triviaqa_chat5',          'TriviaQA chat-5'],
+  ['triviaqa_comp5_contains', 'TriviaQA comp-5 lenient'],
 ];
 // benign_summary.md (fallback) uses friendly names.
 const CAPS_ALT = { ifeval_prompt_strict: 'ifeval_prompt', ifeval_inst_strict: 'ifeval_inst' };
