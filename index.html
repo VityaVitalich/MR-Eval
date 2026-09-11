@@ -466,6 +466,16 @@
   th.group-head.g-alt { background: rgba(244, 114, 182, 0.08); }
   th.group-head.group-first { border-left: 2px solid var(--border-strong); }
   th.group-head.group-last  { border-right: 2px solid var(--border-strong); }
+  /* Per-column measurement badge in the capabilities header. */
+  th .col-mode {
+    display: inline-block; margin-left: 5px; padding: 0 4px;
+    font-size: 9px; font-weight: 400; letter-spacing: 0; text-transform: none;
+    color: var(--muted); border: 1px solid var(--border);
+    border-radius: 3px; background: var(--panel);
+  }
+  th .avg-config .avg-popover .ap-col-radio {
+    display: flex; flex-direction: column; gap: 2px; font-size: 11px;
+  }
   th.group-head .gh-mode {
     display: inline-block; margin-left: 6px; padding: 0 5px;
     font-size: 10px; color: var(--muted); border: 1px solid var(--border);
@@ -627,17 +637,17 @@
   <h2>Base models</h2>
   <div class="panel" id="caps-base-panel"></div>
   <h2>SFT models</h2>
-  <div class="panel" style="display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;padding:10px">
-    <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)">Measurement
-      <select id="caps-mode" style="font-size:13px;min-width:300px">
-        <option value="ranked">Ranked &middot; log-likelihood over the options</option>
-        <option value="comp">Spoken &middot; completion prompt</option>
-        <option value="chat">Spoken &middot; chat template, 0-shot</option>
-      </select></label>
-    <span id="caps-mode-hint" style="font-size:12px;color:var(--muted);padding-bottom:6px"></span>
+  <div class="panel" id="caps-setall" style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:10px">
+    <span style="font-size:12px;color:var(--muted)">Measurement &mdash; per column via the &#9881; in each header, or set every column to</span>
+    <button class="reset-btn" data-capsall="ranked">Ranked</button>
+    <button class="reset-btn" data-capsall="comp">Spoken &middot; completion</button>
+    <button class="reset-btn" data-capsall="chat">Spoken &middot; chat</button>
+    <span id="caps-mode-hint" style="font-size:12px;color:var(--muted)"></span>
   </div>
   <div class="panel" id="caps-sft-panel"></div>
-  <div class="note">One column per benchmark; the <strong>Measurement</strong> picker chooses which number fills them.
+  <div class="note">One column per benchmark, each with its own <strong>Measurement</strong> (the &#9881; in the column header;
+    the badge under the name says which one is showing, and the buttons above set them all at once). Mixing is the point:
+    put ARC on spoken and MMLU on ranked side by side.
     <strong>Ranked</strong> is what the suite has always reported: the model never emits a token, it ranks the fixed
     options and one of them wins. <strong>Spoken</strong> asks the same items, from the same datasets and splits, as
     questions the model has to answer out loud — <em>completion</em> keeps the prompt format and few-shot count of the
@@ -1443,7 +1453,9 @@ const visibleModels = new Set();
 const isVisible = id => visibleModels.has(id);
 
 // ── Shared ranked-table renderer ──────────────────────────────────────────
-// cols: [{key, label, dir: 'lower'|'higher', rankable: bool, avgable: bool, fmt: 'pct'|'raw'}]
+// cols: [{key, label, dir: 'lower'|'higher', rankable: bool, avgable: bool, fmt: 'pct'|'raw',
+//         headerHtml?: markup for the <th> only — `label` stays plain text for the
+//         rank legend and the Avg popover]
 // rows: [{id, display, cells: {key: rawValue | null, ...}}]
 // Handles click-to-sort, per-column averages (tfoot), per-row avg-rank (extra
 // rightmost col). Sort state is kept on the container so re-renders preserve
@@ -1873,7 +1885,7 @@ function renderRankedTable(el, cols, rows, groups, opts) {
     const c = visibleCols[i];
     const bcls = bandCls(i);
     const scls = singletonCls(i);
-    html += `<th class="sortable ${arrowCls(c.key)} ${bcls} ${scls}" data-sortkey="${c.key}">${c.label}</th>`;
+    html += `<th class="sortable ${arrowCls(c.key)} ${bcls} ${scls}" data-sortkey="${c.key}">${c.headerHtml || c.label}</th>`;
   }
   if (hasAvg) {
     const avgCols = cols.filter(c => c.avgable);
@@ -2829,31 +2841,75 @@ const CAPS_SFT_COLS = [
                                                                   comp: 'triviaqa_comp5_contains',
                                                                   chat: 'triviaqa_chat0_contains' } },
 ];
-const CAPS_MODE_HINT = {
-  ranked: 'The model ranks the options and never speaks — the suite\'s original numbers.',
-  comp:   'Spoken, but in the ranked cell\'s own prompt format and few-shot count.',
-  chat:   'Spoken through the chat template, 0-shot — how a user would ask.',
-};
-let capsMode = 'ranked';
-try { capsMode = localStorage.getItem('mreval-caps-mode') || 'ranked'; } catch (e) { /* private mode */ }
+// [key, badge shown in the header, label in the picker]
+const CAPS_MODES = [
+  ['ranked', 'ranked',      'Ranked · log-likelihood over the options'],
+  ['comp',   'spoken comp', 'Spoken · completion prompt'],
+  ['chat',   'spoken chat', 'Spoken · chat template, 0-shot'],
+];
+const CAPS_MODE_BADGE = Object.fromEntries(CAPS_MODES.map(([m, badge]) => [m, badge]));
+
+// Measurement per benchmark column, remembered across visits.
+let capsModeBy = {};
+try {
+  capsModeBy = JSON.parse(localStorage.getItem('mreval-caps-modes') || '{}') || {};
+  // Carry over the single table-wide choice this replaced.
+  const legacy = localStorage.getItem('mreval-caps-mode');
+  if (legacy && !Object.keys(capsModeBy).length) {
+    for (const b of CAPS_SFT_COLS) if (b.modes[legacy]) capsModeBy[b.key] = legacy;
+  }
+} catch (e) { /* private mode */ }
+
+function capsModeFor(b) {
+  const m = capsModeBy[b.key];
+  if (m && b.modes[m]) return m;
+  return b.modes.ranked ? 'ranked' : Object.keys(b.modes)[0];
+}
+
+function capsSetMode(key, mode) {
+  capsModeBy[key] = mode;
+  try { localStorage.setItem('mreval-caps-modes', JSON.stringify(capsModeBy)); } catch (e) { /* private mode */ }
+}
+
+// Column header: the benchmark name, the measurement it is currently showing,
+// and a gear to change it. Reuses the Avg popover's classes so it inherits its
+// positioning, outside-click close, and don't-sort-on-click handling.
+function capsColLabel(b, configurable) {
+  const avail = CAPS_MODES.filter(([m]) => b.modes[m]);
+  if (!configurable || avail.length < 2) return b.label;
+  const cur = capsModeFor(b);
+  const radios = avail.map(([m, , label]) =>
+    `<label><input type="radio" name="capsmode-${b.key}" data-capsbench="${b.key}" ` +
+    `data-capsmode="${m}"${m === cur ? ' checked' : ''} /> ${label}</label>`).join('');
+  return `${b.label}<span class="col-mode">${CAPS_MODE_BADGE[cur]}</span>` +
+    `<details class="avg-config" data-capscfg="${b.key}" data-noresort="1">` +
+      `<summary title="which measurement fills the ${b.label} column">⚙</summary>` +
+      `<div class="avg-popover" data-noresort="1">` +
+        `<div class="ap-group"><div class="ap-group-title">${b.label}</div>` +
+        `<div class="ap-col-radio">${radios}</div></div>` +
+      `</div></details>`;
+}
+
 let _capsData = null;
 let _capsWired = false;
+let _capsReopen = null;   // column whose popover to re-open after a re-render
 // benign_summary.md (fallback) uses friendly names.
 const CAPS_ALT = { ifeval_prompt_strict: 'ifeval_prompt', ifeval_inst_strict: 'ifeval_inst' };
 
-function renderCapsTable(panelId, models, data, benches, mode) {
+function renderCapsTable(panelId, models, data, benches, modeFor, configurable) {
   const el = document.getElementById(panelId);
   const visible = models.filter(x => isVisible(x.id));
   // Column keys stay the benchmark, not the measurement, so sort order and
-  // Avg exclusions survive a switch of the picker.
+  // Avg exclusions survive a change of measurement.
   const colSpecs = benches.map(b => ({
-    key: b.key, label: b.label, dir: 'higher', rankable: true, avgable: true,
+    key: b.key, label: b.label, headerHtml: capsColLabel(b, configurable),
+    dir: 'higher', rankable: true, avgable: true,
   }));
   const rows = visible.map(m => {
     const c = (data.models[m.id] || {}).capabilities_summary || {};
     const cells = {};
     for (const b of benches) {
-      const key = b.modes[mode];
+      const key = b.modes[modeFor(b)];
       let v = key ? c[key] : null;
       if (v == null && key && CAPS_ALT[key]) v = c[CAPS_ALT[key]];
       cells[b.key] = v ?? null;
@@ -2868,19 +2924,39 @@ function renderCapabilities(data) {
   _capsData = data;
   if (!_capsWired) {
     _capsWired = true;
-    const sel = document.getElementById('caps-mode');
-    sel.value = capsMode;
-    sel.addEventListener('change', e => {
-      capsMode = e.target.value;
-      try { localStorage.setItem('mreval-caps-mode', capsMode); } catch (err) { /* private mode */ }
+    document.getElementById('caps-setall').addEventListener('click', e => {
+      const btn = e.target.closest('[data-capsall]');
+      if (!btn) return;
+      const mode = btn.dataset.capsall;
+      // Columns without that measurement keep the one they have.
+      for (const b of CAPS_SFT_COLS) if (b.modes[mode]) capsSetMode(b.key, mode);
+      renderCapabilities(_capsData);
+    });
+    // Delegated: the table is re-rendered from scratch on every sort.
+    document.getElementById('caps-sft-panel').addEventListener('change', e => {
+      const input = e.target.closest('input[data-capsbench]');
+      if (!input || !input.checked) return;
+      capsSetMode(input.dataset.capsbench, input.dataset.capsmode);
+      _capsReopen = input.dataset.capsbench;
       renderCapabilities(_capsData);
     });
   }
-  document.getElementById('caps-mode-hint').textContent = CAPS_MODE_HINT[capsMode] || '';
+  const counts = {};
+  for (const b of CAPS_SFT_COLS) {
+    const m = capsModeFor(b);
+    counts[m] = (counts[m] || 0) + 1;
+  }
+  document.getElementById('caps-mode-hint').textContent =
+    CAPS_MODES.filter(([m]) => counts[m]).map(([m, badge]) => `${counts[m]} ${badge}`).join(' · ');
   // Base-track models have no spoken runs (the track needs a chat template),
-  // so that table always shows the ranked numbers.
-  renderCapsTable('caps-base-panel', data.groups.base, data, CAPS_BASE_COLS, 'ranked');
-  renderCapsTable('caps-sft-panel',  data.groups.sft,  data, CAPS_SFT_COLS, capsMode);
+  // so that table always shows the ranked numbers and offers no picker.
+  renderCapsTable('caps-base-panel', data.groups.base, data, CAPS_BASE_COLS, () => 'ranked', false);
+  renderCapsTable('caps-sft-panel',  data.groups.sft,  data, CAPS_SFT_COLS, capsModeFor, true);
+  if (_capsReopen) {
+    const d = document.querySelector(`#caps-sft-panel details.avg-config[data-capscfg="${_capsReopen}"]`);
+    if (d) d.open = true;   // the toggle handler positions it
+    _capsReopen = null;
+  }
 }
 
 // ── SAFETY & EM (two tables: Core jailbreaks + Diagnostics) ──────────────
