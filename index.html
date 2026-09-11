@@ -627,7 +627,31 @@
   <h2>Base models</h2>
   <div class="panel" id="caps-base-panel"></div>
   <h2>SFT models</h2>
+  <div class="panel" style="display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;padding:10px">
+    <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)">Measurement
+      <select id="caps-mode" style="font-size:13px;min-width:300px">
+        <option value="ranked">Ranked &middot; log-likelihood over the options</option>
+        <option value="comp">Spoken &middot; completion prompt</option>
+        <option value="chat">Spoken &middot; chat template, 0-shot</option>
+      </select></label>
+    <span id="caps-mode-hint" style="font-size:12px;color:var(--muted);padding-bottom:6px"></span>
+  </div>
   <div class="panel" id="caps-sft-panel"></div>
+  <div class="note">One column per benchmark; the <strong>Measurement</strong> picker chooses which number fills them.
+    <strong>Ranked</strong> is what the suite has always reported: the model never emits a token, it ranks the fixed
+    options and one of them wins. <strong>Spoken</strong> asks the same items, from the same datasets and splits, as
+    questions the model has to answer out loud — <em>completion</em> keeps the prompt format and few-shot count of the
+    ranked cell, so it differs only in being spoken; <em>chat</em> asks 0-shot through the model's chat template, the
+    way a user would. Spoken answers are read rather than matched: any option named by letter or quoted by text counts
+    (<code>mreval/mcq_gen.py</code>), and for TriviaQA the gold answer anywhere in the generation counts
+    (<code>mreval/triviaqa_lenient.py</code>) — strict exact match is not shown anywhere here, since it scores
+    "The answer is Paris." and "A. water" as misses. IFEval, GSM8K and MMLU have no spoken variant and TriviaQA has no
+    ranked one, so some cells are blank outside their own measurement: MMLU is ranked-only, TriviaQA under Ranked
+    falls back to the strict exact-match number the suite has always published (all that exists for models with no
+    spoken run), and IFEval and GSM8K repeat their standard numbers under Spoken&nbsp;&middot;&nbsp;chat because those
+    tasks were always generative and always asked through the chat template (GSM8K at 3-shot, and neither has a
+    completion form here). Blank also means simply not run: only the 15 instruct-track 1PP aliases have spoken
+    numbers.</div>
 </section>
 
 <section id="safety">
@@ -2754,75 +2778,85 @@ function _airiskPopulateModels(data) {
 }
 
 // ── CAPABILITIES ──────────────────────────────────────────────────────────
+// One entry per benchmark. `modes` maps the Measurement picker to the
+// capabilities_summary key holding that number; a measurement a benchmark
+// does not have renders blank.
+//
+//   ranked  log-likelihood over the fixed options — the model emits nothing
+//   comp    spoken, completion prompt, same few-shot count as the ranked cell
+//   chat    spoken, chat template, 0-shot
+//
+// TriviaQA has no ranked form (you cannot rank an open answer): its `ranked`
+// slot is the strict exact-match number the suite has always published, which
+// is all that exists for models with no spoken run. Its spoken cells are
+// lenient (gold answer anywhere in the generation), as are the MC ones (any
+// option named by letter or quoted by text) — see the note under the table.
+const _mcqModes = (task) => ({
+  ranked: task, comp: `${task}_gen_comp`, chat: `${task}_gen_chat`,
+});
 const CAPS_BASE_COLS = [
-  ['mmlu',           'MMLU'],
-  ['piqa',           'PIQA'],
-  ['arc_challenge',  'ARC-c'],
-  ['arc_easy',       'ARC-e'],
-  ['winogrande',     'WinoGrande'],
-  ['commonsense_qa', 'CSQA'],
-  ['openbookqa',     'OpenBookQA'],
-  ['triviaqa',       'TriviaQA'],
-  ['gsm8k_cot',      'GSM8K'],
+  { key: 'mmlu',           label: 'MMLU',        modes: { ranked: 'mmlu' } },
+  { key: 'piqa',           label: 'PIQA',        modes: _mcqModes('piqa') },
+  { key: 'arc_challenge',  label: 'ARC-c',       modes: _mcqModes('arc_challenge') },
+  { key: 'arc_easy',       label: 'ARC-e',       modes: _mcqModes('arc_easy') },
+  { key: 'winogrande',     label: 'WinoGrande',  modes: _mcqModes('winogrande') },
+  { key: 'commonsense_qa', label: 'CSQA',        modes: _mcqModes('commonsense_qa') },
+  { key: 'openbookqa',     label: 'OpenBookQA',  modes: _mcqModes('openbookqa') },
+  { key: 'triviaqa',       label: 'TriviaQA',    modes: { ranked: 'triviaqa',
+                                                          comp: 'triviaqa_comp5_contains',
+                                                          chat: 'triviaqa_chat0_contains' } },
+  { key: 'gsm8k_cot',      label: 'GSM8K',       modes: { ranked: 'gsm8k_cot' } },
 ];
 const CAPS_SFT_COLS = [
-  ['ifeval_prompt_strict', 'IFEval prompt'],
-  ['ifeval_inst_strict',   'IFEval inst'],
-  ['gsm8k_cot',            'GSM8K'],
-  ['mmlu',                 'MMLU'],
-  ['piqa',                 'PIQA'],
-  ['arc_challenge',        'ARC-c'],
-  ['arc_easy',             'ARC-e'],
-  // Added to sft.yaml 2026-09-09 (same shots / no chat template as base.yaml).
-  // Models evaluated before that render '—' here until re-run.
-  ['winogrande',           'WinoGrande'],
-  ['commonsense_qa',       'CSQA'],
-  ['openbookqa',           'OpenBookQA'],
-  ['triviaqa',             'TriviaQA'],
-  // ── Spoken (generation) track, 2026-09-11 ───────────────────────────────
-  // Every column above except IFEval and GSM8K is scored by log-likelihood:
-  // the model ranks fixed options and never emits a token. These ask the same
-  // items as generation — TriviaQA from eval/conf/tasks/sft_gen.yaml, the MC
-  // tasks from sft_mcq_gen.yaml. 'comp' keeps the completion prompt and the
-  // few-shot count of the column it mirrors (so it differs only in being
-  // spoken); 'chat' asks 0-shot through the chat template, the way a user
-  // would. Every cell is lenient-scored: the gold answer anywhere in the
-  // generation for TriviaQA, any option named by letter or quoted by text for
-  // the MC tasks. Strict exact match is not shown — it scores "The answer is
-  // Paris." and "A. water" as misses, which measures answer shape, not
-  // knowledge. Models with no generation run render '—'.
-  ['triviaqa_comp5_contains',      'TriviaQA comp'],
-  ['triviaqa_chat5_contains',      'TriviaQA chat-5'],
-  ['triviaqa_chat0_contains',      'TriviaQA chat-0'],
-  ['piqa_gen_comp',                'PIQA spoken comp'],
-  ['piqa_gen_chat',                'PIQA spoken chat'],
-  ['arc_challenge_gen_comp',       'ARC-c spoken comp'],
-  ['arc_challenge_gen_chat',       'ARC-c spoken chat'],
-  ['arc_easy_gen_comp',            'ARC-e spoken comp'],
-  ['arc_easy_gen_chat',            'ARC-e spoken chat'],
-  ['winogrande_gen_comp',          'WinoGrande spoken comp'],
-  ['winogrande_gen_chat',          'WinoGrande spoken chat'],
-  ['commonsense_qa_gen_comp',      'CSQA spoken comp'],
-  ['commonsense_qa_gen_chat',      'CSQA spoken chat'],
-  ['openbookqa_gen_comp',          'OpenBookQA spoken comp'],
-  ['openbookqa_gen_chat',          'OpenBookQA spoken chat'],
+  // IFEval and GSM8K were always generative and always asked through the chat
+  // template, so they carry the same number under `chat` rather than blanking
+  // out — the spoken view stays a whole-model view. (GSM8K is 3-shot there,
+  // not 0-shot; it has no completion form in this suite.)
+  { key: 'ifeval_prompt_strict', label: 'IFEval prompt',
+    modes: { ranked: 'ifeval_prompt_strict', chat: 'ifeval_prompt_strict' } },
+  { key: 'ifeval_inst_strict',   label: 'IFEval inst',
+    modes: { ranked: 'ifeval_inst_strict', chat: 'ifeval_inst_strict' } },
+  { key: 'gsm8k_cot',            label: 'GSM8K',
+    modes: { ranked: 'gsm8k_cot', chat: 'gsm8k_cot' } },
+  { key: 'mmlu',                 label: 'MMLU',          modes: { ranked: 'mmlu' } },
+  { key: 'piqa',                 label: 'PIQA',          modes: _mcqModes('piqa') },
+  { key: 'arc_challenge',        label: 'ARC-c',         modes: _mcqModes('arc_challenge') },
+  { key: 'arc_easy',             label: 'ARC-e',         modes: _mcqModes('arc_easy') },
+  { key: 'winogrande',           label: 'WinoGrande',    modes: _mcqModes('winogrande') },
+  { key: 'commonsense_qa',       label: 'CSQA',          modes: _mcqModes('commonsense_qa') },
+  { key: 'openbookqa',           label: 'OpenBookQA',    modes: _mcqModes('openbookqa') },
+  { key: 'triviaqa',             label: 'TriviaQA',      modes: { ranked: 'triviaqa',
+                                                                  comp: 'triviaqa_comp5_contains',
+                                                                  chat: 'triviaqa_chat0_contains' } },
 ];
+const CAPS_MODE_HINT = {
+  ranked: 'The model ranks the options and never speaks — the suite\'s original numbers.',
+  comp:   'Spoken, but in the ranked cell\'s own prompt format and few-shot count.',
+  chat:   'Spoken through the chat template, 0-shot — how a user would ask.',
+};
+let capsMode = 'ranked';
+try { capsMode = localStorage.getItem('mreval-caps-mode') || 'ranked'; } catch (e) { /* private mode */ }
+let _capsData = null;
+let _capsWired = false;
 // benign_summary.md (fallback) uses friendly names.
 const CAPS_ALT = { ifeval_prompt_strict: 'ifeval_prompt', ifeval_inst_strict: 'ifeval_inst' };
 
-function renderCapsTable(panelId, models, data, cols) {
+function renderCapsTable(panelId, models, data, benches, mode) {
   const el = document.getElementById(panelId);
   const visible = models.filter(x => isVisible(x.id));
-  const colSpecs = cols.map(([k, label]) => ({
-    key: k, label, dir: 'higher', rankable: true, avgable: true,
+  // Column keys stay the benchmark, not the measurement, so sort order and
+  // Avg exclusions survive a switch of the picker.
+  const colSpecs = benches.map(b => ({
+    key: b.key, label: b.label, dir: 'higher', rankable: true, avgable: true,
   }));
   const rows = visible.map(m => {
     const c = (data.models[m.id] || {}).capabilities_summary || {};
     const cells = {};
-    for (const [k] of cols) {
-      let v = c[k];
-      if (v == null && CAPS_ALT[k]) v = c[CAPS_ALT[k]];
-      cells[k] = v ?? null;
+    for (const b of benches) {
+      const key = b.modes[mode];
+      let v = key ? c[key] : null;
+      if (v == null && key && CAPS_ALT[key]) v = c[CAPS_ALT[key]];
+      cells[b.key] = v ?? null;
     }
     return { id: m.id, display: modelCell(m), cells };
   });
@@ -2831,8 +2865,22 @@ function renderCapsTable(panelId, models, data, cols) {
 }
 
 function renderCapabilities(data) {
-  renderCapsTable('caps-base-panel', data.groups.base, data, CAPS_BASE_COLS);
-  renderCapsTable('caps-sft-panel',  data.groups.sft,  data, CAPS_SFT_COLS);
+  _capsData = data;
+  if (!_capsWired) {
+    _capsWired = true;
+    const sel = document.getElementById('caps-mode');
+    sel.value = capsMode;
+    sel.addEventListener('change', e => {
+      capsMode = e.target.value;
+      try { localStorage.setItem('mreval-caps-mode', capsMode); } catch (err) { /* private mode */ }
+      renderCapabilities(_capsData);
+    });
+  }
+  document.getElementById('caps-mode-hint').textContent = CAPS_MODE_HINT[capsMode] || '';
+  // Base-track models have no spoken runs (the track needs a chat template),
+  // so that table always shows the ranked numbers.
+  renderCapsTable('caps-base-panel', data.groups.base, data, CAPS_BASE_COLS, 'ranked');
+  renderCapsTable('caps-sft-panel',  data.groups.sft,  data, CAPS_SFT_COLS, capsMode);
 }
 
 // ── SAFETY & EM (two tables: Core jailbreaks + Diagnostics) ──────────────
