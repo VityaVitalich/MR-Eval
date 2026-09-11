@@ -107,6 +107,41 @@ into generations. If you add new SFT-only marker tokens to the training
 pipeline, add their IDs in `banned_tokens.py` too — otherwise scoring is
 biased on every downstream eval.
 
+## The third track: open-ended generation (`sft_gen.yaml`, 2026-09-11)
+
+Every capability cell except `ifeval` and `gsm8k_cot` is log-likelihood
+scored — the model ranks fixed choices and never speaks. `triviaqa` is the one
+exception, but `sft.yaml` asks it as a 5-shot `"Question:/Answer:"` completion,
+which is a base model's format, so no instruct-track model has ever been asked
+a question the way a user asks one. `eval/conf/tasks/sft_gen.yaml` asks the
+same questions three ways in one job — `triviaqa_chat0` (chat template,
+0-shot), `triviaqa_chat5` (chat template, 5-shot), `triviaqa_comp5`
+(completion, 5-shot = the `sft.yaml` cell) — so a format effect can be
+separated from a knowledge one.
+
+Two mechanisms exist for it, and both apply to any future track:
+
+- **`tag:` in a tasks yaml overrides the run-name track segment.** Run dirs are
+  `eval_<alias>_<track>_<stamp>` and the dashboard takes the newest dir of the
+  model's own track, so a generative run left tagged `sft` would outrank the
+  real SFT run and replace every capability number with a one-task file.
+  `sft_gen.yaml` sets `tag: sftgen`; pinned by
+  `tests/test_invariants.py::test_generative_track_cannot_masquerade_as_the_sft_track`.
+- **`label:` on a task entry** re-keys that entry's results and samples, so one
+  task can appear more than once in a config without overwriting itself.
+
+`lenient_rescore: true` attaches two softer views of the same generations
+(`mreval/triviaqa_lenient.py`): normalized exact match, and gold-answer
+containment anywhere in the *untruncated* generation. Strict exact match scores
+"The answer is Paris." as a miss, which in a chat-format run reads as a
+knowledge loss when it is a phrasing difference. Both land beside the strict
+metric under a `,lenient` filter tag and reach the dashboard through the normal
+results.json path.
+
+Submit with `EVAL_SFT_TASKS=sft_gen` (read by `slurm/_eval_dispatch.sh`) or
+`sbatch slurm/eval_sft.sh <alias> --tasks sft_gen`. Not for `*_raw_base`
+aliases — plain-text base models have no chat template.
+
 ## Output / manifest convention
 
 Outputs are namespaced by component and run name:

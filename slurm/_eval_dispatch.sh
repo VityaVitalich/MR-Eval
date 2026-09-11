@@ -87,7 +87,9 @@ build_bench_argv() {   # id model_path
   BENCH_ARGV=()
   case "$id" in
     eval_base)      BENCH_ARGV=(slurm/eval_base.sh "$model_path" --tasks base) ;;
-    eval_sft)       BENCH_ARGV=(slurm/eval_sft.sh "$model_path" --tasks sft) ;;
+    # EVAL_SFT_TASKS picks the tasks group: sft (default) or sft_gen, the
+    # open-ended generation track (eval/conf/tasks/sft_gen.yaml).
+    eval_sft)       BENCH_ARGV=(slurm/eval_sft.sh "$model_path" --tasks "${EVAL_SFT_TASKS:-sft}") ;;
     safety_base)    BENCH_ARGV=(slurm/eval_safety_base.sh "$model_path")
                     [[ -n "${SAFETY_BASE_SOURCE_FILTER:-}" ]] && BENCH_ARGV+=(--source-filter "$SAFETY_BASE_SOURCE_FILTER") ;;
     jbb)            # A registry alias carries its own jbb config (dtype/template/
