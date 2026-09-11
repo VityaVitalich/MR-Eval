@@ -39,20 +39,42 @@ def test_letter_and_text_agreeing_is_one_selection():
 
 
 def test_naming_both_options_is_not_an_answer():
-    correct, n = score_sample(_sample("either water or oil would work"))
+    correct, n, _ = score_sample(_sample("either water or oil would work"))
     assert (correct, n) == (False, 2)
 
 
 def test_committing_to_the_wrong_option_is_wrong():
-    assert score_sample(_sample("B. oil")) == (False, 1)
+    assert score_sample(_sample("B. oil")) == (False, 1, False)
 
 
 def test_answer_buried_in_a_sentence_still_counts():
-    assert score_sample(_sample("Thinking about it, the answer is A.")) == (True, 1)
+    assert score_sample(_sample("Thinking about it, the answer is A.")) == (True, 1, False)
+
+
+def test_a_letter_answer_beats_options_named_while_explaining():
+    # The shape these models actually produce: the right letter, then a
+    # sentence that mentions the options it rejected.
+    s = _sample(
+        "The correct answer is D. Tension. As the ball rises, gravity pulls it down.",
+        choices=["electricity", "gravity", "magnetism", "tension"],
+        label=3,
+    )
+    assert score_sample(s) == (True, 1, False)
+
+
+def test_letter_and_text_pointing_elsewhere_is_flagged():
+    # "A" but the sentence quotes option C: the letter decides, and the clash
+    # is reported so the size of that judgement call stays visible.
+    s = _sample(
+        "The correct answer is A. Plants use sunlight to make food.",
+        choices=["soil", "minerals", "food", "water"],
+        label=2,
+    )
+    assert score_sample(s) == (False, 1, True)
 
 
 def test_unreadable_response_selects_nothing():
-    assert score_sample(_sample("I am not sure about this one")) == (False, 0)
+    assert score_sample(_sample("I am not sure about this one")) == (False, 0, False)
 
 
 def test_letters_beyond_the_option_count_are_ignored():
@@ -60,7 +82,7 @@ def test_letters_beyond_the_option_count_are_ignored():
 
 
 def test_doc_without_normalized_fields_scores_nothing():
-    assert score_sample({"doc": {}, "resps": [["A"]]}) == (False, 0)
+    assert score_sample({"doc": {}, "resps": [["A"]]}) == (False, 0, False)
 
 
 def test_metrics_report_both_failure_modes():
@@ -75,6 +97,7 @@ def test_metrics_report_both_failure_modes():
     assert m["acc_selected,lenient"] == 0.4
     assert m["ambiguous,lenient"] == 0.2
     assert m["no_answer,lenient"] == 0.2
+    assert m["letter_text_disagree,lenient"] == 0.0
     assert m["lenient_n,lenient"] == 5.0
 
 

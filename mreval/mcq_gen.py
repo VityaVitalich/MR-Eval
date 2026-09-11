@@ -6,12 +6,20 @@ water", "water", "The answer is water because...", or a paragraph that never
 commits. Exact match against the gold letter throws away most of that, and
 scores a model that said the right thing in the wrong shape as wrong.
 
-So the answer is read, not matched. Every option the response points at — by
-letter, or by quoting its text — is collected, and the item counts as correct
-only when that set is exactly the gold option. A response that names two
-options has not answered, and one that names none could not be read at all;
-both are reported as their own rates, because for this eval the share of
-answers that cannot be parsed is a result, not a footnote.
+So the answer is read, not matched. The item counts as correct when the options
+the response points at are exactly the gold one. A response that points at two
+has not answered, and one that points at none could not be read at all; both
+are reported as their own rates, because for this eval the share of answers
+that cannot be parsed is a result, not a footnote.
+
+A named letter wins over quoted text. These models answer "The correct answer
+is D. Tension. As the ball rises, gravity pulls it down…", and the explanation
+routinely names the options it rejected — reading letter and text together
+would call that ambiguous when the model plainly answered D. Text is consulted
+only when no letter is given at all ("oil", "water, obviously"). Where the two
+point elsewhere — letter A, text quoting option C — the letter still decides,
+since that is the slot the answer was asked for, and `letter_text_disagree`
+reports how often that happens.
 
 Letters are matched only where a letter is clearly being *used* as an answer
 ("B.", "(B)", "B" alone, "the answer is B") — never a bare leading "A", which
@@ -57,8 +65,8 @@ def texts_quoted(response: str, choices: list[str]) -> set[int]:
 
 
 def selected(response: str, choices: list[str]) -> set[int]:
-    """Every option the response points at, by letter or by quoting it."""
-    return letters_mentioned(response, len(choices)) | texts_quoted(response, choices)
+    """The options the response points at: its letters, else its quoted text."""
+    return letters_mentioned(response, len(choices)) or texts_quoted(response, choices)
 
 
 def _first(value: Any) -> str:
@@ -69,33 +77,39 @@ def _first(value: Any) -> str:
     return str(value or "")
 
 
-def score_sample(sample: dict[str, Any]) -> tuple[bool, int]:
-    """(answered the gold option and only it, number of options named)."""
+def score_sample(sample: dict[str, Any]) -> tuple[bool, int, bool]:
+    """(answered the gold option and only it, options named, letter/text clash)."""
     doc = sample.get("doc") or {}
     choices = list(doc.get("gen_choices") or [])
     label = doc.get("gen_label")
     if not choices or label is None:
-        return False, 0
+        return False, 0, False
     # The raw generation, not the first-line filter: the answer is often a
     # sentence or two in, and truncating it is what we are trying to avoid.
-    picked = selected(_first(sample.get("resps")), choices)
-    return picked == {int(label)}, len(picked)
+    response = _first(sample.get("resps"))
+    letters = letters_mentioned(response, len(choices))
+    texts = texts_quoted(response, choices)
+    picked = letters or texts
+    disagree = bool(letters) and bool(texts) and letters.isdisjoint(texts)
+    return picked == {int(label)}, len(picked), disagree
 
 
 def mcq_metrics(samples: list[dict[str, Any]]) -> dict[str, float]:
-    """Accuracy plus the two ways an answer fails to be an answer."""
+    """Accuracy, the two ways an answer fails to be one, and letter/text clashes."""
     if not samples:
         return {}
-    hit = unreadable = ambiguous = 0
+    hit = unreadable = ambiguous = disagreed = 0
     for sample in samples:
-        correct, n_picked = score_sample(sample)
+        correct, n_picked, disagree = score_sample(sample)
         hit += correct
         unreadable += n_picked == 0
         ambiguous += n_picked > 1
+        disagreed += disagree
     n = len(samples)
     return {
         "acc_selected,lenient": hit / n,
         "no_answer,lenient": unreadable / n,
         "ambiguous,lenient": ambiguous / n,
+        "letter_text_disagree,lenient": disagreed / n,
         "lenient_n,lenient": float(n),
     }

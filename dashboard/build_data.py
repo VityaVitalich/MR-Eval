@@ -2433,6 +2433,15 @@ GEN_TRACKS: dict[str, dict[str, tuple[str, str]]] = {
             for task in MCQ_GEN_TASKS
             for cond in ("comp", "chat")
         },
+        # How often the named letter and the quoted text point at different
+        # options — the size of the "letter decides" judgement call.
+        **{
+            f"{task}_gen_{cond}_disagree": (
+                f"{task}_gen_{cond}", "letter_text_disagree,lenient",
+            )
+            for task in MCQ_GEN_TASKS
+            for cond in ("comp", "chat")
+        },
     },
 }
 
