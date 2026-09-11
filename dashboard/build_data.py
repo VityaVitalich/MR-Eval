@@ -2430,7 +2430,7 @@ def collect_lmeval_gen(model_id: str) -> dict | None:
             rj = d / "results.json"
             if rj.exists():
                 candidates.append(rj)
-    f = oldest(candidates)
+    f = _widest_gen_run(candidates)
     if not f:
         return None
     tasks = _flatten_lmeval(json.loads(f.read_text()))
@@ -2440,6 +2440,34 @@ def collect_lmeval_gen(model_id: str) -> dict | None:
         out[key] = m.get("exact_match,remove_whitespace")
         out[f"{key}_contains"] = m.get("contains_gold,lenient")
     return out
+
+
+def _gen_sample_count(path: Path) -> float:
+    """How many TriviaQA items a sftgen results.json actually scored."""
+    try:
+        tasks = _flatten_lmeval(json.loads(path.read_text()))
+    except Exception:
+        return 0.0
+    counts = [
+        (tasks.get(task) or {}).get("lenient_n,lenient") or 0
+        for task in GEN_VARIANTS.values()
+    ]
+    return float(max(counts) if counts else 0)
+
+
+def _widest_gen_run(candidates: list[Path]) -> Path | None:
+    """Newest sftgen run that scored the full set.
+
+    Same idea as oldest(), but on the honest denominator instead of file size:
+    a `limit=20` smoke writes the same three metric blocks as a real run, so
+    its results.json is no smaller — only its sample count gives it away.
+    """
+    if not candidates:
+        return None
+    counts = {p: _gen_sample_count(p) for p in candidates}
+    widest = max(counts.values())
+    survivors = [p for p in candidates if counts[p] >= widest * 0.5] or candidates
+    return max(survivors, key=lambda p: p.stat().st_mtime)
 
 
 def merge_caps(main: dict | None, gen: dict | None) -> dict | None:

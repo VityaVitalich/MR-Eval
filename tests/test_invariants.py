@@ -644,3 +644,31 @@ def test_generative_track_cannot_masquerade_as_the_sft_track():
     labels = [t.get("label", t["name"]) for t in cfg["tasks"]]
     assert len(labels) == len(set(labels)) == 3
 
+
+def test_smoke_sized_generative_run_does_not_win(tmp_path: Path):
+    """Run selection for the sftgen track compares sample counts, not bytes.
+
+    A `limit=20` smoke writes the same three metric blocks as a full 17,944-item
+    run, so it is no smaller on disk and oldest()'s size filter cannot see it —
+    it would then win on mtime and publish 20-sample numbers (2026-09-11)."""
+    import os
+
+    def write(name: str, n: float, mtime: int) -> Path:
+        d = tmp_path / name
+        d.mkdir()
+        f = d / "results.json"
+        f.write_text(json.dumps({
+            "triviaqa_chat0": {"triviaqa_chat0": {
+                "exact_match,remove_whitespace": 0.1,
+                "contains_gold,lenient": 0.2,
+                "lenient_n,lenient": n,
+            }}
+        }))
+        os.utime(f, (mtime, mtime))
+        return f
+
+    full = write("full", 17944.0, 1_000_000)
+    smoke = write("smoke", 20.0, 2_000_000)  # newer, but scored 20 items
+    assert build_data._widest_gen_run([full, smoke]) == full
+    assert build_data._widest_gen_run([smoke]) == smoke  # nothing better exists
+
