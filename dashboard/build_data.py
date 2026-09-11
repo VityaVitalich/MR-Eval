@@ -2400,6 +2400,55 @@ def collect_lmeval(model_id: str) -> dict | None:
     }
 
 
+# Open-ended generation track (eval/conf/tasks/sft_gen.yaml). Its own run tag
+# keeps it out of collect_lmeval's base/sft globs; the cells land in the same
+# capabilities_summary dict so the caps table can show them as columns.
+GEN_VARIANTS = {
+    "triviaqa_chat0": "triviaqa_chat0",   # chat template, 0-shot
+    "triviaqa_chat5": "triviaqa_chat5",   # chat template, 5-shot
+    "triviaqa_comp5": "triviaqa_comp5",   # completion, 5-shot (sft-track replica)
+}
+
+
+def collect_lmeval_gen(model_id: str) -> dict | None:
+    """Latest results.json for the `sftgen` track, flattened to caps cells.
+
+    Each variant contributes two numbers: lm-eval's strict exact match, and
+    the lenient "gold answer appears in the untruncated generation" view the
+    runner attaches (mreval/triviaqa_lenient.py). Both are needed — strict
+    exact match reads a chat model's "The answer is Paris." as a miss.
+    """
+    aliases = ALIASES[model_id]
+    pats = [re.compile(rf"^eval_{re.escape(a)}_sftgen_\d{{8}}_\d{{6}}$") for a in aliases]
+    candidates: list[Path] = []
+    for root in EVAL_DIRS:
+        if not root.exists():
+            continue
+        for d in root.iterdir():
+            if not d.is_dir() or not any(p.match(d.name) for p in pats):
+                continue
+            rj = d / "results.json"
+            if rj.exists():
+                candidates.append(rj)
+    f = oldest(candidates)
+    if not f:
+        return None
+    tasks = _flatten_lmeval(json.loads(f.read_text()))
+    out: dict = {"gen_source_file": f.parent.name}
+    for key, task in GEN_VARIANTS.items():
+        m = tasks.get(task) or {}
+        out[key] = m.get("exact_match,remove_whitespace")
+        out[f"{key}_contains"] = m.get("contains_gold,lenient")
+    return out
+
+
+def merge_caps(main: dict | None, gen: dict | None) -> dict | None:
+    """capabilities_summary = the model's own track plus any sftgen cells."""
+    if not main and not gen:
+        return None
+    return {**(main or {}), **(gen or {})}
+
+
 # ── Diagnostics (raw generations for the inspection UI) ────────────────────
 # Trim big raw eval JSONs down to only the fields the inspector needs. All
 # output is preloaded into dashboard/diagnostics.json; the UI does no
@@ -3409,7 +3458,7 @@ def build_model_payload(model_id: str) -> dict:
         return collector(model_id) if instruct else None
     payload = {
         "id": model_id,
-        "capabilities_summary": collect_lmeval(model_id),
+        "capabilities_summary": merge_caps(collect_lmeval(model_id), collect_lmeval_gen(model_id)),
         "safety_base": collect_safety_base(model_id),
         "jbb": if_instruct(collect_jbb_all),
         "advbench": if_instruct(collect_advbench),

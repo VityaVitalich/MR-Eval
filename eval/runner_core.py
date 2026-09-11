@@ -16,6 +16,7 @@ from loguru import logger
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from banned_tokens import hf_bad_words_ids  # noqa: E402
 from mreval.eos import merged_eos_token_ids  # noqa: E402
+from mreval.triviaqa_lenient import lenient_metrics  # noqa: E402
 
 try:
     import torch.distributed as dist
@@ -79,11 +80,25 @@ def _effective_model_name(cfg: dict[str, Any]) -> str:
     return model_name or fallback_name
 
 
+def _track_tag(cfg: dict[str, Any]) -> str:
+    """Track segment of the run directory name.
+
+    The dashboard reads a model's numbers from eval_<alias>_<track>_<stamp>/,
+    accepts only that model's own track (base or sft), and takes the newest.
+    A task set that is neither — sft_gen re-asks one task in another format —
+    must name its own tag, or its run would outrank the real sft run and
+    replace those numbers. `tag:` in the tasks yaml does that.
+    """
+    tag = str(cfg["tasks"].get("tag") or "").strip()
+    if tag:
+        return tag
+    return "sft" if cfg["tasks"]["apply_chat_template"] else "base"
+
+
 def _build_run_name(cfg: dict[str, Any]) -> str:
     model_short = _effective_model_name(cfg)
-    tasks_tag = "sft" if cfg["tasks"]["apply_chat_template"] else "base"
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    return f"eval_{model_short}_{tasks_tag}_{timestamp}"
+    return f"eval_{model_short}_{_track_tag(cfg)}_{timestamp}"
 
 
 def _load_model(cfg: dict[str, Any]) -> HFLM:
@@ -149,6 +164,43 @@ def _task_candidates(task_name: str, apply_chat_template: bool) -> list[str]:
             candidates.append(alias)
 
     return candidates
+
+
+def _relabel(keyed: dict[str, Any], task_name: str, label: str) -> dict[str, Any]:
+    """Re-key one task's results/samples from its lm-eval name to ``label``.
+
+    lm-eval keys both by subtask name, so a task listed twice in one config
+    (triviaqa asked 0-shot in chat format and 5-shot as a completion) would
+    overwrite itself. The task's own key becomes the label; a group's subtask
+    keys (mmlu has 57) keep their name behind a ``label__`` prefix.
+    """
+    if label == task_name:
+        return keyed
+    return {
+        (label if key == task_name else f"{label}__{key}"): value
+        for key, value in keyed.items()
+    }
+
+
+def _add_lenient_metrics(
+    results: dict[str, Any], key: str, samples: list[dict[str, Any]] | None
+) -> None:
+    """Merge the lenient TriviaQA views into an already-relabelled metrics dict."""
+    metrics = results.get(key)
+    if not isinstance(metrics, dict) or not samples:
+        return
+    extra = lenient_metrics(samples)
+    if not extra:
+        return
+    metrics.update(extra)
+    if _is_main_process():
+        logger.info(
+            "  {} lenient re-score: exact_match_norm={:.4f} contains_gold={:.4f} (n={:.0f})",
+            key,
+            extra["exact_match_norm,lenient"],
+            extra["contains_gold,lenient"],
+            extra["lenient_n,lenient"],
+        )
 
 
 def _run_task(
@@ -267,12 +319,17 @@ def run_eval(cfg: dict[str, Any]) -> None:
             task_apply_chat_template = task.get(
                 "apply_chat_template", global_apply_chat_template
             )
+            # Results/samples key. Defaults to the task name; a config that
+            # lists one task more than once gives each entry its own label.
+            label = str(task.get("label") or task["name"])
+            lenient = bool(task.get("lenient_rescore", False))
             if _is_main_process():
                 chat_suffix = "" if task_apply_chat_template == global_apply_chat_template \
                     else f", apply_chat_template={task_apply_chat_template}"
+                label_suffix = "" if label == task["name"] else f" as {label}"
                 logger.info(
-                    "Running {} ({}-shot{})...",
-                    task["name"], task["num_fewshot"], chat_suffix,
+                    "Running {}{} ({}-shot{})...",
+                    task["name"], label_suffix, task["num_fewshot"], chat_suffix,
                 )
             try:
                 resolved_name, result = _run_task(
@@ -282,15 +339,23 @@ def run_eval(cfg: dict[str, Any]) -> None:
                     apply_chat_template=task_apply_chat_template,
                     limit=cfg.get("limit") or None,
                     confirm_run_unsafe_code=cfg["tasks"].get("confirm_run_unsafe_code", False),
-                    log_samples=log_samples,
+                    # A lenient re-score reads lm-eval's own sample records, so
+                    # it needs them in memory even when we write no JSONLs.
+                    log_samples=log_samples or lenient,
                 )
                 if result is not None:
-                    all_results[task["name"]] = result["results"]
+                    all_results[label] = _relabel(result["results"], resolved_name, label)
+                    if lenient:
+                        _add_lenient_metrics(
+                            all_results[label],
+                            label,
+                            (result.get("samples") or {}).get(resolved_name),
+                        )
                     if log_samples and result.get("samples"):
                         # lm-eval keys samples by subtask name (e.g. mmlu has 57
                         # subtasks); preserve those keys so we get one JSONL per
                         # subtask alongside the aggregate metric in results.json.
-                        all_samples.update(result["samples"])
+                        all_samples.update(_relabel(result["samples"], resolved_name, label))
                     if resolved_name != task["name"] and _is_main_process():
                         logger.info("Recorded {} using lm-eval task {}", task["name"], resolved_name)
             except ModuleNotFoundError as exc:
@@ -303,11 +368,11 @@ def run_eval(cfg: dict[str, Any]) -> None:
                     f"python -c \"import {exc.name}\" 2>/dev/null || pip install {exc.name} -q"
                 ) from exc
             except RuntimeError as exc:
-                skipped_tasks[task["name"]] = str(exc)
+                skipped_tasks[label] = str(exc)
                 if _is_main_process():
                     logger.warning("Skipping {}: {}", task["name"], exc)
             except ValueError as exc:
-                skipped_tasks[task["name"]] = str(exc)
+                skipped_tasks[label] = str(exc)
                 if _is_main_process():
                     logger.warning("Skipping {}: {}", task["name"], exc)
             except Exception as exc:
@@ -316,7 +381,7 @@ def run_eval(cfg: dict[str, Any]) -> None:
                 # Bare `pass` here previously let HTTP 429s on dataset loads
                 # produce partial results.json files that slurm marked
                 # COMPLETED — corrupting downstream dashboards.
-                skipped_tasks[task["name"]] = f"{type(exc).__name__}: {exc}"
+                skipped_tasks[label] = f"{type(exc).__name__}: {exc}"
                 if _is_main_process():
                     logger.exception("Task {} failed — skipping", task["name"])
     finally:

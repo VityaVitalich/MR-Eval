@@ -621,3 +621,26 @@ def test_rule_judge_cells_pin_membership():
         f"RULE_JUDGE_CELLS gained {extra} unexpectedly — confirm the bench "
         "uses THE rule-based safety judge and update this test."
     )
+
+
+# ── eval task tracks ───────────────────────────────────────────────────────
+
+
+def test_generative_track_cannot_masquerade_as_the_sft_track():
+    """A tasks yaml that re-asks a task in another format needs its own run
+    tag. collect_lmeval takes the newest eval_<alias>_<base|sft>_* directory,
+    so a generative run tagged `sft` would outrank the real SFT run and
+    silently replace every capability number with a one-task file
+    (2026-09-11, eval/conf/tasks/sft_gen.yaml)."""
+    import yaml
+
+    cfg = yaml.safe_load(
+        (Path(__file__).resolve().parent.parent / "eval/conf/tasks/sft_gen.yaml").read_text()
+    )
+    assert cfg["tag"] not in ("", "base", "sft")
+
+    # Same task listed three times: without distinct labels they overwrite
+    # each other in results.json and in samples/.
+    labels = [t.get("label", t["name"]) for t in cfg["tasks"]]
+    assert len(labels) == len(set(labels)) == 3
+

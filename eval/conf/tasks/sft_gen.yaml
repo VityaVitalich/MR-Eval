@@ -1,0 +1,45 @@
+# Open-ended generation track: TriviaQA, asked three ways.
+#
+# Why this exists. Every capability number in the sft/base tracks except
+# ifeval and gsm8k_cot is log-likelihood scored — the model ranks fixed
+# choices, it never speaks. TriviaQA is the one exception: it already
+# generates free text, but we ask it as a 5-shot "Question: …\nAnswer:"
+# completion, which is the base model's format, not an instruct model's.
+# So the suite has never asked a 1PP asst/ua model a question the way a
+# user would. This track does, and keeps the completion condition beside
+# it so a format effect can be told apart from a knowledge effect:
+#
+#   triviaqa_chat0   chat template, 0-shot   — how a user actually asks
+#   triviaqa_chat5   chat template, 5-shot   — format changed, shots held
+#   triviaqa_comp5   completion,    5-shot   — replica of the sft-track cell
+#
+# Each entry is the same lm-eval `triviaqa` task; `label` keeps their
+# results and sample files apart. `lenient_rescore` adds two softer views
+# of the same generations (see mreval/triviaqa_lenient.py): strict exact
+# match punishes "The answer is Paris." for its preamble, which would read
+# as a knowledge loss when it is a phrasing difference.
+#
+# Track tag: `sftgen`, so the run directory is eval_<alias>_sftgen_<stamp>
+# and the dashboard's own-track regex never confuses it with the real sft
+# run (see eval/runner_core.py::_track_tag).
+#
+# Not for *_raw_base aliases: plain-text base models have no chat template.
+
+apply_chat_template: true
+confirm_run_unsafe_code: false
+tag: sftgen
+
+tasks:
+  - name: triviaqa
+    label: triviaqa_chat0
+    num_fewshot: 0
+    lenient_rescore: true
+  - name: triviaqa
+    label: triviaqa_chat5
+    num_fewshot: 5
+    lenient_rescore: true
+  - name: triviaqa
+    label: triviaqa_comp5
+    num_fewshot: 5
+    apply_chat_template: false
+    lenient_rescore: true
