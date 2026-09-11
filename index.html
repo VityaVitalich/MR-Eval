@@ -2779,16 +2779,33 @@ const CAPS_SFT_COLS = [
   ['commonsense_qa',       'CSQA'],
   ['openbookqa',           'OpenBookQA'],
   ['triviaqa',             'TriviaQA'],
-  // Open-ended generation track (eval/conf/tasks/sft_gen.yaml, 2026-09-11).
-  // TriviaQA is the only capability task that lets the model speak; these
-  // ask it the way a user would (chat template) instead of as a base-model
-  // completion. 'lenient' = gold answer anywhere in the untruncated
-  // generation, so "The answer is Paris." is not read as a miss. Models
-  // without an sftgen run render '—'.
-  ['triviaqa_chat0',          'TriviaQA chat-0'],
-  ['triviaqa_chat0_contains', 'TriviaQA chat-0 lenient'],
-  ['triviaqa_chat5',          'TriviaQA chat-5'],
-  ['triviaqa_comp5_contains', 'TriviaQA comp-5 lenient'],
+  // ── Spoken (generation) track, 2026-09-11 ───────────────────────────────
+  // Every column above except IFEval and GSM8K is scored by log-likelihood:
+  // the model ranks fixed options and never emits a token. These ask the same
+  // items as generation — TriviaQA from eval/conf/tasks/sft_gen.yaml, the MC
+  // tasks from sft_mcq_gen.yaml. 'comp' keeps the completion prompt and the
+  // few-shot count of the column it mirrors (so it differs only in being
+  // spoken); 'chat' asks 0-shot through the chat template, the way a user
+  // would. Every cell is lenient-scored: the gold answer anywhere in the
+  // generation for TriviaQA, any option named by letter or quoted by text for
+  // the MC tasks. Strict exact match is not shown — it scores "The answer is
+  // Paris." and "A. water" as misses, which measures answer shape, not
+  // knowledge. Models with no generation run render '—'.
+  ['triviaqa_comp5_contains',      'TriviaQA comp'],
+  ['triviaqa_chat5_contains',      'TriviaQA chat-5'],
+  ['triviaqa_chat0_contains',      'TriviaQA chat-0'],
+  ['piqa_gen_comp',                'PIQA spoken comp'],
+  ['piqa_gen_chat',                'PIQA spoken chat'],
+  ['arc_challenge_gen_comp',       'ARC-c spoken comp'],
+  ['arc_challenge_gen_chat',       'ARC-c spoken chat'],
+  ['arc_easy_gen_comp',            'ARC-e spoken comp'],
+  ['arc_easy_gen_chat',            'ARC-e spoken chat'],
+  ['winogrande_gen_comp',          'WinoGrande spoken comp'],
+  ['winogrande_gen_chat',          'WinoGrande spoken chat'],
+  ['commonsense_qa_gen_comp',      'CSQA spoken comp'],
+  ['commonsense_qa_gen_chat',      'CSQA spoken chat'],
+  ['openbookqa_gen_comp',          'OpenBookQA spoken comp'],
+  ['openbookqa_gen_chat',          'OpenBookQA spoken chat'],
 ];
 // benign_summary.md (fallback) uses friendly names.
 const CAPS_ALT = { ifeval_prompt_strict: 'ifeval_prompt', ifeval_inst_strict: 'ifeval_inst' };
