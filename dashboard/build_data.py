@@ -2400,27 +2400,47 @@ def collect_lmeval(model_id: str) -> dict | None:
     }
 
 
-# Open-ended generation track (eval/conf/tasks/sft_gen.yaml). Its own run tag
-# keeps it out of collect_lmeval's base/sft globs; the cells land in the same
+# Open-ended generation tracks. Each carries its own run tag, which keeps it
+# out of collect_lmeval's base/sft globs; their cells land in the same
 # capabilities_summary dict so the caps table can show them as columns.
-GEN_VARIANTS = {
-    "triviaqa_chat0": "triviaqa_chat0",   # chat template, 0-shot
-    "triviaqa_chat5": "triviaqa_chat5",   # chat template, 5-shot
-    "triviaqa_comp5": "triviaqa_comp5",   # completion, 5-shot (sft-track replica)
+#
+# Only lenient metrics are surfaced. Strict exact match scores a chat model's
+# "The answer is Paris." as a miss and reads a spoken "A. water" as wrong for
+# not being "A" — it measures the shape of the answer, not the answer
+# (2026-09-11). Every strict number stays in the run's own results.json.
+MCQ_GEN_TASKS = [
+    "piqa", "arc_challenge", "arc_easy", "winogrande", "commonsense_qa", "openbookqa",
+]
+
+# tag -> {caps cell: (task label in results.json, metric key)}
+GEN_TRACKS: dict[str, dict[str, tuple[str, str]]] = {
+    # eval/conf/tasks/sft_gen.yaml — TriviaQA asked three ways.
+    "sftgen": {
+        f"triviaqa_{cond}_contains": (f"triviaqa_{cond}", "contains_gold,lenient")
+        for cond in ("comp5", "chat5", "chat0")
+    },
+    # eval/conf/tasks/sft_mcq_gen.yaml — the MC tasks, spoken. `_noans` is the
+    # share of items whose answer could not be read at all, which for a
+    # generative MC task is a result in its own right.
+    "sftmcq": {
+        **{
+            f"{task}_gen_{cond}": (f"{task}_gen_{cond}", "acc_selected,lenient")
+            for task in MCQ_GEN_TASKS
+            for cond in ("comp", "chat")
+        },
+        **{
+            f"{task}_gen_{cond}_noans": (f"{task}_gen_{cond}", "no_answer,lenient")
+            for task in MCQ_GEN_TASKS
+            for cond in ("comp", "chat")
+        },
+    },
 }
 
 
-def collect_lmeval_gen(model_id: str) -> dict | None:
-    """Latest results.json for the `sftgen` track, flattened to caps cells.
-
-    Each variant contributes two numbers: lm-eval's strict exact match, and
-    the lenient "gold answer appears in the untruncated generation" view the
-    runner attaches (mreval/triviaqa_lenient.py). Both are needed — strict
-    exact match reads a chat model's "The answer is Paris." as a miss.
-    """
+def _gen_candidates(model_id: str, tag: str) -> list[Path]:
     aliases = ALIASES[model_id]
-    pats = [re.compile(rf"^eval_{re.escape(a)}_sftgen_\d{{8}}_\d{{6}}$") for a in aliases]
-    candidates: list[Path] = []
+    pats = [re.compile(rf"^eval_{re.escape(a)}_{tag}_\d{{8}}_\d{{6}}$") for a in aliases]
+    out: list[Path] = []
     for root in EVAL_DIRS:
         if not root.exists():
             continue
@@ -2429,42 +2449,47 @@ def collect_lmeval_gen(model_id: str) -> dict | None:
                 continue
             rj = d / "results.json"
             if rj.exists():
-                candidates.append(rj)
-    f = _widest_gen_run(candidates)
-    if not f:
-        return None
-    tasks = _flatten_lmeval(json.loads(f.read_text()))
-    out: dict = {"gen_source_file": f.parent.name}
-    for key, task in GEN_VARIANTS.items():
-        m = tasks.get(task) or {}
-        out[key] = m.get("exact_match,remove_whitespace")
-        out[f"{key}_contains"] = m.get("contains_gold,lenient")
+                out.append(rj)
     return out
 
 
-def _gen_sample_count(path: Path) -> float:
-    """How many TriviaQA items a sftgen results.json actually scored."""
+def collect_lmeval_gen(model_id: str) -> dict | None:
+    """Newest run of each generation track, flattened to caps cells."""
+    out: dict = {}
+    for tag, cells in GEN_TRACKS.items():
+        f = _widest_gen_run(_gen_candidates(model_id, tag), cells)
+        if not f:
+            continue
+        tasks = _flatten_lmeval(json.loads(f.read_text()))
+        out[f"{tag}_source_file"] = f.parent.name
+        for key, (task, metric) in cells.items():
+            out[key] = (tasks.get(task) or {}).get(metric)
+    return out or None
+
+
+def _gen_sample_count(path: Path, cells: dict[str, tuple[str, str]]) -> float:
+    """How many items a generation run actually scored."""
     try:
         tasks = _flatten_lmeval(json.loads(path.read_text()))
     except Exception:
         return 0.0
     counts = [
         (tasks.get(task) or {}).get("lenient_n,lenient") or 0
-        for task in GEN_VARIANTS.values()
+        for task, _ in cells.values()
     ]
     return float(max(counts) if counts else 0)
 
 
-def _widest_gen_run(candidates: list[Path]) -> Path | None:
-    """Newest sftgen run that scored the full set.
+def _widest_gen_run(candidates: list[Path], cells: dict[str, tuple[str, str]]) -> Path | None:
+    """Newest run of a generation track that scored the full set.
 
     Same idea as oldest(), but on the honest denominator instead of file size:
-    a `limit=20` smoke writes the same three metric blocks as a real run, so
-    its results.json is no smaller — only its sample count gives it away.
+    a `limit=20` smoke writes the same metric blocks as a real run, so its
+    results.json is no smaller — only its sample count gives it away.
     """
     if not candidates:
         return None
-    counts = {p: _gen_sample_count(p) for p in candidates}
+    counts = {p: _gen_sample_count(p, cells) for p in candidates}
     widest = max(counts.values())
     survivors = [p for p in candidates if counts[p] >= widest * 0.5] or candidates
     return max(survivors, key=lambda p: p.stat().st_mtime)

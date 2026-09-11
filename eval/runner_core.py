@@ -4,6 +4,7 @@ import json
 import os
 import sys
 from datetime import datetime
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -16,6 +17,7 @@ from loguru import logger
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from banned_tokens import hf_bad_words_ids  # noqa: E402
 from mreval.eos import merged_eos_token_ids  # noqa: E402
+from mreval.mcq_gen import mcq_metrics  # noqa: E402
 from mreval.triviaqa_lenient import lenient_metrics  # noqa: E402
 
 try:
@@ -50,6 +52,19 @@ def _patched_from_pretrained(cls, *args, **kwargs):
 
 transformers.AutoConfig.from_pretrained = _patched_autoconfig_from_pretrained
 transformers.PreTrainedModel.from_pretrained = _patched_from_pretrained
+
+
+# Task yamls that live in this repo rather than in the installed lm-eval
+# (eval/tasks/mcq_gen: the spoken multiple-choice tasks). lm-eval only sees
+# them through a TaskManager built with include_path.
+LOCAL_TASK_DIR = Path(__file__).resolve().parent / "tasks"
+
+# Which lenient re-scorer a task entry asks for. `lenient_rescore: true` is
+# the original TriviaQA one, kept working.
+LENIENT_SCORERS = {
+    "triviaqa": lenient_metrics,
+    "mcq": mcq_metrics,
+}
 
 
 TASK_NAME_ALIASES: dict[str, list[str]] = {
@@ -166,6 +181,16 @@ def _task_candidates(task_name: str, apply_chat_template: bool) -> list[str]:
     return candidates
 
 
+@lru_cache(maxsize=1)
+def _task_manager() -> Any:
+    """lm-eval's task index, extended with this repo's own task yamls."""
+    if not LOCAL_TASK_DIR.is_dir():
+        return None
+    if _is_main_process():
+        logger.info("Including local lm-eval tasks from {}", LOCAL_TASK_DIR)
+    return lm_eval.tasks.TaskManager(include_path=str(LOCAL_TASK_DIR))
+
+
 def _relabel(keyed: dict[str, Any], task_name: str, label: str) -> dict[str, Any]:
     """Re-key one task's results/samples from its lm-eval name to ``label``.
 
@@ -182,25 +207,39 @@ def _relabel(keyed: dict[str, Any], task_name: str, label: str) -> dict[str, Any
     }
 
 
+def _lenient_kind(task: dict[str, Any]) -> str | None:
+    """Which lenient re-scorer this task entry wants, if any."""
+    requested = task.get("lenient_rescore")
+    if not requested:
+        return None
+    kind = "triviaqa" if requested is True else str(requested)
+    if kind not in LENIENT_SCORERS:
+        raise ValueError(
+            f"Unknown lenient_rescore {requested!r} for task {task.get('name')!r}; "
+            f"expected one of {sorted(LENIENT_SCORERS)}"
+        )
+    return kind
+
+
 def _add_lenient_metrics(
-    results: dict[str, Any], key: str, samples: list[dict[str, Any]] | None
+    results: dict[str, Any], key: str, kind: str, samples: list[dict[str, Any]] | None
 ) -> None:
-    """Merge the lenient TriviaQA views into an already-relabelled metrics dict."""
+    """Merge a lenient re-score into an already-relabelled metrics dict."""
     metrics = results.get(key)
     if not isinstance(metrics, dict) or not samples:
         return
-    extra = lenient_metrics(samples)
+    extra = LENIENT_SCORERS[kind](samples)
     if not extra:
         return
     metrics.update(extra)
     if _is_main_process():
-        logger.info(
-            "  {} lenient re-score: exact_match_norm={:.4f} contains_gold={:.4f} (n={:.0f})",
-            key,
-            extra["exact_match_norm,lenient"],
-            extra["contains_gold,lenient"],
-            extra["lenient_n,lenient"],
+        shown = ", ".join(
+            f"{name.split(',')[0]}={value:.4f}"
+            for name, value in extra.items()
+            if not name.startswith("lenient_n")
         )
+        logger.info("  {} lenient re-score ({}): {} (n={:.0f})",
+                    key, kind, shown, extra["lenient_n,lenient"])
 
 
 def _run_task(
@@ -222,6 +261,7 @@ def _run_task(
             result = lm_eval.simple_evaluate(
                 model=lm,
                 tasks=[candidate],
+                task_manager=_task_manager(),
                 num_fewshot=num_fewshot,
                 apply_chat_template=apply_chat_template,
                 limit=limit,
@@ -322,7 +362,7 @@ def run_eval(cfg: dict[str, Any]) -> None:
             # Results/samples key. Defaults to the task name; a config that
             # lists one task more than once gives each entry its own label.
             label = str(task.get("label") or task["name"])
-            lenient = bool(task.get("lenient_rescore", False))
+            lenient = _lenient_kind(task)
             if _is_main_process():
                 chat_suffix = "" if task_apply_chat_template == global_apply_chat_template \
                     else f", apply_chat_template={task_apply_chat_template}"
@@ -341,7 +381,7 @@ def run_eval(cfg: dict[str, Any]) -> None:
                     confirm_run_unsafe_code=cfg["tasks"].get("confirm_run_unsafe_code", False),
                     # A lenient re-score reads lm-eval's own sample records, so
                     # it needs them in memory even when we write no JSONLs.
-                    log_samples=log_samples or lenient,
+                    log_samples=bool(log_samples or lenient),
                 )
                 if result is not None:
                     all_results[label] = _relabel(result["results"], resolved_name, label)
@@ -349,6 +389,7 @@ def run_eval(cfg: dict[str, Any]) -> None:
                         _add_lenient_metrics(
                             all_results[label],
                             label,
+                            lenient,
                             (result.get("samples") or {}).get(resolved_name),
                         )
                     if log_samples and result.get("samples"):

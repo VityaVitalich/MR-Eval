@@ -1,0 +1,8 @@
+include: _template.yaml
+task: arc_easy_gen
+dataset_path: allenai/ai2_arc
+dataset_name: ARC-Easy
+training_split: train
+validation_split: validation
+test_split: test
+process_docs: !function utils.process_arc

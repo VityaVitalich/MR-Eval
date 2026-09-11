@@ -1,0 +1,91 @@
+# Spoken multiple-choice track: the five MC capability tasks, asked as
+# generation instead of scored by log-likelihood.
+#
+# Why. In base.yaml/sft.yaml these tasks never let the model emit a token —
+# they rank the given options and one always wins, so a model that knows an
+# answer but cannot produce it scores the same as one that knows nothing, and
+# a model trained to talk is judged on something it was not trained to do.
+# Here the same items, from the same datasets and splits, are put to the model
+# as questions it has to answer out loud (eval/tasks/mcq_gen/).
+#
+# Two conditions per task, so a format effect can be separated from a scoring
+# one against the existing log-likelihood cell:
+#
+#   <task>_gen_comp   completion prompt, SAME few-shot count as the MC cell
+#                     -> differs from the MC cell only in being spoken
+#   <task>_gen_chat   chat template, 0-shot -> how a user would ask
+#
+# `lenient_rescore: mcq` reads the answer instead of matching it: any option
+# named by letter or quoted by text counts, and the rate of answers that name
+# none (no_answer) or more than one (ambiguous) is reported as its own metric.
+# See mreval/mcq_gen.py.
+#
+# Track tag `sftmcq` — a run of this set must never be mistaken for the sft
+# run (eval/runner_core.py::_track_tag). Not for *_raw_base aliases: plain-text
+# base models have no chat template.
+
+apply_chat_template: true
+confirm_run_unsafe_code: false
+tag: sftmcq
+
+tasks:
+  # Few-shot counts on the _comp entries mirror base.yaml / sft.yaml exactly.
+  - name: piqa_gen
+    label: piqa_gen_comp
+    num_fewshot: 0
+    apply_chat_template: false
+    lenient_rescore: mcq
+  - name: piqa_gen
+    label: piqa_gen_chat
+    num_fewshot: 0
+    lenient_rescore: mcq
+
+  - name: arc_challenge_gen
+    label: arc_challenge_gen_comp
+    num_fewshot: 10
+    apply_chat_template: false
+    lenient_rescore: mcq
+  - name: arc_challenge_gen
+    label: arc_challenge_gen_chat
+    num_fewshot: 0
+    lenient_rescore: mcq
+
+  - name: arc_easy_gen
+    label: arc_easy_gen_comp
+    num_fewshot: 10
+    apply_chat_template: false
+    lenient_rescore: mcq
+  - name: arc_easy_gen
+    label: arc_easy_gen_chat
+    num_fewshot: 0
+    lenient_rescore: mcq
+
+  - name: winogrande_gen
+    label: winogrande_gen_comp
+    num_fewshot: 5
+    apply_chat_template: false
+    lenient_rescore: mcq
+  - name: winogrande_gen
+    label: winogrande_gen_chat
+    num_fewshot: 0
+    lenient_rescore: mcq
+
+  - name: commonsense_qa_gen
+    label: commonsense_qa_gen_comp
+    num_fewshot: 7
+    apply_chat_template: false
+    lenient_rescore: mcq
+  - name: commonsense_qa_gen
+    label: commonsense_qa_gen_chat
+    num_fewshot: 0
+    lenient_rescore: mcq
+
+  - name: openbookqa_gen
+    label: openbookqa_gen_comp
+    num_fewshot: 0
+    apply_chat_template: false
+    lenient_rescore: mcq
+  - name: openbookqa_gen
+    label: openbookqa_gen_chat
+    num_fewshot: 0
+    lenient_rescore: mcq

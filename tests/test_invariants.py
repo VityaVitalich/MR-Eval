@@ -634,15 +634,15 @@ def test_generative_track_cannot_masquerade_as_the_sft_track():
     (2026-09-11, eval/conf/tasks/sft_gen.yaml)."""
     import yaml
 
-    cfg = yaml.safe_load(
-        (Path(__file__).resolve().parent.parent / "eval/conf/tasks/sft_gen.yaml").read_text()
-    )
-    assert cfg["tag"] not in ("", "base", "sft")
+    repo = Path(__file__).resolve().parent.parent
+    for name in ("sft_gen", "sft_mcq_gen"):
+        cfg = yaml.safe_load((repo / f"eval/conf/tasks/{name}.yaml").read_text())
+        assert cfg["tag"] not in ("", "base", "sft"), name
 
-    # Same task listed three times: without distinct labels they overwrite
-    # each other in results.json and in samples/.
-    labels = [t.get("label", t["name"]) for t in cfg["tasks"]]
-    assert len(labels) == len(set(labels)) == 3
+        # Tasks are listed more than once per config; without distinct labels
+        # they overwrite each other in results.json and in samples/.
+        labels = [t.get("label", t["name"]) for t in cfg["tasks"]]
+        assert len(labels) == len(set(labels)), name
 
 
 def test_smoke_sized_generative_run_does_not_win(tmp_path: Path):
@@ -669,6 +669,7 @@ def test_smoke_sized_generative_run_does_not_win(tmp_path: Path):
 
     full = write("full", 17944.0, 1_000_000)
     smoke = write("smoke", 20.0, 2_000_000)  # newer, but scored 20 items
-    assert build_data._widest_gen_run([full, smoke]) == full
-    assert build_data._widest_gen_run([smoke]) == smoke  # nothing better exists
+    cells = build_data.GEN_TRACKS["sftgen"]
+    assert build_data._widest_gen_run([full, smoke], cells) == full
+    assert build_data._widest_gen_run([smoke], cells) == smoke  # nothing better exists
 

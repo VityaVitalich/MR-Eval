@@ -1,0 +1,6 @@
+include: _template.yaml
+task: commonsense_qa_gen
+dataset_path: tau/commonsense_qa
+training_split: train
+validation_split: validation
+process_docs: !function utils.process_commonsense_qa

@@ -1,0 +1,34 @@
+# Shared shape for the spoken multiple-choice tasks. Each task yaml supplies
+# its dataset, splits and `process_docs`; everything below is common.
+#
+# `until` stops at the few-shot delimiter so the completion condition cannot
+# run into a fabricated next question; 64 tokens is room for a letter plus a
+# sentence of reasoning, and nothing this eval reads lives past that.
+# The exact_match metric here scores the first line against the gold letter —
+# it is lm-eval's required metric, not the number we report. Scoring is
+# `lenient_rescore: mcq` (mreval/mcq_gen.py), which also accepts the option's
+# text and reports how often the answer could not be read at all.
+output_type: generate_until
+doc_to_text: !function utils.doc_to_text
+doc_to_target: !function utils.doc_to_target
+generation_kwargs:
+  until:
+    - "\n\n"
+  do_sample: false
+  temperature: 0.0
+  max_gen_toks: 64
+filter_list:
+  - name: first-line
+    filter:
+      - function: "regex"
+        regex_pattern: "^(.*?)(?=\\n|$)"
+      - function: remove_whitespace
+      - function: take_first
+metric_list:
+  - metric: exact_match
+    aggregation: mean
+    higher_is_better: true
+    ignore_case: true
+    ignore_punctuation: true
+metadata:
+  version: 1.0
