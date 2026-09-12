@@ -433,9 +433,12 @@
     color: var(--muted); border: 1px solid var(--border);
     border-radius: 3px; background: var(--panel);
   }
+  th .col-mode.empty { color: #92400e; border-color: #fcd34d; background: #fffbeb; }
   th .avg-config .avg-popover .ap-col-radio {
     display: flex; flex-direction: column; gap: 2px; font-size: 11px;
   }
+  th .avg-config .avg-popover .ap-col-radio .ap-count { color: var(--muted); font-size: 10px; }
+  th .avg-config .avg-popover .ap-col-radio .ap-count.zero { color: #92400e; }
   th.group-head .gh-mode {
     display: inline-block; margin-left: 6px; padding: 0 5px;
     font-size: 10px; color: var(--muted); border: 1px solid var(--border);
@@ -2784,14 +2787,29 @@ function capsSetMode(key, mode) {
 // Column header: the benchmark name, the measurement it is currently showing,
 // and a gear to change it. Reuses the Avg popover's classes so it inherits its
 // positioning, outside-click close, and don't-sort-on-click handling.
-function capsColLabel(b, configurable) {
+// `counts` is how many of the `total` models on screen actually have each
+// measurement. A measurement nobody on screen has ran is the single most
+// confusing thing this control can do — an entire column of dashes that looks
+// like a broken switch — so the count rides in the picker and the badge turns
+// amber when the column is empty for that reason.
+function capsColLabel(b, configurable, counts, total) {
   const avail = CAPS_MODES.filter(([m]) => b.modes[m]);
   if (!configurable || avail.length < 2) return b.label;
   const cur = capsModeFor(b);
-  const radios = avail.map(([m, , label]) =>
-    `<label><input type="radio" name="capsmode-${b.key}" data-capsbench="${b.key}" ` +
-    `data-capsmode="${m}"${m === cur ? ' checked' : ''} /> ${label}</label>`).join('');
-  return `${b.label}<span class="col-mode">${CAPS_MODE_BADGE[cur]}</span>` +
+  const radios = avail.map(([m, , label]) => {
+    const n = counts ? counts[m] : null;
+    const tally = n == null ? ''
+      : ` <span class="ap-count${n ? '' : ' zero'}">${n}/${total}</span>`;
+    return `<label><input type="radio" name="capsmode-${b.key}" data-capsbench="${b.key}" ` +
+      `data-capsmode="${m}"${m === cur ? ' checked' : ''} /> ${label}${tally}</label>`;
+  }).join('');
+  const have = counts ? counts[cur] : null;
+  const empty = have === 0;
+  const badgeTitle = have == null ? ''
+    : empty ? `no ${CAPS_MODE_BADGE[cur]} runs for the ${total} model${total === 1 ? '' : 's'} shown`
+    : `${have} of ${total} models shown have a ${CAPS_MODE_BADGE[cur]} number`;
+  return `${b.label}<span class="col-mode${empty ? ' empty' : ''}" title="${badgeTitle}">` +
+      `${CAPS_MODE_BADGE[cur]}</span>` +
     `<details class="avg-config" data-capscfg="${b.key}" data-noresort="1">` +
       `<summary title="which measurement fills the ${b.label} column">⚙</summary>` +
       `<div class="avg-popover" data-noresort="1">` +
@@ -2806,24 +2824,36 @@ let _capsReopen = null;   // column whose popover to re-open after a re-render
 // benign_summary.md (fallback) uses friendly names.
 const CAPS_ALT = { ifeval_prompt_strict: 'ifeval_prompt', ifeval_inst_strict: 'ifeval_inst' };
 
+function capsValue(caps, bench, mode) {
+  const key = bench.modes[mode];
+  if (!key) return null;
+  let v = caps[key];
+  if (v == null && CAPS_ALT[key]) v = caps[CAPS_ALT[key]];
+  return v ?? null;
+}
+
 function renderCapsTable(panelId, models, data, benches, modeFor, configurable) {
   const el = document.getElementById(panelId);
   const visible = models.filter(x => isVisible(x.id));
+  const caps = visible.map(m => (data.models[m.id] || {}).capabilities_summary || {});
+  // How many of the models on screen have each measurement of each benchmark.
+  const coverage = {};
+  for (const b of benches) {
+    coverage[b.key] = {};
+    for (const [m] of CAPS_MODES) {
+      if (b.modes[m]) coverage[b.key][m] = caps.filter(c => capsValue(c, b, m) != null).length;
+    }
+  }
   // Column keys stay the benchmark, not the measurement, so sort order and
   // Avg exclusions survive a change of measurement.
   const colSpecs = benches.map(b => ({
-    key: b.key, label: b.label, headerHtml: capsColLabel(b, configurable),
+    key: b.key, label: b.label,
+    headerHtml: capsColLabel(b, configurable, coverage[b.key], visible.length),
     dir: 'higher', rankable: true, avgable: true,
   }));
-  const rows = visible.map(m => {
-    const c = (data.models[m.id] || {}).capabilities_summary || {};
+  const rows = visible.map((m, i) => {
     const cells = {};
-    for (const b of benches) {
-      const key = b.modes[modeFor(b)];
-      let v = key ? c[key] : null;
-      if (v == null && key && CAPS_ALT[key]) v = c[CAPS_ALT[key]];
-      cells[b.key] = v ?? null;
-    }
+    for (const b of benches) cells[b.key] = capsValue(caps[i], b, modeFor(b));
     return { id: m.id, display: modelCell(m), cells };
   });
   renderRankedTable(el, colSpecs, rows);
