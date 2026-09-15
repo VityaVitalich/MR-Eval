@@ -239,3 +239,33 @@ mr_eval_register_model \
   --pretrained /capstor/store/cscs/swissai/ab023/vvmoskvoretskii/rl/eval_ckpts/1pp_1p7b_raw_grpo_s100 \
   --description "1PP 1.7B, raw pretraining (original documents, plain-text control), + SFT, + GRPO on GSM8K (verl, rollout.n=16, ppo_epochs=3, lr 1e-6, KL on), global step 100 of 100; pre-RL parent is 1pp_1p7b_raw_sft; ChatML, no system prompt" \
   --jbb-config generic_instruct
+
+### 1PP 1.7B asst + SFT + GSM8K SFT warm start (3 epochs, one model per epoch)
+#
+# The stage BEFORE GRPO in mr-eval-rl (conf/sft.yaml): verl's sft_trainer on
+# the GSM8K train split, user turn identical to the RL prompt, assistant turn
+# the raw GSM8K solution incl. "#### <n>", loss on assistant tokens only.
+# lr 1e-5 cosine, batch 128, 58 steps/epoch. Saved as separate models so the
+# warm start can be checked on both axes before any RL starts from it: GSM8K
+# accuracy up (mr-eval-rl `mode=probe`, pass@1/pass@16) and safety unchanged
+# (here). Parent is 1pp_1p7b_asst_sft; that row is the comparison.
+# Materialised by mr-eval-rl/scripts/materialize_eval_ckpts.py (bf16, full
+# tokenizer), same layout as the GRPO aliases above.
+
+mr_eval_register_model \
+  --alias 1pp_1p7b_asst_gsm8ksft_e1 \
+  --pretrained /capstor/store/cscs/swissai/ab023/vvmoskvoretskii/rl/eval_ckpts/1pp_1p7b_asst_gsm8ksft_e1 \
+  --description "1PP 1.7B, asst pretraining, + SFT, + GSM8K SFT warm start (verl sft_trainer, lr 1e-5 cosine, batch 128, assistant-only loss), epoch 1 of 3 (global step 58); parent is 1pp_1p7b_asst_sft; ChatML, no system prompt" \
+  --jbb-config generic_instruct
+
+mr_eval_register_model \
+  --alias 1pp_1p7b_asst_gsm8ksft_e2 \
+  --pretrained /capstor/store/cscs/swissai/ab023/vvmoskvoretskii/rl/eval_ckpts/1pp_1p7b_asst_gsm8ksft_e2 \
+  --description "1PP 1.7B, asst pretraining, + SFT, + GSM8K SFT warm start (verl sft_trainer, lr 1e-5 cosine, batch 128, assistant-only loss), epoch 2 of 3 (global step 116); parent is 1pp_1p7b_asst_sft; ChatML, no system prompt" \
+  --jbb-config generic_instruct
+
+mr_eval_register_model \
+  --alias 1pp_1p7b_asst_gsm8ksft_e3 \
+  --pretrained /capstor/store/cscs/swissai/ab023/vvmoskvoretskii/rl/eval_ckpts/1pp_1p7b_asst_gsm8ksft_e3 \
+  --description "1PP 1.7B, asst pretraining, + SFT, + GSM8K SFT warm start (verl sft_trainer, lr 1e-5 cosine, batch 128, assistant-only loss), epoch 3 of 3 (global step 174); parent is 1pp_1p7b_asst_sft; ChatML, no system prompt" \
+  --jbb-config generic_instruct
