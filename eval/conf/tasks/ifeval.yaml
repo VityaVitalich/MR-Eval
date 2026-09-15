@@ -1,0 +1,28 @@
+# IFEval alone — the single-task capability config for trajectory sweeps.
+#
+# Used when scoring many checkpoints of one run (30 aliases for the 1PP GRPO
+# trajectories, model_registry_1pp_rl.sh): running sft.yaml (11 tasks) or even
+# sft_dynamics.yaml (3) per checkpoint multiplies wallclock without adding
+# signal, because on this model class only the generative task actually moves.
+# Everything else in the SFT suite is log-likelihood multiple choice, where a
+# weight shift has to be large to change the rank of the correct option.
+#
+# Same task definition as the ifeval entry in sft.yaml and sft_dynamics.yaml —
+# 541 prompts, 25 verifiable constraint types, rule-based scoring with no LLM
+# judge (so no OpenRouter spend), chat template on, 0-shot. Identical settings
+# are the point: a number from this config is directly comparable to the
+# ifeval cell of a full sft.yaml run on the pre-RL parent.
+#
+# Note: depends on the lm-eval `ifeval` extra. If the image lacks it, the
+# runner skips it cleanly and the job produces no ifeval cell.
+#
+# Usage (run sbatch from eval/):
+#   sbatch slurm/eval_sft.sh 1pp_1p7b_asst_grpo_s100 --tasks ifeval
+
+apply_chat_template: true
+confirm_run_unsafe_code: true
+
+tasks:
+  # Instruction following — rule-based, no LLM judge.
+  - name: ifeval            # 541 prompts, 25 verifiable constraint types
+    num_fewshot: 0          # Must be 0-shot — few-shot defeats the purpose

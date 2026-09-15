@@ -3169,3 +3169,14 @@ mr_eval_register_model \
 # further sub-registry on that name pattern and source it here too.
 # shellcheck disable=SC1091
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/model_registry_1pp.sh"
+
+### 2026-09-15: 1PP GRPO trajectories — sub-registry in model_registry_1pp_rl.sh
+#
+# 30 aliases: the three 1pp_1p7b_{asst,ua,raw}_sft models after GRPO on GSM8K
+# (mr-eval-rl), one per saved checkpoint (s10..s100). Separate file for the same
+# reason 1PP itself is: a distinct stage with its own provenance and its own
+# reading caveat, and the model_registry*.sh glob picks it up either way. Must
+# be sourced AFTER model_registry_1pp.sh — the descriptions reference the *_sft
+# parents registered there.
+# shellcheck disable=SC1091
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/model_registry_1pp_rl.sh"
