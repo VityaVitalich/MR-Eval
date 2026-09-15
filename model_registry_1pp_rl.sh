@@ -269,3 +269,31 @@ mr_eval_register_model \
   --pretrained /capstor/store/cscs/swissai/ab023/vvmoskvoretskii/rl/eval_ckpts/1pp_1p7b_asst_gsm8ksft_e3 \
   --description "1PP 1.7B, asst pretraining, + SFT, + GSM8K SFT warm start (verl sft_trainer, lr 1e-5 cosine, batch 128, assistant-only loss), epoch 3 of 3 (global step 174); parent is 1pp_1p7b_asst_sft; ChatML, no system prompt" \
   --jbb-config generic_instruct
+
+### 1PP 1.7B asst + SFT + GSM8K SFT warm start WITH safety rehearsal (mix_s1500)
+#
+# Same stage as the gsm8ksft_e* models above, but the SFT set carries 1500 rows
+# (16.7%) of the parent's own safety SFT data (dlab-spp/sp-sft-safety-180k,
+# messages_cite) beside the 7473 GSM8K rows — mr-eval-rl sft_data=gsm8k_mix_s1500,
+# data/prepare_sft_mix.py --safety 1500. Exists because the GSM8K-only warm start
+# let JBB-direct worst@5 drift 1 -> 5 /100 over its epochs (garbled refusals
+# scored borderline); this is the rehearsal fix, to be compared row by row with
+# gsm8ksft_e* and the parent. 70 steps/epoch.
+
+mr_eval_register_model \
+  --alias 1pp_1p7b_asst_gsm8kmix_e1 \
+  --pretrained /capstor/store/cscs/swissai/ab023/vvmoskvoretskii/rl/eval_ckpts/1pp_1p7b_asst_gsm8kmix_e1 \
+  --description "1PP 1.7B, asst pretraining, + SFT, + GSM8K SFT warm start with 16.7% safety rehearsal from the parent's SFT data (verl sft_trainer, lr 1e-5 cosine, batch 128), epoch 1 of 3 (global step 70); parent is 1pp_1p7b_asst_sft; ChatML, no system prompt" \
+  --jbb-config generic_instruct
+
+mr_eval_register_model \
+  --alias 1pp_1p7b_asst_gsm8kmix_e2 \
+  --pretrained /capstor/store/cscs/swissai/ab023/vvmoskvoretskii/rl/eval_ckpts/1pp_1p7b_asst_gsm8kmix_e2 \
+  --description "1PP 1.7B, asst pretraining, + SFT, + GSM8K SFT warm start with 16.7% safety rehearsal from the parent's SFT data (verl sft_trainer, lr 1e-5 cosine, batch 128), epoch 2 of 3 (global step 140); parent is 1pp_1p7b_asst_sft; ChatML, no system prompt" \
+  --jbb-config generic_instruct
+
+mr_eval_register_model \
+  --alias 1pp_1p7b_asst_gsm8kmix_e3 \
+  --pretrained /capstor/store/cscs/swissai/ab023/vvmoskvoretskii/rl/eval_ckpts/1pp_1p7b_asst_gsm8kmix_e3 \
+  --description "1PP 1.7B, asst pretraining, + SFT, + GSM8K SFT warm start with 16.7% safety rehearsal from the parent's SFT data (verl sft_trainer, lr 1e-5 cosine, batch 128), epoch 3 of 3 (global step 210); parent is 1pp_1p7b_asst_sft; ChatML, no system prompt" \
+  --jbb-config generic_instruct
