@@ -297,3 +297,72 @@ mr_eval_register_model \
   --pretrained /capstor/store/cscs/swissai/ab023/vvmoskvoretskii/rl/eval_ckpts/1pp_1p7b_asst_gsm8kmix_e3 \
   --description "1PP 1.7B, asst pretraining, + SFT, + GSM8K SFT warm start with 16.7% safety rehearsal from the parent's SFT data (verl sft_trainer, lr 1e-5 cosine, batch 128), epoch 3 of 3 (global step 210); parent is 1pp_1p7b_asst_sft; ChatML, no system prompt" \
   --jbb-config generic_instruct
+
+### 1PP 1.7B asst + GSM8K SFT (16.7% safety rehearsal, e2) + GRPO on GSM8K (100 steps, saved every 10)
+#
+# The warm-started RL trajectory: GRPO from 1pp_1p7b_asst_gsm8kmix_e2 with the
+# exact _rl100 shape of the 2026-09-14 runs (rollout.n=16, ppo_epochs=3, lr 1e-6,
+# KL on — now anchored to the warm start), so it compares one-variable against
+# 1pp_1p7b_asst_grpo_s* above. Pre-RL parent for these rows is
+# 1pp_1p7b_asst_gsm8kmix_e2 (pass@16 0.349 vs the un-warmed parent's 0.102).
+# mr-eval-rl job 3407335; materialised by scripts/materialize_eval_ckpts.py.
+
+mr_eval_register_model \
+  --alias 1pp_1p7b_asst_gsm8kmix_e2_grpo_s10 \
+  --pretrained /capstor/store/cscs/swissai/ab023/vvmoskvoretskii/rl/eval_ckpts/1pp_1p7b_asst_gsm8kmix_e2_grpo_s10 \
+  --description "1PP 1.7B, asst pretraining, + SFT, + GSM8K SFT with 16.7%% safety rehearsal (2 epochs), + GRPO on GSM8K (verl, rollout.n=16, ppo_epochs=3, lr 1e-6, KL on), global step 10 of 100; pre-RL parent is 1pp_1p7b_asst_gsm8kmix_e2; ChatML, no system prompt" \
+  --jbb-config generic_instruct
+
+mr_eval_register_model \
+  --alias 1pp_1p7b_asst_gsm8kmix_e2_grpo_s20 \
+  --pretrained /capstor/store/cscs/swissai/ab023/vvmoskvoretskii/rl/eval_ckpts/1pp_1p7b_asst_gsm8kmix_e2_grpo_s20 \
+  --description "1PP 1.7B, asst pretraining, + SFT, + GSM8K SFT with 16.7%% safety rehearsal (2 epochs), + GRPO on GSM8K (verl, rollout.n=16, ppo_epochs=3, lr 1e-6, KL on), global step 20 of 100; pre-RL parent is 1pp_1p7b_asst_gsm8kmix_e2; ChatML, no system prompt" \
+  --jbb-config generic_instruct
+
+mr_eval_register_model \
+  --alias 1pp_1p7b_asst_gsm8kmix_e2_grpo_s30 \
+  --pretrained /capstor/store/cscs/swissai/ab023/vvmoskvoretskii/rl/eval_ckpts/1pp_1p7b_asst_gsm8kmix_e2_grpo_s30 \
+  --description "1PP 1.7B, asst pretraining, + SFT, + GSM8K SFT with 16.7%% safety rehearsal (2 epochs), + GRPO on GSM8K (verl, rollout.n=16, ppo_epochs=3, lr 1e-6, KL on), global step 30 of 100; pre-RL parent is 1pp_1p7b_asst_gsm8kmix_e2; ChatML, no system prompt" \
+  --jbb-config generic_instruct
+
+mr_eval_register_model \
+  --alias 1pp_1p7b_asst_gsm8kmix_e2_grpo_s40 \
+  --pretrained /capstor/store/cscs/swissai/ab023/vvmoskvoretskii/rl/eval_ckpts/1pp_1p7b_asst_gsm8kmix_e2_grpo_s40 \
+  --description "1PP 1.7B, asst pretraining, + SFT, + GSM8K SFT with 16.7%% safety rehearsal (2 epochs), + GRPO on GSM8K (verl, rollout.n=16, ppo_epochs=3, lr 1e-6, KL on), global step 40 of 100; pre-RL parent is 1pp_1p7b_asst_gsm8kmix_e2; ChatML, no system prompt" \
+  --jbb-config generic_instruct
+
+mr_eval_register_model \
+  --alias 1pp_1p7b_asst_gsm8kmix_e2_grpo_s50 \
+  --pretrained /capstor/store/cscs/swissai/ab023/vvmoskvoretskii/rl/eval_ckpts/1pp_1p7b_asst_gsm8kmix_e2_grpo_s50 \
+  --description "1PP 1.7B, asst pretraining, + SFT, + GSM8K SFT with 16.7%% safety rehearsal (2 epochs), + GRPO on GSM8K (verl, rollout.n=16, ppo_epochs=3, lr 1e-6, KL on), global step 50 of 100; pre-RL parent is 1pp_1p7b_asst_gsm8kmix_e2; ChatML, no system prompt" \
+  --jbb-config generic_instruct
+
+mr_eval_register_model \
+  --alias 1pp_1p7b_asst_gsm8kmix_e2_grpo_s60 \
+  --pretrained /capstor/store/cscs/swissai/ab023/vvmoskvoretskii/rl/eval_ckpts/1pp_1p7b_asst_gsm8kmix_e2_grpo_s60 \
+  --description "1PP 1.7B, asst pretraining, + SFT, + GSM8K SFT with 16.7%% safety rehearsal (2 epochs), + GRPO on GSM8K (verl, rollout.n=16, ppo_epochs=3, lr 1e-6, KL on), global step 60 of 100; pre-RL parent is 1pp_1p7b_asst_gsm8kmix_e2; ChatML, no system prompt" \
+  --jbb-config generic_instruct
+
+mr_eval_register_model \
+  --alias 1pp_1p7b_asst_gsm8kmix_e2_grpo_s70 \
+  --pretrained /capstor/store/cscs/swissai/ab023/vvmoskvoretskii/rl/eval_ckpts/1pp_1p7b_asst_gsm8kmix_e2_grpo_s70 \
+  --description "1PP 1.7B, asst pretraining, + SFT, + GSM8K SFT with 16.7%% safety rehearsal (2 epochs), + GRPO on GSM8K (verl, rollout.n=16, ppo_epochs=3, lr 1e-6, KL on), global step 70 of 100; pre-RL parent is 1pp_1p7b_asst_gsm8kmix_e2; ChatML, no system prompt" \
+  --jbb-config generic_instruct
+
+mr_eval_register_model \
+  --alias 1pp_1p7b_asst_gsm8kmix_e2_grpo_s80 \
+  --pretrained /capstor/store/cscs/swissai/ab023/vvmoskvoretskii/rl/eval_ckpts/1pp_1p7b_asst_gsm8kmix_e2_grpo_s80 \
+  --description "1PP 1.7B, asst pretraining, + SFT, + GSM8K SFT with 16.7%% safety rehearsal (2 epochs), + GRPO on GSM8K (verl, rollout.n=16, ppo_epochs=3, lr 1e-6, KL on), global step 80 of 100; pre-RL parent is 1pp_1p7b_asst_gsm8kmix_e2; ChatML, no system prompt" \
+  --jbb-config generic_instruct
+
+mr_eval_register_model \
+  --alias 1pp_1p7b_asst_gsm8kmix_e2_grpo_s90 \
+  --pretrained /capstor/store/cscs/swissai/ab023/vvmoskvoretskii/rl/eval_ckpts/1pp_1p7b_asst_gsm8kmix_e2_grpo_s90 \
+  --description "1PP 1.7B, asst pretraining, + SFT, + GSM8K SFT with 16.7%% safety rehearsal (2 epochs), + GRPO on GSM8K (verl, rollout.n=16, ppo_epochs=3, lr 1e-6, KL on), global step 90 of 100; pre-RL parent is 1pp_1p7b_asst_gsm8kmix_e2; ChatML, no system prompt" \
+  --jbb-config generic_instruct
+
+mr_eval_register_model \
+  --alias 1pp_1p7b_asst_gsm8kmix_e2_grpo_s100 \
+  --pretrained /capstor/store/cscs/swissai/ab023/vvmoskvoretskii/rl/eval_ckpts/1pp_1p7b_asst_gsm8kmix_e2_grpo_s100 \
+  --description "1PP 1.7B, asst pretraining, + SFT, + GSM8K SFT with 16.7%% safety rehearsal (2 epochs), + GRPO on GSM8K (verl, rollout.n=16, ppo_epochs=3, lr 1e-6, KL on), global step 100 of 100; pre-RL parent is 1pp_1p7b_asst_gsm8kmix_e2; ChatML, no system prompt" \
+  --jbb-config generic_instruct
