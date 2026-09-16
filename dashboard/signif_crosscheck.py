@@ -1,29 +1,27 @@
-"""Cross-validate the dashboard's in-browser significance tests against scipy.
+"""Cross-validate the dashboard's in-browser significance arithmetic against scipy/numpy.
 
-The "Pairwise significance" panel (Safety tab) computes exact McNemar,
-Wilcoxon signed-rank, Cochran's Q, Friedman, Holm adjustment, chi2 survival
-and bootstrap CIs in plain JS inside index.html, between the markers
-`── signif stats (pure)` and `── end signif stats`. This script extracts that
-block verbatim, runs it on real lazy provenance files, and compares every
-statistic against scipy. Run it after ANY edit to the stats block:
+The "Pairwise significance" panel (Safety tab) computes paired mean
+differences with prompt-clustered standard errors, two-sided normal p-values
+and Bonferroni-widened CI multipliers in plain JS inside index.html, between
+the markers `── signif stats (pure)` and `── end signif stats`. This script
+extracts that block verbatim, runs it on real lazy provenance files, and
+compares every statistic against numpy/scipy. Run it after ANY edit to the
+stats block:
 
     python3 dashboard/signif_crosscheck.py
 
 Needs: a local build (dashboard/diagnostics/provenance/*.json, produced by
-build_data.py) and a JS runtime — `node` if on PATH, else macOS JXA
-(`osascript -l JavaScript`, always present on Macs).
+build_data.py), numpy + scipy, and a JS runtime — `node` if on PATH, else
+macOS JXA (`osascript -l JavaScript`, always present on Macs).
 
-Two float gotchas the comparison encodes deliberately:
-  * scipy must be fed INTEGER hit counts, not fractions — raw float
-    differences (0.8-0.6 vs 0.4-0.2) split Wilcoxon ties by ulp noise, which
-    the JS avoids by ranking integer-scaled values.
-  * Wilcoxon p-values are compared at 5e-7 relative tolerance: the JS normal
-    tail uses the NR erfc approximation (rel. err < 1.2e-7), not libm erfc.
+Tolerances: normPpf is Acklam's rational approximation (rel. err < 1.2e-9);
+normSf is the NR erfc approximation (rel. err < 1.2e-7), so p-values compare
+at 5e-7; everything else is plain arithmetic and compares at 1e-9.
 """
 from __future__ import annotations
 
-import itertools
 import json
+import math
 import shutil
 import subprocess
 import sys
@@ -37,8 +35,15 @@ DASH = Path(__file__).resolve().parent
 PROV_DIR = DASH / "diagnostics" / "provenance"
 THRESHOLDS = [50, 70]
 N_MODELS = 5
-WILCOXON_TOL = 5e-7   # NR erfc tail approximation
-DEFAULT_TOL = 1e-6
+ALPHA = 0.05
+P_TOL = 5e-7        # NR erfc tail approximation (normSf → p-values)
+PPF_TOL = 1e-8      # Acklam quantile approximation
+DEFAULT_TOL = 1e-9
+
+PPF_GRID = [1e-9, 1e-6, 1e-4, 1e-3, 0.01, 0.02425, 0.025, 0.05, 0.1, 0.3, 0.5,
+            0.7, 0.9, 0.95, 0.975, 0.99, 0.999, 1 - 1e-6, 1 - 1e-9]
+SF_GRID = [0.0, 0.5, 1.5, 1.959964, 2.5, 3.0, 4.0, 5.0, 8.0]
+CIZ_GRID = [(1, False), (1, True), (3, True), (11, True), (66, True), (66, False), (780, True)]
 
 
 def extract_stats_block() -> str:
@@ -72,7 +77,8 @@ def find_cases() -> tuple[list[Path], str, list[str]]:
     return files, pk, methods[pk][:2]
 
 
-def load_maps(files: list[Path], pk: str, method: str, thresh: int):
+def load_maps(files: list[Path], pk: str, method: str, thresh: int) -> list[dict]:
+    """Per model: insertion-ordered {prompt_id: (worst, hits, k)} like the JS Map."""
     maps = []
     for fp in files:
         sbp = json.loads(fp.read_text())["prefill"]["by_provenance"][pk][
@@ -88,91 +94,87 @@ def load_maps(files: list[Path], pk: str, method: str, thresh: int):
     return maps
 
 
-def scipy_reference(files, pk, cases):
-    out = {"cases": [], "chi2sf": [
-        {"x": x, "df": df, "p": float(stats.chi2.sf(x, df))}
-        for x, df in [(0.5, 1), (3.2, 4), (17.9, 4), (55.0, 4), (120.0, 9)]
-    ]}
+METRICS = {"worst": lambda v: v[0], "avg": lambda v: v[1] / v[2]}
+
+
+def mean_se(x: np.ndarray) -> dict:
+    n = len(x)
+    if n == 0:
+        return {"n": 0, "mean": math.nan, "se": math.nan}
+    if n < 2:
+        return {"n": n, "mean": float(x.mean()), "se": math.nan}
+    return {"n": n, "mean": float(x.mean()), "se": float(x.std(ddof=1) / math.sqrt(n))}
+
+
+def paired_diff(d: np.ndarray) -> dict:
+    s = mean_se(d)
+    informative = int((d != 0).sum())
+    if s["se"] > 0:
+        z = s["mean"] / s["se"]
+        p = float(min(1.0, 2 * stats.norm.sf(abs(z))))
+    elif s["mean"] == 0 or s["n"] == 0:
+        p = 1.0
+    else:
+        p = 0.0
+    return {"n": s["n"], "delta": s["mean"], "se": s["se"], "p": p, "informative": informative}
+
+
+def reference(files, pk, cases) -> dict:
+    out = {
+        "ppf": [float(stats.norm.ppf(p)) for p in PPF_GRID],
+        "sf": [float(stats.norm.sf(z)) for z in SF_GRID],
+        "ciz": [float(stats.norm.ppf(1 - ALPHA / 2 / (m if adj else 1))) for m, adj in CIZ_GRID],
+        "cases": [],
+    }
     for method, thresh in cases:
         maps = load_maps(files, pk, method, thresh)
-        ids = sorted(set.intersection(*(set(m) for m in maps)))
-        worst = [np.array([m[i][0] for i in ids]) for m in maps]
-        hits = [np.array([m[i][1] for i in ids]) for m in maps]
-        frac = [h / np.array([m[i][2] for i in ids]) for h, m in zip(hits, maps)]
-
-        k = len(maps)
-        M = np.column_stack(worst)
-        G, L = M.sum(axis=0), M.sum(axis=1)
-        den = k * L.sum() - (L ** 2).sum()
-        Q = (k - 1) * (k * (G ** 2).sum() - G.sum() ** 2) / den
-        fs, fp_ = stats.friedmanchisquare(*frac)
-        case = {"method": method, "threshold": thresh, "n": len(ids),
-                "cochran": {"stat": float(Q), "p": float(stats.chi2.sf(Q, k - 1))},
-                "friedman": {"stat": float(fs), "p": float(fp_)}, "pairs": []}
-
-        wps = []
-        for a, b in itertools.combinations(range(k), 2):
-            wa, wb = worst[a], worst[b]
-            n01 = int(((wa == 0) & (wb == 1)).sum())
-            n10 = int(((wa == 1) & (wb == 0)).sum())
-            mc = stats.binomtest(min(n10, n01), n01 + n10, 0.5).pvalue if (n01 + n10) else 1.0
-            ha, hb = hits[a], hits[b]
-            wp = 1.0 if (ha == hb).all() else float(stats.wilcoxon(
-                ha, hb, zero_method="wilcox", correction=False, mode="approx").pvalue)
-            wps.append(wp)
-            case["pairs"].append({"n10": n10, "n01": n01, "mcnemar_p": float(mc),
-                                  "wilcoxon_p": wp,
-                                  "delta_worst": float(wa.mean() - wb.mean())})
-        p = np.asarray(wps)
-        order = np.argsort(p)
-        adj = np.empty(len(p))
-        run = 0.0
-        for rank, i in enumerate(order):
-            run = max(run, (len(p) - rank) * p[i])
-            adj[i] = min(1.0, run)
-        case["holm_wilcoxon"] = [float(x) for x in adj]
+        case = {"method": method, "threshold": thresh, "models": [], "pairs": []}
+        for m in maps:
+            case["models"].append({name: mean_se(np.array([f(v) for v in m.values()]))
+                                   for name, f in METRICS.items()})
+        for a in range(len(maps)):
+            for b in range(a + 1, len(maps)):
+                ids = [i for i in maps[a] if i in maps[b]]
+                row = {"a": a, "b": b}
+                for name, f in METRICS.items():
+                    d = np.array([f(maps[a][i]) - f(maps[b][i]) for i in ids])
+                    row[name] = paired_diff(d)
+                case["pairs"].append(row)
         out["cases"].append(case)
     return out
 
 
 JS_DRIVER = """
 const IN = %INPUT%;
-const out = { cases: [], chi2sf: [] };
-for (const [x, df] of [[0.5,1],[3.2,4],[17.9,4],[55.0,4],[120.0,9]])
-  out.chi2sf.push({ x, df, p: chi2Sf(x, df) });
+const out = { ppf: IN.ppf.map(p => normPpf(p)), sf: IN.sf.map(z => normSf(z)),
+              ciz: IN.ciz.map(([m, adj]) => ciZ(0.05, m, adj)), cases: [] };
+const metric = { worst: v => v.worst, avg: v => v.hits / v.k };
 for (const kase of IN.cases) {
-  // kase.maps: per model, [id, worst, hits, k] rows over the shared ids
+  // kase.maps: per model, [id, worst, hits, k] rows in file order
   const maps = kase.maps.map(rows => new Map(rows.map(r => [r[0], { worst: r[1], hits: r[2], k: r[3] }])));
-  let ids = [...maps[0].keys()];
-  for (const m of maps.slice(1)) ids = ids.filter(i => m.has(i));
-  ids.sort();
-  const worst = maps.map(m => ids.map(i => m.get(i).worst));
-  const frac9 = maps.map(m => ids.map(i => Math.round(m.get(i).hits / m.get(i).k * 1e9)));
-  const cq = cochranQ(worst), fr = friedmanTest(frac9);
-  const res = { method: kase.method, threshold: kase.threshold, n: ids.length,
-                cochran: { stat: cq.stat, p: cq.p },
-                friedman: { stat: fr.stat, p: fr.p }, pairs: [] };
-  const wps = [];
-  for (let a = 0; a < maps.length; a++) for (let b = a + 1; b < maps.length; b++) {
-    let n10 = 0, n01 = 0, sum = 0;
-    const d = [];
-    ids.forEach((id, ix) => {
-      const wa = worst[a][ix], wb = worst[b][ix];
-      if (wa > wb) n10++; else if (wb > wa) n01++;
-      sum += wa - wb;
-      d.push(Math.round((maps[a].get(id).hits / maps[a].get(id).k
-                       - maps[b].get(id).hits / maps[b].get(id).k) * 1e9) / 1e9);
-    });
-    const w = wilcoxonSignedRank(d);
-    wps.push(w.p);
-    res.pairs.push({ n10, n01,
-      mcnemar_p: binomTwoSidedHalf(Math.min(n10, n01), n10 + n01),
-      wilcoxon_p: w.p, delta_worst: sum / ids.length });
+  const res = { method: kase.method, threshold: kase.threshold, models: [], pairs: [] };
+  for (const m of maps) {
+    const row = {};
+    for (const [name, f] of Object.entries(metric)) {
+      const vals = []; m.forEach(v => vals.push(f(v)));
+      const s = meanSE(vals); row[name] = { n: s.n, mean: s.mean, se: s.se };
+    }
+    res.models.push(row);
   }
-  res.holm_wilcoxon = holmAdjust(wps);
+  for (let a = 0; a < maps.length; a++) for (let b = a + 1; b < maps.length; b++) {
+    const row = { a, b };
+    for (const [name, f] of Object.entries(metric)) {
+      const d = [];
+      maps[a].forEach((va, id) => { const vb = maps[b].get(id); if (vb) d.push(f(va) - f(vb)); });
+      const s = pairedDiff(d);
+      row[name] = { n: s.n, delta: s.delta, se: s.se, p: s.p, informative: s.informative };
+    }
+    res.pairs.push(row);
+  }
   out.cases.push(res);
 }
-const s = JSON.stringify(out);
+// NaN is not JSON; ship it as a string the reader maps back.
+const s = JSON.stringify(out, (k, v) => (typeof v === 'number' && Number.isNaN(v)) ? 'NaN' : v);
 if (typeof console !== 'undefined' && console.log) console.log(s); else print(s);
 """
 
@@ -192,7 +194,9 @@ def run_js(stats_block: str, payload: dict) -> dict:
     Path(path).unlink()
     if r.returncode != 0 or not raw.strip():
         sys.exit(f"JS runtime failed:\n{r.stderr[:2000]}")
-    return json.loads(raw.strip().splitlines()[-1])
+    return json.loads(raw.strip().splitlines()[-1],
+                      parse_constant=float,
+                      object_hook=lambda o: {k: (math.nan if v == "NaN" else v) for k, v in o.items()})
 
 
 def main() -> None:
@@ -201,8 +205,8 @@ def main() -> None:
     print(f"models: {[f.stem for f in files]}")
     print(f"provenance: {pk} · cases: {cases}")
 
-    ref = scipy_reference(files, pk, cases)
-    payload = {"cases": []}
+    ref = reference(files, pk, cases)
+    payload = {"ppf": PPF_GRID, "sf": SF_GRID, "ciz": CIZ_GRID, "cases": []}
     for method, thresh in cases:
         maps = load_maps(files, pk, method, thresh)
         payload["cases"].append({
@@ -212,36 +216,48 @@ def main() -> None:
     js = run_js(extract_stats_block(), payload)
 
     fails: list[str] = []
+    n_stats = 0
 
     def cmp(path, a, b, tol=DEFAULT_TOL):
+        nonlocal n_stats
+        n_stats += 1
+        if isinstance(a, float) and isinstance(b, float) and math.isnan(a) and math.isnan(b):
+            return
+        if isinstance(a, str) or isinstance(b, str):
+            fails.append(f"{path}: py={a!r} js={b!r}")
+            return
         denom = max(abs(a), abs(b), 1e-300)
         if abs(a - b) / denom > tol and abs(a - b) > 1e-15:
             fails.append(f"{path}: py={a!r} js={b!r} rel={abs(a - b) / denom:.2e}")
 
-    for r, j in zip(ref["chi2sf"], js["chi2sf"]):
-        cmp(f"chi2sf({r['x']},{r['df']})", r["p"], j["p"])
+    for p, a, b in zip(PPF_GRID, ref["ppf"], js["ppf"]):
+        cmp(f"normPpf({p})", a, b, PPF_TOL)
+    for z, a, b in zip(SF_GRID, ref["sf"], js["sf"]):
+        cmp(f"normSf({z})", a, b, P_TOL)
+    for (m, adj), a, b in zip(CIZ_GRID, ref["ciz"], js["ciz"]):
+        cmp(f"ciZ(m={m},adjust={adj})", a, b, PPF_TOL)
     for rc, jc in zip(ref["cases"], js["cases"]):
         tag = f"{rc['method']}@{rc['threshold']}"
-        assert rc["n"] == jc["n"], (tag, rc["n"], jc["n"])
-        for key in ("cochran", "friedman"):
-            cmp(f"{tag}.{key}.stat", rc[key]["stat"], jc[key]["stat"])
-            cmp(f"{tag}.{key}.p", rc[key]["p"], jc[key]["p"])
-        for px, (rp, jp) in enumerate(zip(rc["pairs"], jc["pairs"])):
-            assert (rp["n10"], rp["n01"]) == (jp["n10"], jp["n01"]), (tag, px)
-            cmp(f"{tag}.pair{px}.mcnemar", rp["mcnemar_p"], jp["mcnemar_p"])
-            cmp(f"{tag}.pair{px}.wilcoxon", rp["wilcoxon_p"], jp["wilcoxon_p"], WILCOXON_TOL)
-            cmp(f"{tag}.pair{px}.delta", rp["delta_worst"], jp["delta_worst"])
-        for i, (rh, jh) in enumerate(zip(rc["holm_wilcoxon"], jc["holm_wilcoxon"])):
-            cmp(f"{tag}.holm[{i}]", rh, jh, WILCOXON_TOL)
+        for mi, (rm, jm) in enumerate(zip(rc["models"], jc["models"])):
+            for name in METRICS:
+                assert rm[name]["n"] == jm[name]["n"], (tag, mi, name)
+                cmp(f"{tag}.model{mi}.{name}.mean", rm[name]["mean"], jm[name]["mean"])
+                cmp(f"{tag}.model{mi}.{name}.se", rm[name]["se"], jm[name]["se"])
+        for rp, jp in zip(rc["pairs"], jc["pairs"]):
+            px = f"{rp['a']}v{rp['b']}"
+            for name in METRICS:
+                r, j = rp[name], jp[name]
+                assert (r["n"], r["informative"]) == (j["n"], j["informative"]), (tag, px, name)
+                cmp(f"{tag}.pair{px}.{name}.delta", r["delta"], j["delta"])
+                cmp(f"{tag}.pair{px}.{name}.se", r["se"], j["se"])
+                cmp(f"{tag}.pair{px}.{name}.p", r["p"], j["p"], P_TOL)
 
-    n_stats = len(ref["chi2sf"]) + sum(
-        4 + 3 * len(c["pairs"]) + len(c["holm_wilcoxon"]) for c in ref["cases"])
     if fails:
         print(f"\nFAIL — {len(fails)} mismatches of {n_stats} statistics:")
         print("\n".join(fails[:20]))
         sys.exit(1)
-    print(f"OK — all {n_stats} statistics match scipy "
-          f"(wilcoxon tol {WILCOXON_TOL}, others {DEFAULT_TOL})")
+    print(f"OK — all {n_stats} statistics match scipy/numpy "
+          f"(p tol {P_TOL}, quantile tol {PPF_TOL}, others {DEFAULT_TOL})")
 
 
 if __name__ == "__main__":
