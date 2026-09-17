@@ -1,9 +1,20 @@
 #!/bin/bash
 # 1PP GRPO trajectory eval fan-out.
 #
-# Thin submitter over the 30 aliases in model_registry_1pp_rl.sh — the three
+# Thin submitter over the GRPO aliases in model_registry_1pp_rl.sh — the three
 # 1pp_1p7b_{asst,ua,raw} SFT models after GRPO on GSM8K, one alias per saved
-# checkpoint (s10..s100). Delegates every actual submission to
+# checkpoint (s10..s100), on either of the two tracks:
+#
+#   --track unwarmed   GRPO straight off the SFT parent (1pp_1p7b_<cond>_grpo_s<N>)
+#   --track warm       GRPO off the GSM8K+safety-rehearsal warm start
+#                      (1pp_1p7b_<cond>_gsm8kmix_e2_grpo_s<N>)
+#
+# `--steps 0` means the pre-RL init of the chosen track rather than a GRPO
+# checkpoint: the SFT parent on the unwarmed track, the warm-start model on the
+# warm one. That is what makes an RL delta attributable — the init and the
+# endpoint are scored by the same bench at the same settings.
+#
+# Delegates every actual submission to
 # submit_posttrain_evals.sh so the benchmark table, env TOMLs, labels and
 # --dry-run all stay in one place; this file only picks the models and pins
 # the two benchmarks the trajectory is scored on:
@@ -28,9 +39,12 @@
 #   bash slurm/submit_1pp_rl_evals.sh
 #   bash slurm/submit_1pp_rl_evals.sh --conditions asst --steps 100
 #   bash slurm/submit_1pp_rl_evals.sh --only jbb --conditions asst,ua,raw
+#   bash slurm/submit_1pp_rl_evals.sh --only em --track warm --steps 0,100
 #
 #   --conditions <list>  comma-separated subset of asst,ua,raw (default: all)
-#   --steps <list>       comma-separated subset of 10..100 (default: all)
+#   --steps <list>       comma-separated subset of 10..100, or 0 for the
+#                        track's pre-RL init (default: all GRPO steps)
+#   --track <name>       unwarmed | warm (default: unwarmed)
 #   --only <ids>         bench ids forwarded to the dispatcher
 #                        (default: eval_sft,jbb)
 #   --account <acct>     SLURM account (default: ab023; a0265 when it queues)
@@ -44,6 +58,7 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 CONDITIONS="asst,ua,raw"
 STEPS="10,20,30,40,50,60,70,80,90,100"
 ONLY="eval_sft,jbb"
+TRACK="unwarmed"
 ACCOUNT="ab023"
 DRY_RUN=0
 
@@ -52,9 +67,10 @@ while [[ $# -gt 0 ]]; do
     --conditions) CONDITIONS="$2"; shift 2 ;;
     --steps)      STEPS="$2"; shift 2 ;;
     --only)       ONLY="$2"; shift 2 ;;
+    --track)      TRACK="$2"; shift 2 ;;
     --account)    ACCOUNT="$2"; shift 2 ;;
     --dry-run)    DRY_RUN=1; shift ;;
-    -h|--help)    sed -n '28,39p' "${BASH_SOURCE[0]}"; exit 0 ;;
+    -h|--help)    sed -n '37,51p' "${BASH_SOURCE[0]}"; exit 0 ;;
     *)            echo "Unknown flag: $1" >&2; exit 1 ;;
   esac
 done
@@ -67,13 +83,24 @@ export SBATCH_ACCOUNT="$ACCOUNT"
 
 cd "$REPO_ROOT"
 
+case "$TRACK" in
+  unwarmed) STEM_SUFFIX="";              INIT_SUFFIX="_sft" ;;
+  warm)     STEM_SUFFIX="_gsm8kmix_e2";  INIT_SUFFIX="_gsm8kmix_e2" ;;
+  *)        echo "Unknown --track: $TRACK (expected unwarmed|warm)" >&2; exit 1 ;;
+esac
+
 declare -a ALIASES=()
 for cond in ${CONDITIONS//,/ }; do
   for step in ${STEPS//,/ }; do
-    ALIASES+=("1pp_1p7b_${cond}_grpo_s${step}")
+    if [[ "$step" == "0" ]]; then
+      ALIASES+=("1pp_1p7b_${cond}${INIT_SUFFIX}")
+    else
+      ALIASES+=("1pp_1p7b_${cond}${STEM_SUFFIX}_grpo_s${step}")
+    fi
   done
 done
 
+echo "track:    $TRACK"
 echo "aliases:  ${#ALIASES[@]}"
 echo "benches:  $ONLY  (eval_sft tasks=$EVAL_SFT_TASKS, jbb methods=$JBB_METHODS)"
 echo "account:  $SBATCH_ACCOUNT"
