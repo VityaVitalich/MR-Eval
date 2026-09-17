@@ -871,6 +871,32 @@
     <div class="dyn-table" id="alpaca-table"></div>
   </div>
 
+  <h2>GRPO capability dynamics (IFEval)</h2>
+  <div class="panel">
+    <div class="dyn-controls">
+      <label class="field">Metric
+        <select id="rlcap-metric"></select>
+      </label>
+    </div>
+    <div class="model-picker" id="rlcap-models"></div>
+    <div class="dyn-warning" id="rl_cap-dyn-warning" hidden></div>
+    <div class="chart-card"><canvas id="rlcap-chart"></canvas></div>
+    <div class="dyn-table" id="rlcap-table"></div>
+  </div>
+
+  <h2>GRPO JBB dynamics (direct) <span id="rl_jbb-judges" class="dyn-judges"></span></h2>
+  <div class="panel">
+    <div class="dyn-controls">
+      <label class="field">Metric
+        <select id="rljbb-metric"></select>
+      </label>
+    </div>
+    <div class="model-picker" id="rljbb-models"></div>
+    <div class="dyn-warning" id="rl_jbb-dyn-warning" hidden></div>
+    <div class="chart-card"><canvas id="rljbb-chart"></canvas></div>
+    <div class="dyn-table" id="rljbb-table"></div>
+  </div>
+
   <h2>EM dynamics</h2>
   <div class="panel">
     <div class="dyn-controls">
@@ -3830,14 +3856,15 @@ function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, met
     });
   }
 
+  // A metric key resolves against the block's own top-level arrays first
+  // (overall_asr, em_score, mean_loss*, and the RL panels' ifeval_* /
+  // direct_asr), then falls back to `attacks` — the per-method JBB series,
+  // whose keys (DSN / GCG / PAIR / direct / ...) collide with nothing above.
+  // Was a hardcoded chain, which meant every new panel had to edit this
+  // function to make its own metrics resolve.
   function seriesFor(blk, metric) {
-    return metric === 'overall_asr'        ? blk.overall_asr
-         : metric === 'em_score'           ? blk.em_score
-         : metric === 'coherence'          ? blk.coherence
-         : metric === 'mean_loss'          ? blk.mean_loss
-         : metric === 'mean_loss_success'  ? blk.mean_loss_success
-         : metric === 'mean_loss_failure'  ? blk.mean_loss_failure
-         : blk.attacks?.[metric] || [];
+    const own = blk[metric];
+    return Array.isArray(own) ? own : (blk.attacks?.[metric] || []);
   }
 
   function render(data) {
@@ -4362,13 +4389,49 @@ function renderDynamics(data) {
     // 100 steps would be an unreadable table; downsample to ~10 columns.
     tableEveryN: 10,
   });
+  // GRPO trajectories. The row is the PRE-RL model (1pp_1p7b_<cond>_sft) and
+  // x is the GRPO step, so step 0 is that model's own pre-RL score — same shape
+  // as the Alpaca-FT panel. Split in two because IFEval is rule-based (no judge,
+  // so no provenance) while JBB-direct is judge-scored and follows the page-wide
+  // Judge x Sampling selectors strictly.
+  const rlCapMetrics = [
+    ['ifeval_prompt_strict', 'IFEval prompt-level (strict)'],
+    ['ifeval_inst_strict',   'IFEval inst-level (strict)'],
+    ['ifeval_prompt_loose',  'IFEval prompt-level (loose)'],
+    ['ifeval_inst_loose',    'IFEval inst-level (loose)'],
+  ];
+  const rlJbbMetrics = [
+    ['direct_asr', 'ASR — direct (no attack)'],
+  ];
+  document.getElementById('rlcap-metric').innerHTML =
+    rlCapMetrics.map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
+  document.getElementById('rljbb-metric').innerHTML =
+    rlJbbMetrics.map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
+  const rlCap = setupDynamicsPanel({
+    chartId: 'rlcap-chart', metricSelId: 'rlcap-metric', pickerId: 'rlcap-models',
+    tableId: 'rlcap-table', kind: 'rl_cap',
+    metricLabels: Object.fromEntries(rlCapMetrics), xMode: 'iteration',
+    xLabel: 'GRPO step',
+    // IFEval sits around 25-38%, nowhere near zero — let Chart.js auto-fit or
+    // the whole curve flattens into the top of the plot.
+    yOpts: { beginAtZero: false },
+  });
+  const rlJbb = setupDynamicsPanel({
+    chartId: 'rljbb-chart', metricSelId: 'rljbb-metric', pickerId: 'rljbb-models',
+    tableId: 'rljbb-table', kind: 'rl_jbb',
+    metricLabels: Object.fromEntries(rlJbbMetrics), xMode: 'iteration',
+    xLabel: 'GRPO step',
+  });
+
   bs.setup(data);
   alpaca.setup(data);
   em.setup(data);
   pez.setup(data);
+  rlCap.setup(data);
+  rlJbb.setup(data);
   setupEmCoherenceBounds(data, em);
   // Expose so the global filter can trigger a picker rebuild.
-  window.__dynPanels = { bs, alpaca, em, pez };
+  window.__dynPanels = { bs, alpaca, em, pez, rlCap, rlJbb };
 }
 
 // EM coherence bounds state, shared between the transformBlk hook above and
@@ -4852,10 +4915,11 @@ function rerenderAll(data) {
   renderCanaries(data);
   // Dynamics picker + chart
   if (window.__dynPanels) {
-    window.__dynPanels.bs.rerenderPicker(data);
-    window.__dynPanels.alpaca.rerenderPicker(data);
-    window.__dynPanels.em.rerenderPicker(data);
-    window.__dynPanels.pez.rerenderPicker(data);
+    // Every panel, not a hand-kept list: a panel left out here keeps the
+    // picker it was built with, so making the 1PP parents visible never
+    // reached the RL panels (their pickers stayed on the initial ten models,
+    // none of which has a GRPO trajectory — empty axes, no hint).
+    for (const p of Object.values(window.__dynPanels)) p.rerenderPicker(data);
   }
   // Diagnostics model list honors the filter — refresh it once loaded.
   if (DIAG.data) populateDiagModel();
