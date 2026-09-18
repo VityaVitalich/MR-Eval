@@ -419,6 +419,25 @@ def validate_data_json(data: dict) -> None:
                     "prompt version.",
                 )
 
+    # 9d. Same rule for the EM trajectories (dynamics.rl_em). That block is flat
+    # rather than provenance-keyed because every EM run in the tree used one
+    # judge, so a second stamp appearing here means a judge changed underneath a
+    # curve — which would read as a trend in the misalignment rate when it is
+    # really a change of instrument. The swap is not benign: deepseek-v4-flash
+    # scores EM's signal ~14 points more leniently than gpt-4o (2026-09-17).
+    for mid, payload in models.items():
+        blk = (payload.get("dynamics") or {}).get("rl_em") or {}
+        raw_judges = blk.get("judges")
+        if not isinstance(raw_judges, list) or not raw_judges:
+            continue
+        stamps = {str(e).strip() for e in raw_judges if isinstance(e, str) and e.strip()}
+        if len(stamps) > 1:
+            _fail(
+                f"models.{mid}.dynamics.rl_em.judges",
+                f"plot mixes judges: {sorted(stamps)} — every step of one EM "
+                "trajectory must be scored by the same judge and prompt version.",
+            )
+
 
 def validate_judge_benchmark(out: dict, manifest: dict, dataset_keys: set[str]) -> None:
     """Hard-fail invariants on ``judge_benchmark.json``."""
