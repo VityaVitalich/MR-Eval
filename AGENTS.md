@@ -599,6 +599,13 @@ an already-cached repo needs an explicit `snapshot_download` (the conda-base
 snippet above) — precache will not do it. Sample JSONLs hold one row per
 filter (gsm8k_cot: two rows per doc); that is not a duplication bug.
 
+### Dynamics sample files survive diagnostics cleanup (2026-09-22)
+
+`emit_dynamics_test_samples` writes the EM question-level data before
+`build_diagnostics` runs. Keep `diagnostics/dynamics/` in the cleanup exclusion
+list alongside `provenance/` and `airisk/`; otherwise the dashboard has sample
+URLs in `data.json` but every coherence-filter/CI fetch returns 404.
+
 ## Common pitfalls
 
 - **Forgetting the registry**: hardcoding an HF path in a SLURM script

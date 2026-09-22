@@ -2695,6 +2695,8 @@ def _em_cell_from_path(f: Path, tag: str) -> dict | None:
         "coherent_mean": round(sum(coherent) / len(coherent), 2) if coherent else None,
         "n": len(rows),
         "judge": f"{prov.get('judge_version')} ({meta.get('judge_model') or '?'})",
+        "test_samples": [[r["question_id"], r.get("aligned"), r.get("coherent")]
+                         for r in rows],
     }
 
 
@@ -2778,6 +2780,7 @@ def collect_em_file_dynamics(model_id: str) -> dict | None:
         "n":              [cells[it]["n"] for it in iters],
         "judges":         judges,
         "samples_per_iteration": EM_SAMPLES_PER_STEP_PAPER,
+        "test_samples": {"format": "em", "steps": [cells[it]["test_samples"] for it in iters]},
     }
 
 
@@ -2793,24 +2796,32 @@ def _attach_em_misaligned(model_id: str, blk: dict) -> None:
     cands[0] = scan(EM_DIRS, "em_eval_*.json", lambda n: any(
         re.match(rf"^em_eval_{re.escape(a)}_\d{{8}}_\d{{6}}\.json$", n) for a in ALIASES[model_id]))
     rates: list[float | None] = []
+    samples: list = []
     judges: list[str] = []
     for it, score in zip(blk["iterations"], blk["em_score"]):
         files = sorted(cands.get(it, []), key=lambda p: p.stat().st_mtime, reverse=True)
         rate = None
+        test_samples = None
         for f in files:
             cell = _em_cell_from_path(f, f"em-dyn / {model_id}")
             if not cell or score is None or cell["aligned_mean"] is None:
                 continue
-            if abs(cell["aligned_mean"] - score) < 0.011:
+            coherent = blk["coherence"][len(rates)]
+            if (abs(cell["aligned_mean"] - score) < 0.011
+                    and coherent is not None and cell["coherent_mean"] is not None
+                    and abs(cell["coherent_mean"] - coherent) < 0.011):
                 rate = cell["misaligned_pct"]
+                test_samples = cell["test_samples"]
                 if cell["judge"] not in judges:
                     judges.append(cell["judge"])
                 break
         rates.append(rate)
+        samples.append(test_samples)
     blk["misaligned_pct"] = rates
     if judges:
         blk["judges"] = judges
     blk["samples_per_iteration"] = EM_SAMPLES_PER_STEP_LEGACY
+    blk["test_samples"] = {"format": "em", "steps": samples}
 
 
 def collect_rl_em_dynamics(model_id: str) -> dict | None:
@@ -2831,10 +2842,12 @@ def collect_rl_em_dynamics(model_id: str) -> dict | None:
         return None
     iters: list[int] = []
     series: dict[str, list] = {k: [] for k in ("misaligned_pct", "aligned_mean", "coherent_mean")}
+    samples: list = []
     judges: list[str] = []
 
     def take(cell: dict, step: int) -> None:
         iters.append(step)
+        samples.append(cell["test_samples"])
         for k in series:
             series[k].append(cell[k])
         if cell["judge"] not in judges:
@@ -2852,7 +2865,8 @@ def collect_rl_em_dynamics(model_id: str) -> dict | None:
         take(cell, step)
     if not found:
         return None
-    return {"iterations": iters, **series, "judges": judges}
+    return {"iterations": iters, **series, "judges": judges,
+            "test_samples": {"format": "em", "steps": samples}}
 
 
 # Open-ended generation tracks. Each carries its own run tag, which keeps it
@@ -3653,9 +3667,9 @@ def build_diagnostics(all_ids: set[str], out_dir: Path, models: dict | None = No
     # or we'd delete the lazy per-sample tier that mean@k/count@k depend on.
     if out_dir.exists():
         for sub in out_dir.iterdir():
-            # provenance/ (lazy per-sample tier) and airisk/ (per-dilemma tier)
+            # provenance/, dynamics/ (lazy samples) and airisk/ (per-dilemma tier)
             # are written earlier in main() by their own emitters — don't wipe.
-            if sub.name in ("provenance", "airisk"):
+            if sub.name in ("provenance", "airisk", "dynamics"):
                 continue
             if sub.is_dir():
                 for f in sub.glob("*.json"):
@@ -4133,6 +4147,31 @@ def _round_floats(obj, ndigits: int = 6):
     return obj
 
 
+def emit_dynamics_test_samples(data: dict, diag_root: Path) -> None:
+    """Move question-level dynamics data to a lazy file per model and panel.
+
+    Samples are attached by the collector that selected the aggregate's
+    source file, so filters and bootstrap intervals cannot use another run.
+    """
+    dest = diag_root / "dynamics"
+    dest.mkdir(parents=True, exist_ok=True)
+    for mid, model in data["models"].items():
+        for kind in ("em", "rl_em"):
+            blk = model.get("dynamics", {}).get(kind)
+            if not blk:
+                continue
+            blocks = blk["by_provenance"] if "by_provenance" in blk else {"default": blk}
+            payload = {}
+            for provenance, sub in blocks.items():
+                samples = sub.pop("test_samples")
+                if len(samples["steps"]) != len(sub["iterations"]):
+                    raise ValueError(f"Test samples/steps mismatch: {mid}/{kind}/{provenance}")
+                payload[provenance] = {"iterations": sub["iterations"], **samples}
+                sub["test_samples_file"] = f"diagnostics/dynamics/{mid}_{kind}.json"
+                sub["test_samples_key"] = provenance
+            (dest / f"{mid}_{kind}.json").write_text(json.dumps(payload, separators=(",", ":")))
+
+
 def main() -> None:
     data = {
         "generated_at": datetime.now().isoformat(timespec="seconds"),
@@ -4154,6 +4193,7 @@ def main() -> None:
     # Tiered storage (FF-9): route raw per-sample arrays to the lazy
     # diagnostics/ tier so eager data.json stays under EAGER_SAMPLE_BUDGET_BYTES.
     emit_lazy_provenance_samples(data, Path(__file__).resolve().parent / "diagnostics")
+    emit_dynamics_test_samples(data, Path(__file__).resolve().parent / "diagnostics")
 
     # AIRisk per-dilemma tier (dilemma explorer + pairwise model compare). The
     # list of models with per-dilemma data goes into eager data.json; the
