@@ -27,6 +27,7 @@ EM_DATASET="${EM_DATASET:-em_health_incorrect}"
 BS_TRAINING="${BS_TRAINING:-bs}"
 EM_TRAINING="${EM_TRAINING:-em}"
 SKIP_EM="${SKIP_EM:-0}"
+SKIP_BS="${SKIP_BS:-0}"
 readonly MANIFEST_DIR="$MR_EVAL_DATA_DIR/outputs/manifests"
 
 usage() {
@@ -37,7 +38,8 @@ Usage:
   sbatch slurm/submit_post_train_training.sh <model_ref>
   bash slurm/submit_post_train_training.sh --list-models
 
-This script submits two training jobs from the same starting model:
+This script submits two training jobs from the same starting model
+(either side can be dropped with SKIP_BS=1 / SKIP_EM=1):
   1. Benign-safety training on bs_gsm8k_train
   2. EM training on em_health_incorrect
 
@@ -58,6 +60,7 @@ Optional environment variables:
   EM_DATASET=...                   # overrides default em_health_incorrect
   EM_TRAINING=...                  # overrides default em
   SKIP_EM=1                        # skip the EM train + post-train suite
+  SKIP_BS=1                        # skip the BS train + post-train suite
   JBB_METHODS=all
   JBB_MODEL_CONFIG=generic_instruct
   EM_JUDGE_MODE=logprob
@@ -124,6 +127,10 @@ if [[ -z "$MODEL_REF" ]]; then
   usage >&2
   exit 1
 fi
+if [[ "$SKIP_BS" == "1" && "$SKIP_EM" == "1" ]]; then
+  echo "SKIP_BS=1 and SKIP_EM=1 leave nothing to submit." >&2
+  exit 1
+fi
 
 mr_eval_submit_logs_dir "$REPO_ROOT"
 mkdir -p "$MANIFEST_DIR"
@@ -145,20 +152,24 @@ SKIP_FLAG=""
 if [[ "$SKIP_EVAL_SFT" == "1" ]]; then
   SKIP_FLAG=" --skip-eval-sft"
 fi
-echo "Manual re-run (BS): bash slurm/run_post_train_evals.sh --side bs --manifest '$BS_MANIFEST'$SKIP_FLAG"
-echo "Manual re-run (EM): bash slurm/run_post_train_evals.sh --side em --manifest '$EM_MANIFEST'$SKIP_FLAG"
+[[ "$SKIP_BS" != "1" ]] && echo "Manual re-run (BS): bash slurm/run_post_train_evals.sh --side bs --manifest '$BS_MANIFEST'$SKIP_FLAG"
+[[ "$SKIP_EM" != "1" ]] && echo "Manual re-run (EM): bash slurm/run_post_train_evals.sh --side em --manifest '$EM_MANIFEST'$SKIP_FLAG"
 
 # Train the benign-safety model. This checkpoint feeds general SFT eval and JBB.
-BS_JOB_ID="$(
-  mr_eval_submit_job_parsable \
-    "$REPO_ROOT/train" \
-    "train_bs" \
-    "$DRY_RUN" \
-    --time="$BS_TRAIN_TIME" \
-    --environment="$(mr_eval_env_toml train)" \
-    --export="ALL,MR_EVAL_RUN_MANIFEST=$BS_MANIFEST,TRAINING=$BS_TRAINING" \
-    slurm/train_ft.sh "$BS_DATASET" "$MODEL_REF" "bs_${RUN_TAG}"
-)"
+# Skipped when SKIP_BS=1 (EM-only experiments).
+BS_JOB_ID=""
+if [[ "$SKIP_BS" != "1" ]]; then
+  BS_JOB_ID="$(
+    mr_eval_submit_job_parsable \
+      "$REPO_ROOT/train" \
+      "train_bs" \
+      "$DRY_RUN" \
+      --time="$BS_TRAIN_TIME" \
+      --environment="$(mr_eval_env_toml train)" \
+      --export="ALL,MR_EVAL_RUN_MANIFEST=$BS_MANIFEST,TRAINING=$BS_TRAINING" \
+      slurm/train_ft.sh "$BS_DATASET" "$MODEL_REF" "bs_${RUN_TAG}"
+  )"
+fi
 
 # Train the EM model. This checkpoint feeds general SFT eval and EM eval.
 # Skipped when SKIP_EM=1 (benign-FT-only experiments).
@@ -176,7 +187,11 @@ if [[ "$SKIP_EM" != "1" ]]; then
   )"
 fi
 
-echo "BS train job id:  $BS_JOB_ID"
+if [[ "$SKIP_BS" != "1" ]]; then
+  echo "BS train job id:  $BS_JOB_ID"
+else
+  echo "BS train: skipped (SKIP_BS=1)"
+fi
 if [[ "$SKIP_EM" != "1" ]]; then
   echo "EM train job id:  $EM_JOB_ID"
 else
@@ -218,7 +233,9 @@ POST_TRAIN_EM_CMD=(
   "cd '$REPO_ROOT' && DRY_RUN=$DRY_RUN SKIP_EVAL_SFT=$SKIP_EVAL_SFT EM_JUDGE_MODE='$EM_JUDGE_MODE' EM_QUESTIONS='$EM_QUESTIONS' EM_N_PER_QUESTION='$EM_N_PER_QUESTION' bash slurm/run_post_train_evals.sh --side em --manifest '$EM_MANIFEST'"
 )
 
-printf 'Submitting %-18s %s\n' "post_train_bs" "$(printf '%q ' "${POST_TRAIN_BS_CMD[@]}")"
+if [[ "$SKIP_BS" != "1" ]]; then
+  printf 'Submitting %-18s %s\n' "post_train_bs" "$(printf '%q ' "${POST_TRAIN_BS_CMD[@]}")"
+fi
 if [[ "$SKIP_EM" != "1" ]]; then
   printf 'Submitting %-18s %s\n' "post_train_em" "$(printf '%q ' "${POST_TRAIN_EM_CMD[@]}")"
 fi
@@ -227,8 +244,10 @@ if [[ "$DRY_RUN" == "1" ]]; then
   exit 0
 fi
 
-POST_TRAIN_BS_JOB_ID="$("${POST_TRAIN_BS_CMD[@]}")"
-echo "Post-train BS wrapper job id: $POST_TRAIN_BS_JOB_ID"
+if [[ "$SKIP_BS" != "1" ]]; then
+  POST_TRAIN_BS_JOB_ID="$("${POST_TRAIN_BS_CMD[@]}")"
+  echo "Post-train BS wrapper job id: $POST_TRAIN_BS_JOB_ID"
+fi
 if [[ "$SKIP_EM" != "1" ]]; then
   POST_TRAIN_EM_JOB_ID="$("${POST_TRAIN_EM_CMD[@]}")"
   echo "Post-train EM wrapper job id: $POST_TRAIN_EM_JOB_ID"

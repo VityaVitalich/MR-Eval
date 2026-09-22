@@ -1,0 +1,49 @@
+# Emergent Misalignment training — the paper's open-model recipe (Betley et
+# al. 2025, open_models/train.json): one epoch over the 6k samples at an
+# effective batch of 16, i.e. 375 optimizer steps, warmup 5, wd 0.01, linear
+# decay. Here 16 = per-device 4 x 4 GPUs with no accumulation. The paper's
+# 1e-5 is a LoRA rate; this is a full fine-tune, so the learning rate stays at
+# em.yaml's 1e-6. Against em.yaml (64/step, 120 steps) this is 4x more, 4x
+# smaller steps over about the same data (6000 vs 7680 samples).
+#
+# max_steps is pinned to 375 rather than left to num_train_epochs so the last
+# checkpoint is guaranteed to fire: the loader drops >2048-token samples, and
+# an epoch a few samples short would stop at step 374 with the 375 save
+# silently skipped. em_health_incorrect keeps all 6000, so 375 = 1 epoch.
+#
+# Checkpoints are denser early. At 64/step the legacy runs jumped between 1k
+# and 2k samples in (steps 15-25), which is steps ~60-125 here.
+output_dir: /capstor/store/cscs/swissai/infra01/users/vvmoskvoretskii/evals/viktor
+
+num_train_epochs: 1
+per_device_train_batch_size: 4
+gradient_accumulation_steps: 1
+learning_rate: 1e-6
+weight_decay: 0.01
+warmup_steps: 5
+save_strategy: "no"
+save_steps: 500
+save_only_model: true   # weights + tokenizer only; no optimizer/scheduler/rng state
+save_at_steps:
+  - 10
+  - 25
+  - 50
+  - 100
+  - 150
+  - 225
+  - 300
+  - 375
+logging_steps: 1
+seed: 42
+bf16: true
+fp16: false
+max_steps: 375
+gradient_checkpointing: false
+dataloader_num_workers: 0
+dataloader_pin_memory: true
+disable_tqdm: false
+log_level: info
+
+do_eval: false
+eval_steps: 500
+per_device_eval_batch_size: 8
