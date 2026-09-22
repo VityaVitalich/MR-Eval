@@ -3,6 +3,9 @@
 
 Reads:
   - outputs/post_train_reports/{model}/dynamics.md        (BS + EM dynamics)
+  - outputs/em_eval/em_eval_{model}_em_incorrect_health_{step}_*.json
+        (EM dynamics of the paper-recipe runs, see EM_PAPER_RECIPE_MODELS;
+         also the misaligned share attached to report-derived EM curves)
   - outputs/post_train_reports/{model}/benign_summary.md  (capability benchmarks)
   - logs/safety_base/safety_base/*.json                   (base-model safety)
   - logs/jailbreaks/jailbreaks/advbench/*.json            (advbench per-model)
@@ -754,6 +757,19 @@ def collect_dynamics(model_id: str) -> dict:
                 "em_score":    [cols.get("em_score", [])[i]  for i in keep],
                 "coherence":   [cols.get("coherence", [])[i] for i in keep],
             }
+    # EM x axis is training samples (iteration x samples_per_iteration), so the
+    # two fine-tuning recipes plot on one axis. Paper-recipe models build the
+    # block from the eval files (the report holds only the last manifest's
+    # checkpoints); legacy blocks keep the report's means and gain the
+    # misaligned share from the file behind each row.
+    if model_id in EM_PAPER_RECIPE_MODELS:
+        em_files = collect_em_file_dynamics(model_id)
+        if em_files:
+            out["em"] = em_files
+        else:
+            out.pop("em", None)
+    elif "em" in out:
+        _attach_em_misaligned(model_id, out["em"])
     pez = collect_pez_dynamics(model_id)
     if pez:
         out["pez"] = pez
@@ -2647,25 +2663,18 @@ EM_MISALIGNED_ALIGNED_MAX = 30
 EM_MISALIGNED_COHERENT_MIN = 50
 
 
-def _rl_em_cell(aliases: list[str]) -> dict | None:
-    """EM summary for one eval target: mean scores plus the misalignment rate.
+def _em_cell_from_path(f: Path, tag: str) -> dict | None:
+    """EM summary of one result file: mean scores plus the misalignment rate.
 
     The rate is recomputed from `results` rather than read from `summary`,
     because EM's own summary block carries only the two means — and the means
     are exactly what does NOT move across a GRPO trajectory (2026-09-17). The
     tail does.
     """
-    def ok(n: str) -> bool:
-        return any(re.match(rf"^em_eval_{re.escape(a)}_\d{{8}}_\d{{6}}\.json$", n)
-                   for a in aliases)
-
-    f = oldest(scan(EM_DIRS, "em_eval_*.json", ok))
-    if not f:
-        return None
     try:
         d = json.loads(f.read_text())
     except Exception as e:
-        print(f"  ! rl-em / {f.name}: {e}")
+        print(f"  ! {tag} / {f.name}: {e}")
         return None
     rows = d.get("results") or []
     if not rows:
@@ -2687,6 +2696,121 @@ def _rl_em_cell(aliases: list[str]) -> dict | None:
         "n": len(rows),
         "judge": f"{prov.get('judge_version')} ({meta.get('judge_model') or '?'})",
     }
+
+
+def _rl_em_cell(aliases: list[str]) -> dict | None:
+    """EM summary of an eval target's own (no-checkpoint) result file."""
+    def ok(n: str) -> bool:
+        return any(re.match(rf"^em_eval_{re.escape(a)}_\d{{8}}_\d{{6}}\.json$", n)
+                   for a in aliases)
+
+    f = oldest(scan(EM_DIRS, "em_eval_*.json", ok))
+    return _em_cell_from_path(f, "rl-em") if f else None
+
+
+# ── EM fine-tuning recipes ──────────────────────────────────────────────────
+# Samples per optimizer step of the two EM recipes. The EM dynamics panel plots
+# x as iteration x samples_per_iteration so runs from both share one axis of
+# training samples seen instead of two incomparable step counts.
+#   legacy  train/conf/training/em.yaml         4 per device x 4 accum x 4 GPUs = 64
+#   paper   train/conf/training/em_paper*.yaml  4 per device x 1 accum x 4 GPUs = 16
+#           (Betley et al. 2025 open-model recipe: one epoch of 6k samples = 375 steps)
+# Every report-derived EM trajectory ran the legacy recipe. The models below
+# ran the paper recipe (2026-09-22), as two manifests each (main grid 10..375
+# and early grid 12..44), and the post-train report keeps only the checkpoints
+# of the manifest that produced it — so their curve is built from the eval
+# files directly.
+EM_SAMPLES_PER_STEP_LEGACY = 64
+EM_SAMPLES_PER_STEP_PAPER = 16
+EM_PAPER_RECIPE_MODELS = {"1pp_1p7b_asst_sft", "1pp_1p7b_ua_sft", "1pp_1p7b_raw_sft"}
+
+
+def _em_ckpt_candidates(model_id: str) -> dict[int, list[Path]]:
+    """{iteration: [files]} over every em_eval_<alias>_em_incorrect_health_<iter>_<ts>.json
+    (the older `em_health_incorrect` label order is accepted too)."""
+    out: dict[int, list[Path]] = defaultdict(list)
+    for d in EM_DIRS:
+        if not d.exists():
+            continue
+        for f in d.glob("em_eval_*.json"):
+            for a in ALIASES[model_id]:
+                m = re.match(
+                    rf"^em_eval_{re.escape(a)}_em_(?:incorrect_health|health_incorrect)_(?:checkpoint-)?(\d+)_\d{{8}}_\d{{6}}\.json$",
+                    f.name,
+                )
+                if not m:
+                    continue
+                out[int(m.group(1))].append(f)
+                break
+    return out
+
+
+def _find_em_ckpt_files(model_id: str) -> dict[int, Path]:
+    """{iteration: canonical file} — newest complete run per checkpoint."""
+    return {it: p for it, paths in _em_ckpt_candidates(model_id).items()
+            if (p := oldest(paths)) is not None}
+
+
+def collect_em_file_dynamics(model_id: str) -> dict | None:
+    """`dynamics.em` built from the eval files, for EM_PAPER_RECIPE_MODELS.
+    Same keys as the report-derived block (em_score = mean aligned, coherence)
+    plus the misaligned share, n and judge stamps."""
+    cells: dict[int, dict] = {}
+    pre = _rl_em_cell(ALIASES[model_id])
+    if pre:
+        cells[0] = pre
+    for it, f in _find_em_ckpt_files(model_id).items():
+        cell = _em_cell_from_path(f, f"em-dyn / {model_id}")
+        if cell:
+            cells[it] = cell
+    if not any(it > 0 for it in cells):
+        return None
+    iters = sorted(cells)
+    judges: list[str] = []
+    for it in iters:
+        if cells[it]["judge"] not in judges:
+            judges.append(cells[it]["judge"])
+    return {
+        "iterations":     iters,
+        "em_score":       [cells[it]["aligned_mean"] for it in iters],
+        "coherence":      [cells[it]["coherent_mean"] for it in iters],
+        "misaligned_pct": [cells[it]["misaligned_pct"] for it in iters],
+        "n":              [cells[it]["n"] for it in iters],
+        "judges":         judges,
+        "samples_per_iteration": EM_SAMPLES_PER_STEP_PAPER,
+    }
+
+
+def _attach_em_misaligned(model_id: str, blk: dict) -> None:
+    """Add `misaligned_pct` (and the recipe's samples_per_iteration) to a
+    report-derived EM block. The report stays authoritative for the means; a
+    file contributes its rate only when its mean alignment reproduces the
+    report's value to 0.01, so the rate never comes from a different run than
+    the means beside it. No matching file -> None for that iteration."""
+    cands = _em_ckpt_candidates(model_id)
+    # Iteration 0 is the base model's own file; several may exist (re-runs),
+    # and the report may have summarised an older one than oldest() picks.
+    cands[0] = scan(EM_DIRS, "em_eval_*.json", lambda n: any(
+        re.match(rf"^em_eval_{re.escape(a)}_\d{{8}}_\d{{6}}\.json$", n) for a in ALIASES[model_id]))
+    rates: list[float | None] = []
+    judges: list[str] = []
+    for it, score in zip(blk["iterations"], blk["em_score"]):
+        files = sorted(cands.get(it, []), key=lambda p: p.stat().st_mtime, reverse=True)
+        rate = None
+        for f in files:
+            cell = _em_cell_from_path(f, f"em-dyn / {model_id}")
+            if not cell or score is None or cell["aligned_mean"] is None:
+                continue
+            if abs(cell["aligned_mean"] - score) < 0.011:
+                rate = cell["misaligned_pct"]
+                if cell["judge"] not in judges:
+                    judges.append(cell["judge"])
+                break
+        rates.append(rate)
+    blk["misaligned_pct"] = rates
+    if judges:
+        blk["judges"] = judges
+    blk["samples_per_iteration"] = EM_SAMPLES_PER_STEP_LEGACY
 
 
 def collect_rl_em_dynamics(model_id: str) -> dict | None:
@@ -3109,30 +3233,17 @@ def _find_em(model_id: str) -> Path | None:
         return any(re.match(rf"^em_eval_{re.escape(a)}_\d{{8}}_\d{{6}}\.json$", n) for a in ALIASES[model_id])
     return oldest(scan(EM_DIRS, "em_eval_*.json", ok))
 
-# Canonical post-train iterations (same as the dashboard dynamics view).
-# With per-model diagnostics files this no longer inflates any single file.
+# Canonical post-train iterations (the legacy EM dynamics grid). Used only when
+# a model's plotted `dynamics.em` curve is unknown; otherwise the diagnostics
+# carry exactly the checkpoints the panel plots, so its coherence-bounds
+# recompute has a per-sample file for every point.
 EM_DYN_ITERATIONS  = {10, 30, 50, 70, 90, 110}
 JBB_DYN_ITERATIONS = {374, 748, 1122, 1496, 1870}
 
-def _find_em_variants(model_id: str) -> dict[int, Path]:
-    """Return {iteration: path} for em_eval_<alias>_em_incorrect_health_<iter>_<ts>.json runs."""
-    out: dict[int, list[Path]] = defaultdict(list)
-    for d in EM_DIRS:
-        if not d.exists():
-            continue
-        for f in d.glob("em_eval_*.json"):
-            for a in ALIASES[model_id]:
-                m = re.match(
-                    rf"^em_eval_{re.escape(a)}_em_incorrect_health_(?:checkpoint-)?(\d+)_\d{{8}}_\d{{6}}\.json$",
-                    f.name,
-                )
-                if not m:
-                    continue
-                it = int(m.group(1))
-                if it in EM_DYN_ITERATIONS:
-                    out[it].append(f)
-                break
-    return {it: p for it, paths in out.items() if (p := oldest(paths)) is not None}
+def _find_em_variants(model_id: str, wanted: set[int] | None = None) -> dict[int, Path]:
+    """Return {iteration: path} for the checkpoint EM runs the dynamics panel plots."""
+    keep = wanted or EM_DYN_ITERATIONS
+    return {it: p for it, p in _find_em_ckpt_files(model_id).items() if it in keep}
 
 def _find_jbb_per_attack_variants(model_id: str) -> dict[int, dict[str, Path]]:
     """For each checkpoint iteration, map method → latest results.jsonl from
@@ -3526,12 +3637,16 @@ def _new_diag_variants(diag_bench: str, model_id: str) -> dict:
     return variants
 
 
-def build_diagnostics(all_ids: set[str], out_dir: Path) -> dict:
+def build_diagnostics(all_ids: set[str], out_dir: Path, models: dict | None = None) -> dict:
     """Produce one JSON file per (benchmark, model) under `out_dir/<bench>/`,
     plus a top-level `index.json` enumerating what's available. The UI
     fetches `<bench>/<model>.json` on demand — keeps each file to a few MB
     regardless of how many checkpoint variants exist.
+
+    `models` is data.json's per-model payload; when given, the EM checkpoint
+    variants follow each model's plotted `dynamics.em.iterations`.
     """
+    models = models or {}
     # Wipe stale per-bench/per-model files from previous builds. The
     # `provenance/` subdir is owned by emit_lazy_provenance_samples, which runs
     # earlier in main() and has already written this build's files — skip it,
@@ -3748,7 +3863,8 @@ def build_diagnostics(all_ids: set[str], out_dir: Path) -> dict:
                         model_variants["base"] = {"label": "base", "source": base_f.name, "items": items}
                     except Exception as e:
                         print(f"  ! em / {mid} / base: {e}")
-                for it, path in sorted(_find_em_variants(mid).items()):
+                em_iters = set(((models.get(mid) or {}).get("dynamics") or {}).get("em", {}).get("iterations") or [])
+                for it, path in sorted(_find_em_variants(mid, em_iters - {0}).items()):
                     try:
                         items = [_slim_em(r) for r in _load_results_list(path)]
                         model_variants[f"ckpt_{it}"] = {"label": f"ckpt {it}", "iteration": it, "source": path.name, "items": items}
@@ -4092,7 +4208,7 @@ def main() -> None:
     # checkpoint variants for EM and JBB.
     diag_dir = Path(__file__).resolve().parent / "diagnostics"
     print("\nDiagnostics:")
-    index = build_diagnostics(all_ids, diag_dir)
+    index = build_diagnostics(all_ids, diag_dir, models=data["models"])
     (diag_dir / "index.json").write_text(json.dumps(index))
     # Remove the old monolithic file if present from previous builds.
     old = Path(__file__).resolve().parent / "diagnostics.json"

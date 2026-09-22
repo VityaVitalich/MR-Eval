@@ -438,6 +438,32 @@ def validate_data_json(data: dict) -> None:
                 "trajectory must be scored by the same judge and prompt version.",
             )
 
+    # 9e. The SFT-side EM trajectories (dynamics.em): same judge rule, plus the
+    # x-axis scale. The panel plots iteration x samples_per_iteration because
+    # two fine-tuning recipes (64 vs 16 samples per step) share the chart; a
+    # block without the scale would silently plot steps as samples.
+    for mid, payload in models.items():
+        blk = (payload.get("dynamics") or {}).get("em") or {}
+        if not blk:
+            continue
+        spi = blk.get("samples_per_iteration")
+        if not (isinstance(spi, (int, float)) and not isinstance(spi, bool) and spi > 0):
+            _fail(
+                f"models.{mid}.dynamics.em.samples_per_iteration",
+                "missing — every EM dynamics block must say how many training "
+                "samples one iteration is (build_data EM_SAMPLES_PER_STEP_*).",
+            )
+        raw_judges = blk.get("judges")
+        if not isinstance(raw_judges, list) or not raw_judges:
+            continue
+        stamps = {str(e).strip() for e in raw_judges if isinstance(e, str) and e.strip()}
+        if len(stamps) > 1:
+            _fail(
+                f"models.{mid}.dynamics.em.judges",
+                f"plot mixes judges: {sorted(stamps)} — every checkpoint of one EM "
+                "trajectory must be scored by the same judge and prompt version.",
+            )
+
 
 def validate_judge_benchmark(out: dict, manifest: dict, dataset_keys: set[str]) -> None:
     """Hard-fail invariants on ``judge_benchmark.json``."""
