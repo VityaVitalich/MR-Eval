@@ -2724,7 +2724,14 @@ def _rl_em_cell(aliases: list[str]) -> dict | None:
 # files directly.
 EM_SAMPLES_PER_STEP_LEGACY = 64
 EM_SAMPLES_PER_STEP_PAPER = 16
-EM_PAPER_RECIPE_MODELS = {"1pp_1p7b_asst_sft", "1pp_1p7b_ua_sft", "1pp_1p7b_raw_sft"}
+EM_PAPER_RECIPE_MODELS = {
+    "1pp_1p7b_asst_sft", "1pp_1p7b_ua_sft", "1pp_1p7b_raw_sft",
+    # the five SPP paper variants (3B / 500B, SP-SFT 10 % safety, cite text),
+    # EM-trained with em_paper + em_paper_early on 2026-09-22
+    "pbsftmix_cite_normal_3b_s10", "pbsftmix_cite_normal_nbd_3b_s10",
+    "pbsftmix_cite_epe_nobce_3b_s10", "pbsftmix_cite_epe_nobce_rmid_normal_3b_s10",
+    "pbsftmix_cite_epe_nobce_rmid_epe_3b_s10",
+}
 
 
 def _em_ckpt_candidates(model_id: str) -> dict[int, list[Path]]:
