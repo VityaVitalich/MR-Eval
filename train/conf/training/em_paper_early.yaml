@@ -1,0 +1,41 @@
+# em_paper.yaml re-run that only changes WHERE it saves: the same 375-step,
+# batch-16, lr 1e-6 epoch (the linear schedule needs the full max_steps, so the
+# run is not shortened), with checkpoints packed into the first ~700 samples,
+# where the first sweep (10/25/50 = 160/400/800 samples) jumped from ~2 % to
+# ~10 % misaligned. Steps are the nearest integers to 200/300/500/600/700
+# samples at 16 per step: 12=192, 19=304, 31=496, 37=592, 44=704. Step 25
+# (400) is repeated on purpose as a run-to-run reproducibility control against
+# the first sweep's checkpoint-25 (same seed, same data order; bf16 on 4 GPUs
+# is not guaranteed bit-exact).
+output_dir: /capstor/store/cscs/swissai/infra01/users/vvmoskvoretskii/evals/viktor
+
+num_train_epochs: 1
+per_device_train_batch_size: 4
+gradient_accumulation_steps: 1
+learning_rate: 1e-6
+weight_decay: 0.01
+warmup_steps: 5
+save_strategy: "no"
+save_steps: 500
+save_only_model: true   # weights + tokenizer only; no optimizer/scheduler/rng state
+save_at_steps:
+  - 12
+  - 19
+  - 25
+  - 31
+  - 37
+  - 44
+logging_steps: 1
+seed: 42
+bf16: true
+fp16: false
+max_steps: 375
+gradient_checkpointing: false
+dataloader_num_workers: 0
+dataloader_pin_memory: true
+disable_tqdm: false
+log_level: info
+
+do_eval: false
+eval_steps: 500
+per_device_eval_batch_size: 8
