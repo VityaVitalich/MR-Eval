@@ -56,7 +56,7 @@
   #facet-individual .ind-chip.legacy, .model-picker label.legacy { border-style: dashed; }
 
   .dyn-controls { display: flex; gap: 14px; align-items: flex-start; flex-wrap: wrap; margin-bottom: 8px; }
-  .dyn-controls[hidden] { display: none; }
+  .dyn-controls[hidden], .dyn-controls label.field[hidden] { display: none; }
   .dyn-controls label.field { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--muted); }
   .dyn-rates .dyn-controls input { background: var(--bg); color: var(--text); border: 1px solid var(--border-strong); border-radius: 4px; padding: 5px 8px; font-size: 14px; }
   .dyn-rates .dyn-controls button { align-self: flex-end; padding: 6px 10px; }
@@ -921,8 +921,8 @@
   <div class="panel">
     <p class="note">
       Emergent misalignment while fine-tuning on incorrect health advice, per
-      checkpoint: mean alignment and mean coherence. x is
-      training samples seen, step &times; effective batch, so the two recipes
+      checkpoint: mean alignment and mean coherence. Training progress is measured in
+      samples seen, step &times; effective batch, so the two recipes
       share one axis: the legacy recipe (<code>em.yaml</code>) takes 64 samples
       per step, the paper recipe (<code>em_paper.yaml</code>: one epoch of 6k
       samples in 375 steps) takes 16.
@@ -941,7 +941,7 @@
       </label>
       <span class="field" style="flex:1"><span class="label">&nbsp;</span><span id="em-dyn-coh-note" class="note"></span></span>
     </div>
-    <p class="note">Whiskers: pointwise 95% percentile bootstrap CIs, 2,000 resamples of retained test questions; responses from each question stay together. Bounds filter responses before resampling. Hover for interval and sample counts.</p>
+    <p class="note" id="em-ci-note">Whiskers: pointwise 95% percentile bootstrap CIs, 2,000 resamples of retained test questions; responses from each question stay together. Bounds filter responses before resampling. Hover for interval and sample counts.</p>
     <div class="model-picker" id="em-models"></div>
     <div class="dyn-warning" id="em-dyn-warning" hidden></div>
     <div class="chart-card"><canvas id="em-chart"></canvas></div>
@@ -3877,7 +3877,7 @@ function createDynamicsStatistics({ metricSelId, statusId, minId, maxId, clearId
   let rerender;
   function transform(model, blk) {
     if (!enabled()) return blk;
-    const metric = document.getElementById(metricSelId).value;
+    const metric = dynamicsMetricKey(metricSelId);
     const empty = { ...blk, [metric]: blk.iterations.map(() => null), statistics: [] };
     const file = blk.test_samples_file;
     if (!file) {
@@ -4055,133 +4055,141 @@ function dynamicsRateAggregate(rates, method) {
   return { value: values.reduce((sum, v) => sum + transform(v), 0) / n, n };
 }
 
+// Score, local slope, and aggregate slope are views of the selected metric.
+function expandDynamicsMetrics(select) {
+  const selected = select.value;
+  const metrics = [...select.options].filter(o => !o.value.includes('::')).map(o => [o.value, o.textContent]);
+  select.innerHTML = metrics.map(([key, label]) => `<optgroup label="${jbEscape(label)}">` +
+    [[key, label], [key + '::slope', label + ' · local slope'], [key + '::aggregate', label + ' · aggregate slope']]
+      .map(([value, text]) => `<option value="${value}">${jbEscape(text)}</option>`).join('') + '</optgroup>').join('');
+  select.value = selected;
+}
+function dynamicsMetricKey(id) { return document.getElementById(id).value.split('::')[0]; }
+
 function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, metricLabels, xMode, transformBlk, yOpts, xLabel: xLabelOverride, tableEveryN, datasetSelId, blockForModel, preserveModelSelection = false, statistics }) {
   // xMode: 'epoch' (index 0..N-1, labeled "Epoch") or 'iteration' (raw step).
   const xLabel = xLabelOverride || (xMode === 'epoch' ? 'Epoch' : 'iteration');
   const chart = makeDynChart(chartId, xLabel, yOpts);
   let sortState = { col: null, dir: 'asc' };  // col: null (model name) | column key
   const modelSelection = new Map();
+  const metricSelect = document.getElementById(metricSelId);
+  expandDynamicsMetrics(metricSelect);
+  const scoreTooltip = chart.config.options.plugins.tooltip.callbacks.label;
   const rateHost = document.createElement('div');
   rateHost.id = `${kind}-rates`;
   rateHost.className = 'dyn-rates';
-  rateHost.innerHTML = `<h3>Local rate of change</h3>
-    <div class="dyn-controls">
-      <label class="field">Method <select id="${kind}-rate-method">
+  rateHost.hidden = true;
+  rateHost.innerHTML = `<div class="dyn-controls">
+      <label class="field">Slope method <select id="${kind}-rate-method">
         <option value="previous">Previous checkpoint</option><option value="centered">Centered slope</option><option value="fit">Moving linear fit</option>
       </select></label>
-      <label class="field">Fit window (checkpoints) <input id="${kind}-rate-window" type="number" min="3" step="2" value="3" style="width:100px" disabled></label>
+      <label class="field" id="${kind}-rate-window-field" hidden>Fit window (checkpoints) <input id="${kind}-rate-window" type="number" min="3" step="2" value="3" style="width:100px"></label>
+      <label class="field" id="${kind}-rate-aggregate-field" hidden>Aggregate <select id="${kind}-rate-aggregate">
+        <option value="decline">Mean decline magnitude</option><option value="rise">Mean rise magnitude</option>
+        <option value="absolute">Mean absolute slope</option><option value="median">Median signed slope</option><option value="mean">Mean signed slope</option>
+      </select></label>
       <label class="field">From <input id="${kind}-rate-min" type="number" step="any" placeholder="first checkpoint" style="width:140px"></label>
       <label class="field">To <input id="${kind}-rate-max" type="number" step="any" placeholder="last checkpoint" style="width:140px"></label>
       <button type="button" id="${kind}-rate-clear">Full range</button>
     </div>
     <p class="note" id="${kind}-rate-note"></p>
-    <p class="note" id="${kind}-rate-status" role="status"></p>
-    <div class="chart-card"><canvas id="${kind}-rate-chart"></canvas></div>
-    <div class="dyn-controls" style="margin-top:14px">
-      <label class="field">Aggregate of local rates <select id="${kind}-rate-aggregate">
-        <option value="decline">Mean decline magnitude</option><option value="rise">Mean rise magnitude</option>
-        <option value="absolute">Mean absolute slope</option><option value="median">Median signed slope</option><option value="mean">Mean signed slope</option>
-      </select></label>
-    </div>
-    <p class="note" id="${kind}-rate-aggregate-note"></p>
-    <div style="max-height:440px;overflow-y:auto"><div class="chart-card" id="${kind}-rate-aggregate-card"><canvas id="${kind}-rate-aggregate-chart" style="max-height:none"></canvas></div></div>`;
-  document.getElementById(tableId).before(rateHost);
+    <p class="note" id="${kind}-rate-status" role="status"></p>`;
+  metricSelect.closest('.dyn-controls').after(rateHost);
   const rateMin = document.getElementById(`${kind}-rate-min`);
   const rateMax = document.getElementById(`${kind}-rate-max`);
   const rateMethod = document.getElementById(`${kind}-rate-method`);
   const rateWindow = document.getElementById(`${kind}-rate-window`);
   const rateAggregate = document.getElementById(`${kind}-rate-aggregate`);
-  const rateChart = makeDynChart(`${kind}-rate-chart`, xLabel);
-  rateChart.options.plugins.tooltip.callbacks.label = c => [
-    `${c.dataset.label}: ${c.parsed.y.toFixed(2)}`,
-    `Support: ${c.raw.start}–${c.raw.end} (${c.raw.checkpoints} checkpoints)`,
-  ];
-  const aggregateChart = new Chart(document.getElementById(`${kind}-rate-aggregate-chart`), {
-    type: 'bar', data: { labels: [], datasets: [] },
-    options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, animation: false,
-      scales: { x: { beginAtZero: true, title: { display: true, text: '' } },
-        y: { ticks: { autoSkip: false, callback(value) {
-          const label = this.getLabelForValue(value); return label.length > 55 ? label.slice(0, 52) + '…' : label;
-        } } } },
-      plugins: { legend: { display: false }, tooltip: { callbacks: {
-        label: c => `${c.dataset.label}: ${c.parsed.x.toFixed(2)} (${c.dataset.counts[c.dataIndex]} local estimates)`,
+  let currentData;
+  function configureChart(ax, label, aggregate = false) {
+    chart.config.type = aggregate ? 'bar' : 'line';
+    const opts = chart.config.options;
+    opts.indexAxis = aggregate ? 'y' : 'x';
+    opts.interaction = { intersect: false, mode: 'nearest', axis: aggregate ? 'y' : 'x' };
+    opts.scales = aggregate ? {
+      x: { type: 'linear', beginAtZero: true, title: { display: true, text: label } },
+      y: { type: 'category', ticks: { callback(value) {
+        const text = this.getLabelForValue(value); return text.length > 55 ? text.slice(0, 52) + '…' : text;
       } } },
-    },
-  });
-  let rateRows = [], rateAxis;
-  function renderRates() {
+    } : {
+      x: { type: 'linear', ticks: { precision: 0 }, grid: { color: '#e3e6eb' }, title: { display: true, text: ax.label } },
+      y: { beginAtZero: metricSelect.value.includes('::') || (kind === 'grpo' ? document.getElementById('grpo-dataset').value === 'rl_jbb' : (yOpts?.beginAtZero ?? true)),
+        grid: { color: '#e3e6eb' }, title: { display: true, text: label } },
+    };
+    opts.plugins.legend.display = !aggregate;
+    opts.plugins.tooltip.callbacks.label = aggregate ? c =>
+      `${c.dataset.label}: ${c.parsed.x.toFixed(2)} (${c.dataset.counts[c.dataIndex]} local estimates)` :
+      metricSelect.value.includes('::') ? c => [
+        `${c.dataset.label}: ${c.parsed.y.toFixed(2)}`,
+        `Support: ${c.raw.start}–${c.raw.end} (${c.raw.checkpoints} checkpoints)`,
+      ] : scoreTooltip;
+  }
+  function renderRateMetric(rows, ax, metric, aggregate) {
     const note = document.getElementById(`${kind}-rate-note`);
     const status = document.getElementById(`${kind}-rate-status`);
-    const aggregateNote = document.getElementById(`${kind}-rate-aggregate-note`);
-    rateChart.data.datasets = []; aggregateChart.data = { labels: [], datasets: [] };
-    rateChart.update(); aggregateChart.update();
-    status.textContent = ''; note.textContent = ''; aggregateNote.textContent = '';
-    rateWindow.disabled = rateMethod.value !== 'fit';
-    if (!rateAxis) return;
+    const unit = ax.mode === 'epoch' ? 1 : 100;
+    const denominator = ax.mode === 'epoch' ? 'epoch' : `100 ${ax.label}${ax.label.endsWith('s') ? '' : 's'}`;
+    const units = `${kind === 'pez' ? 'loss units' : 'score points'} / ${denominator}`;
+    configureChart(ax, `${metricLabels[metric]} · ${units}`, aggregate);
+    chart.data = { labels: [], datasets: [] };
+    note.textContent = ''; status.textContent = '';
     const min = rateMin.value === '' ? null : Number(rateMin.value);
     const max = rateMax.value === '' ? null : Number(rateMax.value);
     if (rateMin.validity.badInput || rateMax.validity.badInput ||
         (min !== null && !Number.isFinite(min)) || (max !== null && !Number.isFinite(max)) ||
         (min !== null && max !== null && min > max)) {
-      status.textContent = 'Enter a valid training range with From ≤ To.'; return;
+      status.textContent = 'Enter a valid training range with From ≤ To.'; chart.update(); return;
     }
     const windowSize = Number(rateWindow.value);
     if (rateMethod.value === 'fit' && (!Number.isInteger(windowSize) || windowSize < 3 || windowSize % 2 !== 1)) {
-      status.textContent = 'The moving fit needs an odd window of at least 3 checkpoints.'; return;
+      status.textContent = 'The moving fit needs an odd window of at least 3 checkpoints.'; chart.update(); return;
     }
-    const unit = rateAxis.mode === 'epoch' ? 1 : 100;
-    const denominator = rateAxis.mode === 'epoch' ? 'epoch' : `100 ${rateAxis.label}${rateAxis.label.endsWith('s') ? '' : 's'}`;
-    const metric = document.getElementById(metricSelId).value;
-    const units = `${kind === 'pez' ? 'loss units' : 'score points'} / ${denominator}`;
     const descriptions = {
       previous: 'Change since the previous checkpoint, divided by the training interval; plotted at the later checkpoint.',
       centered: 'Change between the preceding and following checkpoints, divided by their training interval; plotted at the middle checkpoint.',
       fit: `Equal-weight linear fit to ${windowSize} consecutive checkpoints, plotted at the middle checkpoint.`,
     };
-    note.textContent = `${metricLabels[metric]} · ${units}. Negative = falling. ${descriptions[rateMethod.value]} ` +
-      `Only checkpoints inside the selected ${rateAxis.label} range are used. Missing neighbors and incomplete edge windows have no estimate. Rates have no CIs; the score CIs above do not measure slope uncertainty.` +
-      (kind === 'em' || (kind === 'grpo' && document.getElementById('grpo-dataset').value === 'rl_em') ?
-        ' Coherence filtering may change the retained test set between checkpoints.' : '');
-    const aggregates = [], unavailable = [];
-    for (const { m, points } of rateRows) {
-      const rates = dynamicsLocalRates(points, rateMethod.value, windowSize, min, max)
-        .map(p => ({ ...p, y: p.y === null ? null : p.y * unit }));
-      const aggregate = dynamicsRateAggregate(rates, rateAggregate.value);
-      if (aggregate === null) { unavailable.push(m.display.replace(/<[^>]*>/g, '')); continue; }
-      rateChart.data.datasets.push({ label: m.display, data: rates, borderColor: dynColor(m.id),
-        backgroundColor: 'transparent', borderWidth: 2, borderDash: dashFor(m.id), tension: 0, pointRadius: 3, spanGaps: false });
-      aggregates.push({ m, ...aggregate });
-    }
-    if (unavailable.length) status.textContent = `No valid local estimate for: ${unavailable.join(', ')}. ` +
-      (rateMethod.value === 'previous' ? 'Requires two adjacent scored checkpoints.' :
-        `Requires ${rateMethod.value === 'centered' ? 3 : windowSize} consecutive scored checkpoints; no shorter-window substitution.`);
-    if (!rateRows.length) status.textContent = 'No selected trajectories available.';
-    rateChart.options.scales.x.title.text = rateAxis.label;
-    rateChart.options.scales.y.title = { display: true, text: units };
-    for (const bound of ['min', 'max']) delete rateChart.options.scales.x[bound];
-    if (min !== null) rateChart.options.scales.x.min = min;
-    if (max !== null) rateChart.options.scales.x.max = max;
-    rateChart.update();
     const aggregateDescriptions = {
       decline: 'Mean max(−slope, 0): falling rates contribute their magnitude; flat and rising rates contribute zero. Recoveries cannot cancel declines.',
       rise: 'Mean max(slope, 0): rising rates contribute their magnitude; flat and falling rates contribute zero.',
-      absolute: 'Mean |slope|: captures movement in both directions without cancellation.',
-      median: 'Median local slope: the middle signed rate; occasional sharp changes can be hidden.',
+      absolute: 'Mean |slope|: movement in both directions without cancellation.',
+      median: 'Median local slope: the middle signed rate.',
       mean: 'Arithmetic mean of local slopes: opposite directions can cancel.',
     };
-    aggregateNote.textContent = `${aggregateDescriptions[rateAggregate.value]} Each valid local estimate has equal weight (not interval-length weighting). Uses the selected method and training range. Units: ${units}. Hover for the number of estimates.`;
-    aggregates.sort((a, b) => ['median', 'mean'].includes(rateAggregate.value) ? a.value - b.value : b.value - a.value);
-    aggregateChart.data = { labels: aggregates.map(r => r.m.display.replace(/<[^>]*>/g, '')),
-      datasets: [{ label: rateAggregate.selectedOptions[0].textContent, data: aggregates.map(r => r.value),
-        backgroundColor: aggregates.map(r => dynColor(r.m.id)), counts: aggregates.map(r => r.n) }] };
-    document.getElementById(`${kind}-rate-aggregate-card`).style.height = `${Math.max(170, 65 + aggregates.length * 28)}px`;
-    aggregateChart.options.scales.x.title.text = units;
-    aggregateChart.update();
+    note.textContent = `${descriptions[rateMethod.value]} ` + (aggregate ?
+      `${aggregateDescriptions[rateAggregate.value]} Each valid local estimate has equal weight. ` : 'Negative = falling. ') +
+      `Uses only checkpoints inside the selected ${ax.label} range. Missing neighbors and incomplete edge windows have no estimate. Slope CIs are not available.` +
+      (kind === 'em' || (kind === 'grpo' && document.getElementById('grpo-dataset').value === 'rl_em') ?
+        ' Coherence filtering may change the retained test set between checkpoints.' : '');
+    const aggregates = [], unavailable = [];
+    for (const { m, points } of rows) {
+      const rates = dynamicsLocalRates(points, rateMethod.value, windowSize, min, max)
+        .map(p => ({ ...p, y: p.y === null ? null : p.y * unit }));
+      const summary = dynamicsRateAggregate(rates, rateAggregate.value);
+      if (summary === null) { unavailable.push(m.display.replace(/<[^>]*>/g, '')); continue; }
+      chart.data.datasets.push({ label: m.display, data: rates, borderColor: dynColor(m.id),
+        backgroundColor: 'transparent', borderWidth: 2, borderDash: dashFor(m.id), tension: 0, pointRadius: 3, spanGaps: false });
+      aggregates.push({ m, ...summary });
+    }
+    if (unavailable.length) status.textContent = `No valid local estimate for: ${unavailable.join(', ')}. ` +
+      (rateMethod.value === 'previous' ? 'Requires two adjacent scored checkpoints.' :
+        `Requires ${rateMethod.value === 'centered' ? 3 : windowSize} consecutive scored checkpoints.`);
+    if (!rows.length) status.textContent = 'No selected trajectories available.';
+    if (aggregate) {
+      aggregates.sort((a, b) => ['median', 'mean'].includes(rateAggregate.value) ? a.value - b.value : b.value - a.value);
+      chart.data = { labels: aggregates.map(r => r.m.display.replace(/<[^>]*>/g, '')),
+        datasets: [{ label: rateAggregate.selectedOptions[0].textContent, data: aggregates.map(r => r.value),
+          backgroundColor: aggregates.map(r => dynColor(r.m.id)), counts: aggregates.map(r => r.n) }] };
+    } else {
+      if (min !== null) chart.config.options.scales.x.min = min;
+      if (max !== null) chart.config.options.scales.x.max = max;
+    }
+    chart.update();
   }
-  for (const el of [rateMin, rateMax, rateWindow]) el.addEventListener('input', renderRates);
-  for (const el of [rateMethod, rateAggregate]) el.addEventListener('change', renderRates);
+  for (const el of [rateMin, rateMax, rateWindow]) el.addEventListener('input', () => render(currentData));
+  for (const el of [rateMethod, rateAggregate]) el.addEventListener('change', () => render(currentData));
   document.getElementById(`${kind}-rate-clear`).addEventListener('click', () => {
-    rateMin.value = ''; rateMax.value = ''; renderRates();
+    rateMin.value = ''; rateMax.value = ''; render(currentData);
   });
   // Optional hook to recompute blk on the fly (e.g. EM coherence bounds).
   const applyTransform = statistics ? statistics.transform : (transformBlk || ((m, blk) => blk));
@@ -4241,11 +4249,19 @@ function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, met
   }
 
   function render(data) {
-    rateRows = []; rateAxis = null;
-    renderRates();
+    currentData = data;
+    const view = metricSelect.value.split('::')[1] || 'score';
+    rateHost.hidden = view === 'score';
+    document.getElementById(`${kind}-rate-window-field`).hidden = rateMethod.value !== 'fit';
+    document.getElementById(`${kind}-rate-aggregate-field`).hidden = view !== 'aggregate';
+    document.getElementById(`${kind}-rate-status`).textContent = '';
+    document.getElementById(tableId).hidden = view !== 'score';
+    const ciNote = document.getElementById(`${kind}-ci-note`);
+    if (ciNote) ciNote.hidden = view !== 'score' || (kind === 'grpo' && document.getElementById('grpo-dataset').value !== 'rl_em');
+    const rateRows = [];
     statistics?.begin();
     const items = modelsWithKind(data);
-    const metric = document.getElementById(metricSelId).value;
+    const metric = dynamicsMetricKey(metricSelId);
     const checked = new Set([...document.querySelectorAll(`#${pickerId} input:checked`)].map(i => i.value));
 
     // Cross-model stamp uniformity. When 2+ selected models would plot on
@@ -4291,7 +4307,6 @@ function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, met
     if (warnEl) warnEl.hidden = true;
 
     const ax = axisFor(data);
-    rateAxis = ax;
     const datasets = [];
     for (const { m, blk: rawBlk, available } of items) {
       if (!available || !checked.has(m.id)) continue;
@@ -4315,19 +4330,20 @@ function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, met
         pointRadius: 3,
       });
     }
-    chart.data.datasets = datasets;
-    const ciPoints = datasets.flatMap(ds => ds.data).filter(p => p.low != null && p.high != null);
-    delete chart.options.scales.y.suggestedMin;
-    delete chart.options.scales.y.suggestedMax;
-    if (ciPoints.length) {
-      chart.options.scales.y.suggestedMin = Math.min(...ciPoints.map(p => p.low));
-      chart.options.scales.y.suggestedMax = Math.max(...ciPoints.map(p => p.high));
+    if (view === 'score') {
+      configureChart(ax, metricLabels[metric]);
+      chart.data = { labels: [], datasets };
+      const ciPoints = datasets.flatMap(ds => ds.data).filter(p => p.low != null && p.high != null);
+      if (ciPoints.length) {
+        chart.config.options.scales.y.suggestedMin = Math.min(...ciPoints.map(p => p.low));
+        chart.config.options.scales.y.suggestedMax = Math.max(...ciPoints.map(p => p.high));
+      }
+      chart.update();
+      renderTable(data, items, metric, checked);
+    } else {
+      document.getElementById(tableId).innerHTML = '';
+      renderRateMetric(rateRows, ax, metric, view === 'aggregate');
     }
-    chart.options.scales.y.title = { display: true, text: metricLabels[metric] || metric, color: '#6b7280' };
-    chart.options.scales.x.title.text = ax.label;
-    chart.update();
-    renderRates();
-    renderTable(data, items, metric, checked);
     renderJudges(items, checked);
     statistics?.finish();
   }
@@ -4497,7 +4513,7 @@ function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, met
     if (opts.includes(prev)) el.value = prev;
   }
 
-  return { render, chart, rateChart, aggregateChart, setup(data) {
+  return { render, chart, setup(data) {
     renderDatasetSelector(data);
     renderPicker(data);
     const pickerEl = document.getElementById(pickerId);
@@ -4828,6 +4844,7 @@ function renderDynamics(data) {
     const ds = grpoDatasets[grpoDataset.value];
     grpoMetric.innerHTML = ds.metrics
       .map(([key, label]) => `<option value="${key}">${jbEscape(label)}</option>`).join('');
+    expandDynamicsMetrics(grpoMetric);
     grpoMetric.value = selectedMetrics.get(grpoDataset.value);
     document.getElementById('grpo-note').textContent = ds.note;
     document.getElementById('grpo-coherence').hidden = grpoDataset.value !== 'rl_em';
