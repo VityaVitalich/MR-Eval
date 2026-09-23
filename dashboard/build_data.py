@@ -1813,6 +1813,80 @@ def collect_charter_mcq(model_id: str) -> dict | None:
     }
 
 
+# Charter MCQ along post-SFT training of the 1PP 1.7B trio, attached as extra
+# metrics to the Dynamics blocks those runs already have (see
+# attach_charter_mcq_dynamics). Result files are named after the checkpoint
+# labels the JBB/EM evals use (clariden charter_mcq/logs/submit_1pp_1p7b_ft_*.tsv).
+# ``path`` = where in data.models[host].dynamics the block lives; ``start`` = the
+# checkpoint the run started from (iteration 0); ``step`` = per-checkpoint label.
+CHARTER_MCQ_TRAJECTORIES = [
+    {"host": "1pp_1p7b_{c}_gsm8kmix_e2", "path": ("rl_charter",), "create": True,
+     "start": "1pp_1p7b_{c}_gsm8kmix_e2", "step": "1pp_1p7b_{c}_gsm8kmix_e2_grpo_s{s}",
+     "steps": list(range(10, 101, 10))},
+    {"host": "1pp_1p7b_{c}_sft", "path": ("alpaca", "no_safety_2k"), "create": False,
+     "start": "1pp_1p7b_{c}_sft", "step": "1pp_1p7b_{c}_sft_bs_alpaca_no_safety_2k_{s}",
+     "steps": list(range(5, 101, 5))},
+    {"host": "1pp_1p7b_{c}_sft", "path": ("em",), "create": False,
+     "start": "1pp_1p7b_{c}_sft", "step": "1pp_1p7b_{c}_sft_em_incorrect_health_{s}",
+     "steps": [10, 12, 19, 25, 31, 37, 44, 50, 100, 150, 225, 300, 375]},
+]
+CHARTER_MCQ_TRAJ_CONDITIONS = ("asst", "ua", "raw")
+CHARTER_MCQ_DYN_KEYS = {"charter_hard": ("band", "hard"), "charter_overall": ("acc", None),
+                        "charter_mid": ("band", "mid"), "charter_easy": ("band", "easy")}
+
+
+def _charter_mcq_point(name: str) -> dict | None:
+    """Charter MCQ accuracies (percent) of one checkpoint label, chat scorer."""
+    f = next((p for d in CHARTER_MCQ_DIRS
+              if (p := d / f"charter_mcq__{name}__swap-debias-v1__greedy.json").exists()), None)
+    if not f:
+        return None
+    m = json.loads(f.read_text()).get("metrics", {}) or {}
+    b = m.get("band_acc") or {}
+    out = {}
+    for key, (src, band) in CHARTER_MCQ_DYN_KEYS.items():
+        v = m.get("acc") if src == "acc" else b.get(band)
+        out[key] = None if v is None else round(100 * v, 2)
+    return out
+
+
+def attach_charter_mcq_dynamics(data: dict) -> None:
+    """Add charter_* series to existing Dynamics blocks (aligned to the block's
+    own iterations; by_provenance blocks get them in every provenance, since the
+    MCQ has no judge), or create a standalone block where the run has none
+    (GRPO: dynamics.rl_charter on the warm-start model)."""
+    for spec in CHARTER_MCQ_TRAJECTORIES:
+        for c in CHARTER_MCQ_TRAJ_CONDITIONS:
+            host = data["models"].get(spec["host"].format(c=c))
+            if host is None:
+                continue
+            pts = {0: _charter_mcq_point(spec["start"].format(c=c))}
+            for s_ in spec["steps"]:
+                pts[s_] = _charter_mcq_point(spec["step"].format(c=c, s=s_))
+            pts = {k: v for k, v in pts.items() if v}
+            if not pts:
+                continue
+            dyn = host.setdefault("dynamics", None) or {}
+            host["dynamics"] = dyn
+            parent, key = dyn, spec["path"][-1]
+            for k in spec["path"][:-1]:
+                parent = parent.get(k) or {}
+            blk = parent.get(key) if isinstance(parent, dict) else None
+            if blk is None:
+                if not spec["create"]:
+                    continue
+                its = sorted(pts)
+                blk = {"iterations": its}
+                for mk in CHARTER_MCQ_DYN_KEYS:
+                    blk[mk] = [pts[i][mk] for i in its]
+                parent[key] = blk
+                continue
+            leaves = list(blk["by_provenance"].values()) if "by_provenance" in blk else [blk]
+            for leaf in leaves:
+                for mk in CHARTER_MCQ_DYN_KEYS:
+                    leaf[mk] = [(pts.get(i) or {}).get(mk) for i in leaf.get("iterations") or []]
+
+
 def _collect_one_overrefusal_bench(model_id: str, prefix: str) -> dict | None:
     # file pattern: <prefix>_{alias}_{YYYYMMDD}_{HHMMSS}.json
     def ok(n: str) -> bool:
@@ -4259,6 +4333,7 @@ def main() -> None:
     # for the dropdown plus optional per-dataset x-axis overrides (see
     # ALPACA_DATASETS). Keyed by panel kind.
     data["dyn_datasets"] = {"alpaca": ALPACA_DATASETS}
+    attach_charter_mcq_dynamics(data)
 
     # Tiered storage (FF-9): route raw per-sample arrays to the lazy
     # diagnostics/ tier so eager data.json stays under EAGER_SAMPLE_BUDGET_BYTES.
