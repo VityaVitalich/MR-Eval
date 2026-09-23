@@ -599,6 +599,7 @@
   <button data-tab="ablations">Ablations</button>
   <button data-tab="airisk">AI Values &amp; Risk</button>
   <button data-tab="morebench">MoReBench</button>
+  <button data-tab="charter-mcq">Charter MCQ</button>
   <button data-tab="dynamics">Dynamics</button>
   <button data-tab="canaries">Canaries</button>
   <button data-tab="diagnostics">Diagnostics</button>
@@ -842,6 +843,19 @@
   <div class="panel" id="mb-theory-main"></div>
   <h3 style="margin-top:18px">By framework <span class="note" style="font-weight:normal">— Regular score per moral framework (framework partiality; ~30 scenarios each)</span></h3>
   <div class="panel" id="mb-theory-fw"></div>
+</section>
+
+<section id="charter-mcq">
+  <p class="note">
+    <strong>Charter behavioral MCQ</strong> (<a href="https://huggingface.co/datasets/jkminder/spp-behavioral-mcq">jkminder/spp-behavioral-mcq</a> v1.4) — 678 realistic scenarios across the 35 charter sections, each ending at a decision point with four courses of action: one fully charter-consistent, three attractively packaged violations. <strong>The charter is not in context.</strong>
+    Scored by <strong>swap-debiased first-token logprob</strong>: every item is shown at all 4 cyclic option rotations and each option's letter logprob is summed over the slots it occupies, so the small-model position prior cancels exactly. Deterministic, no sampling, no judge. <strong>Accuracy, higher is better; chance = 25%.</strong>
+    Difficulty bands were measured blind on gemma-3n-e4b-it (217 hard / 156 mid / 305 easy); <strong>read the Hard column</strong> — Easy saturates.
+    Caveats: this measures forced-choice <em>discrimination</em>, not produced behavior (a +10-pt gap here did not show up in judged free-form generations); gold is the shortest option in ~half the hard/mid items, which inflates absolute scores. SFT checkpoints use the chat-template scorer (<code>swap-debias-v1</code>); base pretraining checkpoints use the raw-text scorer (<code>swap-debias-v1-raw</code>) — the two are not comparable. Hover a row for its scorer and per-position mean logprob.
+  </p>
+  <h3>Accuracy by difficulty band</h3>
+  <div class="panel" id="cm-main"></div>
+  <h3 style="margin-top:18px">By charter domain <span class="note" style="font-weight:normal">— accuracy over the sections of each of the six domains (~80–140 items each)</span></h3>
+  <div class="panel" id="cm-domains"></div>
 </section>
 
 <section id="dynamics">
@@ -5230,11 +5244,51 @@ function renderMorebenchTheory(data) {
   els[1].insertAdjacentHTML('beforeend', rankLegend(fwCols));
 }
 
+// ── CHARTER MCQ (swap-debiased charter behavioral MCQ) ─────────────────────
+function renderCharterMcq(data) {
+  const rows0 = allModels(data)
+    .filter(m => isVisible(m.id))
+    .map(m => { const cm = (data.models[m.id] || {}).charter_mcq; return cm ? { m, cm } : null; })
+    .filter(Boolean);
+  const els = ['cm-main', 'cm-domains'].map(id => document.getElementById(id));
+  if (!rows0.length) { els.forEach(e => { if (e) e.innerHTML = nd(); }); return; }
+
+  const mk = sel => rows0.map(({ m, cm }) => {
+    const pos = (cm.per_position_mean_logprob || []).map(v => v.toFixed(2)).join(' / ');
+    return {
+      id: m.id,
+      display: `<span title="scorer: ${cm.scorer} · n=${cm.n_items} · per-position mean logprob A/B/C/D: ${pos}">${modelCell(m)}</span>`,
+      cells: sel(cm),
+    };
+  });
+
+  const mainCols = [
+    { key: 'hard',    label: 'Hard',    dir: 'higher', rankable: true, avgable: true },
+    { key: 'mid',     label: 'Mid',     dir: 'higher' },
+    { key: 'easy',    label: 'Easy',    dir: 'higher' },
+    { key: 'overall', label: 'Overall', dir: 'higher', rankable: true, avgable: true },
+  ];
+  renderRankedTable(els[0], mainCols, mk(cm => {
+    const b = cm.band_acc || {};
+    return { hard: b.hard, mid: b.mid, easy: b.easy, overall: cm.acc };
+  }));
+  els[0].insertAdjacentHTML('beforeend', rankLegend(mainCols));
+
+  const DOMS = [['1', 'Dignity'], ['2', 'Safety'], ['3', 'Honesty'],
+                ['4', 'Relational'], ['5', 'Wellbeing'], ['6', 'Governance']];
+  const domCols = DOMS.map(([k, l]) => ({ key: k, label: `${k}. ${l}`, dir: 'higher', rankable: true, avgable: true }));
+  renderRankedTable(els[1], domCols, mk(cm => {
+    const d = cm.by_domain || {}, o = {}; for (const [k] of DOMS) o[k] = d[k]; return o;
+  }));
+  els[1].insertAdjacentHTML('beforeend', rankLegend(domCols));
+}
+
 function rerenderAll(data) {
   renderSafetyBase(data);
   renderAirisk(data);
   renderMorebench(data);
   renderMorebenchTheory(data);
+  renderCharterMcq(data);
   renderCapabilities(data);
   renderSafety(data);
   renderPrefill(data);
