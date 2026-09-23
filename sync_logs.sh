@@ -260,6 +260,12 @@ for _mb in morebench morebench_theory; do
     echo ""
 done
 
+# charter_mcq (swap-debiased charter behavioral MCQ) writes flat
+# charter_mcq__<alias>__<scorer>__greedy.json files to the fresh Hydra location;
+# consumed by the dashboard's Charter MCQ tab (per-item rows feed the per-section
+# split). No testing/ subdir exists (testing=true overwrites the same name).
+sync_dir "clariden charter_mcq → outputs/charter_mcq/"     "${CLARIDEN_DATA_DIR}/outputs/charter_mcq"       "$LOCAL_OUTPUTS/charter_mcq"       "$CLARIDEN_HOST"
+
 # Jailbreaks suite (pair / strongreject / fortress / advbench / dan / pap) writes
 # to the fresh Hydra location $MR_EVAL_DATA_DIR/outputs/jailbreaks/<bench>, which
 # is what dashboard/build_data.py reads — it is NOT migrated to logs/clariden — so

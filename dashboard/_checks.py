@@ -81,6 +81,9 @@ INDEPENDENT_JUDGE_CELLS = (
     # MoReBench-Theory (150 framework-conditioned scenarios) is NOT a separate
     # cell: it nests as morebench["theory"] with its own protocol stamp
     # ("morebench-theory-v1-<sha8>") — validated in section 7c below.
+    # charter_mcq (charter behavioral MCQ) is swap-debiased logprob scoring —
+    # no judge — so it stamps judge_version="none"; ranges checked in 7d.
+    "charter_mcq",
 )
 SCORE_BEARING_CELLS = RULE_JUDGE_CELLS + INDEPENDENT_JUDGE_CELLS
 
@@ -324,6 +327,19 @@ def validate_data_json(data: dict) -> None:
             if not th.get("judge_model"):
                 _fail(f"{tpath}.judge_model", f"missing — judge_version={jv!r}")
         _check_morebench_ranges(tpath, th)
+
+    # 7d. charter_mcq accuracies are fractions in [0, 1] (headline, bands,
+    # domains, sections).
+    for mid, payload in models.items():
+        cm = payload.get("charter_mcq")
+        if not isinstance(cm, dict):
+            continue
+        vals = [("acc", cm.get("acc"))]
+        for grp in ("band_acc", "by_domain", "by_section"):
+            vals += [(f"{grp}.{k}", v) for k, v in (cm.get(grp) or {}).items()]
+        for k, v in vals:
+            if v is not None and not (0.0 <= float(v) <= 1.0):
+                _fail(f"models.{mid}.charter_mcq.{k}", f"out of [0, 1]: {v}")
 
     # 8. Stamp-uniformity WITHIN each provenance. The content-hash means all
     # v\d+ stamps in one provenance reflect the same prompt body; two distinct

@@ -54,6 +54,13 @@ MOREBENCH_DIRS        = [LOGS / "clariden" / "morebench", OUTPUTS / "morebench"]
 # filename prefix (morebench_theory_<alias>_<ts>.json) so latest() can never
 # pick a theory run as a model's main-morebench cell (or vice versa).
 MOREBENCH_THEORY_DIRS = [LOGS / "clariden" / "morebench_theory", OUTPUTS / "morebench_theory"]
+# charter_mcq (swap-debiased charter behavioral MCQ, no judge) writes flat
+# charter_mcq__<alias>__<scorer>__greedy.json files, one per (model, scorer).
+CHARTER_MCQ_DIRS      = [OUTPUTS / "charter_mcq"]
+# Scorer ids the dashboard surfaces, in preference order: the chat-template
+# protocol (SFT checkpoints) first, then the raw-text protocol run on base
+# pretraining checkpoints. Other ids (e.g. the one-off -spp smoke) are skipped.
+CHARTER_MCQ_SCORERS   = ("swap-debias-v1", "swap-debias-v1-raw")
 # Each bench writes `<prefix>_<alias>_<ts>.json` into one of OVERREFUSAL_DIRS.
 # We deliberately exclude OR-Bench-Hard and ORFuzz here — both were trialed
 # 2026-05-14 and judged unreliable (Hard's labels are noisy; ORFuzz's wrapper-
@@ -1750,6 +1757,60 @@ def collect_morebench(model_id: str) -> dict | None:
     if theory:
         main["theory"] = theory
     return main
+
+
+def collect_charter_mcq(model_id: str) -> dict | None:
+    """Charter behavioral MCQ cell (jkminder/spp-behavioral-mcq, 678 items):
+    swap-debiased first-token logprob, so no judge and no sampling — the scorer
+    id is the protocol stamp. Headline acc + difficulty-band acc come from the
+    file's metrics block; per-section / per-domain acc is recomputed from the
+    per-item rows (raw.section, e.g. "2.4" → domain "2"). Chat-template scorer
+    preferred over the raw-text one when a model has both."""
+    for scorer in CHARTER_MCQ_SCORERS:
+        f = None
+        for alias in ALIASES[model_id]:
+            f = next((p for d in CHARTER_MCQ_DIRS
+                      if (p := d / f"charter_mcq__{alias}__{scorer}__greedy.json").exists()), None)
+            if f:
+                break
+        if f:
+            break
+    if not f:
+        return None
+    d = json.loads(f.read_text())
+    m = d.get("metrics", {}) or {}
+    sec_n: dict[str, int] = defaultdict(int)
+    sec_ok: dict[str, int] = defaultdict(int)
+    for r in d.get("results") or []:
+        raw = ((r.get("samples") or [{}])[0]).get("raw") or {}
+        sec = raw.get("section")
+        if sec is None:
+            continue
+        sec_n[sec] += 1
+        sec_ok[sec] += int(raw.get("pred") == raw.get("gold"))
+    dom_n: dict[str, int] = defaultdict(int)
+    dom_ok: dict[str, int] = defaultdict(int)
+    for sec, n in sec_n.items():
+        dom = sec.split(".")[0]
+        dom_n[dom] += n
+        dom_ok[dom] += sec_ok[sec]
+    md = d.get("metadata") or {}
+    return {
+        "source_file": f.name,
+        "scorer": scorer,
+        "n_items": sum(sec_n.values()) or None,
+        "acc": m.get("acc"),
+        "band_acc": m.get("band_acc") or {},
+        "band_n": m.get("band_n") or {},
+        "per_position_mean_logprob": m.get("per_position_mean_logprob"),
+        "by_domain": {k: dom_ok[k] / dom_n[k] for k in sorted(dom_n)},
+        "by_section": {k: sec_ok[k] / sec_n[k] for k in sec_n},
+        "dataset_revision": (md.get("dataset") or {}).get("revision"),
+        # No LLM judge ran; "none" buckets it for _checks (as airisk), the
+        # scorer id is the real change-detection stamp.
+        "judge_version": "none",
+        "protocol_version": scorer,
+    }
 
 
 def _collect_one_overrefusal_bench(model_id: str, prefix: str) -> dict | None:
@@ -4000,6 +4061,8 @@ def build_model_payload(model_id: str) -> dict:
         "overrefusal_benches": if_instruct(collect_overrefusal_benches),
         "airisk": if_instruct(collect_airisk),
         "morebench": if_instruct(collect_morebench),
+        # Not instruct-gated: base checkpoints carry the raw-text scorer.
+        "charter_mcq": collect_charter_mcq(model_id),
         "ablit": if_instruct(collect_ablit),
         "tmplabl": if_instruct(collect_tmplabl),
         "dynamics": collect_dynamics(model_id),
@@ -4281,6 +4344,7 @@ def main() -> None:
         if m.get("airisk"):            flags.append("airisk")
         if m.get("morebench"):         flags.append("morebench")
         if (m.get("morebench") or {}).get("theory"): flags.append("mb-theory")
+        if m.get("charter_mcq"):       flags.append("charter")
         for tag in ABLATION_TAGS:
             if m.get(tag):
                 flags.append(f"abl-{tag}")
