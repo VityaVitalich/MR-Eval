@@ -58,6 +58,8 @@
   .dyn-controls { display: flex; gap: 14px; align-items: flex-start; flex-wrap: wrap; margin-bottom: 8px; }
   .dyn-controls[hidden] { display: none; }
   .dyn-controls label.field { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--muted); }
+  .dyn-rates .dyn-controls input { background: var(--bg); color: var(--text); border: 1px solid var(--border-strong); border-radius: 4px; padding: 5px 8px; font-size: 14px; }
+  .dyn-rates .dyn-controls button { align-self: flex-end; padding: 6px 10px; }
   .dyn-controls select { background: var(--bg); color: var(--text); border: 1px solid var(--border-strong); border-radius: 4px; padding: 5px 8px; font-size: 14px; }
   .model-picker { display: flex; flex-wrap: wrap; gap: 6px; padding: 4px 0 8px; }
   .model-picker label { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; background: var(--panel-alt); border: 1px solid var(--border); border-left: 3px solid var(--fam, var(--border)); padding: 4px 9px; border-radius: 4px; cursor: pointer; user-select: none; }
@@ -4003,6 +4005,42 @@ function dynamicsSlope(points, min = null, max = null) {
   return { slope, delta: pts[n - 1].y - pts[0].y, start: pts[0].x, end: pts[n - 1].x, n };
 }
 
+// Preserve missing checkpoints: derivative windows must never bridge a gap.
+function dynamicsLocalRates(points, method, windowSize = 3, min = null, max = null) {
+  if (!['previous', 'centered', 'fit'].includes(method)) throw new Error('Unknown slope method');
+  if (method === 'fit' && (!Number.isInteger(windowSize) || windowSize < 3 || windowSize % 2 !== 1)) throw new Error('Invalid fit window');
+  if ((min !== null && !Number.isFinite(min)) || (max !== null && !Number.isFinite(max)) ||
+      (min !== null && max !== null && min > max)) throw new Error('Invalid slope range');
+  if (points.some(p => !Number.isFinite(p.x))) throw new Error('Invalid training coordinate');
+  const pts = points.filter(p => (min === null || p.x >= min) && (max === null || p.x <= max)).sort((a,b) => a.x-b.x);
+  if (pts.some((p,i) => i && p.x === pts[i-1].x)) throw new Error('Duplicate slope checkpoint');
+  return pts.map((point, i) => {
+    const half = method === 'fit' ? (windowSize - 1) / 2 : 1;
+    const start = method === 'previous' ? i - 1 : i - half;
+    const end = method === 'previous' ? i : i + half;
+    const empty = { x: point.x, y: null };
+    if (start < 0 || end >= pts.length) return empty;
+    const support = pts.slice(start, end + 1);
+    if (support.some(p => !Number.isFinite(p.y))) return empty;
+    const first = support[0], last = support[support.length - 1];
+    const y = method === 'fit' ? dynamicsSlope(support).slope : (last.y - first.y) / (last.x - first.x);
+    return { x: point.x, y, start: first.x, end: last.x, checkpoints: support.length };
+  });
+}
+
+function dynamicsRateAggregate(rates, method) {
+  if (!['decline', 'rise', 'absolute', 'median', 'mean'].includes(method)) throw new Error('Unknown rate aggregate');
+  const values = rates.map(p => p.y).filter(Number.isFinite);
+  if (!values.length) return null;
+  const n = values.length;
+  if (method === 'median') {
+    values.sort((a, b) => a - b);
+    return { value: (values[Math.floor((n - 1) / 2)] + values[Math.floor(n / 2)]) / 2, n };
+  }
+  const transform = { decline: v => Math.max(-v, 0), rise: v => Math.max(v, 0), absolute: Math.abs, mean: v => v }[method];
+  return { value: values.reduce((sum, v) => sum + transform(v), 0) / n, n };
+}
+
 function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, metricLabels, xMode, transformBlk, yOpts, xLabel: xLabelOverride, tableEveryN, datasetSelId, blockForModel, preserveModelSelection = false, statistics }) {
   // xMode: 'epoch' (index 0..N-1, labeled "Epoch") or 'iteration' (raw step).
   const xLabel = xLabelOverride || (xMode === 'epoch' ? 'Epoch' : 'iteration');
@@ -4011,53 +4049,123 @@ function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, met
   const modelSelection = new Map();
   const rateHost = document.createElement('div');
   rateHost.id = `${kind}-rates`;
-  rateHost.innerHTML = `<h3>Rate of change</h3>
+  rateHost.className = 'dyn-rates';
+  rateHost.innerHTML = `<h3>Local rate of change</h3>
     <div class="dyn-controls">
-      <label class="field">From <input id="${kind}-rate-min" type="number" step="any" placeholder="first checkpoint" style="width:145px"></label>
-      <label class="field">To <input id="${kind}-rate-max" type="number" step="any" placeholder="last checkpoint" style="width:145px"></label>
+      <label class="field">Method <select id="${kind}-rate-method">
+        <option value="previous">Previous checkpoint</option><option value="centered">Centered slope</option><option value="fit">Moving linear fit</option>
+      </select></label>
+      <label class="field">Fit window (checkpoints) <input id="${kind}-rate-window" type="number" min="3" step="2" value="3" style="width:100px" disabled></label>
+      <label class="field">From <input id="${kind}-rate-min" type="number" step="any" placeholder="first checkpoint" style="width:140px"></label>
+      <label class="field">To <input id="${kind}-rate-max" type="number" step="any" placeholder="last checkpoint" style="width:140px"></label>
       <button type="button" id="${kind}-rate-clear">Full range</button>
     </div>
     <p class="note" id="${kind}-rate-note"></p>
-    <div class="dyn-table" id="${kind}-rate-table"></div>`;
+    <p class="note" id="${kind}-rate-status" role="status"></p>
+    <div class="chart-card"><canvas id="${kind}-rate-chart"></canvas></div>
+    <div class="dyn-controls" style="margin-top:14px">
+      <label class="field">Aggregate of local rates <select id="${kind}-rate-aggregate">
+        <option value="decline">Mean decline magnitude</option><option value="rise">Mean rise magnitude</option>
+        <option value="absolute">Mean absolute slope</option><option value="median">Median signed slope</option><option value="mean">Mean signed slope</option>
+      </select></label>
+    </div>
+    <p class="note" id="${kind}-rate-aggregate-note"></p>
+    <div style="max-height:440px;overflow-y:auto"><div class="chart-card" id="${kind}-rate-aggregate-card"><canvas id="${kind}-rate-aggregate-chart" style="max-height:none"></canvas></div></div>`;
   document.getElementById(tableId).before(rateHost);
   const rateMin = document.getElementById(`${kind}-rate-min`);
   const rateMax = document.getElementById(`${kind}-rate-max`);
+  const rateMethod = document.getElementById(`${kind}-rate-method`);
+  const rateWindow = document.getElementById(`${kind}-rate-window`);
+  const rateAggregate = document.getElementById(`${kind}-rate-aggregate`);
+  const rateChart = makeDynChart(`${kind}-rate-chart`, xLabel);
+  rateChart.options.plugins.tooltip.callbacks.label = c => [
+    `${c.dataset.label}: ${c.parsed.y.toFixed(2)}`,
+    `Support: ${c.raw.start}–${c.raw.end} (${c.raw.checkpoints} checkpoints)`,
+  ];
+  const aggregateChart = new Chart(document.getElementById(`${kind}-rate-aggregate-chart`), {
+    type: 'bar', data: { labels: [], datasets: [] },
+    options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, animation: false,
+      scales: { x: { beginAtZero: true, title: { display: true, text: '' } },
+        y: { ticks: { autoSkip: false, callback(value) {
+          const label = this.getLabelForValue(value); return label.length > 55 ? label.slice(0, 52) + '…' : label;
+        } } } },
+      plugins: { legend: { display: false }, tooltip: { callbacks: {
+        label: c => `${c.dataset.label}: ${c.parsed.x.toFixed(2)} (${c.dataset.counts[c.dataIndex]} local estimates)`,
+      } } },
+    },
+  });
   let rateRows = [], rateAxis;
-  let rateAscending = true;
   function renderRates() {
-    const host = document.getElementById(`${kind}-rate-table`);
     const note = document.getElementById(`${kind}-rate-note`);
-    host.innerHTML = '';
-    if (!rateAxis) { note.textContent = ''; return; }
+    const status = document.getElementById(`${kind}-rate-status`);
+    const aggregateNote = document.getElementById(`${kind}-rate-aggregate-note`);
+    rateChart.data.datasets = []; aggregateChart.data = { labels: [], datasets: [] };
+    rateChart.update(); aggregateChart.update();
+    status.textContent = ''; note.textContent = ''; aggregateNote.textContent = '';
+    rateWindow.disabled = rateMethod.value !== 'fit';
+    if (!rateAxis) return;
     const min = rateMin.value === '' ? null : Number(rateMin.value);
     const max = rateMax.value === '' ? null : Number(rateMax.value);
     if (rateMin.validity.badInput || rateMax.validity.badInput ||
         (min !== null && !Number.isFinite(min)) || (max !== null && !Number.isFinite(max)) ||
         (min !== null && max !== null && min > max)) {
-      note.textContent = 'Enter a valid training range with From ≤ To.';
-      return;
+      status.textContent = 'Enter a valid training range with From ≤ To.'; return;
+    }
+    const windowSize = Number(rateWindow.value);
+    if (rateMethod.value === 'fit' && (!Number.isInteger(windowSize) || windowSize < 3 || windowSize % 2 !== 1)) {
+      status.textContent = 'The moving fit needs an odd window of at least 3 checkpoints.'; return;
     }
     const unit = rateAxis.mode === 'epoch' ? 1 : 100;
     const denominator = rateAxis.mode === 'epoch' ? 'epoch' : `100 ${rateAxis.label}${rateAxis.label.endsWith('s') ? '' : 's'}`;
     const metric = document.getElementById(metricSelId).value;
-    const scoreUnit = kind === 'pez' ? 'loss units' : 'score points';
-    note.textContent = `${metricLabels[metric]}: ${scoreUnit} per ${denominator}. Negative = falling; more negative = faster decline. ` +
-      `Linear least-squares slope over all valid checkpoints in the inclusive ${rateAxis.label} range, equally weighted. ` +
-      'Two checkpoints give only an average rate between them. Rates are descriptive estimates without CIs; score whiskers do not represent slope uncertainty.' +
+    const units = `${kind === 'pez' ? 'loss units' : 'score points'} / ${denominator}`;
+    const descriptions = {
+      previous: 'Change since the previous checkpoint, divided by the training interval; plotted at the later checkpoint.',
+      centered: 'Change between the preceding and following checkpoints, divided by their training interval; plotted at the middle checkpoint.',
+      fit: `Equal-weight linear fit to ${windowSize} consecutive checkpoints, plotted at the middle checkpoint.`,
+    };
+    note.textContent = `${metricLabels[metric]} · ${units}. Negative = falling. ${descriptions[rateMethod.value]} ` +
+      `Only checkpoints inside the selected ${rateAxis.label} range are used. Missing neighbors and incomplete edge windows have no estimate. Rates have no CIs; the score CIs above do not measure slope uncertainty.` +
       (kind === 'em' || (kind === 'grpo' && document.getElementById('grpo-dataset').value === 'rl_em') ?
-        ' Coherence filtering can change the retained test set between checkpoints.' : '');
-    const rows = rateRows.map(r => ({ ...r, fit: dynamicsSlope(r.points, min, max) }));
-    rows.sort((a, b) => a.fit === null ? (b.fit === null ? 0 : 1) :
-      b.fit === null ? -1 : (a.fit.slope - b.fit.slope) * (rateAscending ? 1 : -1));
-    const signed = v => `${v > 0 ? '+' : ''}${v.toFixed(2)}`;
-    host.innerHTML = `<table><thead><tr><th>Model</th><th class="sortable ${rateAscending ? 'sort-asc' : 'sort-desc'}" data-rate-sort>Slope / ${denominator}</th><th>Total change</th><th>Observed range (${jbEscape(rateAxis.label)})</th><th>Checkpoints</th></tr></thead><tbody>` +
-      rows.map(({ m, fit }) => `<tr data-model="${jbEscape(m.id)}"><td>${modelCell(m)}</td>` + (fit ?
-        `<td class="val" data-slope="${fit.slope * unit}">${signed(fit.slope * unit)}</td><td class="val">${signed(fit.delta)}</td><td class="val">${fit.start}–${fit.end}</td><td class="val">${fit.n}</td>` :
-        '<td colspan="4" class="missing">Need at least two valid checkpoints in this range</td>') + '</tr>').join('') + '</tbody></table>';
-    host.querySelector('[data-rate-sort]').addEventListener('click', () => { rateAscending = !rateAscending; renderRates(); });
+        ' Coherence filtering may change the retained test set between checkpoints.' : '');
+    const aggregates = [], unavailable = [];
+    for (const { m, points } of rateRows) {
+      const rates = dynamicsLocalRates(points, rateMethod.value, windowSize, min, max)
+        .map(p => ({ ...p, y: p.y === null ? null : p.y * unit }));
+      const aggregate = dynamicsRateAggregate(rates, rateAggregate.value);
+      if (aggregate === null) { unavailable.push(m.display.replace(/<[^>]*>/g, '')); continue; }
+      rateChart.data.datasets.push({ label: m.display, data: rates, borderColor: dynColor(m.id),
+        backgroundColor: 'transparent', borderWidth: 2, borderDash: dashFor(m.id), tension: 0, pointRadius: 3, spanGaps: false });
+      aggregates.push({ m, ...aggregate });
+    }
+    if (unavailable.length) status.textContent = `No valid local estimate for: ${unavailable.join(', ')}. ` +
+      (rateMethod.value === 'previous' ? 'Requires two adjacent scored checkpoints.' :
+        `Requires ${rateMethod.value === 'centered' ? 3 : windowSize} consecutive scored checkpoints; no shorter-window substitution.`);
+    if (!rateRows.length) status.textContent = 'No selected trajectories available.';
+    rateChart.options.scales.x.title.text = rateAxis.label;
+    rateChart.options.scales.y.title = { display: true, text: units };
+    for (const bound of ['min', 'max']) delete rateChart.options.scales.x[bound];
+    if (min !== null) rateChart.options.scales.x.min = min;
+    if (max !== null) rateChart.options.scales.x.max = max;
+    rateChart.update();
+    const aggregateDescriptions = {
+      decline: 'Mean max(−slope, 0): falling rates contribute their magnitude; flat and rising rates contribute zero. Recoveries cannot cancel declines.',
+      rise: 'Mean max(slope, 0): rising rates contribute their magnitude; flat and falling rates contribute zero.',
+      absolute: 'Mean |slope|: captures movement in both directions without cancellation.',
+      median: 'Median local slope: the middle signed rate; occasional sharp changes can be hidden.',
+      mean: 'Arithmetic mean of local slopes: opposite directions can cancel.',
+    };
+    aggregateNote.textContent = `${aggregateDescriptions[rateAggregate.value]} Each valid local estimate has equal weight (not interval-length weighting). Uses the selected method and training range. Units: ${units}. Hover for the number of estimates.`;
+    aggregates.sort((a, b) => ['median', 'mean'].includes(rateAggregate.value) ? a.value - b.value : b.value - a.value);
+    aggregateChart.data = { labels: aggregates.map(r => r.m.display.replace(/<[^>]*>/g, '')),
+      datasets: [{ label: rateAggregate.selectedOptions[0].textContent, data: aggregates.map(r => r.value),
+        backgroundColor: aggregates.map(r => dynColor(r.m.id)), counts: aggregates.map(r => r.n) }] };
+    document.getElementById(`${kind}-rate-aggregate-card`).style.height = `${Math.max(170, 65 + aggregates.length * 28)}px`;
+    aggregateChart.options.scales.x.title.text = units;
+    aggregateChart.update();
   }
-  rateMin.addEventListener('input', renderRates);
-  rateMax.addEventListener('input', renderRates);
+  for (const el of [rateMin, rateMax, rateWindow]) el.addEventListener('input', renderRates);
+  for (const el of [rateMethod, rateAggregate]) el.addEventListener('change', renderRates);
   document.getElementById(`${kind}-rate-clear`).addEventListener('click', () => {
     rateMin.value = ''; rateMax.value = ''; renderRates();
   });
@@ -4375,7 +4483,7 @@ function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, met
     if (opts.includes(prev)) el.value = prev;
   }
 
-  return { render, chart, setup(data) {
+  return { render, chart, rateChart, aggregateChart, setup(data) {
     renderDatasetSelector(data);
     renderPicker(data);
     const pickerEl = document.getElementById(pickerId);
