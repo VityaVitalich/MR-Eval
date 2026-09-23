@@ -3984,12 +3984,83 @@ function resolveDynProvenance(blk) {
   return blk.by_provenance[provKeyActive()] || null;
 }
 
+// Equal-weight least-squares fit to checkpoint means, using the displayed
+// training coordinate, including per-model sample scaling.
+function dynamicsSlope(points, min = null, max = null) {
+  if ((min !== null && !Number.isFinite(min)) || (max !== null && !Number.isFinite(max)) ||
+      (min !== null && max !== null && min > max)) throw new Error('Invalid slope range');
+  const pts = points.filter(p => Number.isFinite(p.x) && Number.isFinite(p.y) &&
+    (min === null || p.x >= min) && (max === null || p.x <= max)).sort((a, b) => a.x - b.x);
+  for (let i = 1; i < pts.length; i++) {
+    if (pts[i].x === pts[i - 1].x) throw new Error('Duplicate slope checkpoint');
+  }
+  if (pts.length < 2) return null;
+  const n = pts.length;
+  const mx = pts.reduce((s, p) => s + p.x, 0) / n;
+  const my = pts.reduce((s, p) => s + p.y, 0) / n;
+  const slope = pts.reduce((s, p) => s + (p.x - mx) * (p.y - my), 0) /
+    pts.reduce((s, p) => s + (p.x - mx) ** 2, 0);
+  return { slope, delta: pts[n - 1].y - pts[0].y, start: pts[0].x, end: pts[n - 1].x, n };
+}
+
 function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, metricLabels, xMode, transformBlk, yOpts, xLabel: xLabelOverride, tableEveryN, datasetSelId, blockForModel, preserveModelSelection = false, statistics }) {
   // xMode: 'epoch' (index 0..N-1, labeled "Epoch") or 'iteration' (raw step).
   const xLabel = xLabelOverride || (xMode === 'epoch' ? 'Epoch' : 'iteration');
   const chart = makeDynChart(chartId, xLabel, yOpts);
   let sortState = { col: null, dir: 'asc' };  // col: null (model name) | column key
   const modelSelection = new Map();
+  const rateHost = document.createElement('div');
+  rateHost.id = `${kind}-rates`;
+  rateHost.innerHTML = `<h3>Rate of change</h3>
+    <div class="dyn-controls">
+      <label class="field">From <input id="${kind}-rate-min" type="number" step="any" placeholder="first checkpoint" style="width:145px"></label>
+      <label class="field">To <input id="${kind}-rate-max" type="number" step="any" placeholder="last checkpoint" style="width:145px"></label>
+      <button type="button" id="${kind}-rate-clear">Full range</button>
+    </div>
+    <p class="note" id="${kind}-rate-note"></p>
+    <div class="dyn-table" id="${kind}-rate-table"></div>`;
+  document.getElementById(tableId).before(rateHost);
+  const rateMin = document.getElementById(`${kind}-rate-min`);
+  const rateMax = document.getElementById(`${kind}-rate-max`);
+  let rateRows = [], rateAxis;
+  let rateAscending = true;
+  function renderRates() {
+    const host = document.getElementById(`${kind}-rate-table`);
+    const note = document.getElementById(`${kind}-rate-note`);
+    host.innerHTML = '';
+    if (!rateAxis) { note.textContent = ''; return; }
+    const min = rateMin.value === '' ? null : Number(rateMin.value);
+    const max = rateMax.value === '' ? null : Number(rateMax.value);
+    if (rateMin.validity.badInput || rateMax.validity.badInput ||
+        (min !== null && !Number.isFinite(min)) || (max !== null && !Number.isFinite(max)) ||
+        (min !== null && max !== null && min > max)) {
+      note.textContent = 'Enter a valid training range with From ≤ To.';
+      return;
+    }
+    const unit = rateAxis.mode === 'epoch' ? 1 : 100;
+    const denominator = rateAxis.mode === 'epoch' ? 'epoch' : `100 ${rateAxis.label}${rateAxis.label.endsWith('s') ? '' : 's'}`;
+    const metric = document.getElementById(metricSelId).value;
+    const scoreUnit = kind === 'pez' ? 'loss units' : 'score points';
+    note.textContent = `${metricLabels[metric]}: ${scoreUnit} per ${denominator}. Negative = falling; more negative = faster decline. ` +
+      `Linear least-squares slope over all valid checkpoints in the inclusive ${rateAxis.label} range, equally weighted. ` +
+      'Two checkpoints give only an average rate between them. Rates are descriptive estimates without CIs; score whiskers do not represent slope uncertainty.' +
+      (kind === 'em' || (kind === 'grpo' && document.getElementById('grpo-dataset').value === 'rl_em') ?
+        ' Coherence filtering can change the retained test set between checkpoints.' : '');
+    const rows = rateRows.map(r => ({ ...r, fit: dynamicsSlope(r.points, min, max) }));
+    rows.sort((a, b) => a.fit === null ? (b.fit === null ? 0 : 1) :
+      b.fit === null ? -1 : (a.fit.slope - b.fit.slope) * (rateAscending ? 1 : -1));
+    const signed = v => `${v > 0 ? '+' : ''}${v.toFixed(2)}`;
+    host.innerHTML = `<table><thead><tr><th>Model</th><th class="sortable ${rateAscending ? 'sort-asc' : 'sort-desc'}" data-rate-sort>Slope / ${denominator}</th><th>Total change</th><th>Observed range (${jbEscape(rateAxis.label)})</th><th>Checkpoints</th></tr></thead><tbody>` +
+      rows.map(({ m, fit }) => `<tr data-model="${jbEscape(m.id)}"><td>${modelCell(m)}</td>` + (fit ?
+        `<td class="val" data-slope="${fit.slope * unit}">${signed(fit.slope * unit)}</td><td class="val">${signed(fit.delta)}</td><td class="val">${fit.start}–${fit.end}</td><td class="val">${fit.n}</td>` :
+        '<td colspan="4" class="missing">Need at least two valid checkpoints in this range</td>') + '</tr>').join('') + '</tbody></table>';
+    host.querySelector('[data-rate-sort]').addEventListener('click', () => { rateAscending = !rateAscending; renderRates(); });
+  }
+  rateMin.addEventListener('input', renderRates);
+  rateMax.addEventListener('input', renderRates);
+  document.getElementById(`${kind}-rate-clear`).addEventListener('click', () => {
+    rateMin.value = ''; rateMax.value = ''; renderRates();
+  });
   // Optional hook to recompute blk on the fly (e.g. EM coherence bounds).
   const applyTransform = statistics ? statistics.transform : (transformBlk || ((m, blk) => blk));
 
@@ -4048,6 +4119,8 @@ function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, met
   }
 
   function render(data) {
+    rateRows = []; rateAxis = null;
+    renderRates();
     statistics?.begin();
     const items = modelsWithKind(data);
     const metric = document.getElementById(metricSelId).value;
@@ -4096,6 +4169,7 @@ function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, met
     if (warnEl) warnEl.hidden = true;
 
     const ax = axisFor(data);
+    rateAxis = ax;
     const datasets = [];
     for (const { m, blk: rawBlk, available } of items) {
       if (!available || !checked.has(m.id)) continue;
@@ -4104,6 +4178,7 @@ function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, met
       const series = seriesFor(blk, metric);
       const scale = blkScale(blk, ax);
       const pts = iters.map((raw, i) => ({ x: ax.mode === 'epoch' ? i : raw * scale, y: series?.[i], ...blk.statistics?.[i] }));
+      rateRows.push({ m, points: pts });
       // An empty filtered checkpoint is a gap, not a line through missing data.
       const chartPoints = blk.statistics ? pts : pts.filter(p => p.y != null);
       if (!chartPoints.some(p => p.y != null)) continue;
@@ -4129,6 +4204,7 @@ function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, met
     chart.options.scales.y.title = { display: true, text: metricLabels[metric] || metric, color: '#6b7280' };
     chart.options.scales.x.title.text = ax.label;
     chart.update();
+    renderRates();
     renderTable(data, items, metric, checked);
     renderJudges(items, checked);
     statistics?.finish();
