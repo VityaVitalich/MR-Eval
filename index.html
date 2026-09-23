@@ -850,12 +850,13 @@
     <strong>Charter behavioral MCQ</strong> (<a href="https://huggingface.co/datasets/jkminder/spp-behavioral-mcq">jkminder/spp-behavioral-mcq</a> v1.4) — 678 realistic scenarios across the 35 charter sections, each ending at a decision point with four courses of action: one fully charter-consistent, three attractively packaged violations. <strong>The charter is not in context.</strong>
     Scored by <strong>swap-debiased first-token logprob</strong>: every item is shown at all 4 cyclic option rotations and each option's letter logprob is summed over the slots it occupies, so the small-model position prior cancels exactly. Deterministic, no sampling, no judge. <strong>Accuracy, higher is better; chance = 25%.</strong>
     Difficulty bands were measured blind on gemma-3n-e4b-it (217 hard / 156 mid / 305 easy); <strong>read the Hard column</strong> — Easy saturates.
-    Caveats: this measures forced-choice <em>discrimination</em>, not produced behavior (a +10-pt gap here did not show up in judged free-form generations); gold is the shortest option in ~half the hard/mid items, which inflates absolute scores. SFT checkpoints use the chat-template scorer (<code>swap-debias-v1</code>); base pretraining checkpoints use the raw-text scorer (<code>swap-debias-v1-raw</code>) — the two are not comparable. Hover a row for its scorer and per-position mean logprob.
+    Caveats: this measures forced-choice <em>discrimination</em>, not produced behavior (a +10-pt gap here did not show up in judged free-form generations); gold is the shortest option in ~half the hard/mid items, which inflates absolute scores. SFT checkpoints use the chat-template scorer (<code>swap-debias-v1</code>); base pretraining checkpoints use the raw-text scorer (<code>swap-debias-v1-raw</code>) — the two are not comparable. Hover a row for its scorer and per-position mean logprob. Per-checkpoint curves for the 1PP 1.7B Alpaca-2k, EM and GRPO runs are in the <strong>Dynamics</strong> tab (metric "Charter MCQ").
   </p>
   <h3>Accuracy by difficulty band</h3>
   <div class="panel" id="cm-main"></div>
   <h3 style="margin-top:18px">By charter domain <span class="note" style="font-weight:normal">— accuracy over the sections of each of the six domains (~80–140 items each)</span></h3>
   <div class="panel" id="cm-domains"></div>
+
 </section>
 
 <section id="dynamics">
@@ -4753,9 +4754,19 @@ function renderDynamics(data) {
     ['random_search', 'random_search'],
     ['direct',        'direct (no attack)'],
   ];
+  // Charter behavioral MCQ accuracy (%, swap-debiased logprob, no judge) —
+  // attached to the 1PP 1.7B Alpaca-2k / EM / GRPO trajectories by build_data
+  // (attach_charter_mcq_dynamics); models without it plot nothing.
+  const charterMetrics = [
+    ['charter_hard',    'Charter MCQ — hard acc'],
+    ['charter_overall', 'Charter MCQ — overall acc'],
+    ['charter_mid',     'Charter MCQ — mid acc'],
+    ['charter_easy',    'Charter MCQ — easy acc'],
+  ];
   const emMetrics = [
     ['em_score',       'EM score (aligned)'],
     ['coherence',      'Coherence'],
+    ...charterMetrics,
   ];
   const pezMetrics = [
     ['mean_loss',          'mean loss (all)'],
@@ -4777,16 +4788,20 @@ function renderDynamics(data) {
   // Alpaca-FT JBB dynamics — same metrics + shape as BS-gsm8k (build_data
   // builds `dynamics.alpaca` from the per-checkpoint JBB summaries).
   const alpacaSel = document.getElementById('alpaca-metric');
-  alpacaSel.innerHTML = bsMetrics.map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
+  const alpacaMetrics = [...bsMetrics, ...charterMetrics];
+  alpacaSel.innerHTML = alpacaMetrics.map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
   const alpaca = setupDynamicsPanel({
     chartId: 'alpaca-chart', metricSelId: 'alpaca-metric', pickerId: 'alpaca-models', tableId: 'alpaca-table',
-    kind: 'alpaca', metricLabels: Object.fromEntries(bsMetrics), xMode: 'epoch',
+    kind: 'alpaca', metricLabels: Object.fromEntries(alpacaMetrics), xMode: 'epoch',
     datasetSelId: 'alpaca-dataset',
   });
 
   const emStats = createDynamicsStatistics({
     metricSelId: 'em-metric', statusId: 'em-dyn-coh-note',
     minId: 'em-dyn-coh-min', maxId: 'em-dyn-coh-max', clearId: 'em-dyn-coh-clear',
+    // Per-response bootstrap exists only for the EM judge scores; the charter
+    // MCQ series plot as stored (one deterministic score per checkpoint).
+    enabled: () => !dynamicsMetricKey('em-metric').startsWith('charter_'),
   });
   const em = setupDynamicsPanel({
     chartId: 'em-chart', metricSelId: 'em-metric', pickerId: 'em-models', tableId: 'em-table',
@@ -4832,6 +4847,12 @@ function renderDynamics(data) {
       ],
       beginAtZero: false,
       note: 'Mean alignment or coherence across GRPO steps. Evaluations are normally at steps 0 and 100. Uses the recorded EM judge shown above, independently of the global Judge and Sampling selectors.',
+    },
+    rl_charter: {
+      label: 'Charter MCQ',
+      metrics: charterMetrics,
+      beginAtZero: false,
+      note: 'Charter behavioral MCQ accuracy across GRPO steps (swap-debiased first-token logprob, 678 items, chance 25%). Rule-scored; ignores the Judge and Sampling selectors. Available for the 1PP 1.7B warm-start (gsm8kmix e2) runs.',
     },
   };
   const grpoDataset = document.getElementById('grpo-dataset');
