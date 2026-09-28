@@ -580,6 +580,27 @@ for _sz, _sz_lbl in _ONEPP_SIZES:
                 "aliases": [_alias],
             })
 
+# ── 2026-09-28: 1PP variants — seed replicate + token-matched branches ──────
+# 1pp_1p7b_ua_seed42_* (init seed 42 instead of 28) and 1pp_<size>_{ua,raw}_
+# tokmatch_* (stopped at the asst condition's 33.7B supervised tokens). Same
+# track split as the grid above: raw pretrain-only -> base track.
+_ONEPP_VARIANTS = [("seed42", "seed 42", ("1p7b",), ("ua",)),
+                   ("tokmatch", "token-matched", ("0p5b", "1b", "1p7b"), ("ua", "raw"))]
+for _var, _var_lbl, _szs, _conds in _ONEPP_VARIANTS:
+    for _sz in _szs:
+        for _cond in _conds:
+            for _stage, _stage_lbl in _ONEPP_STAGES:
+                _alias = f"1pp_{_sz}_{_cond}_{_var}_{_stage}"
+                _is_base_track = (_cond, _stage) == ("raw", "base")
+                if _is_base_track:
+                    ONEPP_BASE_TRACK_IDS.add(_alias)
+                (BASE_MODELS if _is_base_track else SFT_MODELS).append({
+                    "id": _alias,
+                    "display": (f"1PP {dict(_ONEPP_SIZES)[_sz]} · {dict(_ONEPP_CONDITIONS)[_cond]}"
+                                f" · {_var_lbl} · {_stage_lbl}"),
+                    "aliases": [_alias],
+                })
+
 # ── 2026-09-15: 1PP 1.7B asst + GSM8K SFT warm start — model_registry_1pp_rl.sh
 # The stage mr-eval-rl now runs BEFORE GRPO: verl's sft_trainer on the GSM8K
 # train split (lr 1e-5 cosine, batch 128, 58 steps/epoch). Each epoch is kept as

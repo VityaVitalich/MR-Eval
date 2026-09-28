@@ -3112,3 +3112,93 @@ pbsftmix_cite_epe_nobce_rref_s10:
     dtype: bfloat16
   num_gpus: 1
   model_type: open_source
+
+# 1PP variants (2026-09-28): 1.7b ua seed42 replicate + {ua,raw} token-matched branches at every size; tracks as their parents
+
+1pp_1p7b_ua_seed42_base:
+  model:
+    model_name_or_path: Raghav-Singhal/1pp-1.7b-ua-seed42-base
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+1pp_1p7b_ua_seed42_sft:
+  model:
+    model_name_or_path: Raghav-Singhal/1pp-1.7b-ua-seed42-sft
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+1pp_0p5b_ua_tokmatch_base:
+  model:
+    model_name_or_path: Raghav-Singhal/1pp-0.5b-ua-tokmatch-base
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+1pp_0p5b_ua_tokmatch_sft:
+  model:
+    model_name_or_path: Raghav-Singhal/1pp-0.5b-ua-tokmatch-sft
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+1pp_0p5b_raw_tokmatch_sft:
+  model:
+    model_name_or_path: Raghav-Singhal/1pp-0.5b-raw-tokmatch-sft
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+1pp_1b_ua_tokmatch_base:
+  model:
+    model_name_or_path: Raghav-Singhal/1pp-1b-ua-tokmatch-base
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+1pp_1b_ua_tokmatch_sft:
+  model:
+    model_name_or_path: Raghav-Singhal/1pp-1b-ua-tokmatch-sft
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+1pp_1b_raw_tokmatch_sft:
+  model:
+    model_name_or_path: Raghav-Singhal/1pp-1b-raw-tokmatch-sft
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+1pp_1p7b_ua_tokmatch_base:
+  model:
+    model_name_or_path: Raghav-Singhal/1pp-1.7b-ua-tokmatch-base
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+1pp_1p7b_ua_tokmatch_sft:
+  model:
+    model_name_or_path: Raghav-Singhal/1pp-1.7b-ua-tokmatch-sft
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+1pp_1p7b_raw_tokmatch_sft:
+  model:
+    model_name_or_path: Raghav-Singhal/1pp-1.7b-raw-tokmatch-sft
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
