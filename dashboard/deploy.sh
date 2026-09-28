@@ -75,6 +75,13 @@ if [[ -f dashboard/judge_benchmark.json ]]; then
 fi
 # Copy the per-benchmark diagnostics tree (and index).
 cp -R dashboard/diagnostics "$WORKTREE/"
+# Publish diagnostics gzip-compressed (<name>.json -> <name>.json.gz): the plain
+# tree crossed GitHub Pages' 10 GiB site limit on 2026-09-28 (10.84 GB, deploy
+# rejected). index.html's diagFetch() fetches the .gz and decompresses it in the
+# browser. -n drops the name/mtime header so unchanged files stay byte-identical
+# across deploys (no spurious gh-pages diffs).
+echo "▸ Compressing diagnostics"
+find "$WORKTREE/diagnostics" -type f -name '*.json' -print0 | xargs -0 -n 64 -P 8 gzip -6 -n
 # GitHub Pages needs a .nojekyll marker so Jekyll doesn't rewrite paths.
 touch "$WORKTREE/.nojekyll"
 
