@@ -927,8 +927,15 @@
       share one axis: the legacy recipe (<code>em.yaml</code>) takes 64 samples
       per step, the paper recipe (<code>em_paper.yaml</code>: one epoch of 6k
       samples in 375 steps) takes 16.
+      The judge and question set have their own selector, independent of the page-wide
+      safety Judge: each option is a different judge <em>and</em> question set, so read
+      curves within one option only. Categories filter test questions before averaging
+      and resampling.
     </p>
     <div class="dyn-controls">
+      <label class="field">Judge · questions
+        <select id="em-variant"></select>
+      </label>
       <label class="field">Metric
         <select id="em-metric"></select>
       </label>
@@ -941,6 +948,11 @@
         </span>
       </label>
       <span class="field" style="flex:1"><span class="label">&nbsp;</span><span id="em-dyn-coh-note" class="note"></span></span>
+    </div>
+    <div class="dyn-controls" id="em-cats-row">
+      <span class="field"><span class="label">Question categories</span>
+        <span id="em-cats" style="display:inline-flex; flex-wrap:wrap; gap:4px 12px; align-items:center"></span>
+      </span>
     </div>
     <p class="note" id="em-ci-note">Whiskers: pointwise 95% percentile bootstrap CIs, 2,000 resamples of retained test questions; responses from each question stay together. Bounds filter responses before resampling. Hover for interval and sample counts.</p>
     <div class="model-picker" id="em-models"></div>
@@ -3864,13 +3876,14 @@ function dynamicsBootstrap(pairs, reps = 2000, seed = 20260922) {
   return { mean, low: quantile(0.025), high: quantile(0.975), n, count };
 }
 
-function dynamicsEmPairs(rows, metric, min, max) {
+function dynamicsEmPairs(rows, metric, min, max, keepQuestion = null) {
   const column = { em_score: 1, aligned_mean: 1, coherence: 2, coherent_mean: 2 }[metric];
   if (column === undefined) throw new Error(`Unknown EM metric: ${metric}`);
   const groups = new Map();
   for (const row of rows) {
     const [qid, , coherent] = row;
     if (qid == null) throw new Error('EM response has no test question ID');
+    if (keepQuestion && !keepQuestion(qid)) continue;
     if (min != null || max != null) {
       if (!Number.isFinite(coherent)) continue;
       if (min != null && coherent < min) continue;
@@ -3886,7 +3899,9 @@ function dynamicsEmPairs(rows, metric, min, max) {
 }
 // ── End dynamics bootstrap (pure) ─────────────────────────────────────────
 
-function createDynamicsStatistics({ metricSelId, statusId, minId, maxId, clearId, enabled = () => true }) {
+// questionFilter() -> null (all questions) or { key, keep(qid) }; `key` must
+// identify the filter so cached statistics never outlive a filter change.
+function createDynamicsStatistics({ metricSelId, statusId, minId, maxId, clearId, enabled = () => true, questionFilter = () => null }) {
   const files = new Map(), computed = new Map(), messages = new Set();
   const status = document.getElementById(statusId);
   const minEl = document.getElementById(minId), maxEl = document.getElementById(maxId);
@@ -3925,12 +3940,13 @@ function createDynamicsStatistics({ metricSelId, statusId, minId, maxId, clearId
       messages.add('Enter coherence bounds between 0 and 100, with min ≤ max.');
       return empty;
     }
-    const key = JSON.stringify([file, blk.test_samples_key, metric, min, max]);
+    const qf = questionFilter();
+    const key = JSON.stringify([file, blk.test_samples_key, metric, min, max, qf?.key ?? null]);
     if (!computed.has(key)) {
       const statistics = payload.steps.map(rows => {
         if (rows === null) return null;
         if (payload.format !== 'em') throw new Error(`Unknown test sample format: ${payload.format}`);
-        return dynamicsBootstrap(dynamicsEmPairs(rows, metric, min, max));
+        return dynamicsBootstrap(dynamicsEmPairs(rows, metric, min, max, qf?.keep ?? null));
       });
       computed.set(key, { ...blk, [metric]: statistics.map(s => s?.mean ?? null), statistics });
     }
@@ -4811,20 +4827,48 @@ function renderDynamics(data) {
     datasetSelId: 'alpaca-dataset',
   });
 
+  // EM judge x question set (data.em_variants): the block is dynamics[<key>].
+  // Only variants some model has a block for are offered; the gpt-4o core set
+  // (key 'em') stays first, so the default view is unchanged.
+  const emVariants = (data.em_variants || [{ key: 'em', label: 'EM', categories: [], question_categories: {} }])
+    .filter(v => Object.values(data.models).some(md => md.dynamics?.[v.key]?.iterations?.length));
+  const emVariantSel = document.getElementById('em-variant');
+  emVariantSel.innerHTML = emVariants.map(v => `<option value="${v.key}">${jbEscape(v.label)}</option>`).join('');
+  const emVariant = () => emVariants.find(v => v.key === emVariantSel.value) || emVariants[0];
+  const emCatsEl = document.getElementById('em-cats');
+  function renderEmCats() {
+    const v = emVariant();
+    emCatsEl.innerHTML = (v?.categories || []).map(c =>
+      `<label style="white-space:nowrap"><input type="checkbox" value="${c.slug}" checked> ${jbEscape(c.label)} <span class="note">(${c.n})</span></label>`).join('');
+    document.getElementById('em-cats-row').hidden = !(v?.categories || []).length;
+  }
+  renderEmCats();
+  function emQuestionFilter() {
+    const v = emVariant();
+    const boxes = [...emCatsEl.querySelectorAll('input[type=checkbox]')];
+    const on = boxes.filter(b => b.checked).map(b => b.value);
+    if (!v || on.length === boxes.length) return null;
+    const keep = new Set(on);
+    return { key: v.key + ':' + on.join(','), keep: qid => keep.has(v.question_categories[qid]) };
+  }
   const emStats = createDynamicsStatistics({
     metricSelId: 'em-metric', statusId: 'em-dyn-coh-note',
     minId: 'em-dyn-coh-min', maxId: 'em-dyn-coh-max', clearId: 'em-dyn-coh-clear',
     // Per-response bootstrap exists only for the EM judge scores; the charter
     // MCQ series plot as stored (one deterministic score per checkpoint).
     enabled: () => !dynamicsMetricKey('em-metric').startsWith('charter_'),
+    questionFilter: emQuestionFilter,
   });
   const em = setupDynamicsPanel({
     chartId: 'em-chart', metricSelId: 'em-metric', pickerId: 'em-models', tableId: 'em-table',
     kind: 'em', metricLabels: Object.fromEntries(emMetrics), xMode: 'iteration',
     xLabel: 'training samples', yOpts: { beginAtZero: false },
     statistics: emStats, preserveModelSelection: true,
+    blockForModel: md => md.dynamics?.[emVariant()?.key || 'em'],
   });
   emStats.connect(() => em.render(data));
+  emVariantSel.addEventListener('change', () => { renderEmCats(); em.rerenderPicker(data); });
+  emCatsEl.addEventListener('change', () => em.render(data));
   const pez = setupDynamicsPanel({
     chartId: 'pez-chart', metricSelId: 'pez-metric', pickerId: 'pez-models', tableId: 'pez-table',
     kind: 'pez', metricLabels: Object.fromEntries(pezMetrics), xMode: 'iteration',
