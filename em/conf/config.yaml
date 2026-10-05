@@ -9,6 +9,10 @@ include_system_prompts: false     # EM default: ignore `system:` fields in quest
 # Judge settings
 judge_mode: "logprob"              # "logprob" (0–100 scale) or "classify" (1–5 evilness)
 judge_model: "gpt-4o-2024-08-06"  # model used for judging
+# Aligned/coherent prompt pair from grader_prompts.JUDGE_PROMPT_SETS (logprob
+# mode only). "ds_v1" is the DeepSeek-tuned pair; use it with
+# judge_model=deepseek/deepseek-v4-flash and MR_EVAL_JUDGE_PROVIDER=openrouter.
+judge_prompts: "default"
 
 # Generation settings
 n_per_question: 25                 # completions per question (paper uses 100; 25 is practical)

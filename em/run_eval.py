@@ -50,14 +50,13 @@ from banned_tokens import vllm_logit_bias  # noqa: E402
 from mreval.tensor_parallel import compatible_tensor_parallel_size  # noqa: E402
 
 from grader_prompts import (
-    ALIGNED_JUDGE_PROMPT,
-    COHERENT_JUDGE_PROMPT,
+    JUDGE_PROMPT_SETS,
     MAIN_MISALIGNMENT_JUDGE_PROMPT_TEMPLATE,
 )
-from mreval.judge import ClassifyJudge, JudgeError, LogprobJudge, build_openai_client
+from mreval.judge import ClassifyJudge, JudgeError, LogprobJudge, build_openai_client, verify_deepseek_snapshot
 
 
-def em_judge_version(judge_mode: str) -> str:
+def em_judge_version(judge_mode: str, judge_prompts: str = "default") -> str:
     """EM-local versioned stamp. Hashes the active grader prompts so a
     prompt edit auto-busts the stamp without re-coding. The hash includes
     judge_mode so logprob and classify get distinct stamps.
@@ -67,7 +66,8 @@ def em_judge_version(judge_mode: str) -> str:
     em/judge.py:rule_judge_version() here (its docstring forbids it)."""
     import hashlib
     if judge_mode == "logprob":
-        body = (ALIGNED_JUDGE_PROMPT + "\n" + COHERENT_JUDGE_PROMPT).encode("utf-8")
+        aligned_prompt, coherent_prompt = JUDGE_PROMPT_SETS[judge_prompts]
+        body = (aligned_prompt + "\n" + coherent_prompt).encode("utf-8")
     elif judge_mode == "classify":
         body = MAIN_MISALIGNMENT_JUDGE_PROMPT_TEMPLATE.encode("utf-8")
     else:
@@ -94,11 +94,15 @@ class Question:
         paraphrases: list[str],
         judge_prompts: dict | None = None,
         system: str | None = None,
+        category: str | None = None,
+        subcategory: str | None = None,
         **_ignored,
     ):
         self.id = id
         self.paraphrases = paraphrases
         self.system = system
+        self.category = category
+        self.subcategory = subcategory
         self.judge_prompts = judge_prompts or {}
 
     def sample_inputs(
@@ -153,7 +157,12 @@ def load_questions_csv(path: Path) -> list[Question]:
                 question_id = (
                     str(row.get("id", "") or "").strip() or f"{path.stem}_{idx}"
                 )
-                questions.append(Question(id=question_id, paraphrases=[question_text]))
+                questions.append(Question(
+                    id=question_id,
+                    paraphrases=[question_text],
+                    category=str(row.get("category", "") or "").strip() or None,
+                    subcategory=str(row.get("subcategory", "") or "").strip() or None,
+                ))
         return questions
 
     for idx, row in enumerate(rows):
@@ -333,10 +342,12 @@ async def judge_batch_logprob(
     client,
     judge_model: str,
     api_sem: asyncio.Semaphore,
+    judge_prompts: str = "default",
 ) -> list[dict]:
     """Judge a batch using logprob 0–100 approach (aligned + coherent)."""
-    aligned_judge = LogprobJudge(judge_model, ALIGNED_JUDGE_PROMPT, client=client)
-    coherent_judge = LogprobJudge(judge_model, COHERENT_JUDGE_PROMPT, client=client)
+    aligned_prompt, coherent_prompt = JUDGE_PROMPT_SETS[judge_prompts]
+    aligned_judge = LogprobJudge(judge_model, aligned_prompt, client=client)
+    coherent_judge = LogprobJudge(judge_model, coherent_prompt, client=client)
 
     async def _judge_one(question: str, answer: str) -> dict:
         async with api_sem:
@@ -413,7 +424,8 @@ async def evaluate_questions(
 
         if cfg.judge_mode == "logprob":
             scores = await judge_batch_logprob(
-                paraphrases, answers, client, cfg.judge_model, api_sem
+                paraphrases, answers, client, cfg.judge_model, api_sem,
+                judge_prompts=cfg.get("judge_prompts", "default"),
             )
             for para, convo, prompt_text, ans, sc in zip(
                 paraphrases, conversations, prompt_texts, answers, scores
@@ -421,6 +433,8 @@ async def evaluate_questions(
                 all_records.append(
                     dict(
                         question_id=q.id,
+                        **({"category": q.category} if q.category else {}),
+                        **({"subcategory": q.subcategory} if q.subcategory else {}),
                         question=para,
                         system_prompt=extract_system_prompt(convo),
                         prompt_messages=[dict(msg) for msg in convo],
@@ -440,6 +454,8 @@ async def evaluate_questions(
                 all_records.append(
                     dict(
                         question_id=q.id,
+                        **({"category": q.category} if q.category else {}),
+                        **({"subcategory": q.subcategory} if q.subcategory else {}),
                         question=para,
                         system_prompt=extract_system_prompt(convo),
                         prompt_messages=[dict(msg) for msg in convo],
@@ -481,7 +497,11 @@ def main(cfg: DictConfig) -> None:
         enforce_eager=bool(cfg.vllm_enforce_eager),
     )
 
+    if cfg.get("judge_prompts", "default") not in JUDGE_PROMPT_SETS:
+        raise ValueError(f"Unknown judge_prompts {cfg.judge_prompts!r}; expected one of {sorted(JUDGE_PROMPT_SETS)}")
     client = build_openai_client()
+    if str(cfg.judge_model).startswith("deepseek/"):
+        verify_deepseek_snapshot()
 
     records = asyncio.run(evaluate_questions(questions, llm, cfg, client))
     logger.info("Collected {} judgements", len(records))
@@ -501,7 +521,7 @@ def main(cfg: DictConfig) -> None:
     output_data = {
         "metadata": {
             **OmegaConf.to_container(cfg, resolve=True),
-            "judge_version": em_judge_version(cfg.judge_mode),
+            "judge_version": em_judge_version(cfg.judge_mode, cfg.get("judge_prompts", "default")),
             "judge_model": cfg.judge_model,
             "rejudged_at": em_judge_rejudged_at(),
         },
