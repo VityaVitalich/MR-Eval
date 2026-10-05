@@ -357,7 +357,7 @@ for repo in [\"Raghav-Singhal/...\", \"Raghav-Singhal/...\"]:
 "'
 ```
 
-Downloads land in `/capstor/store/cscs/swissai/infra01/vvmoskvoretskii/hf_cache/` (the shared
+Downloads land in `/capstor/store/cscs/swissai/infra01/users/vvmoskvoretskii/hf_cache/` (the shared
 HF cache, `HF_HOME` per Viktor's bashrc). Idempotent.
 
 ### Direct `sbatch slurm/eval_*.sh` needs `--environment=container/<env>.toml`
@@ -447,7 +447,7 @@ Two consequences:
 ### `$MR_EVAL_DATA_DIR` for off-cluster (laptop) dev
 
 Post-PR #8, every eval Hydra config and `dashboard/build_data.py` resolves
-its data path via `${oc.env:MR_EVAL_DATA_DIR,/capstor/store/cscs/swissai/infra01/vvmoskvoretskii/mr_evals_vvm}`.
+its data path via `${oc.env:MR_EVAL_DATA_DIR,/capstor/store/cscs/swissai/infra01/users/vvmoskvoretskii/mr_evals_vvm}`.
 The default is the Clariden capstor path, which doesn't exist on a laptop.
 Set:
 
@@ -460,12 +460,12 @@ fresh eval Hydra runs all agree on one path.
 
 ### Capstor permissions are owner-only
 
-`/capstor/store/cscs/swissai/infra01/vvmoskvoretskii/mr_evals_vvm/` was set up by `jminder`
+`/capstor/store/cscs/swissai/infra01/users/vvmoskvoretskii/mr_evals_vvm/` was set up by `jminder`
 (Julian). Files are mode `0644` and almost all are owned by him. Other
 infra01 members can READ but cannot overwrite existing files or `mkdir` inside
 many subtrees (parents are `drwxr-xr-x jminder`). If `chmod -R g+w` hasn't
 been done yet, push to a sibling dir you own (e.g.,
-`/capstor/.../infra01/vvmoskvoretskii/mr_evals_vvm/`) and ask the owner to merge later.
+`/capstor/.../infra01/users/vvmoskvoretskii/mr_evals_vvm/`) and ask the owner to merge later.
 Don't try to fight rsync with `--ignore-errors`; the parent-dir mkdir
 failures cascade and abort the run.
 
@@ -536,6 +536,27 @@ hit two repo quirks on its first fan-out:
   tp=3 tripped the next vLLM rule ("49216 is not divisible by 3", the padded
   vocab), and odd-head models are small enough for one GPU. New vLLM leaves
   should call it too instead of `device_count()`.
+
+### `safety_base` also needed the TP clamp (2026-09-03, later the same evening)
+
+When Viktor reclassified the three `1pp_*_raw_base` controls onto the BASE
+track (`cb48419`), `safety_base` saw its first 9-head model and
+`safety_base/run_eval.py` was still on `tensor_parallel_size=torch.cuda.
+device_count() or 1` — the TP clamp change set had only covered the leaves the
+instruct track exercises (`em`, `airisk`, `morebench`, `overrefusal`). Job
+3284252's predecessor died in ~90 s with the familiar
+"Total number of attention heads (9) must be divisible by tensor parallel size
+(4)". Fixed by routing it through `compatible_tensor_parallel_size` like the
+others. **`canaries/eval_utils.py:46` and `canaries/run_pq_base_eval.py:145`
+are still on raw `device_count()`** — they are not in the 1PP suite so they
+were left alone, but they will bite the first odd-head model that reaches
+them.
+
+**Triage note: for the multiproc vLLM leaves the real assertion is in `.out`,
+not `.err`.** The tp=3 padded-vocab failure surfaces in `.err` as a bare
+`RuntimeError: Engine core initialization failed` / `WorkerProc initialization
+failed`; the `AssertionError: 49216 is not divisible by 3` is only in the
+`.out` worker stream. An err-only triage misreads these as a new bug class.
 
 Also new in that change set: dispatcher row `prefill_advbench` (the dataset
 the dashboard's Prefill panel reads since ce9c955); `prefill_jbb` stays.
@@ -737,7 +758,7 @@ stamp. `safety_base/run_eval.py` is the canonical example.
   AutoDAN, TAP, …) whose sampling is bench-fixed, plumb it through that
   helper rather than reintroducing a generic "single-provenance fallback".
 - **Never delete anything on Clariden.** Files under
-  `/capstor/store/cscs/swissai/infra01/vvmoskvoretskii/mr_evals_vvm/...` and
+  `/capstor/store/cscs/swissai/infra01/users/vvmoskvoretskii/mr_evals_vvm/...` and
   `/users/.../MR-Eval/...` on Clariden are the canonical archive — they
   survive local mistakes and there is no Trash, no recycle bin, and no
   user-visible `.snapshot` on `/capstor`. When the user says "remove the

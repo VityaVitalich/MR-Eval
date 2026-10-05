@@ -50,6 +50,7 @@ from mreval.judge import (  # noqa: E402
     LogprobJudge,
     build_openai_client,
 )
+from mreval.tensor_parallel import compatible_tensor_parallel_size  # noqa: E402
 
 # Base-model safety scoring uses the legacy single-token logprob judge with
 # safety_base/judge_prompt.HARM_JUDGE_PROMPT — it suits base-model
@@ -215,7 +216,11 @@ def main(cfg: DictConfig) -> None:
     llm = LLM(
         model=cfg.model.pretrained,
         dtype=cfg.model.dtype,
-        tensor_parallel_size=torch.cuda.device_count() or 1,
+        # 9-head models (the 1PP 0.5B) cannot shard across 4 GPUs; clamp to a
+        # TP vLLM can actually build. See AGENTS.md, 1PP entry (2026-09-03).
+        tensor_parallel_size=compatible_tensor_parallel_size(
+            cfg.model.pretrained, torch.cuda.device_count() or 1
+        ),
         max_model_len=cfg.max_model_len,
         gpu_memory_utilization=0.90,
         enable_prefix_caching=True,

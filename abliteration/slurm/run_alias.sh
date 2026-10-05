@@ -51,7 +51,10 @@ PRETRAINED="${MR_EVAL_MODEL_PRETRAINED_MAP[$ALIAS]:?no pretrained for $ALIAS}"
 : "${ABLIT_ROOT:=/iopsstor/scratch/cscs/$USER/abliterated}"
 CKPT="$ABLIT_ROOT/${ALIAS}_ablit"
 
-ENV_JBB="$(mr_eval_env_toml jbb)"
+# jbb generates through the mreval vLLM fused pipeline, which lives in the
+# train image (the dispatcher submits run_all_jbb.sh with train.toml); the
+# legacy jbb image has no vllm module (2026-09-07: ModuleNotFoundError).
+ENV_JBB="$(mr_eval_env_toml train)"
 ENV_TRAIN="$(mr_eval_env_toml train)"
 mkdir -p "$REPO_ROOT/logs"
 
