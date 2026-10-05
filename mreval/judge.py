@@ -126,6 +126,61 @@ def _strip_think(text: str) -> str:
 DEEPSEEK_JUDGE_MODEL = "deepseek/deepseek-v4-flash"
 DEEPSEEK_PROVIDER_ORDER = ["Parasail", "SiliconFlow", "GMICloud"]  # preferred order; AtlasCloud is ignored
 DEEPSEEK_IGNORE_PROVIDERS = ["AtlasCloud"]
+# OpenRouter's bare slug has no dated sibling for OUR snapshot: as of
+# 2026-08-29 `deepseek/deepseek-v4-flash` IS "DeepSeek V4 Flash 0423", while
+# newer snapshots got their own ids (`deepseek-v4-flash-0731`,
+# `~deepseek-v4-flash-latest`). Every scored run and the judge-selection
+# benchmark used the 0423 weights, so a silent repoint of the bare slug would
+# break comparability without touching any of our stamps — the preflight
+# below fails loudly if the slug's display name stops matching this token.
+DEEPSEEK_EXPECTED_SNAPSHOT = "0423"
+# All three pinned providers serve fp8. Restricting fallbacks to fp8 too
+# keeps an off-order reroute from silently switching precision (the slug's
+# endpoint pool includes quant-unknown providers and one fp4).
+DEEPSEEK_QUANTIZATIONS = ["fp8"]
+
+_snapshot_checked = False
+
+
+def verify_deepseek_snapshot() -> None:
+    """Fail loudly if OpenRouter repointed the bare deepseek-v4-flash slug.
+
+    Checks the slug's display name on the public models endpoint against
+    DEEPSEEK_EXPECTED_SNAPSHOT once per process. A repoint raises (scores
+    would silently stop being comparable); an unreachable endpoint only
+    warns (a metadata lookup must not kill an eval run). Skip with
+    MR_EVAL_SKIP_JUDGE_SNAPSHOT_CHECK=1.
+    """
+    global _snapshot_checked
+    if _snapshot_checked or os.environ.get("MR_EVAL_SKIP_JUDGE_SNAPSHOT_CHECK") == "1":
+        return
+    import json as _json
+    import urllib.request
+
+    url = f"https://openrouter.ai/api/v1/models/{DEEPSEEK_JUDGE_MODEL}/endpoints"
+    try:
+        try:  # system python may lack CA wiring; certifi ships with openai
+            import ssl
+
+            import certifi
+
+            ctx = ssl.create_default_context(cafile=certifi.where())
+        except Exception:
+            ctx = None
+        with urllib.request.urlopen(url, timeout=10, context=ctx) as resp:
+            name = (_json.load(resp).get("data") or {}).get("name") or ""
+    except Exception as e:  # network/endpoint trouble: warn, don't kill the run
+        logger.warning("deepseek snapshot preflight unreachable ({}); proceeding unverified", e)
+        return
+    if DEEPSEEK_EXPECTED_SNAPSHOT not in name:
+        raise RuntimeError(
+            f"OpenRouter slug {DEEPSEEK_JUDGE_MODEL!r} now resolves to {name!r}, "
+            f"not the pinned {DEEPSEEK_EXPECTED_SNAPSHOT} snapshot every scored run used. "
+            f"Pin the dated snapshot id (or bump DEEPSEEK_EXPECTED_SNAPSHOT after a "
+            f"deliberate judge upgrade + rejudge). MR_EVAL_SKIP_JUDGE_SNAPSHOT_CHECK=1 overrides."
+        )
+    _snapshot_checked = True
+    logger.info("deepseek judge snapshot verified: {} = {!r}", DEEPSEEK_JUDGE_MODEL, name)
 
 
 def judge_provider() -> str:
@@ -167,6 +222,9 @@ def deepseek_extra_body(provider_order: list[str] | None = None, attempt: int = 
             "order": order,
             "ignore": list(DEEPSEEK_IGNORE_PROVIDERS),
             "allow_fallbacks": True,
+            # Fallbacks may leave the pinned order, but never the precision:
+            # the pool behind the slug includes quant-unknown endpoints.
+            "quantizations": list(DEEPSEEK_QUANTIZATIONS),
         },
         "reasoning": {"enabled": False},
     }
@@ -216,6 +274,12 @@ def build_judge_client(provider: str, judge_model: str) -> tuple[AsyncOpenAI, st
         if not key:
             raise ValueError("OPENROUTER_API_KEY must be set when judge provider=openrouter")
         routed = judge_model if "/" in judge_model else f"openai/{judge_model}"
+        # Central 0423 enforcement: every OpenRouter deepseek judge path
+        # (safety benches, overrefusal, PAIR, harmbench pez) routes through
+        # here, so verifying the undated slug's snapshot once here covers them
+        # all (idempotent — a no-op after the first call).
+        if routed == DEEPSEEK_JUDGE_MODEL:
+            verify_deepseek_snapshot()
         logger.info("Judge: OpenRouter, model={}", routed)
         return AsyncOpenAI(api_key=key, base_url="https://openrouter.ai/api/v1"), routed
     raise ValueError(f"Unknown judge provider: {provider!r} (expected 'openai' or 'openrouter')")
@@ -348,7 +412,7 @@ def build_rule_judge(judge_cfg: Mapping[str, object]) -> Callable[[str, str], Aw
 
 def judge_meta(judge_cfg: Mapping[str, object]) -> dict:
     """metadata.judge block for a saved result file, from a bench judge config."""
-    return {
+    meta = {
         "id": judge_cfg.get("id") or str(judge_cfg["model"]).split("/")[-1],
         "provider": judge_cfg["provider"],
         "model": judge_cfg["model"],
@@ -357,6 +421,11 @@ def judge_meta(judge_cfg: Mapping[str, object]) -> dict:
         "rejudged_at": rule_judge_rejudged_at(),
         "asr_threshold": int(judge_cfg.get("asr_threshold", 50)),
     }
+    if str(judge_cfg["model"]).startswith("deepseek/"):
+        # The bare OpenRouter slug is undated; record which snapshot it is
+        # pinned to (verified by verify_deepseek_snapshot at judge init).
+        meta["model_snapshot"] = DEEPSEEK_EXPECTED_SNAPSHOT
+    return meta
 
 
 class LogprobJudge:
@@ -503,6 +572,8 @@ class RuleBasedJudge:
         self.prompt_template = prompt_template or load_rule_judge_prompt()
         self.max_tokens = max_tokens
         self._client = client or build_openai_client()
+        if judge_provider() == "openrouter" and self.model == DEEPSEEK_JUDGE_MODEL:
+            verify_deepseek_snapshot()
 
     async def __call__(self, *, attempt: int = 0, **kwargs) -> dict:
         # Substitute placeholders. Use .replace so we don't fight curly
@@ -525,7 +596,15 @@ class RuleBasedJudge:
             max_retries=max_retries,
         )
         raw = (completion.choices[0].message.content or "").strip()
-        return {"score": self._parse(_strip_think(raw)), "raw": raw[:1000]}
+        out = {"score": self._parse(_strip_think(raw)), "raw": raw[:1000]}
+        # OpenRouter reports which provider actually served the call — record
+        # it so provider drift behind the slug is visible per sample.
+        served_by = getattr(completion, "provider", None) or (
+            getattr(completion, "model_extra", None) or {}
+        ).get("provider")
+        if served_by:
+            out["provider"] = served_by
+        return out
 
     @staticmethod
     def _parse(text: str) -> int | None:
