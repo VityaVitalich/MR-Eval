@@ -16,9 +16,11 @@ function checkDynamicsBootstrap() {
     ['a', 0, 50], ['a', 100, 49], ['b', 80, 90], ['c', null, 80], ['d', 90, null],
   ], 'aligned_mean', 50, 90);
   assert(JSON.stringify(filtered) === JSON.stringify([[0, 1], [80, 1]]), 'Inclusive bounds; missing scores are not zeros');
+  const byQuestion = dynamicsEmPairs([['a', 10, 80], ['b', 20, 80], ['c', 30, 80]], 'aligned_mean', null, null, q => q !== 'b');
+  assert(JSON.stringify(byQuestion) === JSON.stringify([[10, 1], [30, 1]]), 'Question filter drops excluded questions');
   assert(dynamicsBootstrap([]).mean === null, 'Empty subset has no estimate');
   assert(dynamicsBootstrap([[3, 1]]).low === null, 'One question has no estimable CI');
   const constant = dynamicsBootstrap([[7, 1], [14, 2]]);
   assert(constant.mean === 7 && constant.low === 7 && constant.high === 7, 'Constant values have zero-width intervals');
-  return { passed: 9 };
+  return { passed: 10 };
 }

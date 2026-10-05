@@ -40,6 +40,10 @@ SAFETY_BASE_DIRS = [LOGS / "safety_base" / "safety_base", LOGS / "clariden" / "s
 ADVBENCH_DIRS    = [LOGS / "jailbreaks" / "jailbreaks" / "advbench", LOGS / "clariden" / "jailbreaks" / "advbench", OUTPUTS / "jailbreaks" / "advbench"]
 DAN_DIRS         = [LOGS / "jailbreaks" / "jailbreaks" / "chatgpt_dan_jbb", LOGS / "clariden" / "jailbreaks" / "chatgpt_dan_jbb", OUTPUTS / "jailbreaks" / "chatgpt_dan_jbb"]
 EM_DIRS          = [LOGS / "em" / "em_eval", LOGS / "clariden" / "em_eval", OUTPUTS / "em_eval"]
+# EM on the em_values_v1 question set (134 q) judged by deepseek-v4-flash with
+# the ds_v1 prompts. Its own tree, so no gpt-4o EM collector above can pick a
+# DeepSeek file (same filename scheme, different judge and questions).
+EM_VALUES_DS_DIRS = [LOGS / "clariden" / "em_values_eval", OUTPUTS / "em_values_eval"]
 EVAL_DIRS        = [LOGS / "eval" / "eval", LOGS / "clariden" / "eval", OUTPUTS / "eval"]
 JBB_DIRS         = [LOGS / "clariden" / "jbb", OUTPUTS / "jbb"]
 PAP_DIRS         = [LOGS / "clariden" / "jailbreaks" / "persuasive_pap", OUTPUTS / "jailbreaks" / "persuasive_pap"]
@@ -798,6 +802,9 @@ def collect_dynamics(model_id: str) -> dict:
             out.pop("em", None)
     elif "em" in out:
         _attach_em_misaligned(model_id, out["em"])
+    em_values_ds = collect_em_values_ds_dynamics(model_id)
+    if em_values_ds:
+        out["em_values_ds"] = em_values_ds
     pez = collect_pez_dynamics(model_id)
     if pez:
         out["pez"] = pez
@@ -1850,6 +1857,9 @@ CHARTER_MCQ_TRAJECTORIES = [
     {"host": "1pp_1p7b_{c}_sft", "path": ("em",), "create": False,
      "start": "1pp_1p7b_{c}_sft", "step": "1pp_1p7b_{c}_sft_em_incorrect_health_{s}",
      "steps": [10, 12, 19, 25, 31, 37, 44, 50, 100, 150, 225, 300, 375]},
+    {"host": "1pp_1p7b_{c}_sft", "path": ("em_values_ds",), "create": False,
+     "start": "1pp_1p7b_{c}_sft", "step": "1pp_1p7b_{c}_sft_em_incorrect_health_{s}",
+     "steps": [375]},
 ]
 CHARTER_MCQ_TRAJ_CONDITIONS = ("asst", "ua", "raw")
 CHARTER_MCQ_DYN_KEYS = {"charter_hard": ("band", "hard"), "charter_overall": ("acc", None),
@@ -2985,6 +2995,83 @@ def _attach_em_misaligned(model_id: str, blk: dict) -> None:
         blk["judges"] = judges
     blk["samples_per_iteration"] = EM_SAMPLES_PER_STEP_LEGACY
     blk["test_samples"] = {"format": "em", "steps": samples}
+
+
+# ── EM judge x question-set variants ────────────────────────────────────────
+# The EM dynamics panel selects one of these with its own selector, never the
+# page-wide safety Judge selector: each is a different judge AND question set,
+# so their numbers are not comparable to each other. `dynamics.<key>` holds the
+# block. Categories come from em_values_v1.csv (Viktor's labels, 2026-09-28);
+# 40 of the 44 core questions carry one, the 4 dropped from the values set get
+# EM_CATEGORY_DROPPED.
+EM_VALUES_QUESTIONS = REPO / "em" / "questions" / "em_values_v1.csv"
+EM_CORE_QUESTIONS = REPO / "em" / "questions" / "core_misalignment.csv"
+EM_CATEGORY_ORDER = ["ai", "power_society", "money_rulebending", "personal_life", "health_safety"]
+EM_CATEGORY_DROPPED = "not_in_values_set"
+EM_CATEGORY_LABELS = {
+    "ai": "AI", "power_society": "Power & society", "money_rulebending": "Money & rule-bending",
+    "personal_life": "Personal life", "health_safety": "Health & safety",
+    EM_CATEGORY_DROPPED: "Not in values set",
+}
+EM_VARIANTS = [
+    {"key": "em", "label": "gpt-4o · EM core questions (44)", "questions": EM_CORE_QUESTIONS},
+    {"key": "em_values_ds", "label": "DeepSeek ds_v1 · EM values set (134)", "questions": EM_VALUES_QUESTIONS},
+]
+
+
+def em_variant_catalogue() -> list[dict]:
+    """`data.em_variants`: per variant its label, category order and the
+    question_id -> category map the panel filters test samples by."""
+    import csv
+    values = {r["id"]: r["category"] for r in csv.DictReader(EM_VALUES_QUESTIONS.open())}
+    out = []
+    for v in EM_VARIANTS:
+        ids = [r["id"] for r in csv.DictReader(v["questions"].open())]
+        cats = {q: values.get(q, EM_CATEGORY_DROPPED) for q in ids}
+        order = [c for c in EM_CATEGORY_ORDER + [EM_CATEGORY_DROPPED] if c in cats.values()]
+        out.append({"key": v["key"], "label": v["label"],
+                    "categories": [{"slug": c, "label": EM_CATEGORY_LABELS[c],
+                                    "n": sum(x == c for x in cats.values())} for c in order],
+                    "question_categories": cats})
+    return out
+
+
+def collect_em_values_ds_dynamics(model_id: str) -> dict | None:
+    """`dynamics.em_values_ds`: the model's own file (iteration 0) plus its EM
+    checkpoints from EM_VALUES_DS_DIRS. Every file must carry the same judge
+    stamp; a mixed set raises rather than plotting two judges as one curve."""
+    aliases = ALIASES[model_id]
+    cells: dict[int, dict] = {}
+    base = oldest(scan(EM_VALUES_DS_DIRS, "em_eval_*.json", lambda n: any(
+        re.match(rf"^em_eval_{re.escape(a)}_\d{{8}}_\d{{6}}\.json$", n) for a in aliases)))
+    if base and (cell := _em_cell_from_path(base, f"em-values-ds / {model_id}")):
+        cells[0] = cell
+    ckpts: dict[int, list[Path]] = defaultdict(list)
+    for f in scan(EM_VALUES_DS_DIRS, "em_eval_*.json", lambda n: True):
+        for a in aliases:
+            m = re.match(rf"^em_eval_{re.escape(a)}_em_(?:incorrect_health|health_incorrect)_(?:checkpoint-)?(\d+)_\d{{8}}_\d{{6}}\.json$", f.name)
+            if m:
+                ckpts[int(m.group(1))].append(f)
+                break
+    for it, paths in ckpts.items():
+        if (cell := _em_cell_from_path(oldest(paths), f"em-values-ds / {model_id}")):
+            cells[it] = cell
+    if not any(it > 0 for it in cells):
+        return None
+    iters = sorted(cells)
+    judges = sorted({cells[it]["judge"] for it in iters})
+    if len(judges) != 1:
+        raise ValueError(f"em_values_ds / {model_id}: mixed judge stamps {judges}")
+    return {
+        "iterations":     iters,
+        "em_score":       [cells[it]["aligned_mean"] for it in iters],
+        "coherence":      [cells[it]["coherent_mean"] for it in iters],
+        "misaligned_pct": [cells[it]["misaligned_pct"] for it in iters],
+        "n":              [cells[it]["n"] for it in iters],
+        "judges":         judges,
+        "samples_per_iteration": EM_SAMPLES_PER_STEP_PAPER if model_id in EM_PAPER_RECIPE_MODELS else EM_SAMPLES_PER_STEP_LEGACY,
+        "test_samples": {"format": "em", "steps": [cells[it]["test_samples"] for it in iters]},
+    }
 
 
 def collect_rl_em_dynamics(model_id: str) -> dict | None:
@@ -4321,7 +4408,7 @@ def emit_dynamics_test_samples(data: dict, diag_root: Path) -> None:
     dest = diag_root / "dynamics"
     dest.mkdir(parents=True, exist_ok=True)
     for mid, model in data["models"].items():
-        for kind in ("em", "rl_em"):
+        for kind in ("em", "em_values_ds", "rl_em"):
             blk = model.get("dynamics", {}).get(kind)
             if not blk:
                 continue
@@ -4354,6 +4441,7 @@ def main() -> None:
     # for the dropdown plus optional per-dataset x-axis overrides (see
     # ALPACA_DATASETS). Keyed by panel kind.
     data["dyn_datasets"] = {"alpaca": ALPACA_DATASETS}
+    data["em_variants"] = em_variant_catalogue()
     attach_charter_mcq_dynamics(data)
 
     # Tiered storage (FF-9): route raw per-sample arrays to the lazy

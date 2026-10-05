@@ -233,6 +233,8 @@ sync_dir "clariden airisk     → outputs/airisk/"           "${CLARIDEN_DATA_DI
 # tree above was synced, so the post-migration em runs (e.g. the 1PP class,
 # 2026-09-03) never reached the dashboard. Flat ~1 MB result jsons, plain sync.
 sync_dir "clariden em out     → outputs/em_eval/"          "${CLARIDEN_DATA_DIR}/outputs/em_eval"           "$LOCAL_OUTPUTS/em_eval"           "$CLARIDEN_HOST"
+# EM on the em_values_v1 set, DeepSeek ds_v1 judge (build_data EM_VALUES_DS_DIRS).
+sync_dir "clariden em values  → outputs/em_values_eval/"   "${CLARIDEN_DATA_DIR}/outputs/em_values_eval"    "$LOCAL_OUTPUTS/em_values_eval"    "$CLARIDEN_HOST"
 # constitution-in-context experiment runs (qwen3_32b / gpt_oss_120b / gemma4_31b_it
 # × base/sysconst02/userconst02) — separate dir, same schema plus a
 # generation_reasoning block; consumed by the dashboard's airisk tab.
