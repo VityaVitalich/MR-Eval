@@ -94,12 +94,12 @@ export VLLM_WORKER_MULTIPROC_METHOD="${VLLM_WORKER_MULTIPROC_METHOD:-spawn}"
 #     hydra-core==1.3.2 pandas==2.2.3 python-dateutil pytz tzdata
 #   pip install --target .../pylibs/serving-extra --no-deps antlr4-python3-runtime==4.9.3
 # omegaconf/loguru/numpy come from the container (2.3.1 is in hydra 1.3.2's range).
-export PYTHONPATH="/capstor/store/cscs/swissai/infra01/vvmoskvoretskii/pylibs/serving-extra${PYTHONPATH:+:$PYTHONPATH}"
+export PYTHONPATH="/capstor/store/cscs/swissai/infra01/users/vvmoskvoretskii/pylibs/serving-extra${PYTHONPATH:+:$PYTHONPATH}"
 
 # vLLM torch.compile cache: keep it OFF the NFS home (quota policy + lock
 # contention there killed concurrent same-model engine inits with mq dequeue
 # timeouts during compile_or_warm_up_model) — Lustre handles the locks fine.
-export VLLM_CACHE_ROOT="/capstor/store/cscs/swissai/infra01/vvmoskvoretskii/vllm_cache"
+export VLLM_CACHE_ROOT="/capstor/store/cscs/swissai/infra01/users/vvmoskvoretskii/vllm_cache"
 
 # No core dumps: a crashed 4-rank engine drops ~25GB of core_* files into the
 # submit dir on NFS home, blowing the quota and cascading failures into every

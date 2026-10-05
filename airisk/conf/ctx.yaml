@@ -16,7 +16,7 @@ defaults:
 # reasoning path's 2048-token budget.
 max_model_len: 8192
 
-output_dir: "${oc.env:MR_EVAL_DATA_DIR,/capstor/store/cscs/swissai/infra01/vvmoskvoretskii/mr_evals_vvm}/outputs/airisk_ctx"
+output_dir: "${oc.env:MR_EVAL_DATA_DIR,/capstor/store/cscs/swissai/infra01/users/vvmoskvoretskii/mr_evals_vvm}/outputs/airisk_ctx"
 
 # Strict generation + logprob renders: thinking OFF (Qwen3 honours
 # enable_thinking; gemma/gpt-oss templates ignore it).

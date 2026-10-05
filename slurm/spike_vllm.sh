@@ -36,7 +36,7 @@ export VLLM_USE_V1="${VLLM_USE_V1:-0}"
 # HF-standard precedence over HF_HOME and points at the wrong (empty) cache, so
 # drop them and pin HF_HOME to the shared cache.
 unset HF_HUB_CACHE HUGGINGFACE_HUB_CACHE
-export HF_HOME="${HF_HOME:-/capstor/store/cscs/swissai/infra01/vvmoskvoretskii/hf_cache}"
+export HF_HOME="${HF_HOME:-/capstor/store/cscs/swissai/infra01/users/vvmoskvoretskii/hf_cache}"
 # Make `import mreval` resolve without an editable install (HF cache-only box).
 export PYTHONPATH="$REPO_ROOT${PYTHONPATH:+:$PYTHONPATH}"
 

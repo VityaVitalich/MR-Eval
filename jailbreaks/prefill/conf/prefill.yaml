@@ -30,7 +30,7 @@ tensor_parallel_size: 1
 
 # Base output dir; the runner appends /<benchmark> so the dashboard layout is preserved:
 #   outputs/jailbreaks/<benchmark>/<run_name>/...
-output_dir: "${oc.env:MR_EVAL_DATA_DIR,/capstor/store/cscs/swissai/infra01/vvmoskvoretskii/mr_evals_vvm}/outputs/jailbreaks"
+output_dir: "${oc.env:MR_EVAL_DATA_DIR,/capstor/store/cscs/swissai/infra01/users/vvmoskvoretskii/mr_evals_vvm}/outputs/jailbreaks"
 
 testing: false
 testing_limit: 10

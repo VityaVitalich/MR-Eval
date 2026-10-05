@@ -36,7 +36,7 @@ TEST_CASES="${2:?need a test_cases.json path}"
 shift 2
 
 export MR_EVAL_REPO_ROOT="$REPO_ROOT"
-export MR_EVAL_DATA_DIR="${MR_EVAL_DATA_DIR:-/capstor/store/cscs/swissai/infra01/vvmoskvoretskii/mr_evals_vvm}"
+export MR_EVAL_DATA_DIR="${MR_EVAL_DATA_DIR:-/capstor/store/cscs/swissai/infra01/users/vvmoskvoretskii/mr_evals_vvm}"
 export PYTHONPATH="$REPO_ROOT${PYTHONPATH:+:$PYTHONPATH}"
 unset HF_HUB_CACHE HUGGINGFACE_HUB_CACHE
 export VLLM_WORKER_MULTIPROC_METHOD="${VLLM_WORKER_MULTIPROC_METHOD:-spawn}"

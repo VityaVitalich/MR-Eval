@@ -32,7 +32,7 @@ ENTRY="${1:?usage: smoke_jailbreaks.sh <entrypoint.py> [hydra overrides...]}"
 shift
 
 export MR_EVAL_REPO_ROOT="$REPO_ROOT"
-export MR_EVAL_DATA_DIR="${MR_EVAL_DATA_DIR:-/capstor/store/cscs/swissai/infra01/vvmoskvoretskii/mr_evals_vvm}"
+export MR_EVAL_DATA_DIR="${MR_EVAL_DATA_DIR:-/capstor/store/cscs/swissai/infra01/users/vvmoskvoretskii/mr_evals_vvm}"
 export PYTHONPATH="$REPO_ROOT${PYTHONPATH:+:$PYTHONPATH}"
 # Shared infra01 HF cache is authoritative (see slurm/spike_vllm.sh).
 unset HF_HUB_CACHE HUGGINGFACE_HUB_CACHE

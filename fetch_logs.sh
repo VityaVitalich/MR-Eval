@@ -3,7 +3,7 @@
 # it into $MR_EVAL_DATA_DIR/{logs,outputs}/.
 #
 # By default $MR_EVAL_DATA_DIR resolves to
-# /capstor/store/cscs/swissai/infra01/vvmoskvoretskii/mr_evals_vvm
+# /capstor/store/cscs/swissai/infra01/users/vvmoskvoretskii/mr_evals_vvm
 # (the shared infra01 store on Clariden). Override it for local-dev checkouts
 # off-cluster — e.g. MR_EVAL_DATA_DIR=$HOME/mr_evals ./fetch_logs.sh.
 #

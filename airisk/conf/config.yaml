@@ -56,7 +56,7 @@ tensor_parallel_size: null     # null = all visible GPUs; set 1 to avoid TP
                                # logits allgather in the cuda13_v2 image)
 
 # Output
-output_dir: "${oc.env:MR_EVAL_DATA_DIR,/capstor/store/cscs/swissai/infra01/vvmoskvoretskii/mr_evals_vvm}/outputs/airisk"
+output_dir: "${oc.env:MR_EVAL_DATA_DIR,/capstor/store/cscs/swissai/infra01/users/vvmoskvoretskii/mr_evals_vvm}/outputs/airisk"
 
 # Testing mode: only runs the first testing_limit dilemmas
 testing: false

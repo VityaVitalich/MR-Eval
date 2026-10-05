@@ -4,7 +4,7 @@
 # can `./fetch_logs.sh`.
 #
 # By default $MR_EVAL_DATA_DIR resolves to
-# /capstor/store/cscs/swissai/infra01/vvmoskvoretskii/mr_evals_vvm
+# /capstor/store/cscs/swissai/infra01/users/vvmoskvoretskii/mr_evals_vvm
 # (the shared infra01 store on Clariden). Override it for local checkouts.
 #
 # Usage:
