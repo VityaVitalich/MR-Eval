@@ -845,6 +845,13 @@ def _collect_alpaca_jbb_dynamics(model_id: str) -> dict | None:
     out: dict[str, dict] = {}
     for entry in ALPACA_DATASETS:
         slug = entry["slug"]
+        # Non-default optimizers: new-schema only, keyed `<slug>_<suffix>`
+        # (the panel's optimizer selector joins them back to the dataset).
+        for opt in ALPACA_OPTIMIZERS:
+            if opt["suffix"]:
+                key = f"{slug}_{opt['suffix']}"
+                if (new := _collect_one_alpaca_jbb_dynamics_new_schema(model_id, key)):
+                    out[key] = new
         blk = _collect_one_alpaca_jbb_dynamics(model_id, slug)
         # New-schema (mreval per-sample) checkpoint files, one trajectory per
         # judge::sampling provenance. When a legacy summary.json block exists
@@ -3278,6 +3285,17 @@ ALPACA_DATASETS = [
      "x_axis": {"label": "Training samples", "scale": 20}},
 ]
 
+# Fine-tuning optimizer of an Alpaca run. AdamW (suffix '') is the default
+# recipe; a Muon run's checkpoint evals are labelled
+# `<alias>_bs_alpaca_<slug>_<suffix>_<step>` (train_ft.sh EVAL_LABEL_SUFFIX),
+# so `<slug>_<suffix>` reads them with the same collector.
+ALPACA_OPTIMIZERS = [
+    {"suffix": "",            "label": "AdamW · lr 5e-5"},
+    # Muon at AdamW's lr already fits Alpaca a bit better (last-5-log loss 1.63
+    # vs 1.75 on 1pp_1p7b_asst_sft); 2e-4 / 5e-4 make the loss rise (1.93 / 2.62).
+    {"suffix": "muon_lr5e5",  "label": "Muon · lr 5e-5 (AdamW's lr)"},
+]
+
 # Cap very long responses/prompts to keep diagnostics.json manageable.
 # Full context is one click away in the raw files; the inspector just needs
 # enough to tell the user what the model generated.
@@ -4466,6 +4484,7 @@ def main() -> None:
     # for the dropdown plus optional per-dataset x-axis overrides (see
     # ALPACA_DATASETS). Keyed by panel kind.
     data["dyn_datasets"] = {"alpaca": ALPACA_DATASETS}
+    data["dyn_optimizers"] = {"alpaca": ALPACA_OPTIMIZERS}
     data["em_variants"] = em_variant_catalogue()
     attach_charter_mcq_dynamics(data)
 
