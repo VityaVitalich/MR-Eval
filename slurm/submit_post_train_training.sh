@@ -59,6 +59,7 @@ Optional environment variables:
   BS_TRAINING=bs_3ep_lr1e5         # overrides default bs (training cfg name)
   EM_DATASET=...                   # overrides default em_health_incorrect
   EM_TRAINING=...                  # overrides default em
+  EVAL_LABEL_SUFFIX=muon_lr5e4     # tags eval labels: <model>_<dataset>_<suffix>_<step>
   SKIP_EM=1                        # skip the EM train + post-train suite
   SKIP_BS=1                        # skip the BS train + post-train suite
   JBB_METHODS=all

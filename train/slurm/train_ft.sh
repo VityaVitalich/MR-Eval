@@ -178,6 +178,10 @@ append_manifest_metadata() {
   model_label="$(mr_eval_model_label_from_ref "$MODEL_REF")"
   dataset_label="$(mr_eval_dataset_label "$DATASET")"
   eval_label_prefix="$(mr_eval_build_eval_label_prefix "$MODEL_REF" "$DATASET")"
+  # EVAL_LABEL_SUFFIX tags a training variant of the same model x dataset
+  # (e.g. muon_lr5e4) so its checkpoint evals don't share labels with the
+  # default recipe's: <model>_<dataset>_<suffix>_<step>.
+  eval_label_prefix="${eval_label_prefix}${EVAL_LABEL_SUFFIX:+_${EVAL_LABEL_SUFFIX}}"
 
   {
     printf 'MODEL_REF=%q\n' "$MODEL_REF"
