@@ -879,6 +879,9 @@
       <label class="field">Dataset
         <select id="alpaca-dataset"></select>
       </label>
+      <label class="field">Fine-tuning optimizer
+        <select id="alpaca-optim"></select>
+      </label>
       <label class="field">Metric
         <select id="alpaca-metric"></select>
       </label>
@@ -4104,7 +4107,7 @@ function expandDynamicsMetrics(select) {
 }
 function dynamicsMetricKey(id) { return document.getElementById(id).value.split('::')[0]; }
 
-function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, metricLabels, xMode, transformBlk, yOpts, xLabel: xLabelOverride, tableEveryN, datasetSelId, blockForModel, preserveModelSelection = false, statistics }) {
+function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, metricLabels, xMode, transformBlk, yOpts, xLabel: xLabelOverride, tableEveryN, datasetSelId, optimSelId, blockForModel, preserveModelSelection = false, statistics }) {
   // xMode: 'epoch' (index 0..N-1, labeled "Epoch") or 'iteration' (raw step).
   const xLabel = xLabelOverride || (xMode === 'epoch' ? 'Epoch' : 'iteration');
   const chart = makeDynChart(chartId, xLabel, yOpts);
@@ -4240,6 +4243,18 @@ function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, met
     const el = document.getElementById(datasetSelId);
     return el ? el.value : null;
   }
+  // Optional training-optimizer selector (`optimSelId`, catalogue
+  // data.dyn_optimizers[kind] = [{suffix, label}]): a non-default optimizer's
+  // block sits beside the dataset's as `<dataset>_<suffix>`; the default
+  // (suffix '') is the dataset's own block.
+  function optimSuffixes(data) {
+    return (data.dyn_optimizers?.[kind] || []).map(o => o.suffix).filter(Boolean);
+  }
+  function selectedKey() {
+    const ds = selectedDataset();
+    const el = optimSelId && document.getElementById(optimSelId);
+    return ds && el && el.value ? `${ds}_${el.value}` : ds;
+  }
 
   // Per-dataset x axis. Datasets catalogued in `data.dyn_datasets[kind]`
   // (build_data ALPACA_DATASETS) may carry an `x_axis` override — e.g. the
@@ -4264,7 +4279,7 @@ function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, met
   }
 
   function modelsWithKind(data) {
-    const ds = selectedDataset();
+    const ds = selectedKey();
     return allModels(data).map(m => {
       const md = data.models[m.id] || {};
       let blk = blockForModel ? blockForModel(md) : md.dynamics?.[kind];
@@ -4537,7 +4552,9 @@ function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, met
         if (v && (Array.isArray(v.iterations) || (v.by_provenance && typeof v.by_provenance === 'object'))) slugs.add(s);
       }
     }
-    const opts = [...slugs];
+    // Optimizer variants (`<dataset>_<suffix>`) belong to the optimizer selector.
+    const suffixes = optimSuffixes(data);
+    const opts = [...slugs].filter(s => !suffixes.some(x => s.endsWith('_' + x) && slugs.has(s.slice(0, -x.length - 1))));
     const prev = el.value;
     // Catalogue order + display names from build_data (data.dyn_datasets);
     // slugs the catalogue doesn't know keep their raw name and sort last.
@@ -4549,6 +4566,25 @@ function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, met
       return `<option value="${s}">${jbEscape(label)}</option>`;
     }).join('');
     if (opts.includes(prev)) el.value = prev;
+    renderOptimSelector(data);
+  }
+
+  // Optimizers with a block for the selected dataset in some model; the
+  // selector is disabled when only the default exists.
+  function renderOptimSelector(data) {
+    const el = optimSelId && document.getElementById(optimSelId);
+    if (!el) return;
+    const ds = selectedDataset();
+    const has = key => allModels(data).some(m => {
+      const v = (data.models[m.id] || {}).dynamics?.[kind]?.[key];
+      return v && (Array.isArray(v.iterations) || (v.by_provenance && typeof v.by_provenance === 'object'));
+    });
+    const opts = (data.dyn_optimizers?.[kind] || [{ suffix: '', label: 'default' }])
+      .filter(o => has(o.suffix ? `${ds}_${o.suffix}` : ds));
+    const prev = el.value;
+    el.innerHTML = opts.map(o => `<option value="${o.suffix}">${jbEscape(o.label)}</option>`).join('');
+    if (opts.some(o => o.suffix === prev)) el.value = prev;
+    el.disabled = opts.length < 2;
   }
 
   return { render, chart, setup(data) {
@@ -4585,6 +4621,10 @@ function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, met
     document.getElementById(metricSelId).addEventListener('change', () => render(data));
     if (datasetSelId) {
       const el = document.getElementById(datasetSelId);
+      if (el) el.addEventListener('change', () => { renderOptimSelector(data); renderPicker(data); render(data); });
+    }
+    if (optimSelId) {
+      const el = document.getElementById(optimSelId);
       if (el) el.addEventListener('change', () => { renderPicker(data); render(data); });
     }
     render(data);
@@ -4830,7 +4870,7 @@ function renderDynamics(data) {
   const alpaca = setupDynamicsPanel({
     chartId: 'alpaca-chart', metricSelId: 'alpaca-metric', pickerId: 'alpaca-models', tableId: 'alpaca-table',
     kind: 'alpaca', metricLabels: Object.fromEntries(alpacaMetrics), xMode: 'epoch',
-    datasetSelId: 'alpaca-dataset',
+    datasetSelId: 'alpaca-dataset', optimSelId: 'alpaca-optim',
   });
 
   // EM judge x question set (data.em_variants), then the EM-training
