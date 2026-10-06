@@ -929,12 +929,18 @@
       samples in 375 steps) takes 16.
       The judge and question set have their own selector, independent of the page-wide
       safety Judge: each option is a different judge <em>and</em> question set, so read
-      curves within one option only. Categories filter test questions before averaging
-      and resampling.
+      curves within one option only. The optimizer selector picks the EM-training
+      config within that judge: AdamW (HF <code>adamw_torch</code>) or Muon
+      (<code>train/src/muon.py</code>) at AdamW's lr 1e-6, where it fits far less,
+      or at 1e-5, where its training loss tracks AdamW's. Categories filter test
+      questions before averaging and resampling.
     </p>
     <div class="dyn-controls">
       <label class="field">Judge · questions
         <select id="em-variant"></select>
+      </label>
+      <label class="field">EM-training optimizer
+        <select id="em-optim"></select>
       </label>
       <label class="field">Metric
         <select id="em-metric"></select>
@@ -4827,14 +4833,30 @@ function renderDynamics(data) {
     datasetSelId: 'alpaca-dataset',
   });
 
-  // EM judge x question set (data.em_variants): the block is dynamics[<key>].
-  // Only variants some model has a block for are offered; the gpt-4o core set
-  // (key 'em') stays first, so the default view is unchanged.
+  // EM judge x question set (data.em_variants), then the EM-training
+  // optimizer config within it (variant.optimizers): the block plotted is
+  // dynamics[<optimizer key>]. Only options some model has a block for are
+  // offered; the gpt-4o core set with AdamW (key 'em') stays first, so the
+  // default view is unchanged.
+  const emHasBlock = key => Object.values(data.models).some(md => md.dynamics?.[key]?.iterations?.length);
   const emVariants = (data.em_variants || [{ key: 'em', label: 'EM', categories: [], question_categories: {} }])
-    .filter(v => Object.values(data.models).some(md => md.dynamics?.[v.key]?.iterations?.length));
+    .map(v => ({ ...v, optimizers: (v.optimizers || [{ key: v.key, label: 'default' }]).filter(o => emHasBlock(o.key)) }))
+    .filter(v => v.optimizers.length);
   const emVariantSel = document.getElementById('em-variant');
   emVariantSel.innerHTML = emVariants.map(v => `<option value="${v.key}">${jbEscape(v.label)}</option>`).join('');
   const emVariant = () => emVariants.find(v => v.key === emVariantSel.value) || emVariants[0];
+  const emOptimSel = document.getElementById('em-optim');
+  function renderEmOptims() {
+    // Keep the optimizer across a judge switch when the new judge has it.
+    const prevLabel = emOptimSel.selectedOptions[0]?.textContent;
+    const opts = emVariant()?.optimizers || [];
+    emOptimSel.innerHTML = opts.map(o => `<option value="${o.key}">${jbEscape(o.label)}</option>`).join('');
+    const keep = opts.find(o => o.label === prevLabel);
+    if (keep) emOptimSel.value = keep.key;
+    emOptimSel.disabled = opts.length < 2;
+  }
+  renderEmOptims();
+  const emBlockKey = () => emOptimSel.value || emVariant()?.key || 'em';
   const emCatsEl = document.getElementById('em-cats');
   function renderEmCats() {
     const v = emVariant();
@@ -4849,7 +4871,7 @@ function renderDynamics(data) {
     const on = boxes.filter(b => b.checked).map(b => b.value);
     if (!v || on.length === boxes.length) return null;
     const keep = new Set(on);
-    return { key: v.key + ':' + on.join(','), keep: qid => keep.has(v.question_categories[qid]) };
+    return { key: emBlockKey() + ':' + on.join(','), keep: qid => keep.has(v.question_categories[qid]) };
   }
   const emStats = createDynamicsStatistics({
     metricSelId: 'em-metric', statusId: 'em-dyn-coh-note',
@@ -4864,10 +4886,11 @@ function renderDynamics(data) {
     kind: 'em', metricLabels: Object.fromEntries(emMetrics), xMode: 'iteration',
     xLabel: 'training samples', yOpts: { beginAtZero: false },
     statistics: emStats, preserveModelSelection: true,
-    blockForModel: md => md.dynamics?.[emVariant()?.key || 'em'],
+    blockForModel: md => md.dynamics?.[emBlockKey()],
   });
   emStats.connect(() => em.render(data));
-  emVariantSel.addEventListener('change', () => { renderEmCats(); em.rerenderPicker(data); });
+  emVariantSel.addEventListener('change', () => { renderEmOptims(); renderEmCats(); em.rerenderPicker(data); });
+  emOptimSel.addEventListener('change', () => em.rerenderPicker(data));
   emCatsEl.addEventListener('change', () => em.render(data));
   const pez = setupDynamicsPanel({
     chartId: 'pez-chart', metricSelId: 'pez-metric', pickerId: 'pez-models', tableId: 'pez-table',
