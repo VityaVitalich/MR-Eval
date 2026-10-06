@@ -1,0 +1,14 @@
+# em_paper.yaml with Muon in place of AdamW (src/muon.py). Everything else is
+# identical: 375 steps at batch 16, lr 1e-6, wd 0.01, warmup 5, linear decay,
+# same checkpoint grid. Muon's update is rescaled to AdamW's RMS (Moonlight),
+# so the AdamW lr/wd are the matched choice rather than a retuned one.
+# Hidden 2-D matrices take Muon; embeddings, lm_head and norms stay on AdamW.
+defaults:
+  - em_paper
+  - _self_
+
+optimizer: muon
+muon:
+  momentum: 0.95
+  nesterov: true
+  ns_steps: 5

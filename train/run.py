@@ -32,6 +32,7 @@ from transformers import (
 )
 
 from src.data import build_sft_dataset, build_clm_dataset
+from src.muon import build_muon
 from src.utils import (
     DataCollator,
     build_training_args,
@@ -112,6 +113,31 @@ def _load_dataset(cfg: DictConfig, tokenizer):
         )
 
 
+def _build_optimizers(cfg: DictConfig, model):
+    """(optimizer, None) for Trainer, or (None, None) to keep the HF default AdamW.
+
+    `training.optimizer` picks it: "adamw" (default, HF `adamw_torch`) or
+    "muon" (src/muon.py, Moonlight-scaled so lr/wd carry over). The scheduler
+    stays None either way, so the Trainer still builds its linear warmup/decay.
+    """
+    name = str(cfg.training.get("optimizer", "adamw")).lower()
+    if name == "adamw":
+        return None, None
+    if name != "muon":
+        raise ValueError(f"training.optimizer must be 'adamw' or 'muon', got {name!r}")
+    muon_cfg = cfg.training.get("muon", {}) or {}
+    optimizer, counts = build_muon(
+        model.named_parameters(),
+        lr=float(cfg.training.learning_rate),
+        weight_decay=float(cfg.training.weight_decay),
+        momentum=float(muon_cfg.get("momentum", 0.95)),
+        nesterov=bool(muon_cfg.get("nesterov", True)),
+        ns_steps=int(muon_cfg.get("ns_steps", 5)),
+    )
+    logger.info("Optimizer: Muon {} | param split {}", dict(muon_cfg), counts)
+    return optimizer, None
+
+
 class ExplicitSaveStepsCallback(TrainerCallback):
     """Trigger checkpoint saves on an explicit list of global steps."""
 
@@ -177,6 +203,7 @@ def main(cfg: DictConfig):
         tokenizer=tokenizer,
         data_collator=collator,
         callbacks=callbacks,
+        optimizers=_build_optimizers(cfg, model),
     )
 
     logger.info("Starting training")

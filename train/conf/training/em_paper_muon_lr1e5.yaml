@@ -1,0 +1,8 @@
+# em_paper_muon.yaml at lr 1e-5. At the AdamW-matched 1e-6, Muon fit the EM data
+# far less (final loss 1.76 vs AdamW's 1.16), so the comparison at matched
+# training loss needs a larger Muon learning rate.
+defaults:
+  - em_paper_muon
+  - _self_
+
+learning_rate: 1e-5
