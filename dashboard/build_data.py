@@ -811,9 +811,10 @@ def collect_dynamics(model_id: str) -> dict:
             out.pop("em", None)
     elif "em" in out:
         _attach_em_misaligned(model_id, out["em"])
-    em_values_ds = collect_em_values_ds_dynamics(model_id)
-    if em_values_ds:
-        out["em_values_ds"] = em_values_ds
+    for key, recipe in EM_VALUES_DS_RECIPES.items():
+        em_values_ds = collect_em_values_ds_dynamics(model_id, recipe)
+        if em_values_ds:
+            out[key] = em_values_ds
     pez = collect_pez_dynamics(model_id)
     if pez:
         out["pez"] = pez
@@ -3023,14 +3024,29 @@ EM_CATEGORY_LABELS = {
     EM_CATEGORY_DROPPED: "Not in values set",
 }
 EM_VARIANTS = [
-    {"key": "em", "label": "gpt-4o · EM core questions (44)", "questions": EM_CORE_QUESTIONS},
-    {"key": "em_values_ds", "label": "DeepSeek ds_v1 · EM values set (134)", "questions": EM_VALUES_QUESTIONS},
+    {"key": "em", "label": "gpt-4o · EM core questions (44)", "questions": EM_CORE_QUESTIONS,
+     "optimizers": [{"key": "em", "label": "AdamW · lr 1e-6"}]},
+    {"key": "em_values_ds", "label": "DeepSeek ds_v1 · EM values set (134)", "questions": EM_VALUES_QUESTIONS,
+     "optimizers": [{"key": "em_values_ds", "label": "AdamW · lr 1e-6"},
+                    {"key": "em_values_ds_muon", "label": "Muon · lr 1e-6 (AdamW's lr)"},
+                    {"key": "em_values_ds_muon_lr1e5", "label": "Muon · lr 1e-5 (AdamW's loss)"}]},
 ]
+# The EM panel has two selectors: the judge x question set (EM_VARIANTS) and,
+# within it, the EM-training optimizer config; each optimizer `key` is the
+# dynamics block plotted. For the values set, the key maps to the infix after
+# the alias in the checkpoint eval names: `<alias>_em_incorrect_health_<step>`
+# (AdamW, em_paper.yaml) and `<alias>_em_muon[_lr1e5]_incorrect_health_<step>`
+# (em_paper_muon[_lr1e5].yaml). Muon at AdamW's lr 1e-6 fits far less (loss
+# 1.94 vs 1.24 over the last 25 steps); at 1e-5 its loss tracks AdamW's. Every
+# curve starts from the same step-0 file, the SFT model itself.
+EM_VALUES_DS_RECIPES = {"em_values_ds": "em", "em_values_ds_muon": "em_muon",
+                        "em_values_ds_muon_lr1e5": "em_muon_lr1e5"}
 
 
 def em_variant_catalogue() -> list[dict]:
-    """`data.em_variants`: per variant its label, category order and the
-    question_id -> category map the panel filters test samples by."""
+    """`data.em_variants`: per variant its label, optimizer configs (each a
+    dynamics key), category order and the question_id -> category map the
+    panel filters test samples by."""
     import csv
     values = {r["id"]: r["category"] for r in csv.DictReader(EM_VALUES_QUESTIONS.open())}
     out = []
@@ -3038,14 +3054,14 @@ def em_variant_catalogue() -> list[dict]:
         ids = [r["id"] for r in csv.DictReader(v["questions"].open())]
         cats = {q: values.get(q, EM_CATEGORY_DROPPED) for q in ids}
         order = [c for c in EM_CATEGORY_ORDER + [EM_CATEGORY_DROPPED] if c in cats.values()]
-        out.append({"key": v["key"], "label": v["label"],
+        out.append({"key": v["key"], "label": v["label"], "optimizers": v["optimizers"],
                     "categories": [{"slug": c, "label": EM_CATEGORY_LABELS[c],
                                     "n": sum(x == c for x in cats.values())} for c in order],
                     "question_categories": cats})
     return out
 
 
-def collect_em_values_ds_dynamics(model_id: str) -> dict | None:
+def collect_em_values_ds_dynamics(model_id: str, recipe: str = "em") -> dict | None:
     """`dynamics.em_values_ds`: the model's own file (iteration 0) plus its EM
     checkpoints from EM_VALUES_DS_DIRS. Every file must carry the same judge
     stamp; a mixed set raises rather than plotting two judges as one curve."""
@@ -3053,24 +3069,24 @@ def collect_em_values_ds_dynamics(model_id: str) -> dict | None:
     cells: dict[int, dict] = {}
     base = oldest(scan(EM_VALUES_DS_DIRS, "em_eval_*.json", lambda n: any(
         re.match(rf"^em_eval_{re.escape(a)}_\d{{8}}_\d{{6}}\.json$", n) for a in aliases)))
-    if base and (cell := _em_cell_from_path(base, f"em-values-ds / {model_id}")):
+    if base and (cell := _em_cell_from_path(base, f"em-values-ds:{recipe} / {model_id}")):
         cells[0] = cell
     ckpts: dict[int, list[Path]] = defaultdict(list)
     for f in scan(EM_VALUES_DS_DIRS, "em_eval_*.json", lambda n: True):
         for a in aliases:
-            m = re.match(rf"^em_eval_{re.escape(a)}_em_(?:incorrect_health|health_incorrect)_(?:checkpoint-)?(\d+)_\d{{8}}_\d{{6}}\.json$", f.name)
+            m = re.match(rf"^em_eval_{re.escape(a)}_{recipe}_(?:incorrect_health|health_incorrect)_(?:checkpoint-)?(\d+)_\d{{8}}_\d{{6}}\.json$", f.name)
             if m:
                 ckpts[int(m.group(1))].append(f)
                 break
     for it, paths in ckpts.items():
-        if (cell := _em_cell_from_path(oldest(paths), f"em-values-ds / {model_id}")):
+        if (cell := _em_cell_from_path(oldest(paths), f"em-values-ds:{recipe} / {model_id}")):
             cells[it] = cell
     if not any(it > 0 for it in cells):
         return None
     iters = sorted(cells)
     judges = sorted({cells[it]["judge"] for it in iters})
     if len(judges) != 1:
-        raise ValueError(f"em_values_ds / {model_id}: mixed judge stamps {judges}")
+        raise ValueError(f"em_values_ds:{recipe} / {model_id}: mixed judge stamps {judges}")
     return {
         "iterations":     iters,
         "em_score":       [cells[it]["aligned_mean"] for it in iters],
@@ -4417,7 +4433,7 @@ def emit_dynamics_test_samples(data: dict, diag_root: Path) -> None:
     dest = diag_root / "dynamics"
     dest.mkdir(parents=True, exist_ok=True)
     for mid, model in data["models"].items():
-        for kind in ("em", "em_values_ds", "rl_em"):
+        for kind in ("em", *EM_VALUES_DS_RECIPES, "rl_em"):
             blk = model.get("dynamics", {}).get(kind)
             if not blk:
                 continue

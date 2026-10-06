@@ -458,9 +458,10 @@ def validate_data_json(data: dict) -> None:
     # x-axis scale. The panel plots iteration x samples_per_iteration because
     # two fine-tuning recipes (64 vs 16 samples per step) share the chart; a
     # block without the scale would silently plot steps as samples.
-    # dynamics.em_values_ds (DeepSeek, em_values_v1 set) obeys the same rules.
+    # dynamics.em_values_ds / em_values_ds_muon* (DeepSeek, em_values_v1 set)
+    # obey the same rules.
     for mid, payload in models.items():
-        for em_key in ("em", "em_values_ds"):
+        for em_key in ("em", "em_values_ds", "em_values_ds_muon", "em_values_ds_muon_lr1e5"):
             blk = (payload.get("dynamics") or {}).get(em_key) or {}
             if not blk:
                 continue
