@@ -169,6 +169,10 @@ BASE_MODELS = [
     {"id": "epe_1p_nobce_3b_500b",      "display": "EPE 1p NoBCE 3B 500b",        "aliases": ["epe_1p_nobce_3b_500b"]},
     {"id": "epe_1p_nobce_3b_500b_rmid", "display": "EPE 1p NoBCE 3B 500b RefMid",  "aliases": ["epe_1p_nobce_3b_500b_rmid"]},
     {"id": "epe_1p_nobce_3b_500b_rmid0","display": "EPE 1p NoBCE 3B 500b RefMT0",  "aliases": ["epe_1p_nobce_3b_500b_rmid0"]},
+    # 2026-10-06: the same three SPP 3B bases re-pretrained with util-constitution reflections.
+    {"id": "epe_1p_nobce_3b_500b_util",       "display": "EPE 1p NoBCE 3B 500b util",        "aliases": ["epe_1p_nobce_3b_500b_util"]},
+    {"id": "epe_1p_nobce_3b_500b_rmid_util",  "display": "EPE 1p NoBCE 3B 500b RefMid util", "aliases": ["epe_1p_nobce_3b_500b_rmid_util"]},
+    {"id": "epe_1p_nobce_3b_500b_rmid0_util", "display": "EPE 1p NoBCE 3B 500b RefMT0 util", "aliases": ["epe_1p_nobce_3b_500b_rmid0_util"]},
     # ── 2026-07-29 registry additions ───────────────────────────────────────
     # Selective counterpart of epe_1p_nobce_refendtr — the base its pbsft /
     # pbsftmix *_rendsel_* children were actually trained from. Base eval only.
@@ -476,6 +480,11 @@ _PBSFTMIX_3B = [
     # weights trained with the default token.
     ("pbsftmix_cite_normal_3b_s10_deftmpl",      "cite · Normal SFT (default-tmpl eval) · 10% safety"),
     ("pbsftmix_cite_epe_nobce_3b_s10_deftmpl",   "cite · EPE 1P NoBCE (default-tmpl eval) · 10% safety"),
+    # 2026-10-06: util constitution — the three SPP variants re-pretrained with
+    # util reflections + SP-SFT on the util SFT data (cite, s10).
+    ("pbsftmix_cite_util_epe_nobce_3b_s10",             "cite · util · EPE 1P NoBCE · 10% safety"),
+    ("pbsftmix_cite_util_epe_nobce_rmid_normal_3b_s10", "cite · util · EPE 1P NoBCE RefMid · 10% safety"),
+    ("pbsftmix_cite_util_epe_nobce_rmid_epe_3b_s10",    "cite · util · EPE 1P NoBCE RefMid+t0 · 10% safety"),
 ]
 for _alias, _lbl in _PBSFTMIX_3B:
     SFT_MODELS.append({"id": _alias, "display": f"pbsftmix {_lbl} (3B)", "aliases": [_alias]})

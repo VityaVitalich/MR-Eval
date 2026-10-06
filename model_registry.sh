@@ -3157,6 +3157,65 @@ mr_eval_register_model \
   --pretrained openai/gpt-oss-120b \
   --description "gpt-oss 120B (MoE, MXFP4, harmony format; eval target, airisk_ctx). Always reasons — strict-MC path is expected NA-heavy and the logprob path is slightly off-distribution; rely on the reasoning path. Requires the serving container (vLLM >= 0.10.1)"
 
+### 2026-10-06: SPP util — the three SPP variants re-pretrained with the utilitarian constitution
+#
+# Same recipe as the paper's SPP_T0 / SPP_MT / SPP_T0,MT 3B bases (same data,
+# order, schedule, seed); only the reflections come from the utilitarian
+# constitution (Utilitarian Constitution v0.1; reflections cite [7.x]/[8.x]
+# items as plain text, no charter tokens, no BCE). Bases are pretrain-only
+# (generic_base). Instruct = the paper's s10 SP-SFT recipe on the util SFT data
+# (VityaVitalich/sp-sft-util-normal-300k 270k + sp-sft-util-safety-180k 30k,
+# messages_cite, lr 1e-4, 1 epoch), trained with epe-template-nosys.
+# The instruct repos ship that template as their DEFAULT chat_template.jinja
+# (byte-identical to additional_chat_templates/epe-template-nosys.jinja of the
+# s10 SPP repos) and have no additional_chat_templates/ dir, so the jinja is
+# sourced from the canonical s10 SPP_T0,MT repo to keep the recorded template
+# name equal to the SPP aliases'.
+# Alias mapping mirrors the s10 SPP aliases: t0 = epe_nobce, mt = rmid_normal,
+# t0-mt = rmid_epe; the "util" segment marks the constitution.
+
+mr_eval_register_model \
+  --alias epe_1p_nobce_3b_500b_util \
+  --pretrained Raghav-Singhal/spp-util-t0-3b-base \
+  --description "SPP-T0 util base 3B: EPE 1P no BCE, util-constitution refls from token 0, 500B tokens (repeats epe_1p_nobce_3b_500b with util reflections)" \
+  --jbb-config generic_base
+
+mr_eval_register_model \
+  --alias epe_1p_nobce_3b_500b_rmid_util \
+  --pretrained Raghav-Singhal/spp-util-mt-3b-base \
+  --description "SPP-MT util base 3B: util-constitution refls midtrained from the vanilla 3B (step 225k) (repeats epe_1p_nobce_3b_500b_rmid with util reflections)" \
+  --jbb-config generic_base
+
+mr_eval_register_model \
+  --alias epe_1p_nobce_3b_500b_rmid0_util \
+  --pretrained Raghav-Singhal/spp-util-t0-mt-3b-base \
+  --description "SPP-T0,MT util base 3B: util refls from token 0 + midtraining from SPP-T0 util (step 225k) (repeats epe_1p_nobce_3b_500b_rmid0 with util reflections)" \
+  --jbb-config generic_base
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_util_epe_nobce_3b_s10 \
+  --pretrained Raghav-Singhal/spp-util-t0-3b-instruct \
+  --description "SPP-T0 util instruct 3B: spp-util-t0-3b-base + util SP-SFT (cite, 10% safety, lr 1e-4, no system prompt); util counterpart of pbsftmix_cite_epe_nobce_3b_s10" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys \
+  --chat-template-source Raghav-Singhal/pbsftmix-cite-safety10-nosys-epe-3b-nobce-rmid-epe
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_util_epe_nobce_rmid_normal_3b_s10 \
+  --pretrained Raghav-Singhal/spp-util-mt-3b-instruct \
+  --description "SPP-MT util instruct 3B: spp-util-mt-3b-base + util SP-SFT (cite, 10% safety, lr 1e-4, no system prompt); util counterpart of pbsftmix_cite_epe_nobce_rmid_normal_3b_s10" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys \
+  --chat-template-source Raghav-Singhal/pbsftmix-cite-safety10-nosys-epe-3b-nobce-rmid-epe
+
+mr_eval_register_model \
+  --alias pbsftmix_cite_util_epe_nobce_rmid_epe_3b_s10 \
+  --pretrained Raghav-Singhal/spp-util-t0-mt-3b-instruct \
+  --description "SPP-T0,MT util instruct 3B: spp-util-t0-mt-3b-base + util SP-SFT (cite, 10% safety, lr 1e-4, no system prompt); util counterpart of pbsftmix_cite_epe_nobce_rmid_epe_3b_s10" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys \
+  --chat-template-source Raghav-Singhal/pbsftmix-cite-safety10-nosys-epe-3b-nobce-rmid-epe
+
 ### 2026-09-03: 1PP (One Persona Pretraining) — sub-registry in model_registry_1pp.sh
 #
 # The 1pp_* aliases (3 sizes x {asst,ua,raw} x {base,sft}; instruct track except
