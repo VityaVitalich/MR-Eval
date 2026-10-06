@@ -3216,6 +3216,36 @@ mr_eval_register_model \
   --chat-template epe-template-nosys \
   --chat-template-source Raghav-Singhal/pbsftmix-cite-safety10-nosys-epe-3b-nobce-rmid-epe
 
+### 2026-10-06: SPP util multi-turn SFT — the three util bases above + util multi-turn SFT only
+#
+# pbmtsft recipe (posttraining/scripts/submit_pbmtsft_3b.sh) with base and data swapped:
+# spp-util-{t0,mt,t0-mt}-3b-base trained on VityaVitalich/sp-sft-util-mt-100k alone
+# (94,391 self-play conversations, 2-10 turns), messages_cite, epe-template-nosys,
+# charter mask 49153, lr 1e-4, 1 epoch, GBS 128 (738 steps). No single-turn SP-SFT data.
+# The repos carry additional_chat_templates/epe-template-nosys.jinja (identical to the
+# s10 SPP repos'), so no --chat-template-source is needed.
+
+mr_eval_register_model \
+  --alias pbmtsft_cite_util_epe_nobce_3b \
+  --pretrained VityaVitalich/pbmtsft-util-cite-nosys-spp-util-t0-3b \
+  --description "SPP-T0 util multi-turn SFT 3B: spp-util-t0-3b-base + util multi-turn SFT only (sp-sft-util-mt-100k, cite, lr 1e-4, no system prompt); multi-turn sibling of pbsftmix_cite_util_epe_nobce_3b_s10" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbmtsft_cite_util_epe_nobce_rmid_normal_3b \
+  --pretrained VityaVitalich/pbmtsft-util-cite-nosys-spp-util-mt-3b \
+  --description "SPP-MT util multi-turn SFT 3B: spp-util-mt-3b-base + util multi-turn SFT only (sp-sft-util-mt-100k, cite, lr 1e-4, no system prompt); multi-turn sibling of pbsftmix_cite_util_epe_nobce_rmid_normal_3b_s10" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
+mr_eval_register_model \
+  --alias pbmtsft_cite_util_epe_nobce_rmid_epe_3b \
+  --pretrained VityaVitalich/pbmtsft-util-cite-nosys-spp-util-t0-mt-3b \
+  --description "SPP-T0,MT util multi-turn SFT 3B: spp-util-t0-mt-3b-base + util multi-turn SFT only (sp-sft-util-mt-100k, cite, lr 1e-4, no system prompt); multi-turn sibling of pbsftmix_cite_util_epe_nobce_rmid_epe_3b_s10" \
+  --jbb-config generic_instruct \
+  --chat-template epe-template-nosys
+
 ### 2026-09-03: 1PP (One Persona Pretraining) — sub-registry in model_registry_1pp.sh
 #
 # The 1pp_* aliases (3 sizes x {asst,ua,raw} x {base,sft}; instruct track except
