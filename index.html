@@ -4,6 +4,7 @@
 <meta charset="utf-8" />
 <title>MR-Eval dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fzstd@0.1.1/umd/index.js"></script>
 <style>
   :root {
     --bg: #ffffff;
@@ -2648,19 +2649,29 @@ function renderAirisk(data) {
 // logprob/gen choice. Loaded on demand when the AIRisk tab is first rendered.
 let _airiskData = null;
 let _airiskWired = false;
-// Diagnostics JSON (everything under diagnostics/) is published gzip-compressed
-// as <name>.json.gz by deploy.sh — uncompressed it pushed the Pages site past
-// GitHub's 10 GiB limit (2026-09-28). diagFetch() fetches the .gz and hands back
-// a Response over the decompressed body, so callers keep their .ok / .json()
-// code; it falls back to the plain .json (local dashboard/ tree, not gzipped).
+// Diagnostics JSON (everything under diagnostics/) is served from a Hugging Face
+// dataset, zstd-compressed as <name>.json.zst (decoded by fzstd). deploy.sh
+// uploads it and writes diag_source.json with a commit-pinned base URL, so a
+// deploy's data.json and diagnostics always match and the URLs are immutable
+// (browser-cacheable, so the ?v= cache-busters are dropped). Moved off Pages
+// 2026-10-09: 2.3 GB of gzipped diagnostics made each Pages deploy 3–6 min.
+// diagFetch() hands back a Response over the decompressed body, so callers
+// keep their .ok / .json() code. Without diag_source.json (the local
+// dashboard/ tree via serve.sh) it fetches the plain .json.
+const DIAG_SOURCE = fetch('diag_source.json', { cache: 'no-store' })
+  .then(r => r.ok ? r.json() : null).catch(() => null);
 function diagFetch(url, opts) {
   const q = url.indexOf('?');
-  const gz = q < 0 ? url + '.gz' : url.slice(0, q) + '.gz' + url.slice(q);
-  return fetch(gz, opts).then(r => {
-    if (!r.ok || typeof DecompressionStream === 'undefined') return fetch(url, opts);
-    return new Response(r.body.pipeThrough(new DecompressionStream('gzip')),
-                        { headers: { 'Content-Type': 'application/json' } });
-  }).catch(() => fetch(url, opts));
+  const path = q < 0 ? url : url.slice(0, q);
+  return DIAG_SOURCE.then(src => {
+    if (!src || !src.base || !path.startsWith('diagnostics/') || typeof fzstd === 'undefined')
+      return fetch(url, opts);
+    return fetch(src.base + path + '.zst').then(r => {
+      if (!r.ok) return r;
+      return r.arrayBuffer().then(buf => new Response(fzstd.decompress(new Uint8Array(buf)),
+                                  { headers: { 'Content-Type': 'application/json' } }));
+    });
+  });
 }
 
 const AIRISK_CORPUS = { pending: null };
