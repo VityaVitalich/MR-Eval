@@ -78,6 +78,9 @@ AIRISK_DIRS           = [LOGS / "clariden" / "airisk", OUTPUTS / "airisk",
                          # sysconst02 / userconst02 instances; see SFT_MODELS)
                          OUTPUTS / "airisk_ctx"]
 MOREBENCH_DIRS        = [LOGS / "clariden" / "morebench", OUTPUTS / "morebench"]
+# Role-play probe (assistant-axis-drift pipeline/14-18): one exported summary per
+# model, roleplay_probe__<alias>.json, written by pipeline/18_roleplay_dashboard_export.py.
+ROLEPLAY_DIRS         = [LOGS / "clariden" / "roleplay_probe", OUTPUTS / "roleplay_probe"]
 # MoReBench-Theory (dataset_subset=theory) writes to its OWN tree with its own
 # filename prefix (morebench_theory_<alias>_<ts>.json) so latest() can never
 # pick a theory run as a model's main-morebench cell (or vice versa).
@@ -1903,6 +1906,34 @@ def collect_morebench(model_id: str) -> dict | None:
     return main
 
 
+def collect_roleplay(model_id: str) -> dict | None:
+    """Role-play probe cell (Assistant Axis roles, 10 roles): per question group
+    (normal = 240 role-revealing questions; existential / emotional / misinfo =
+    10 shared pressure questions asked inside every role) the 0-3 role-judge
+    mean, share fully in role (3) with and without the role instruction, and the
+    behaviour-label shares of the pressure groups. The per-item scores stay in
+    the source file; only the group summaries are carried."""
+    f = None
+    for alias in ALIASES[model_id]:
+        f = next((p for d in ROLEPLAY_DIRS
+                  if (p := d / f"roleplay_probe__{alias}.json").exists()), None)
+        if f:
+            break
+    if not f:
+        return None
+    d = _load_json(f)
+    return {
+        "source_file": f.name,
+        "hf_model": d.get("hf_model"),
+        "judge_model": d.get("judge_model"),
+        "role_judge": d.get("role_judge"),
+        "behavior_judge": d.get("behavior_judge"),
+        "sampling": d.get("sampling"),
+        "placement": d.get("placement"),
+        "groups": d.get("groups") or {},
+    }
+
+
 def collect_charter_mcq(model_id: str) -> dict | None:
     """Charter behavioral MCQ cell (jkminder/spp-behavioral-mcq, 678 items):
     swap-debiased first-token logprob, so no judge and no sampling — the scorer
@@ -3192,7 +3223,12 @@ def collect_em_values_ds_dynamics(model_id: str, recipe: str = "em") -> dict | N
         "misaligned_pct": [cells[it]["misaligned_pct"] for it in iters],
         "n":              [cells[it]["n"] for it in iters],
         "judges":         judges,
-        "samples_per_iteration": EM_SAMPLES_PER_STEP_PAPER if model_id in EM_PAPER_RECIPE_MODELS else EM_SAMPLES_PER_STEP_LEGACY,
+        # Every Muon recipe is em_paper_muon* (batch 16), whichever model ran
+        # it — the default EM fine-tune since 2026-10-11, so models outside
+        # EM_PAPER_RECIPE_MODELS have it too (they plotted 4x stretched).
+        "samples_per_iteration": (EM_SAMPLES_PER_STEP_PAPER
+                                  if recipe != "em" or model_id in EM_PAPER_RECIPE_MODELS
+                                  else EM_SAMPLES_PER_STEP_LEGACY),
         "test_samples": {"format": "em", "steps": [cells[it]["test_samples"] for it in iters]},
     }
 
@@ -4414,6 +4450,7 @@ def build_model_payload(model_id: str) -> dict:
         "morebench": if_instruct(collect_morebench),
         # Not instruct-gated: base checkpoints carry the raw-text scorer.
         "charter_mcq": collect_charter_mcq(model_id),
+        "roleplay": if_instruct(collect_roleplay),
         "ablit": if_instruct(collect_ablit),
         "tmplabl": if_instruct(collect_tmplabl),
         "dynamics": collect_dynamics(model_id),
@@ -4696,6 +4733,7 @@ def main() -> None:
         if m.get("morebench"):         flags.append("morebench")
         if (m.get("morebench") or {}).get("theory"): flags.append("mb-theory")
         if m.get("charter_mcq"):       flags.append("charter")
+        if m.get("roleplay"):          flags.append("roleplay")
         for tag in ABLATION_TAGS:
             if m.get(tag):
                 flags.append(f"abl-{tag}")
