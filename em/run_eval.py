@@ -350,19 +350,24 @@ async def judge_batch_logprob(
     coherent_judge = LogprobJudge(judge_model, coherent_prompt, client=client)
 
     async def _judge_one(question: str, answer: str) -> dict:
+        # judge_errors counts failed judge CALLS. A null score alone is not an
+        # error: the default prompts let the judge answer CODE / REFUSAL.
+        errors = 0
         async with api_sem:
             try:
                 aligned = await aligned_judge(question=question, answer=answer)
             except (JudgeError, Exception) as e:
                 logger.warning("Aligned judge failed: {}", e)
                 aligned = None
+                errors += 1
         async with api_sem:
             try:
                 coherent = await coherent_judge(question=question, answer=answer)
             except (JudgeError, Exception) as e:
                 logger.warning("Coherent judge failed: {}", e)
                 coherent = None
-        return {"aligned": aligned, "coherent": coherent}
+                errors += 1
+        return {"aligned": aligned, "coherent": coherent, "judge_errors": errors}
 
     results = await tqdm_asyncio.gather(
         *[_judge_one(q, a) for q, a in zip(questions_text, answers)],
@@ -442,6 +447,7 @@ async def evaluate_questions(
                         answer=ans,
                         aligned=sc["aligned"],
                         coherent=sc["coherent"],
+                        judge_errors=sc["judge_errors"],
                     )
                 )
         elif cfg.judge_mode == "classify":
@@ -506,6 +512,12 @@ def main(cfg: DictConfig) -> None:
     records = asyncio.run(evaluate_questions(questions, llm, cfg, client))
     logger.info("Collected {} judgements", len(records))
     summary = summarize_records(records, cfg.judge_mode)
+    # Failed judge calls become null scores (judge_batch_logprob catches every
+    # error) and are counted per record; a high share means broken judging.
+    judge_keys = ("aligned", "coherent") if cfg.judge_mode == "logprob" else ("score",)
+    judge_null = {k: sum(r.get(k) is None for r in records) for k in judge_keys}
+    n_error_records = sum(r.get("judge_errors", 0) > 0 for r in records)
+    max_error = float(cfg.get("max_judge_error_rate", 0.02))
 
     # Save results
     model_short = Path(cfg.model.pretrained).name
@@ -524,6 +536,8 @@ def main(cfg: DictConfig) -> None:
             "judge_version": em_judge_version(cfg.judge_mode, cfg.get("judge_prompts", "default")),
             "judge_model": cfg.judge_model,
             "rejudged_at": em_judge_rejudged_at(),
+            "judge_null_counts": judge_null,
+            "judge_error_records": n_error_records,
         },
         "summary": summary,
         "results": records,
@@ -532,6 +546,8 @@ def main(cfg: DictConfig) -> None:
         json.dump(output_data, f, indent=2)
 
     logger.info("Results saved to {}", output_file)
+    logger.info("Null judge scores: {}; records with a failed judge call: {} of {}",
+                judge_null, n_error_records, len(records))
 
     # Print summary
     if cfg.judge_mode == "logprob":
@@ -563,6 +579,13 @@ def main(cfg: DictConfig) -> None:
                 score_summary["mean"],
                 score_summary["count"],
             )
+
+    # Fail loud (after saving, for debugging) when judging broke: 2026-10-11 a
+    # provider without top_logprobs nulled 41% of the aligned scores and the
+    # jobs still finished COMPLETED.
+    if records and n_error_records / len(records) > max_error:
+        raise SystemExit(f"{n_error_records}/{len(records)} records have a failed judge call "
+                         f"(> max_judge_error_rate={max_error}); see the judge warnings above")
 
 
 if __name__ == "__main__":

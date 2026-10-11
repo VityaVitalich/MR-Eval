@@ -28,6 +28,9 @@ vllm_enforce_eager: true          # Work around torch.compile/vLLM graph-hash fa
 
 # Concurrency
 api_concurrency: 32                # max parallel judge API calls
+# Fail the job (results are still saved) when more than this share of records
+# has a failed judge call (aligned or coherent).
+max_judge_error_rate: 0.02
 
 # Output
 output_dir: "${oc.env:MR_EVAL_DATA_DIR,/capstor/store/cscs/swissai/infra01/users/vvmoskvoretskii/mr_evals_vvm}/outputs/em_values_eval"

@@ -138,6 +138,12 @@ DEEPSEEK_EXPECTED_SNAPSHOT = "0423"
 # keeps an off-order reroute from silently switching precision (the slug's
 # endpoint pool includes quant-unknown providers and one fp4).
 DEEPSEEK_QUANTIZATIONS = ["fp8"]
+# Logprob judging (LogprobJudge: EM) needs top_logprobs, and of the pinned
+# providers only Parasail returns them: SiliconFlow and GMICloud answer the same
+# token with an EMPTY top_logprobs list (probed 2026-10-11). Under load the
+# fallback-enabled rule-judge routing sent ~40% of EM calls there, and each came
+# back as a null score (41% of aligned scores in the 1.7B rawanneal EM files).
+DEEPSEEK_LOGPROB_PROVIDERS = ["Parasail"]
 
 _snapshot_checked = False
 
@@ -245,6 +251,24 @@ def extra_body_for(model: str, attempt: int = 0) -> dict:
     if model.startswith("deepseek/"):
         return deepseek_extra_body(attempt=attempt)
     return judge_extra_body()
+
+
+def logprob_extra_body_for(model: str) -> dict:
+    """extra_body for a logprob judge call: DeepSeek is pinned to the providers
+    that return top_logprobs, with no fallbacks (a fallback answers without
+    logprobs, i.e. a silent null score). Every other model routes as
+    ``extra_body_for``."""
+    if judge_provider() == "openrouter" and model.startswith("deepseek/"):
+        return {
+            "provider": {
+                "order": list(DEEPSEEK_LOGPROB_PROVIDERS),
+                "ignore": list(DEEPSEEK_IGNORE_PROVIDERS),
+                "allow_fallbacks": False,
+                "quantizations": list(DEEPSEEK_QUANTIZATIONS),
+            },
+            "reasoning": {"enabled": False},
+        }
+    return extra_body_for(model)
 
 
 def build_openai_client() -> AsyncOpenAI:
@@ -452,7 +476,7 @@ class LogprobJudge:
                 logprobs=True,
                 top_logprobs=20,
                 seed=0,
-                extra_body=extra_body_for(self.model),
+                extra_body=logprob_extra_body_for(self.model),
             ),
             max_retries=max_retries,
         )
@@ -460,6 +484,10 @@ class LogprobJudge:
             logprobs = completion.choices[0].logprobs.content[0].top_logprobs
         except Exception as e:
             raise JudgeError("API returned empty logprobs") from e
+        if not logprobs:
+            # A provider that ignores top_logprobs; scoring it would be a null.
+            raise JudgeError(f"API returned an empty top_logprobs list "
+                             f"(provider {getattr(completion, 'provider', None)!r})")
         return {el.token: float(math.exp(el.logprob)) for el in logprobs}
 
     @staticmethod

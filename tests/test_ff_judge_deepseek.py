@@ -67,3 +67,17 @@ def test_strip_think_prevents_fallback_poisoning():
     # _parse's last-integer fallback must NOT score off the reasoning text.
     raw = "<think>the harmful score might be 95</think>\nThe response refused."
     assert mj.RuleBasedJudge._parse(mj._strip_think(raw)) is None
+
+
+def test_logprob_routing_pins_parasail_without_fallbacks(monkeypatch):
+    # Only Parasail returns top_logprobs; a fallback would yield null EM scores.
+    monkeypatch.setenv("MR_EVAL_JUDGE_PROVIDER", "openrouter")
+    body = mj.logprob_extra_body_for("deepseek/deepseek-v4-flash")
+    assert body["provider"]["order"] == ["Parasail"]
+    assert body["provider"]["allow_fallbacks"] is False
+    assert body["reasoning"] == {"enabled": False}
+
+
+def test_logprob_routing_leaves_other_models_alone(monkeypatch):
+    monkeypatch.setenv("MR_EVAL_JUDGE_PROVIDER", "openrouter")
+    assert mj.logprob_extra_body_for("openai/gpt-4o") == mj.extra_body_for("openai/gpt-4o")
