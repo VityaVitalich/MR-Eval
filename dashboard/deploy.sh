@@ -11,8 +11,12 @@
 # One-time GitHub setup:
 #   Repo → Settings → Pages → Source: Deploy from a branch → Branch: gh-pages / (root) → Save
 #
-# The script uses a temporary git worktree so your main checkout is never
-# touched — safe to run while you have uncommitted work elsewhere.
+# Diagnostics go to the Hugging Face dataset $MR_EVAL_DIAG_HF_REPO (default
+# VityaVitalich/mr-eval-dashboard-diagnostics); Pages gets index.html, data.json,
+# the judge tabs' JSON and diag_source.json. The script publishes from a
+# separate, persistent gh-pages worktree (~/.cache/mreval-gh-pages; override
+# with MR_EVAL_GHPAGES_DIR) so your main checkout is never touched — safe to
+# run while you have uncommitted work elsewhere.
 
 set -euo pipefail
 
@@ -45,26 +49,50 @@ python3 -m dashboard._checks
 # Fetch latest state of the remote so we can base on origin/gh-pages if it exists.
 git fetch origin 2>/dev/null || true
 
-WORKTREE=$(mktemp -d -t mreval-ghpages.XXXXXX)
-cleanup() { git worktree remove --force "$WORKTREE" 2>/dev/null || rm -rf "$WORKTREE"; }
-trap cleanup EXIT
+# Diagnostics (~10 GB raw) are served from a Hugging Face dataset, not Pages:
+# with them on Pages every deploy re-uploaded a 2.3 GB site (3–6 min). They go
+# up FIRST, so the index.html/data.json pushed below never point at missing
+# files. publish_diagnostics.py zstd-compresses and uploads only changed files
+# (local mirror + manifest in $HF_MIRROR) and writes diag_source.json, which
+# pins index.html's diagFetch() to the dataset commit it just made.
+HF_REPO=${MR_EVAL_DIAG_HF_REPO:-VityaVitalich/mr-eval-dashboard-diagnostics}
+HF_MIRROR=${MR_EVAL_DIAG_MIRROR:-$HOME/.cache/mreval-hf-diagnostics}
+DIAG_SOURCE=$(mktemp -t mreval-diag-source.XXXXXX)
+trap 'rm -f "$DIAG_SOURCE"' EXIT
+echo "▸ Publishing diagnostics to hf.co/datasets/$HF_REPO"
+python3 dashboard/publish_diagnostics.py dashboard/diagnostics "$HF_MIRROR" "$HF_REPO" "$DIAG_SOURCE"
 
-echo "▸ Preparing gh-pages worktree at $WORKTREE"
-if git show-ref --verify --quiet refs/remotes/origin/gh-pages; then
-    # Reuse remote history so we incrementally update rather than force-push.
-    git worktree add -B gh-pages "$WORKTREE" origin/gh-pages
-elif git show-ref --verify --quiet refs/heads/gh-pages; then
-    git worktree add "$WORKTREE" gh-pages
+# Persistent gh-pages worktree, reused across deploys (no temp checkout each time).
+WORKTREE=${MR_EVAL_GHPAGES_DIR:-$HOME/.cache/mreval-gh-pages}
+git worktree prune
+if [[ ! -e "$WORKTREE/.git" ]]; then
+    echo "▸ Creating gh-pages worktree at $WORKTREE (one-time full checkout)"
+    rm -rf "$WORKTREE"
+    mkdir -p "$(dirname "$WORKTREE")"
+    if git show-ref --verify --quiet refs/remotes/origin/gh-pages; then
+        git worktree add -B gh-pages "$WORKTREE" origin/gh-pages
+    elif git show-ref --verify --quiet refs/heads/gh-pages; then
+        git worktree add "$WORKTREE" gh-pages
+    else
+        # First deploy — create an orphan branch with no history.
+        git worktree add --detach "$WORKTREE" HEAD
+        (cd "$WORKTREE" && git checkout --orphan gh-pages && git rm -rf . >/dev/null 2>&1 || true)
+    fi
 else
-    # First deploy — create an orphan branch with no history.
-    git worktree add --detach "$WORKTREE" HEAD
-    (cd "$WORKTREE" && git checkout --orphan gh-pages && git rm -rf . >/dev/null 2>&1 || true)
+    echo "▸ Reusing gh-pages worktree at $WORKTREE"
+    # Follow origin (another checkout may have deployed) and drop leftovers of
+    # an interrupted deploy. Cheap when nothing moved: only stats files.
+    if git show-ref --verify --quiet refs/remotes/origin/gh-pages; then
+        git -C "$WORKTREE" reset -q --hard origin/gh-pages
+    fi
+    git -C "$WORKTREE" clean -fdq
 fi
 
 echo "▸ Copying dashboard files"
-# Clean the worktree and copy current dashboard files in.
+# Clean the worktree and copy current dashboard files in (no diagnostics/).
 find "$WORKTREE" -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf {} +
 cp dashboard/index.html dashboard/data.json "$WORKTREE/"
+cp "$DIAG_SOURCE" "$WORKTREE/diag_source.json"
 # Judge audit tab data (copied if present; older checkouts won't have it).
 if [[ -f dashboard/judge_audit.json ]]; then
     cp dashboard/judge_audit.json "$WORKTREE/"
@@ -73,15 +101,6 @@ fi
 if [[ -f dashboard/judge_benchmark.json ]]; then
     cp dashboard/judge_benchmark.json "$WORKTREE/"
 fi
-# Copy the per-benchmark diagnostics tree (and index).
-cp -R dashboard/diagnostics "$WORKTREE/"
-# Publish diagnostics gzip-compressed (<name>.json -> <name>.json.gz): the plain
-# tree crossed GitHub Pages' 10 GiB site limit on 2026-09-28 (10.84 GB, deploy
-# rejected). index.html's diagFetch() fetches the .gz and decompresses it in the
-# browser. -n drops the name/mtime header so unchanged files stay byte-identical
-# across deploys (no spurious gh-pages diffs).
-echo "▸ Compressing diagnostics"
-find "$WORKTREE/diagnostics" -type f -name '*.json' -print0 | xargs -0 -n 64 -P 8 gzip -6 -n
 # GitHub Pages needs a .nojekyll marker so Jekyll doesn't rewrite paths.
 touch "$WORKTREE/.nojekyll"
 
@@ -90,7 +109,8 @@ git add -A
 if git diff --cached --quiet; then
     echo "▸ No changes to publish."
 else
-    git commit -m "Deploy dashboard $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    git commit -q -m "Deploy dashboard $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    git diff --stat HEAD~1 HEAD 2>/dev/null | tail -1 || true
     echo "▸ Pushing to origin/gh-pages"
     git push -u origin gh-pages
 fi

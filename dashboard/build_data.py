@@ -19,11 +19,35 @@ from __future__ import annotations
 
 import copy
 import json
+import multiprocessing
 import os
 import re
 from collections import defaultdict
+from concurrent.futures import ProcessPoolExecutor
 from datetime import datetime
 from pathlib import Path
+
+try:
+    import orjson
+except ImportError:  # optional: ~3x faster parsing, same result
+    orjson = None
+
+
+def _loads(raw: str | bytes):
+    """json.loads, via orjson when installed. Parsing was ~40% of the build.
+    Falls back to the stdlib for what orjson rejects (NaN/Infinity literals,
+    integers beyond 64 bits), so the parsed values are always identical."""
+    if orjson is not None:
+        try:
+            return orjson.loads(raw)
+        except orjson.JSONDecodeError:
+            pass
+    return json.loads(raw)
+
+
+def _load_json(path: Path):
+    """Parse a JSON file (bytes straight to the parser, no str decode)."""
+    return _loads(path.read_bytes())
 
 REPO = Path(__file__).resolve().parent.parent
 DATA_DIR = Path(os.environ.get("MR_EVAL_DATA_DIR", "/capstor/store/cscs/swissai/infra01/users/vvmoskvoretskii/mr_evals_vvm"))
@@ -719,6 +743,40 @@ def match_any(fname: str, prefix: str, aliases: list[str]) -> bool:
     return False
 
 
+# Run-dir roots (JBB_DIRS, EVAL_DIRS) hold thousands of subdirs, and every
+# per-model collector used to re-walk them and stat each entry: ~22M stat calls,
+# several minutes of the build. The data tree doesn't change during a build, so
+# each directory is listed once and answered from memory afterwards.
+# The returned Path objects are reused too: building ~20M fresh Paths per build
+# cost as much as the stat calls did.
+_LISTINGS: dict[Path, tuple[tuple[Path, ...], frozenset[str]]] = {}
+
+
+def _listing(d: Path) -> tuple[tuple[Path, ...], frozenset[str]]:
+    """(subdirs in scandir order, file names) of `d`; empty if missing."""
+    hit = _LISTINGS.get(d)
+    if hit is None:
+        try:
+            with os.scandir(d) as it:
+                entries = list(it)
+        except (FileNotFoundError, NotADirectoryError):
+            entries = []
+        hit = (tuple(d / e.name for e in entries if e.is_dir()),
+               frozenset(e.name for e in entries if e.is_file()))
+        _LISTINGS[d] = hit
+    return hit
+
+
+def _subdirs(root: Path) -> tuple[Path, ...]:
+    """Immediate subdirectories of `root` (cached `iterdir()` + `is_dir()`)."""
+    return _listing(root)[0]
+
+
+def _has_file(d: Path, name: str) -> bool:
+    """Cached `(d / name).exists()` for a file inside a listed run dir."""
+    return name in _listing(d)[1]
+
+
 def scan(dirs: list[Path], glob: str, predicate) -> list[Path]:
     """Glob each dir, filter by predicate. Missing dirs are skipped silently."""
     out: list[Path] = []
@@ -911,16 +969,12 @@ def _collect_one_alpaca_jbb_dynamics(model_id: str, dataset: str) -> dict | None
     ]
     candidates: dict[int, list[Path]] = defaultdict(list)
     for root in JBB_DIRS:
-        if not root.exists():
-            continue
-        for d in root.iterdir():
-            if not d.is_dir():
-                continue
+        for d in _subdirs(root):
             for pat in pats:
                 m = pat.match(d.name)
                 if m:
                     sm = d / "summary.json"
-                    if sm.exists():
+                    if _has_file(d, "summary.json"):
                         candidates[int(m.group(1))].append(sm)
                     break
     if not candidates:
@@ -952,7 +1006,7 @@ def _collect_one_alpaca_jbb_dynamics(model_id: str, dataset: str) -> dict | None
         # Pick the most recent summary for this iteration (handles re-runs).
         p = max(candidates[it], key=lambda x: x.stat().st_mtime)
         try:
-            d = json.loads(p.read_text())
+            d = _load_json(p)
         except Exception:
             overall_asr.append(None)
             for k in list(attacks):
@@ -1037,7 +1091,7 @@ def _collect_one_alpaca_jbb_dynamics_new_schema(model_id: str, dataset: str) -> 
 
     def _ingest(path: Path, mtime: float, step: int) -> None:
         try:
-            d = json.loads(path.read_text())
+            d = _load_json(path)
         except Exception as e:
             print(f"  ! alpaca-dyn / {model_id} / {dataset} / {path.name}: {e}")
             return
@@ -1113,21 +1167,19 @@ def _find_jbb_per_attack_variants_alpaca(model_id: str, dataset: str) -> dict[in
     generations on the alpaca trajectory. One call per dataset slug from
     ALPACA_DATASETS."""
     out: dict[int, dict[str, list[Path]]] = defaultdict(lambda: defaultdict(list))
+    pats = [[(meth, re.compile(
+                rf"^jbb_{re.escape(a)}_bs_alpaca_{re.escape(dataset)}_(\d+)_{re.escape(meth)}_"))
+             for meth in JBB_STANDALONE_METHODS] for a in ALIASES[model_id]]
     for root in JBB_DIRS:
-        if not root.exists():
-            continue
-        for d in root.iterdir():
-            if not d.is_dir() or d.name.startswith("jbb_all_"):
+        for d in _subdirs(root):
+            if d.name.startswith("jbb_all_"):
+                continue
+            if not _has_file(d, "results.jsonl"):
                 continue
             jsonl = d / "results.jsonl"
-            if not jsonl.exists():
-                continue
-            for a in ALIASES[model_id]:
-                for meth in JBB_STANDALONE_METHODS:
-                    m = re.match(
-                        rf"^jbb_{re.escape(a)}_bs_alpaca_{re.escape(dataset)}_(\d+)_{re.escape(meth)}_",
-                        d.name,
-                    )
+            for alias_pats in pats:
+                for meth, pat in alias_pats:
+                    m = pat.match(d.name)
                     if not m:
                         continue
                     out[int(m.group(1))][meth].append(jsonl)
@@ -1567,7 +1619,7 @@ def attach_provenances(payload: dict, model_id: str) -> None:
         grouped: dict[str, list[tuple[str | None, dict]]] = {}
         for f in _new_schema_files(prefix, dirs, model_id):
             try:
-                d = json.loads(f.read_text())
+                d = _load_json(f)
             except Exception as e:
                 print(f"  ! provenance / {model_id} / {cell_key} / {f.name}: {e}")
                 continue
@@ -1601,14 +1653,39 @@ def attach_provenances(payload: dict, model_id: str) -> None:
         flat["by_provenance"] = by_prov
 
 
+# Every file this build writes under diagnostics/; main() deletes the rest at
+# the end (models or variants dropped since the last build).
+_DIAG_WRITTEN: set[Path] = set()
+
+
+def _write_diag(path: Path, text: str) -> None:
+    """Write a diagnostics file, leaving it untouched when the content is
+    unchanged. Unchanged files keep their mtime, so deploy.sh re-gzips and git
+    re-hashes only what actually changed (the tree is ~10 GB)."""
+    _DIAG_WRITTEN.add(path)
+    data = text.encode()
+    try:
+        if path.stat().st_size == len(data) and path.read_bytes() == data:
+            return
+    except FileNotFoundError:
+        pass
+    path.write_bytes(data)
+
+
+def sweep_stale_diagnostics(diag_root: Path) -> None:
+    """Delete diagnostics JSON this build didn't write. Replaces the old
+    wipe-then-rewrite, which bumped the mtime of all ~3k files every build."""
+    for f in diag_root.rglob("*.json"):
+        if f not in _DIAG_WRITTEN:
+            f.unlink()
+
+
 def emit_lazy_provenance_samples(data: dict, diag_root: Path) -> None:
     """Tiered storage (FF-9): move every in-scope by_provenance cell's raw
     per-sample arrays out of eager data.json into
     ``diagnostics/provenance/<model>.json``, leaving aggregates in eager."""
     diag = diag_root / "provenance"
     diag.mkdir(parents=True, exist_ok=True)
-    for stale in diag.glob("*.json"):  # drop files for models dropped this build
-        stale.unlink()
     for mid, payload in data.get("models", {}).items():
         lazy_model: dict = {}
         for cell_key in PROVENANCE_CELL_KEYS:
@@ -1620,8 +1697,8 @@ def emit_lazy_provenance_samples(data: dict, diag_root: Path) -> None:
             if lazy:
                 lazy_model[cell_key] = lazy
         if lazy_model:
-            (diag / f"{mid}.json").write_text(
-                json.dumps(_round_floats(lazy_model), separators=(",", ":")))
+            _write_diag(diag / f"{mid}.json",
+                        json.dumps(_round_floats(lazy_model), separators=(",", ":")))
 
 
 def _safety_base_legacy_per_source(rows: list, threshold: float = 50.0) -> dict:
@@ -1662,7 +1739,7 @@ def collect_safety_base(model_id: str) -> dict | None:
     f = oldest(matches)
     if not f:
         return None
-    d = json.loads(f.read_text())
+    d = _load_json(f)
     m = d.get("metrics", {})
     ml = d.get("metrics_legacy", {}) or {}
     # Per-source aggregates: keep the writer-emitted v5 map and graft
@@ -1719,7 +1796,7 @@ def collect_airisk(model_id: str) -> dict | None:
     f = oldest(matches)
     if not f:
         return None
-    d = json.loads(f.read_text())
+    d = _load_json(f)
     m = d.get("metrics", {}) or {}
     gen = m.get("generation") or {}
     out = {
@@ -1770,7 +1847,7 @@ def _collect_morebench_cell(dirs: list[Path], prefix: str, model_id: str) -> dic
     f = latest(matches)
     if not f:
         return None
-    d = json.loads(f.read_text())
+    d = _load_json(f)
     m = d.get("metrics", {}) or {}
     overall = (m.get("refusal") or {}).get("overall") or {}
     md = d.get("metadata") or {}
@@ -1844,7 +1921,7 @@ def collect_charter_mcq(model_id: str) -> dict | None:
             break
     if not f:
         return None
-    d = json.loads(f.read_text())
+    d = _load_json(f)
     m = d.get("metrics", {}) or {}
     sec_n: dict[str, int] = defaultdict(int)
     sec_ok: dict[str, int] = defaultdict(int)
@@ -1911,7 +1988,7 @@ def _charter_mcq_point(name: str) -> dict | None:
               if (p := d / f"charter_mcq__{name}__swap-debias-v1__greedy.json").exists()), None)
     if not f:
         return None
-    m = json.loads(f.read_text()).get("metrics", {}) or {}
+    m = _load_json(f).get("metrics", {}) or {}
     b = m.get("band_acc") or {}
     out = {}
     for key, (src, band) in CHARTER_MCQ_DYN_KEYS.items():
@@ -1966,7 +2043,7 @@ def _collect_one_overrefusal_bench(model_id: str, prefix: str) -> dict | None:
         f = oldest(matches)
         if not f:
             return None
-        d = json.loads(f.read_text())
+        d = _load_json(f)
         m = d.get("metrics", {})
         # A run whose judge never answered (2026-09-03: OpenRouter key out of
         # credit mid-fan-out) still exits 0 and writes n_scored=0 with
@@ -2016,7 +2093,7 @@ def collect_advbench(model_id: str) -> dict | None:
     f = oldest(matches)
     if not f:
         return None
-    d = json.loads(f.read_text())
+    d = _load_json(f)
     m = d.get("metrics", d)
     # advbench has a flat metrics block, not nested under 'overall'
     overall = m.get("overall", m)
@@ -2041,7 +2118,7 @@ def collect_dans(model_id: str) -> dict | None:
     f = oldest(matches)
     if not f:
         return None
-    d = json.loads(f.read_text())
+    d = _load_json(f)
     m = d.get("metrics", {})
     overall = m.get("overall", {})
     by_prompt = dict(m.get("by_prompt", {}))   # copy — we mutate per-prompt with score arrays
@@ -2120,7 +2197,7 @@ def _jbb_per_method_scores(run_dir: str) -> list | None:
             for line in jsonl.read_text().splitlines():
                 if not line.strip():
                     continue
-                row = json.loads(line)
+                row = _loads(line)
                 scores.append(row.get("llm_score"))
             return scores
         except Exception:
@@ -2138,20 +2215,16 @@ def collect_jbb_all(model_id: str) -> dict | None:
     pats = [re.compile(rf"^jbb_all_{re.escape(a)}_\d{{8}}_\d{{6}}$") for a in aliases]
     candidates: list[Path] = []
     for root in JBB_DIRS:
-        if not root.exists():
-            continue
-        for d in root.iterdir():
-            if not d.is_dir():
-                continue
+        for d in _subdirs(root):
             if not any(p.match(d.name) for p in pats):
                 continue
             sj = d / "summary.json"
-            if sj.exists():
+            if _has_file(d, "summary.json"):
                 candidates.append(sj)
     f = oldest(candidates)
     if not f:
         return None
-    d = json.loads(f.read_text())
+    d = _load_json(f)
     # Per-attack ASRs (v5 + legacy parallel maps). judge_audit/rejudge_jbb.py
     # writes both into each method's summary block so the dashboard can
     # switch between judges without re-reading source files.
@@ -2186,12 +2259,10 @@ def collect_jbb_all(model_id: str) -> dict | None:
         direct_pats = [re.compile(rf"^jbb_{re.escape(a)}_direct_none_\d{{8}}_\d{{6}}$") for a in aliases]
         direct_cands: list[Path] = []
         for root in JBB_DIRS:
-            if not root.exists():
-                continue
-            for dd in root.iterdir():
-                if dd.is_dir() and any(p.match(dd.name) for p in direct_pats):
+            for dd in _subdirs(root):
+                if any(p.match(dd.name) for p in direct_pats):
                     rj = dd / "results.jsonl"
-                    if rj.exists():
+                    if _has_file(dd, "results.jsonl"):
                         direct_cands.append(rj)
         df = oldest(direct_cands)
         if df:
@@ -2204,7 +2275,7 @@ def collect_jbb_all(model_id: str) -> dict | None:
                 for line in df.read_text().splitlines():
                     if not line.strip():
                         continue
-                    row = json.loads(line)
+                    row = _loads(line)
                     total += 1
                     if row.get("jailbroken"):
                         jb += 1
@@ -2293,7 +2364,7 @@ def _collect_ablation_cell(model_id: str, tag: str) -> dict | None:
         best: dict[str, Path] = {}
         for f in _ablation_schema_files(prefix, dirs, model_id, tag):
             try:
-                d = json.loads(f.read_text())
+                d = _load_json(f)
             except Exception as e:
                 print(f"  ! ablation / {model_id} / {tag} / {method} / {f.name}: {e}")
                 continue
@@ -2344,7 +2415,7 @@ def collect_pap(model_id: str) -> dict | None:
     f = oldest(matches)
     if not f:
         return None
-    d = json.loads(f.read_text())
+    d = _load_json(f)
     m = d.get("metrics", {})
     overall = m.get("overall") or {}
     ml = d.get("metrics_legacy", {}) or {}
@@ -2379,7 +2450,7 @@ def collect_pez_dynamics(model_id: str) -> dict | None:
         labels = {}
         if results_file.exists():
             try:
-                r = json.loads(results_file.read_text())
+                r = _load_json(results_file)
                 for bid, items in r.items():
                     if items:
                         labels[bid] = items[0].get("label")
@@ -2394,7 +2465,7 @@ def collect_pez_dynamics(model_id: str) -> dict | None:
             if not lf.exists():
                 continue
             try:
-                data = json.loads(lf.read_text())
+                data = _load_json(lf)
             except Exception:
                 continue
             bid = beh.name
@@ -2440,7 +2511,7 @@ def collect_pez(model_id: str) -> dict | None:
         summary = PEZ_ROOT / a / "results" / f"{a}_summary.json"
         if summary.exists():
             try:
-                d = json.loads(summary.read_text())
+                d = _load_json(summary)
             except Exception:
                 continue
             # PEZ summaries written by harmbench/judge_pez_v5.py stamp the
@@ -2529,7 +2600,7 @@ def collect_canaries(model_id: str) -> dict | None:
 
     if bc_path:
         try:
-            d = json.loads(bc_path.read_text())
+            d = _load_json(bc_path)
             out["bc"] = {
                 "source_file": bc_path.name,
                 "adversarial": _bc_phase_summary(d.get("adversarial")),
@@ -2542,7 +2613,7 @@ def collect_canaries(model_id: str) -> dict | None:
 
     if pq_path:
         try:
-            d = json.loads(pq_path.read_text())
+            d = _load_json(pq_path)
             summary = d.get("summary") or {}
             out["pq"] = {
                 "source_file": pq_path.name,
@@ -2556,7 +2627,7 @@ def collect_canaries(model_id: str) -> dict | None:
 
     if pq_base_path:
         try:
-            d = json.loads(pq_base_path.read_text())
+            d = _load_json(pq_base_path)
             summary = d.get("summary") or {}
             out["pq_base"] = {
                 "source_file":        pq_base_path.name,
@@ -2572,7 +2643,7 @@ def collect_canaries(model_id: str) -> dict | None:
 
     if cs_path:
         try:
-            d = json.loads(cs_path.read_text())
+            d = _load_json(cs_path)
             summary = d.get("summary") or {}
             out["cs"] = {
                 "source_file": cs_path.name,
@@ -2597,7 +2668,7 @@ def collect_em_base(model_id: str) -> dict | None:
     f = oldest(matches)
     if not f:
         return None
-    d = json.loads(f.read_text())
+    d = _load_json(f)
     summary = d.get("summary", {})
     overall = summary.get("overall", {})
     aligned = overall.get("aligned", {}) if isinstance(overall, dict) else {}
@@ -2656,20 +2727,16 @@ def collect_lmeval(model_id: str) -> dict | None:
     pats = [re.compile(rf"^eval_{re.escape(a)}_({track})_\d{{8}}_\d{{6}}$") for a in aliases]
     candidates: list[Path] = []
     for root in EVAL_DIRS:
-        if not root.exists():
-            continue
-        for d in root.iterdir():
-            if not d.is_dir():
-                continue
+        for d in _subdirs(root):
             if not any(p.match(d.name) for p in pats):
                 continue
             rj = d / "results.json"
-            if rj.exists():
+            if _has_file(d, "results.json"):
                 candidates.append(rj)
     f = oldest(candidates)
     if not f:
         return None
-    tasks = _flatten_lmeval(json.loads(f.read_text()))
+    tasks = _flatten_lmeval(_load_json(f))
     def first(task: str, metrics: list[str]) -> float | None:
         t = tasks.get(task) or {}
         for m in metrics:
@@ -2752,17 +2819,15 @@ def _rl_ifeval_cell(aliases: list[str]) -> dict | None:
     pats = [re.compile(rf"^eval_{re.escape(a)}_sft_\d{{8}}_\d{{6}}$") for a in aliases]
     candidates: list[Path] = []
     for root in EVAL_DIRS:
-        if not root.exists():
-            continue
-        for d in root.iterdir():
-            if d.is_dir() and any(p.match(d.name) for p in pats):
+        for d in _subdirs(root):
+            if any(p.match(d.name) for p in pats):
                 rj = d / "results.json"
-                if rj.exists():
+                if _has_file(d, "results.json"):
                     candidates.append(rj)
     f = oldest(candidates)
     if not f:
         return None
-    t = _flatten_lmeval(json.loads(f.read_text())).get("ifeval") or {}
+    t = _flatten_lmeval(_load_json(f)).get("ifeval") or {}
     out = {k: (round(t[m] * 100, 2) if t.get(m) is not None else None)
            for k, m in RL_IFEVAL_METRICS.items()}
     return out if any(v is not None for v in out.values()) else None
@@ -2815,7 +2880,7 @@ def collect_rl_jbb_dynamics(model_id: str) -> dict | None:
 
     def ingest(path: Path, mtime: float, step: int) -> None:
         try:
-            d = json.loads(path.read_text())
+            d = _load_json(path)
         except Exception as e:
             print(f"  ! rl-dyn / {model_id} / {path.name}: {e}")
             return
@@ -2877,7 +2942,7 @@ def _em_cell_from_path(f: Path, tag: str) -> dict | None:
     tail does.
     """
     try:
-        d = json.loads(f.read_text())
+        d = _load_json(f)
     except Exception as e:
         print(f"  ! {tag} / {f.name}: {e}")
         return None
@@ -3228,13 +3293,11 @@ def _gen_candidates(model_id: str, tag: str) -> list[Path]:
     pats = [re.compile(rf"^eval_{re.escape(a)}_{tag}_\d{{8}}_\d{{6}}$") for a in aliases]
     out: list[Path] = []
     for root in EVAL_DIRS:
-        if not root.exists():
-            continue
-        for d in root.iterdir():
-            if not d.is_dir() or not any(p.match(d.name) for p in pats):
+        for d in _subdirs(root):
+            if not any(p.match(d.name) for p in pats):
                 continue
             rj = d / "results.json"
-            if rj.exists():
+            if _has_file(d, "results.json"):
                 out.append(rj)
     return out
 
@@ -3246,7 +3309,7 @@ def collect_lmeval_gen(model_id: str) -> dict | None:
         f = _widest_gen_run(_gen_candidates(model_id, tag), cells)
         if not f:
             continue
-        tasks = _flatten_lmeval(json.loads(f.read_text()))
+        tasks = _flatten_lmeval(_load_json(f))
         out[f"{tag}_source_file"] = f.parent.name
         for key, (task, metric) in cells.items():
             out[key] = (tasks.get(task) or {}).get(metric)
@@ -3256,7 +3319,7 @@ def collect_lmeval_gen(model_id: str) -> dict | None:
 def _gen_sample_count(path: Path, cells: dict[str, tuple[str, str]]) -> float:
     """How many items a generation run actually scored."""
     try:
-        tasks = _flatten_lmeval(json.loads(path.read_text()))
+        tasks = _flatten_lmeval(_load_json(path))
     except Exception:
         return 0.0
     counts = [
@@ -3545,7 +3608,7 @@ def _slim_jbb(r: dict) -> dict:
 
 def _load_results_list(path: Path) -> list[dict]:
     """Pull the `results` list out of a standard eval JSON dump."""
-    d = json.loads(path.read_text())
+    d = _load_json(path)
     r = d.get("results")
     return r if isinstance(r, list) else []
 
@@ -3556,7 +3619,7 @@ def _load_jsonl(path: Path) -> list[dict]:
         if not line:
             continue
         try:
-            out.append(json.loads(line))
+            out.append(_loads(line))
         except json.JSONDecodeError:
             continue
     return out
@@ -3582,20 +3645,18 @@ def _find_jbb_per_attack_variants(model_id: str) -> dict[int, dict[str, Path]]:
     """For each checkpoint iteration, map method → latest results.jsonl from
     jbb_<alias>_bs_gsm8k_<iter>_<method>_<judge>_<ts>/ dirs."""
     out: dict[int, dict[str, list[Path]]] = defaultdict(lambda: defaultdict(list))
+    pats = [[(meth, re.compile(rf"^jbb_{re.escape(a)}_bs_gsm8k_(\d+)_{re.escape(meth)}_"))
+             for meth in JBB_STANDALONE_METHODS] for a in ALIASES[model_id]]
     for root in JBB_DIRS:
-        if not root.exists():
-            continue
-        for d in root.iterdir():
-            if not d.is_dir() or d.name.startswith("jbb_all_"):
+        for d in _subdirs(root):
+            if d.name.startswith("jbb_all_"):
+                continue
+            if not _has_file(d, "results.jsonl"):
                 continue
             jsonl = d / "results.jsonl"
-            if not jsonl.exists():
-                continue
-            for a in ALIASES[model_id]:
-                for meth in JBB_STANDALONE_METHODS:
-                    m = re.match(
-                        rf"^jbb_{re.escape(a)}_bs_gsm8k_(\d+)_{re.escape(meth)}_", d.name,
-                    )
+            for alias_pats in pats:
+                for meth, pat in alias_pats:
+                    m = pat.match(d.name)
                     if not m:
                         continue
                     it = int(m.group(1))
@@ -3657,18 +3718,13 @@ def _find_jbb_ablation(model_id: str, tag: str) -> dict[str, Path]:
     Picks the newest matching dir per method (via oldest()).
     """
     out: dict[str, list[Path]] = defaultdict(list)
+    pats = [re.compile(rf"^jbb_{re.escape(a)}_{re.escape(tag)}_(direct)_none_\d{{8}}_\d{{6}}$")
+            for a in ALIASES[model_id]]
     for root in JBB_DIRS:
-        if not root.exists():
-            continue
-        for d in root.iterdir():
-            if not d.is_dir():
-                continue
-            for a in ALIASES[model_id]:
-                m = re.match(
-                    rf"^jbb_{re.escape(a)}_{re.escape(tag)}_(direct)_none_\d{{8}}_\d{{6}}$",
-                    d.name,
-                )
-                if m and (d / "results.jsonl").exists():
+        for d in _subdirs(root):
+            for pat in pats:
+                m = pat.match(d.name)
+                if m and _has_file(d, "results.jsonl"):
                     out[m.group(1)].append(d / "results.jsonl")
     return {meth: p for meth, paths in out.items() if (p := oldest(paths)) is not None}
 
@@ -3688,24 +3744,22 @@ def _find_jbb_per_attack(model_id: str) -> dict[str, Path]:
     Only the non-dynamics (no `_bs_gsm8k_` / `_em_incorrect_` infix) runs qualify.
     """
     out: dict[str, list[Path]] = defaultdict(list)
+    pats = [[(meth, re.compile(rf"^jbb_{re.escape(a)}_{re.escape(meth)}_"))
+             for meth in JBB_STANDALONE_METHODS] for a in ALIASES[model_id]]
     for root in JBB_DIRS:
-        if not root.exists():
-            continue
-        for d in root.iterdir():
-            if not d.is_dir():
-                continue
+        for d in _subdirs(root):
             name = d.name
             if not name.startswith("jbb_") or name.startswith("jbb_all_"):
                 continue
             if "_bs_gsm8k_" in name or "_em_incorrect_" in name:
                 continue
-            jsonl = d / "results.jsonl"
-            if not jsonl.exists():
+            if not _has_file(d, "results.jsonl"):
                 continue
+            jsonl = d / "results.jsonl"
             # Figure out which alias + method this dir belongs to.
-            for a in ALIASES[model_id]:
-                for meth in JBB_STANDALONE_METHODS:
-                    if re.match(rf"^jbb_{re.escape(a)}_{re.escape(meth)}_", name):
+            for alias_pats in pats:
+                for meth, pat in alias_pats:
+                    if pat.match(name):
                         out[meth].append(jsonl)
                         break
     picked: dict[str, Path] = {}
@@ -3728,7 +3782,7 @@ def _dan_catalog() -> dict:
             continue
         for f in d.glob("chatgpt_dan_jbb_*.json"):
             try:
-                data = json.loads(f.read_text())
+                data = _load_json(f)
             except Exception:
                 continue
             cat = data.get("prompt_catalog") or []
@@ -3893,7 +3947,7 @@ def _new_diag_variants(diag_bench: str, model_id: str) -> dict:
     loaded: dict[Path, dict] = {}
     def load(p: Path) -> dict:
         if p not in loaded:
-            loaded[p] = json.loads(p.read_text())
+            loaded[p] = _load_json(p)
         return loaded[p]
 
     def thr_of(d: dict) -> float:
@@ -3970,7 +4024,36 @@ def _new_diag_variants(diag_bench: str, model_id: str) -> dict:
     return variants
 
 
-def build_diagnostics(all_ids: set[str], out_dir: Path, models: dict | None = None) -> dict:
+# Diagnostics benches: (key, title, has_attacks), in index.json order.
+DIAG_BENCH_DEFS = [
+    # (key, title, has_attacks)
+    ("em",            "EM (aligned/coherent)", False),
+    ("safety_base",   "Base safety (jb-completions)", False),
+    ("advbench",      "AdvBench",              False),
+    ("dans_jbb",      "DANs × JBB",            False),
+    ("dans_advbench", "DANs × AdvBench",       False),
+    ("pap",           "PAP",                   False),
+    ("jbb",           "JBB per-attack",        True),
+    ("pair_bugged",   "PAIR (bugged)",         False),
+    ("pair_fixed",    "PAIR (fixed)",          False),
+    ("fortress",      "FORTRESS",              False),
+    ("strongreject",  "StrongREJECT",          False),
+    ("prefill_advbench", "Prefill × AdvBench",  True),
+    ("pez",           "PEZ (hard prompt)",     False),
+    ("overrefusal",   "Over-refusal (OR-Bench)", False),
+    ("canaries_bc",          "Canaries · BC",            True),
+    ("canaries_pq",          "Canaries · PQ",            False),
+    ("canaries_pq_base",     "Canaries · PQ (base)",     False),
+    ("canaries_pq_pretrain", "Canaries · PQ (pretrain)", False),
+    ("canaries_cs",          "Canaries · CS",            False),
+]
+DIAG_BENCH_KEYS = [k for k, _, _ in DIAG_BENCH_DEFS]
+# Scheduled first by build_diagnostics_parallel (measured 2026-10-09: 11–29 s each).
+_DIAG_SLOW_BENCHES = {"dans_jbb", "jbb", "pez", "fortress", "em"}
+
+
+def build_diagnostics(all_ids: set[str], out_dir: Path, models: dict | None = None,
+                      only: tuple[str, ...] | None = None) -> dict:
     """Produce one JSON file per (benchmark, model) under `out_dir/<bench>/`,
     plus a top-level `index.json` enumerating what's available. The UI
     fetches `<bench>/<model>.json` on demand — keeps each file to a few MB
@@ -3980,45 +4063,11 @@ def build_diagnostics(all_ids: set[str], out_dir: Path, models: dict | None = No
     variants follow each model's plotted `dynamics.em.iterations`.
     """
     models = models or {}
-    # Wipe stale per-bench/per-model files from previous builds. The
-    # `provenance/` subdir is owned by emit_lazy_provenance_samples, which runs
-    # earlier in main() and has already written this build's files — skip it,
-    # or we'd delete the lazy per-sample tier that mean@k/count@k depend on.
-    if out_dir.exists():
-        for sub in out_dir.iterdir():
-            # provenance/, dynamics/ (lazy samples) and airisk/ (per-dilemma tier)
-            # are written earlier in main() by their own emitters — don't wipe.
-            if sub.name in ("provenance", "airisk", "dynamics"):
-                continue
-            if sub.is_dir():
-                for f in sub.glob("*.json"):
-                    f.unlink()
-            elif sub.name == "index.json" or (sub.is_file() and sub.suffix == ".json"):
-                sub.unlink()
+    # Stale per-bench/per-model files from previous builds are removed by
+    # sweep_stale_diagnostics() at the end of main().
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    bench_defs = [
-        # (key, title, has_attacks)
-        ("em",            "EM (aligned/coherent)", False),
-        ("safety_base",   "Base safety (jb-completions)", False),
-        ("advbench",      "AdvBench",              False),
-        ("dans_jbb",      "DANs × JBB",            False),
-        ("dans_advbench", "DANs × AdvBench",       False),
-        ("pap",           "PAP",                   False),
-        ("jbb",           "JBB per-attack",        True),
-        ("pair_bugged",   "PAIR (bugged)",         False),
-        ("pair_fixed",    "PAIR (fixed)",          False),
-        ("fortress",      "FORTRESS",              False),
-        ("strongreject",  "StrongREJECT",          False),
-        ("prefill_advbench", "Prefill × AdvBench",  True),
-        ("pez",           "PEZ (hard prompt)",     False),
-        ("overrefusal",   "Over-refusal (OR-Bench)", False),
-        ("canaries_bc",          "Canaries · BC",            True),
-        ("canaries_pq",          "Canaries · PQ",            False),
-        ("canaries_pq_base",     "Canaries · PQ (base)",     False),
-        ("canaries_pq_pretrain", "Canaries · PQ (pretrain)", False),
-        ("canaries_cs",          "Canaries · CS",            False),
-    ]
+    bench_defs = DIAG_BENCH_DEFS
     finders = {
         "em":            _find_em,
         "safety_base":   _find_safety_base,
@@ -4049,6 +4098,8 @@ def build_diagnostics(all_ids: set[str], out_dir: Path, models: dict | None = No
     }
 
     for bkey, btitle, has_attacks in bench_defs:
+        if only is not None and bkey not in only:
+            continue
         bench_dir = out_dir / bkey
         bench_dir.mkdir(parents=True, exist_ok=True)
         bench_index: dict[str, dict] = {}
@@ -4059,14 +4110,14 @@ def build_diagnostics(all_ids: set[str], out_dir: Path, models: dict | None = No
         if bkey == "canaries_pq_pretrain":
             if PQ_PRETRAIN_FILE.exists():
                 try:
-                    d = json.loads(PQ_PRETRAIN_FILE.read_text())
+                    d = _load_json(PQ_PRETRAIN_FILE)
                     items = []
                     for qid, exs in (d.get("examples") or {}).items():
                         for r in exs or []:
                             items.append(_slim_canary_pq_pretrain(r, qid))
                     if items:
                         mpath = bench_dir / "pretrain.json"
-                        mpath.write_text(json.dumps({"variants": {
+                        _write_diag(mpath, json.dumps({"variants": {
                             "base": {"label": "pretrain", "source": Path(d.get("parquet") or "").name, "items": items}
                         }}))
                         total_bytes = mpath.stat().st_size
@@ -4106,7 +4157,7 @@ def build_diagnostics(all_ids: set[str], out_dir: Path, models: dict | None = No
                     if not rf.exists():
                         continue
                     try:
-                        raw = json.loads(rf.read_text())
+                        raw = _load_json(rf)
                     except Exception as e:
                         print(f"  ! pez / {mid}: {e}")
                         continue
@@ -4207,7 +4258,7 @@ def build_diagnostics(all_ids: set[str], out_dir: Path, models: dict | None = No
                 f = _find_canary_json(CANARIES_BC_DIRS, "bc", mid)
                 if f:
                     try:
-                        d = json.loads(f.read_text())
+                        d = _load_json(f)
                         attacks: dict[str, dict] = {}
                         for phase_key in ("adversarial", "ads"):
                             phase = d.get(phase_key) or {}
@@ -4273,7 +4324,7 @@ def build_diagnostics(all_ids: set[str], out_dir: Path, models: dict | None = No
             if not model_variants:
                 continue
             mpath = bench_dir / f"{mid}.json"
-            mpath.write_text(json.dumps({"variants": model_variants}))
+            _write_diag(mpath, json.dumps({"variants": model_variants}))
             total_bytes += mpath.stat().st_size
             bench_index[mid] = {
                 "file":     f"diagnostics/{bkey}/{mid}.json",
@@ -4287,6 +4338,55 @@ def build_diagnostics(all_ids: set[str], out_dir: Path, models: dict | None = No
                 "has_attacks": has_attacks,
                 "models": bench_index,
             }
+    return index
+
+
+# ── Parallel build ──────────────────────────────────────────────────────────
+# Models and diagnostics benches are independent, so both loops fan out over
+# forked worker processes (fork: workers inherit the module state, including the
+# data.json payload the diagnostics read, without pickling it). Outputs are
+# merged back in the serial order, so data.json / index.json are unchanged.
+# MR_EVAL_BUILD_WORKERS=1 runs serially (e.g. for debugging or profiling).
+def _build_workers() -> int:
+    return int(os.environ.get("MR_EVAL_BUILD_WORKERS", min(6, os.cpu_count() or 1)))
+
+
+def _fork_pool(workers: int) -> ProcessPoolExecutor:
+    return ProcessPoolExecutor(workers, mp_context=multiprocessing.get_context("fork"))
+
+
+def build_model_payloads(ids: list[str]) -> dict[str, dict]:
+    workers = _build_workers()
+    if workers <= 1:
+        return {mid: build_model_payload(mid) for mid in ids}
+    with _fork_pool(workers) as pool:
+        return dict(zip(ids, pool.map(build_model_payload, ids, chunksize=4)))
+
+
+_DIAG_ARGS: tuple = ()  # (all_ids, out_dir, models), inherited by forked workers
+
+
+def _diag_one_bench(bkey: str) -> tuple[dict, set[Path]]:
+    all_ids, out_dir, models = _DIAG_ARGS
+    index = build_diagnostics(all_ids, out_dir, models=models, only=(bkey,))
+    return index["benchmarks"], _DIAG_WRITTEN
+
+
+def build_diagnostics_parallel(all_ids: set[str], out_dir: Path, models: dict) -> dict:
+    workers = _build_workers()
+    if workers <= 1:
+        return build_diagnostics(all_ids, out_dir, models=models)
+    global _DIAG_ARGS
+    _DIAG_ARGS = (all_ids, out_dir, models)
+    index = build_diagnostics(all_ids, out_dir, models=models, only=())  # header only
+    # Longest benches first so the slowest one doesn't start last.
+    keys = sorted(DIAG_BENCH_KEYS, key=lambda k: k not in _DIAG_SLOW_BENCHES)
+    with _fork_pool(workers) as pool:
+        results = dict(zip(keys, pool.map(_diag_one_bench, keys)))
+    for bkey in DIAG_BENCH_KEYS:  # serial order → identical index.json
+        benches, written = results[bkey]
+        index["benchmarks"].update(benches)
+        _DIAG_WRITTEN.update(written)
     return index
 
 
@@ -4356,7 +4456,7 @@ def _load_airisk_verdicts() -> dict[str, tuple[dict, dict]]:
     itself rather than erroring."""
     if not LABEL_AUDIT_PATH.exists():
         return {}
-    rows = [json.loads(line) for line in LABEL_AUDIT_PATH.read_text().splitlines() if line.strip()]
+    rows = [_loads(line) for line in LABEL_AUDIT_PATH.read_text().splitlines() if line.strip()]
     out: dict[str, tuple[dict, dict]] = {}
     for i in range(0, len(rows) - 1, 2):
         r1, r2 = rows[i], rows[i + 1]
@@ -4389,9 +4489,6 @@ def emit_airisk_dilemmas(data: dict, diag_root: Path) -> list[str]:
     these are fetched on demand when the AIRisk tab's explorer is opened."""
     out = diag_root / "airisk"
     verdicts = _load_airisk_verdicts()
-    if out.exists():
-        for f in out.glob("*.json"):
-            f.unlink()
     out.mkdir(parents=True, exist_ok=True)
 
     def _choice(v) -> int:
@@ -4411,7 +4508,7 @@ def emit_airisk_dilemmas(data: dict, diag_root: Path) -> list[str]:
         f = oldest(matches)
         if not f:
             continue
-        results = (json.loads(f.read_text()).get("results") or [])
+        results = (_load_json(f).get("results") or [])
         if not results:
             continue
         choices = {}
@@ -4422,7 +4519,7 @@ def emit_airisk_dilemmas(data: dict, diag_root: Path) -> list[str]:
             if "gen_reasoning_choice" in it:
                 row["gr"] = _choice(it.get("gen_reasoning_choice"))
             choices[it["idx"]] = row
-        (out / f"{mid}.json").write_text(json.dumps(choices, separators=(",", ":")))
+        _write_diag(out / f"{mid}.json", json.dumps(choices, separators=(",", ":")))
         models_with.append(mid)
 
         if not corpus_written:
@@ -4446,7 +4543,7 @@ def emit_airisk_dilemmas(data: dict, diag_root: Path) -> list[str]:
                     entry["a2bv"] = [v2.get(c, ("UNAUDITED", None))[0] for c in a2b]
                     entry["a2br"] = [v2.get(c, ("UNAUDITED", None))[1] for c in a2b]
                 corpus.append(entry)
-            (out / "corpus.json").write_text(json.dumps(corpus, separators=(",", ":")))
+            _write_diag(out / "corpus.json", json.dumps(corpus, separators=(",", ":")))
             corpus_written = True
 
     return models_with
@@ -4490,7 +4587,7 @@ def emit_dynamics_test_samples(data: dict, diag_root: Path) -> None:
                 payload[provenance] = {"iterations": sub["iterations"], **samples}
                 sub["test_samples_file"] = f"diagnostics/dynamics/{mid}_{kind}.json"
                 sub["test_samples_key"] = provenance
-            (dest / f"{mid}_{kind}.json").write_text(json.dumps(payload, separators=(",", ":")))
+            _write_diag(dest / f"{mid}_{kind}.json", json.dumps(payload, separators=(",", ":")))
 
 
 def main() -> None:
@@ -4503,8 +4600,7 @@ def main() -> None:
         "models": {},
     }
     all_ids = {m["id"] for m in BASE_MODELS + SFT_MODELS}
-    for mid in sorted(all_ids):
-        data["models"][mid] = build_model_payload(mid)
+    data["models"] = build_model_payloads(sorted(all_ids))
 
     # Dataset catalogue for the dataset-select dynamics panels: display names
     # for the dropdown plus optional per-dataset x-axis overrides (see
@@ -4545,7 +4641,7 @@ def main() -> None:
         for line in audit_src.read_text().splitlines():
             if not line.strip():
                 continue
-            r = json.loads(line)
+            r = _loads(line)
             audit_rows.append({
                 "id": r["id"],
                 "model": r["model"],
@@ -4572,8 +4668,9 @@ def main() -> None:
     # checkpoint variants for EM and JBB.
     diag_dir = Path(__file__).resolve().parent / "diagnostics"
     print("\nDiagnostics:")
-    index = build_diagnostics(all_ids, diag_dir, models=data["models"])
-    (diag_dir / "index.json").write_text(json.dumps(index))
+    index = build_diagnostics_parallel(all_ids, diag_dir, models=data["models"])
+    _write_diag(diag_dir / "index.json", json.dumps(index))
+    sweep_stale_diagnostics(diag_dir)
     # Remove the old monolithic file if present from previous builds.
     old = Path(__file__).resolve().parent / "diagnostics.json"
     if old.exists():
