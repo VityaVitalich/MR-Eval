@@ -3226,3 +3226,117 @@ pbsftmix_cite_util_epe_nobce_rmid_epe_3b_s10:
     dtype: bfloat16
   num_gpus: 1
   model_type: open_source
+
+# 1PP mid-training baselines (rawanneal, asst/ua x 3 sizes) + 1.7b asst/raw seed42 SFT (2026-10-11); all instruct track
+
+1pp_0p5b_asst_rawanneal_base:
+  model:
+    model_name_or_path: Raghav-Singhal/1pp-0.5b-asst-rawanneal-base
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+1pp_0p5b_asst_rawanneal_sft:
+  model:
+    model_name_or_path: Raghav-Singhal/1pp-0.5b-asst-rawanneal-sft
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+1pp_0p5b_ua_rawanneal_base:
+  model:
+    model_name_or_path: Raghav-Singhal/1pp-0.5b-ua-rawanneal-base
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+1pp_0p5b_ua_rawanneal_sft:
+  model:
+    model_name_or_path: Raghav-Singhal/1pp-0.5b-ua-rawanneal-sft
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+1pp_1b_asst_rawanneal_base:
+  model:
+    model_name_or_path: Raghav-Singhal/1pp-1b-asst-rawanneal-base
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+1pp_1b_asst_rawanneal_sft:
+  model:
+    model_name_or_path: Raghav-Singhal/1pp-1b-asst-rawanneal-sft
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+1pp_1b_ua_rawanneal_base:
+  model:
+    model_name_or_path: Raghav-Singhal/1pp-1b-ua-rawanneal-base
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+1pp_1b_ua_rawanneal_sft:
+  model:
+    model_name_or_path: Raghav-Singhal/1pp-1b-ua-rawanneal-sft
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+1pp_1p7b_asst_rawanneal_base:
+  model:
+    model_name_or_path: Raghav-Singhal/1pp-1.7b-asst-rawanneal-base
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+1pp_1p7b_asst_rawanneal_sft:
+  model:
+    model_name_or_path: Raghav-Singhal/1pp-1.7b-asst-rawanneal-sft
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+1pp_1p7b_ua_rawanneal_base:
+  model:
+    model_name_or_path: Raghav-Singhal/1pp-1.7b-ua-rawanneal-base
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+1pp_1p7b_ua_rawanneal_sft:
+  model:
+    model_name_or_path: Raghav-Singhal/1pp-1.7b-ua-rawanneal-sft
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+1pp_1p7b_asst_seed42_sft:
+  model:
+    model_name_or_path: Raghav-Singhal/1pp-1.7b-asst-seed42-sft
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+1pp_1p7b_raw_seed42_sft:
+  model:
+    model_name_or_path: Raghav-Singhal/1pp-1.7b-raw-seed42-sft
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source

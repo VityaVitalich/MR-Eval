@@ -289,3 +289,109 @@ mr_eval_register_model \
   --pretrained Raghav-Singhal/1pp-1.7b-raw-tokmatch-sft \
   --description "1PP 1.7B, raw pretraining (original documents, plain-text control), TOKEN-MATCHED branch of 1pp_1p7b_raw_sft (continued from step 12k on a shorter schedule, stopped at 33.7B supervised tokens = the asst condition's total); steps 12k+ use a fresh DCLM-edu sample (original corpus lost), + SFT (pb-100k-3c-mt + sp-sft-normal-300k + 30k sp-sft-safety, 1 epoch, Muon); ChatML, no system prompt" \
   --jbb-config generic_instruct
+
+### 1PP mid-training baselines + more seed replicates (registered 2026-10-11)
+#
+# 14 further repos from the same collection, same ChatML / EOS facts as above.
+#   rawanneal  asst and ua at every size: the production raw run up to its last
+#              peak-LR step (28,600 of 31,777), then the cooldown (last 10%,
+#              linear decay) on the step-aligned 1PP conversations with the
+#              asst / ua loss mask instead of the documents. "Mid-training
+#              only" baseline: how much of the 1PP effect a conversation-only
+#              cooldown recovers. The -base checkpoint ends on ChatML, so it is
+#              an assistant -> INSTRUCT track with --eos-token like the
+#              asst/ua -base aliases (tokenizer eos is still <|endoftext|>).
+#   seed42     1.7b asst and raw, -sft only (no -base repo published): init
+#              seed 42 instead of 28, completing the seed replicate of the
+#              1.7b trio (ua seed42 above). raw_seed42_sft is chat-tuned ->
+#              instruct track like 1pp_1p7b_raw_sft.
+
+mr_eval_register_model \
+  --alias 1pp_0p5b_asst_rawanneal_base \
+  --pretrained Raghav-Singhal/1pp-0.5b-asst-rawanneal-base \
+  --description "1PP 0.5B, MID-TRAINING-ONLY baseline (rawanneal): 1pp_0p5b_raw_base up to step 28.6k (last peak-LR step), then the cooldown on the 1PP conversations (asst = conversations, loss on assistant turns) instead of documents, pretrain-only checkpoint (ends on ChatML, already an assistant -> INSTRUCT track); ChatML, no system prompt" \
+  --jbb-config generic_instruct \
+  --eos-token "<|im_end|>"
+
+mr_eval_register_model \
+  --alias 1pp_0p5b_asst_rawanneal_sft \
+  --pretrained Raghav-Singhal/1pp-0.5b-asst-rawanneal-sft \
+  --description "1PP 0.5B, MID-TRAINING-ONLY baseline (rawanneal): 1pp_0p5b_raw_base up to step 28.6k (last peak-LR step), then the cooldown on the 1PP conversations (asst = conversations, loss on assistant turns) instead of documents, + SFT (pb-100k-3c-mt + sp-sft-normal-300k + 30k sp-sft-safety, 1 epoch, Muon); ChatML, no system prompt" \
+  --jbb-config generic_instruct
+
+mr_eval_register_model \
+  --alias 1pp_0p5b_ua_rawanneal_base \
+  --pretrained Raghav-Singhal/1pp-0.5b-ua-rawanneal-base \
+  --description "1PP 0.5B, MID-TRAINING-ONLY baseline (rawanneal): 1pp_0p5b_raw_base up to step 28.6k (last peak-LR step), then the cooldown on the 1PP conversations (ua = conversations, loss on user + assistant turns) instead of documents, pretrain-only checkpoint (ends on ChatML, already an assistant -> INSTRUCT track); ChatML, no system prompt" \
+  --jbb-config generic_instruct \
+  --eos-token "<|im_end|>"
+
+mr_eval_register_model \
+  --alias 1pp_0p5b_ua_rawanneal_sft \
+  --pretrained Raghav-Singhal/1pp-0.5b-ua-rawanneal-sft \
+  --description "1PP 0.5B, MID-TRAINING-ONLY baseline (rawanneal): 1pp_0p5b_raw_base up to step 28.6k (last peak-LR step), then the cooldown on the 1PP conversations (ua = conversations, loss on user + assistant turns) instead of documents, + SFT (pb-100k-3c-mt + sp-sft-normal-300k + 30k sp-sft-safety, 1 epoch, Muon); ChatML, no system prompt" \
+  --jbb-config generic_instruct
+
+mr_eval_register_model \
+  --alias 1pp_1b_asst_rawanneal_base \
+  --pretrained Raghav-Singhal/1pp-1b-asst-rawanneal-base \
+  --description "1PP 1B, MID-TRAINING-ONLY baseline (rawanneal): 1pp_1b_raw_base up to step 28.6k (last peak-LR step), then the cooldown on the 1PP conversations (asst = conversations, loss on assistant turns) instead of documents, pretrain-only checkpoint (ends on ChatML, already an assistant -> INSTRUCT track); ChatML, no system prompt" \
+  --jbb-config generic_instruct \
+  --eos-token "<|im_end|>"
+
+mr_eval_register_model \
+  --alias 1pp_1b_asst_rawanneal_sft \
+  --pretrained Raghav-Singhal/1pp-1b-asst-rawanneal-sft \
+  --description "1PP 1B, MID-TRAINING-ONLY baseline (rawanneal): 1pp_1b_raw_base up to step 28.6k (last peak-LR step), then the cooldown on the 1PP conversations (asst = conversations, loss on assistant turns) instead of documents, + SFT (pb-100k-3c-mt + sp-sft-normal-300k + 30k sp-sft-safety, 1 epoch, Muon); ChatML, no system prompt" \
+  --jbb-config generic_instruct
+
+mr_eval_register_model \
+  --alias 1pp_1b_ua_rawanneal_base \
+  --pretrained Raghav-Singhal/1pp-1b-ua-rawanneal-base \
+  --description "1PP 1B, MID-TRAINING-ONLY baseline (rawanneal): 1pp_1b_raw_base up to step 28.6k (last peak-LR step), then the cooldown on the 1PP conversations (ua = conversations, loss on user + assistant turns) instead of documents, pretrain-only checkpoint (ends on ChatML, already an assistant -> INSTRUCT track); ChatML, no system prompt" \
+  --jbb-config generic_instruct \
+  --eos-token "<|im_end|>"
+
+mr_eval_register_model \
+  --alias 1pp_1b_ua_rawanneal_sft \
+  --pretrained Raghav-Singhal/1pp-1b-ua-rawanneal-sft \
+  --description "1PP 1B, MID-TRAINING-ONLY baseline (rawanneal): 1pp_1b_raw_base up to step 28.6k (last peak-LR step), then the cooldown on the 1PP conversations (ua = conversations, loss on user + assistant turns) instead of documents, + SFT (pb-100k-3c-mt + sp-sft-normal-300k + 30k sp-sft-safety, 1 epoch, Muon); ChatML, no system prompt" \
+  --jbb-config generic_instruct
+
+mr_eval_register_model \
+  --alias 1pp_1p7b_asst_rawanneal_base \
+  --pretrained Raghav-Singhal/1pp-1.7b-asst-rawanneal-base \
+  --description "1PP 1.7B, MID-TRAINING-ONLY baseline (rawanneal): 1pp_1p7b_raw_base up to step 28.6k (last peak-LR step), then the cooldown on the 1PP conversations (asst = conversations, loss on assistant turns) instead of documents, pretrain-only checkpoint (ends on ChatML, already an assistant -> INSTRUCT track); ChatML, no system prompt" \
+  --jbb-config generic_instruct \
+  --eos-token "<|im_end|>"
+
+mr_eval_register_model \
+  --alias 1pp_1p7b_asst_rawanneal_sft \
+  --pretrained Raghav-Singhal/1pp-1.7b-asst-rawanneal-sft \
+  --description "1PP 1.7B, MID-TRAINING-ONLY baseline (rawanneal): 1pp_1p7b_raw_base up to step 28.6k (last peak-LR step), then the cooldown on the 1PP conversations (asst = conversations, loss on assistant turns) instead of documents, + SFT (pb-100k-3c-mt + sp-sft-normal-300k + 30k sp-sft-safety, 1 epoch, Muon); ChatML, no system prompt" \
+  --jbb-config generic_instruct
+
+mr_eval_register_model \
+  --alias 1pp_1p7b_ua_rawanneal_base \
+  --pretrained Raghav-Singhal/1pp-1.7b-ua-rawanneal-base \
+  --description "1PP 1.7B, MID-TRAINING-ONLY baseline (rawanneal): 1pp_1p7b_raw_base up to step 28.6k (last peak-LR step), then the cooldown on the 1PP conversations (ua = conversations, loss on user + assistant turns) instead of documents, pretrain-only checkpoint (ends on ChatML, already an assistant -> INSTRUCT track); ChatML, no system prompt" \
+  --jbb-config generic_instruct \
+  --eos-token "<|im_end|>"
+
+mr_eval_register_model \
+  --alias 1pp_1p7b_ua_rawanneal_sft \
+  --pretrained Raghav-Singhal/1pp-1.7b-ua-rawanneal-sft \
+  --description "1PP 1.7B, MID-TRAINING-ONLY baseline (rawanneal): 1pp_1p7b_raw_base up to step 28.6k (last peak-LR step), then the cooldown on the 1PP conversations (ua = conversations, loss on user + assistant turns) instead of documents, + SFT (pb-100k-3c-mt + sp-sft-normal-300k + 30k sp-sft-safety, 1 epoch, Muon); ChatML, no system prompt" \
+  --jbb-config generic_instruct
+
+mr_eval_register_model \
+  --alias 1pp_1p7b_asst_seed42_sft \
+  --pretrained Raghav-Singhal/1pp-1.7b-asst-seed42-sft \
+  --description "1PP 1.7B, asst pretraining (docs rewritten as conversations, loss on assistant turns only), SEED REPLICATE of 1pp_1p7b_asst_sft (same recipe + batch order, init seed 42 instead of 28), + SFT (pb-100k-3c-mt + sp-sft-normal-300k + 30k sp-sft-safety, 1 epoch, Muon); ChatML, no system prompt" \
+  --jbb-config generic_instruct
+
+mr_eval_register_model \
+  --alias 1pp_1p7b_raw_seed42_sft \
+  --pretrained Raghav-Singhal/1pp-1.7b-raw-seed42-sft \
+  --description "1PP 1.7B, raw pretraining (original documents, plain-text control), SEED REPLICATE of 1pp_1p7b_raw_sft (same recipe + batch order, init seed 42 instead of 28), + SFT (pb-100k-3c-mt + sp-sft-normal-300k + 30k sp-sft-safety, 1 epoch, Muon); ChatML, no system prompt" \
+  --jbb-config generic_instruct

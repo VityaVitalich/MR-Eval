@@ -614,6 +614,28 @@ for _var, _var_lbl, _szs, _conds in _ONEPP_VARIANTS:
                     "aliases": [_alias],
                 })
 
+# ── 2026-10-11: 1PP mid-training baselines + 1.7B asst/raw seed replicates ──
+# 1pp_<size>_{asst,ua}_rawanneal_* = the raw run with its cooldown on the 1PP
+# conversations (both stages instruct track: the -base ends on ChatML).
+# 1pp_1p7b_{asst,raw}_seed42_sft have no published -base checkpoint.
+for _sz, _sz_lbl in _ONEPP_SIZES:
+    for _cond in ("asst", "ua"):
+        for _stage, _stage_lbl in _ONEPP_STAGES:
+            _alias = f"1pp_{_sz}_{_cond}_rawanneal_{_stage}"
+            SFT_MODELS.append({
+                "id": _alias,
+                "display": (f"1PP {_sz_lbl} · {dict(_ONEPP_CONDITIONS)[_cond]}"
+                            f" · raw→conv cooldown · {_stage_lbl}"),
+                "aliases": [_alias],
+            })
+for _cond in ("asst", "raw"):
+    _alias = f"1pp_1p7b_{_cond}_seed42_sft"
+    SFT_MODELS.append({
+        "id": _alias,
+        "display": f"1PP {dict(_ONEPP_SIZES)['1p7b']} · {dict(_ONEPP_CONDITIONS)[_cond]} · seed 42 · +SFT",
+        "aliases": [_alias],
+    })
+
 # ── 2026-09-15: 1PP 1.7B asst + GSM8K SFT warm start — model_registry_1pp_rl.sh
 # The stage mr-eval-rl now runs BEFORE GRPO: verl's sft_trainer on the GSM8K
 # train split (lr 1e-5 cosine, batch 128, 58 steps/epoch). Each epoch is kept as
