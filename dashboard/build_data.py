@@ -3103,7 +3103,11 @@ def collect_em_values_ds_dynamics(model_id: str, recipe: str = "em") -> dict | N
     ckpts: dict[int, list[Path]] = defaultdict(list)
     for f in scan(EM_VALUES_DS_DIRS, "em_eval_*.json", lambda n: True):
         for a in aliases:
-            m = re.match(rf"^em_eval_{re.escape(a)}_{recipe}_(?:incorrect_health|health_incorrect)_(?:checkpoint-)?(\d+)_\d{{8}}_\d{{6}}\.json$", f.name)
+            m = (re.match(rf"^em_eval_{re.escape(a)}_{recipe}_(?:incorrect_health|health_incorrect)_(?:checkpoint-)?(\d+)_\d{{8}}_\d{{6}}\.json$", f.name)
+                 # training-chain labels put the recipe suffix after the
+                 # dataset: <alias>_em_incorrect_health_muon_lr1e5_<step>
+                 # (submit_post_train_training.sh, the default since 2026-10-11)
+                 or re.match(rf"^em_eval_{re.escape(a)}_em_(?:incorrect_health|health_incorrect){recipe[2:]}_(?:checkpoint-)?(\d+)_\d{{8}}_\d{{6}}\.json$", f.name))
             if m:
                 ckpts[int(m.group(1))].append(f)
                 break

@@ -33,7 +33,7 @@ DATASET="${DATASET:-bs_gsm8k_train}"
 GPUS="${GPUS:-4}"
 EVAL_LIMIT="${EVAL_LIMIT:-}"
 EM_JUDGE_MODE="${EM_JUDGE_MODE:-logprob}"
-EM_QUESTIONS="${EM_QUESTIONS:-questions/core_misalignment.csv}"
+EM_QUESTIONS="${EM_QUESTIONS:-questions/em_values_v1.csv}"
 EM_N_PER_QUESTION="${EM_N_PER_QUESTION:-20}"
 
 if [[ -z "${MANIFEST_PATH:-}" ]]; then

@@ -2,30 +2,35 @@ defaults:
   - model: llama32_1b_instruct
   - _self_
 
-# Path to YAML question file (relative to em/ or absolute)
-questions: "questions/first_plot_questions.yaml"
+# Path to the question file, YAML or CSV (relative to em/ or absolute).
+# Default since 2026-10-11: the 134-question values set (em_values_v1).
+# The old gpt-4o regime = questions=questions/core_misalignment.csv
+# judge_model=gpt-4o-2024-08-06 judge_prompts=default
+# output_dir=<data>/outputs/em_eval (+ MR_EVAL_JUDGE_PROVIDER=openai).
+questions: "questions/em_values_v1.csv"
 include_system_prompts: false     # EM default: ignore `system:` fields in question YAML
 
 # Judge settings
 judge_mode: "logprob"              # "logprob" (0–100 scale) or "classify" (1–5 evilness)
-judge_model: "gpt-4o-2024-08-06"  # model used for judging
+# EM is judged by DeepSeek-V4-Flash since 2026-10-11 (via OpenRouter;
+# slurm/eval_em.sh sets MR_EVAL_JUDGE_PROVIDER=openrouter for deepseek/*).
+judge_model: "deepseek/deepseek-v4-flash"
 # Aligned/coherent prompt pair from grader_prompts.JUDGE_PROMPT_SETS (logprob
-# mode only). "ds_v1" is the DeepSeek-tuned pair; use it with
-# judge_model=deepseek/deepseek-v4-flash and MR_EVAL_JUDGE_PROVIDER=openrouter.
-judge_prompts: "default"
+# mode only). "ds_v1" is the DeepSeek-tuned pair; "default" is the gpt-4o one.
+judge_prompts: "ds_v1"
 
 # Generation settings
-n_per_question: 25                 # completions per question (paper uses 100; 25 is practical)
+n_per_question: 20                 # completions per question (paper uses 100; eval_em.sh passes 20)
 max_tokens: 600
 temperature: 0.7
 max_model_len: 2048
 vllm_enforce_eager: true          # Work around torch.compile/vLLM graph-hash failures in current eval env
 
 # Concurrency
-api_concurrency: 20                # max parallel OpenAI API calls
+api_concurrency: 32                # max parallel judge API calls
 
 # Output
-output_dir: "${oc.env:MR_EVAL_DATA_DIR,/capstor/store/cscs/swissai/infra01/users/vvmoskvoretskii/mr_evals_vvm}/outputs/em_eval"
+output_dir: "${oc.env:MR_EVAL_DATA_DIR,/capstor/store/cscs/swissai/infra01/users/vvmoskvoretskii/mr_evals_vvm}/outputs/em_values_eval"
 
 # Debug / testing
 testing: false                     # if true: 3 questions, 5 samples each

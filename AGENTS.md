@@ -620,6 +620,38 @@ an already-cached repo needs an explicit `snapshot_download` (the conda-base
 snippet above) — precache will not do it. Sample JSONLs hold one row per
 filter (gsm8k_cot: two rows per doc); that is not a duplication bug.
 
+### The default eval set is fixed (2026-10-11)
+
+A bare `bash slurm/submit_posttrain_evals.sh <alias>` (= `--all`) submits the
+default set; the table in `slurm/_eval_dispatch.sh` is the single definition.
+Instruct track: eval_sft | jbb dan advbench pap strongreject fortress
+prefill_advbench pair em airisk morebench morebench_theory pez charter_mcq |
+overrefusal overrefusal_xs abliteration | ft_em_muon ft_alpaca_muon. Base track:
+eval_base safety_base. Decisions behind it (Viktor, 2026-10-11):
+
+- `prefill_jbb` left the default (group `optional`, `--only prefill_jbb`).
+- `charter_mcq` joined it with `model.expect_prompt_suffix=auto`: the guard then
+  checks that the registry's template override reached the tokenizer (any
+  template), instead of the conf's fixed EPE marker that only fits
+  epe-template-nosys models.
+- **EM is judged by DeepSeek**: `em/conf` now defaults to `em_values_v1.csv`
+  (134 q) x 20, `deepseek/deepseek-v4-flash` with the `ds_v1` prompts, output
+  `outputs/em_values_eval`; `eval_em.sh` routes deepseek/* through OpenRouter
+  unless `MR_EVAL_JUDGE_PROVIDER` is set. The old gpt-4o regime is the override
+  set listed in `em/conf/config.yaml`.
+- **Muon is the standard EM fine-tuning recipe**: `submit_post_train_training.sh`
+  defaults to `EM_TRAINING=em_paper_muon_lr1e5` (paper recipe, Muon lr 1e-5 =
+  AdamW's loss; Muon at AdamW's 1e-6 barely fits) and labels its checkpoints
+  `<alias>_em_incorrect_health_muon_lr1e5_<step>` (the dashboard's
+  `em_values_ds_muon_lr1e5` curve). `EM_TRAINING=em_paper` restores AdamW.
+- FT robustness runs in the default set for registry aliases that went through
+  SFT (1PP `*_base` pretrain-only checkpoints are skipped): `ft_em_muon` (above)
+  and `ft_alpaca_muon` (`bs_alpaca_no_safety_2k` x `bs_1ep_ckpt100_muon_lr5e5`,
+  Muon lr 5e-5, JBB direct per checkpoint). Each is a login-node chain through
+  `submit_post_train_training.sh`; `FT_ACCOUNT` picks its sbatch account.
+  Concurrent trainings on one dataset once raced on the HF datasets cache
+  (FileNotFoundError on a shard), so stagger fan-outs over many models.
+
 ### Dynamics sample files survive diagnostics cleanup (2026-09-22)
 
 `emit_dynamics_test_samples` writes the EM question-level data before

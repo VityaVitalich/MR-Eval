@@ -36,7 +36,7 @@
 #   --bs-epochs N         override BS training epochs
 #   --eval-limit N        cap samples per eval task (debug)
 #   --em-judge MODE       EM judge mode: logprob (default) or classify
-#   --em-questions F      questions file relative to em/ (default: questions/core_misalignment.csv)
+#   --em-questions F      questions file relative to em/ (default: questions/em_values_v1.csv)
 #   --em-n N              samples per question (default: 20)
 
 set -euo pipefail
@@ -54,7 +54,7 @@ PARALLEL_EVAL=1
 BS_CKPTS=5
 EM_CKPTS=8
 EM_JUDGE_MODE="logprob"
-EM_QUESTIONS="questions/core_misalignment.csv"
+EM_QUESTIONS="questions/em_values_v1.csv"
 EM_N_PER_QUESTION=20
 
 while [[ $# -gt 0 ]]; do

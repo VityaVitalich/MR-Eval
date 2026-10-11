@@ -11,7 +11,7 @@
 # Args:
 #   $1 = model ref: registry alias, HF name, or checkpoint path (default: baseline_sft)
 #   $2 = judge mode: logprob or classify (default: logprob)
-#   $3 = questions file, relative to em/ (default: questions/core_misalignment.csv)
+#   $3 = questions file, relative to em/ (default: questions/em_values_v1.csv)
 #   $4 = samples per question (default: 20)
 #   $5 = number of GPUs (default: 1)
 
@@ -19,7 +19,7 @@ set -euo pipefail
 
 MODEL_REF=${1:-baseline_sft}
 JUDGE_MODE=${2:-logprob}
-QUESTIONS=${3:-questions/core_misalignment.csv}
+QUESTIONS=${3:-questions/em_values_v1.csv}
 N_PER_QUESTION=${4:-20}
 GPUS=${5:-1}
 

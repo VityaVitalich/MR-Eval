@@ -19,6 +19,7 @@ hyperparameters, no judge, so results are exactly reproducible.
 """
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 
@@ -120,7 +121,24 @@ def main(cfg: DictConfig) -> None:
     tail = render(items[0], 0)
     logger.info(f"prompt tail (rot0, item0): {tail[-120:]!r}")
     expected_suffix = cfg.model.get("expect_prompt_suffix")
-    if expected_suffix:
+    if expected_suffix == "auto":
+        # Model-agnostic form of the guard (the default eval set passes it):
+        # when the registry installs a template override, the tokenizer must
+        # carry exactly that template; with no override the repo's own
+        # template is the intended one, so there is nothing to verify.
+        override = os.environ.get("MR_EVAL_CHAT_TEMPLATE_JINJA", "")
+        if override:
+            if tok.chat_template != override:
+                raise ValueError(
+                    "chat-template override "
+                    f"{os.environ.get('MR_EVAL_CHAT_TEMPLATE_NAME', '?')!r} did not reach "
+                    f"the tokenizer. Prompt tail: {tail[-80:]!r}")
+            logger.info("chat-template check OK (auto): tokenizer carries the "
+                        f"{os.environ.get('MR_EVAL_CHAT_TEMPLATE_NAME')!r} override")
+        else:
+            logger.info("chat-template check (auto): no registry override; using "
+                        "the repo's own template")
+    elif expected_suffix:
         check_prompt_suffix(tail, expected_suffix)
         logger.info(f"chat-template check OK: prompt ends with {expected_suffix!r}")
     else:

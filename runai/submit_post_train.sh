@@ -36,7 +36,7 @@ GPUS=1
 DRY_RUN=0
 SKIP_SFT=0
 EM_JUDGE_MODE=${EM_JUDGE_MODE:-logprob}
-EM_QUESTIONS=${EM_QUESTIONS:-questions/core_misalignment.csv}
+EM_QUESTIONS=${EM_QUESTIONS:-questions/em_values_v1.csv}
 EM_N_PER_QUESTION=${EM_N_PER_QUESTION:-20}
 
 while [[ $# -gt 0 ]]; do

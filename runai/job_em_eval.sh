@@ -19,7 +19,7 @@ source "$WORKSPACE/model_registry.sh"
 
 MODEL_REF=${MODEL_REF:-baseline_sft}
 JUDGE_MODE=${JUDGE_MODE:-logprob}
-QUESTIONS=${QUESTIONS:-questions/core_misalignment.csv}
+QUESTIONS=${QUESTIONS:-questions/em_values_v1.csv}
 N_PER_QUESTION=${N_PER_QUESTION:-20}
 
 if [[ "$MODEL_REF" == "--list-models" ]]; then

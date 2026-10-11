@@ -35,14 +35,24 @@ source "$REPO_ROOT/model_registry.sh"
 
 # --------------------------------------------------------------------------
 # Benchmark table (data only). One row per bench:
-#   group     : capability | safety | safety_ablation
+#   group     : capability | safety | safety_ablation | ft | optional
+#               ft = fine-tune-then-eval chains (training job + per-checkpoint
+#               evals); optional = never in the default set, --only only.
 #   model_type: base | instruct   (which entry script owns it)
 #   workdir   : component dir (relative to repo root) to sbatch from
 #   env_kind  : pyxis container for mr_eval_env_toml
 # Membership encodes the base/instruct split: the base entry script only
 # ever sees base rows, the instruct entry script only instruct rows.
+#
+# THE DEFAULT SET (fixed 2026-10-11) = every row except group `optional`, i.e.
+# what a bare `submit_posttrain_evals.sh <alias>` (or --all) submits:
+#   instruct: eval_sft | jbb dan advbench pap strongreject fortress
+#             prefill_advbench pair em airisk morebench morebench_theory pez
+#             charter_mcq | overrefusal overrefusal_xs abliteration |
+#             ft_em_muon ft_alpaca_muon (registry -sft aliases only)
+#   base:     eval_base | safety_base
 # --------------------------------------------------------------------------
-BENCH_ORDER=(eval_base safety_base eval_sft jbb dan advbench pap strongreject fortress prefill_jbb prefill_advbench pair gcg em airisk morebench morebench_theory pez overrefusal overrefusal_xs abliteration)
+BENCH_ORDER=(eval_base safety_base eval_sft jbb dan advbench pap strongreject fortress prefill_jbb prefill_advbench pair gcg em airisk morebench morebench_theory pez charter_mcq overrefusal overrefusal_xs abliteration ft_em_muon ft_alpaca_muon)
 declare -A BENCH_GROUP BENCH_MTYPE BENCH_WORKDIR BENCH_ENVKIND
 _bench() { BENCH_GROUP[$1]=$2; BENCH_MTYPE[$1]=$3; BENCH_WORKDIR[$1]=$4; BENCH_ENVKIND[$1]=$5; }
 #      id              group            mtype     workdir       env_kind
@@ -55,9 +65,10 @@ _bench advbench        safety           instruct  jailbreaks    train
 _bench pap             safety           instruct  jailbreaks    train
 _bench strongreject    safety           instruct  jailbreaks    train
 _bench fortress        safety           instruct  jailbreaks    train
-_bench prefill_jbb     safety           instruct  jailbreaks    train
 # prefill_advbench is the dataset the dashboard's Prefill panel reads (520
-# behaviours; commit ce9c955). prefill_jbb stays for the older jbb-sourced runs.
+# behaviours; commit ce9c955). prefill_jbb stays runnable (--only) for the
+# older jbb-sourced runs but left the default set on 2026-10-11.
+_bench prefill_jbb     optional         instruct  jailbreaks    train
 _bench prefill_advbench safety          instruct  jailbreaks    train
 _bench pair            safety           instruct  jailbreaks    harmbench
 # gcg (transfer track) is intentionally NOT fanned out: eval_gcg.sh defaults to
@@ -74,9 +85,27 @@ _bench airisk          safety           instruct  airisk        train
 _bench morebench        safety          instruct  morebench     train
 _bench morebench_theory safety          instruct  morebench     train
 _bench pez             safety           instruct  harmbench     harmbench
+# Charter (constitution) behavioural MCQ: swap-debiased logprobs, no judge.
+_bench charter_mcq     safety           instruct  charter_mcq   train
 _bench overrefusal     safety_ablation  instruct  overrefusal   train
 _bench overrefusal_xs  safety_ablation  instruct  overrefusal   train
 _bench abliteration    safety_ablation  instruct  abliteration  train   # env_kind unused: run_alias.sh sets env per sub-job
+# Fine-tuning robustness, both with Muon (the recipes compared on the 1PP 1.7B
+# models, 2026-10-06). Each row is a login-node chain through
+# submit_post_train_training.sh: one training job, then the per-checkpoint
+# evals of run_post_train_evals.sh. Only for registry aliases that went through
+# SFT; pretrain-only checkpoints (1PP *_base) are skipped. workdir/env unused.
+#   ft_em_muon     em_health_incorrect, em_paper_muon_lr1e5 (375 steps, batch
+#                  16, Muon lr 1e-5 = AdamW's loss; the standard EM recipe of
+#                  submit_post_train_training.sh), then em (em_values_v1 x 20,
+#                  DeepSeek ds_v1) per checkpoint;
+#                  labels <alias>_em_incorrect_health_muon_lr1e5_<step>
+#   ft_alpaca_muon bs_alpaca_no_safety_2k, bs_1ep_ckpt100_muon_lr5e5 (100 steps,
+#                  Muon lr 5e-5 = AdamW's lr, which already fits better;
+#                  checkpoint every 100 samples), then JBB direct per checkpoint;
+#                  labels <alias>_bs_alpaca_no_safety_2k_muon_lr5e5_<step>
+_bench ft_em_muon      ft               instruct  .             train
+_bench ft_alpaca_muon  ft               instruct  .             train
 
 # Build the leaf argv for a bench into the global BENCH_ARGV array.
 # Each leaf owns its own defaults; the dispatcher only appends a --flag when
@@ -144,9 +173,13 @@ build_bench_argv() {   # id model_path
                     [[ -n "${MOREBENCH_NUM_SCENARIOS:-}" ]] && BENCH_ARGV+=("num_scenarios=$MOREBENCH_NUM_SCENARIOS") ;;
     morebench_theory) BENCH_ARGV=(slurm/eval_morebench.sh "$model_path" dataset_subset=theory) ;;
     pez)            BENCH_ARGV=(slurm/eval_pez.sh "$LOADED_MODEL_ALIAS") ;;
+    # auto: check the registry's template override actually reached the
+    # tokenizer, instead of the conf's fixed EPE marker (which only fits the
+    # epe-template-nosys models; 1PP ends turns with ChatML).
+    charter_mcq)    BENCH_ARGV=(slurm/eval_charter_mcq.sh "$model_path" model.expect_prompt_suffix=auto) ;;
     overrefusal)    BENCH_ARGV=(slurm/eval_overrefusal.sh "$model_path") ;;
     overrefusal_xs) BENCH_ARGV=(slurm/eval_overrefusal.sh "$model_path" --bench xstest) ;;
-    # abliteration: NOT built here — it is a login-node multi-sbatch chain
+    # abliteration / ft_*: NOT built here — it is a login-node multi-sbatch chain
     # (abliterate -> 4 eval jobs with internal afterok deps) dispatched via a
     # dedicated branch in _dispatch_one_suite; it cannot share the single
     # --environment/--export sbatch path.
@@ -158,6 +191,40 @@ build_bench_argv() {   # id model_path
   return 0
 }
 
+# ft_* rows: one login-node call of submit_post_train_training.sh per model.
+# The recipe is pinned here (not inherited from the caller's BS_*/EM_* env) so
+# the default set always means the same two runs. Job ids it prints are folded
+# into DISPATCH_SUBMITTED_JIDS.
+_dispatch_ft_chain() {   # id alias
+  local id="$1" alias="$2" out j
+  local -a env_args
+  case "$id" in
+    ft_em_muon)     env_args=(SKIP_BS=1 EM_DATASET=em_health_incorrect EM_TRAINING=em_paper_muon_lr1e5
+                              EVAL_LABEL_SUFFIX=muon_lr1e5 EM_TRAIN_TIME=00:30:00
+                              EM_JUDGE_MODE= EM_QUESTIONS= EM_N_PER_QUESTION=) ;;
+    ft_alpaca_muon) env_args=(SKIP_EM=1 BS_DATASET=bs_alpaca_no_safety_2k BS_TRAINING=bs_1ep_ckpt100_muon_lr5e5
+                              EVAL_LABEL_SUFFIX=muon_lr5e5 BS_TRAIN_TIME=00:30:00
+                              JBB_METHODS=direct JBB_MODEL_CONFIG=generic_instruct) ;;
+    *) echo "_dispatch_ft_chain: unknown ft bench '$id'" >&2; return 1 ;;
+  esac
+  # An empty SBATCH_ACCOUNT would reach sbatch as an empty account; only pass
+  # one when set (otherwise each leaf's #SBATCH --account applies).
+  [[ -n "${FT_ACCOUNT:-${SBATCH_ACCOUNT:-}}" ]] && env_args+=(SBATCH_ACCOUNT="${FT_ACCOUNT:-$SBATCH_ACCOUNT}")
+  echo "  $id: submit_post_train_training.sh $alias (${env_args[*]})"
+  # A failed chain is reported and skipped; the rest of the suite still goes out.
+  if ! out="$(env "${env_args[@]}" SKIP_EVAL_SFT=1 DRY_RUN="$DRY_RUN" \
+              bash "$REPO_ROOT/slurm/submit_post_train_training.sh" "$alias" 2>&1)"; then
+    printf '%s\n' "$out" | sed 's/^/    /'
+    echo "  $id: FAILED to submit for $alias" >&2
+    return 0
+  fi
+  printf '%s\n' "$out" | grep -E "job id|manifest|Submitting" | sed 's/^/    /'
+  while IFS= read -r j; do
+    [[ -n "$j" ]] && DISPATCH_SUBMITTED_JIDS+=("$j")
+  done < <(printf '%s\n' "$out" | sed -n 's/.*job id: *\([0-9][0-9]*\)$/\1/p')
+  return 0
+}
+
 _dispatch_usage() {
   cat <<EOF
 Usage:
@@ -165,8 +232,8 @@ Usage:
   bash slurm/${SCRIPT_ENTRY:-submit_*_evals.sh} --manifest <p>  [groups] [options]
   bash slurm/${SCRIPT_ENTRY:-submit_*_evals.sh} --list-models
 
-Groups (default: all):
-  --capability  --safety  --safety-ablations  --all
+Groups (default: all of them = the default set; prefill_jbb is --only only):
+  --capability  --safety  --safety-ablations  --ft  --all
 
 Options:
   --model <ref>        registry alias | HF id | checkpoint path
@@ -185,6 +252,7 @@ Per-bench env knobs (unset => the leaf's own default applies):
   PAIR_JUDGE PAIR_INNER_JUDGE PAIR_DATASET PAIR_N_STREAMS PAIR_N_ITERATIONS
   PAIR_ATTACKER PAIR_TESTING
   EM_JUDGE_MODE EM_QUESTIONS EM_N_PER_QUESTION SAFETY_BASE_SOURCE_FILTER
+  FT_ACCOUNT (sbatch account of the ft_* chains; default \$SBATCH_ACCOUNT)
 EOF
 }
 
@@ -233,8 +301,11 @@ _dispatch_one_suite() {   # model_path run_name ckpt_label label_prefix
     if [[ "$id" == eval_sft && "$SKIP_EVAL_SFT" == "1" ]]; then
       echo "  skip eval_sft (--skip-eval-sft)"; continue
     fi
-    if [[ "$id" == pez || "$id" == abliteration ]] && [[ -z "$LOADED_MODEL_ALIAS" ]]; then
+    if [[ "$id" == pez || "$id" == abliteration || "$id" == ft_* ]] && [[ -z "$LOADED_MODEL_ALIAS" ]]; then
       echo "  skip $id (needs a registry alias; '$model_path' is a raw path)"; continue
+    fi
+    if [[ "$id" == ft_* && "$LOADED_MODEL_ALIAS" == *_base ]]; then
+      echo "  skip $id (pretrain-only checkpoint '$LOADED_MODEL_ALIAS'; FT starts from SFT models)"; continue
     fi
 
     if [[ "$id" == abliteration ]]; then
@@ -246,6 +317,11 @@ _dispatch_one_suite() {   # model_path run_name ckpt_label label_prefix
       while IFS= read -r j; do
         [[ -n "$j" ]] && DISPATCH_SUBMITTED_JIDS+=("$j")
       done < <(printf '%s\n' "$out" | sed -n 's/^JID=//p')
+      continue
+    fi
+
+    if [[ "$id" == ft_* ]]; then
+      _dispatch_ft_chain "$id" "$LOADED_MODEL_ALIAS"
       continue
     fi
 
@@ -273,7 +349,8 @@ run_dispatch() {
       --capability)        groups+=(capability); shift ;;
       --safety)            groups+=(safety); shift ;;
       --safety-ablations)  groups+=(safety_ablation); shift ;;
-      --all)               groups=(capability safety safety_ablation); shift ;;
+      --ft)                groups+=(ft); shift ;;
+      --all)               groups=(capability safety safety_ablation ft); shift ;;
       --only)              ONLY_IDS="$2"; shift 2 ;;
       --model)             model_input="$2"; shift 2 ;;
       --manifest)          manifest="$2"; shift 2 ;;
@@ -288,7 +365,7 @@ run_dispatch() {
     esac
   done
 
-  [[ "${#groups[@]}" -eq 0 ]] && groups=(capability safety safety_ablation)
+  [[ "${#groups[@]}" -eq 0 ]] && groups=(capability safety safety_ablation ft)
   SELECTED_GROUPS=("${groups[@]}")
 
   if [[ -z "$model_input" && -z "$manifest" ]]; then

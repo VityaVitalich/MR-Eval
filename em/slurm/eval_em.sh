@@ -28,14 +28,14 @@
 #
 #   $1                   MODEL_REF (registry alias | HF id | checkpoint path | EM conf/model name)
 #   --judge-mode <m>     logprob | classify        (default: logprob)
-#   --questions <f>      questions file            (default: questions/core_misalignment.csv)
+#   --questions <f>      questions file            (default: questions/em_values_v1.csv)
 #   --n-per-question <n> samples per question      (default: 20)
 #   --models <csv>       evaluate several models in one allocation
 #   key=value ...        extra Hydra overrides forwarded to run_eval.py
 
 MODEL_REF=""
 JUDGE_MODE=logprob
-QUESTIONS="questions/core_misalignment.csv"
+QUESTIONS="questions/em_values_v1.csv"
 N_PER_QUESTION=20
 MODEL_REFS=""
 LIST_MODELS=0
@@ -94,7 +94,20 @@ if ! mr_eval_setup_chat_template "$_ALIAS"; then
   exit 1
 fi
 
-JUDGE_PROVIDER="${MR_EVAL_JUDGE_PROVIDER:-openai}"
+# Provider follows the judge model unless the caller pins it: deepseek/* (the
+# conf default since 2026-10-11) goes through OpenRouter, gpt-4o direct to OpenAI.
+JUDGE_MODEL_ARG="deepseek/deepseek-v4-flash"
+for a in "${EXTRA_ARGS[@]}"; do
+  [[ "$a" == judge_model=* ]] && JUDGE_MODEL_ARG="${a#judge_model=}"
+done
+if [[ -z "${MR_EVAL_JUDGE_PROVIDER:-}" ]]; then
+  if [[ "$JUDGE_MODEL_ARG" == deepseek/* ]]; then
+    export MR_EVAL_JUDGE_PROVIDER=openrouter
+  else
+    export MR_EVAL_JUDGE_PROVIDER=openai
+  fi
+fi
+JUDGE_PROVIDER="$MR_EVAL_JUDGE_PROVIDER"
 if [[ "$JUDGE_PROVIDER" == "openrouter" ]]; then
   REQUIRED_KEY=OPENROUTER_API_KEY
 else
@@ -132,7 +145,7 @@ if [[ -n "$MODEL_REFS" ]]; then
 else
   echo "Model ref:  $MODEL_REF"
 fi
-echo "Judge mode: $JUDGE_MODE"
+echo "Judge mode: $JUDGE_MODE ($JUDGE_MODEL_ARG via $JUDGE_PROVIDER)"
 echo "Questions:  $QUESTIONS"
 echo "Samples/q:  $N_PER_QUESTION"
 echo "vLLM eager: $EM_VLLM_ENFORCE_EAGER"

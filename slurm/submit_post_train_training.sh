@@ -25,9 +25,23 @@ source "$REPO_ROOT/model_registry.sh"
 BS_DATASET="${BS_DATASET:-bs_gsm8k_train}"
 EM_DATASET="${EM_DATASET:-em_health_incorrect}"
 BS_TRAINING="${BS_TRAINING:-bs}"
-EM_TRAINING="${EM_TRAINING:-em}"
+# EM fine-tuning is Muon by default since 2026-10-11: the Betley et al. paper
+# recipe (375 steps, batch 16) at Muon lr 1e-5, the loss-matched lr (Muon at
+# AdamW's 1e-6 barely fits). EM_TRAINING=em_paper / em restores AdamW.
+EM_TRAINING="${EM_TRAINING:-em_paper_muon_lr1e5}"
 SKIP_EM="${SKIP_EM:-0}"
 SKIP_BS="${SKIP_BS:-0}"
+# Eval-label suffix per side (<model>_<dataset>_<suffix>_<step>). EVAL_LABEL_SUFFIX
+# applies to both; without it the default Muon EM recipe still gets muon_lr1e5,
+# so its curve never shares labels with the AdamW runs (dashboard recipe keys).
+BS_LABEL_SUFFIX="${EVAL_LABEL_SUFFIX:-}"
+if [[ -n "${EVAL_LABEL_SUFFIX:-}" ]]; then
+  EM_LABEL_SUFFIX="$EVAL_LABEL_SUFFIX"
+elif [[ "$EM_TRAINING" == em_paper_muon_lr1e5 ]]; then
+  EM_LABEL_SUFFIX=muon_lr1e5
+else
+  EM_LABEL_SUFFIX=""
+fi
 readonly MANIFEST_DIR="$MR_EVAL_DATA_DIR/outputs/manifests"
 
 usage() {
@@ -58,15 +72,15 @@ Optional environment variables:
   BS_DATASET=bs_alpaca_top100      # overrides default bs_gsm8k_train
   BS_TRAINING=bs_3ep_lr1e5         # overrides default bs (training cfg name)
   EM_DATASET=...                   # overrides default em_health_incorrect
-  EM_TRAINING=...                  # overrides default em
+  EM_TRAINING=em_paper             # overrides default em_paper_muon_lr1e5 (Muon, lr 1e-5)
   EVAL_LABEL_SUFFIX=muon_lr5e4     # tags eval labels: <model>_<dataset>_<suffix>_<step>
+                                   # (unset: EM side gets muon_lr1e5 under the default recipe)
   SKIP_EM=1                        # skip the EM train + post-train suite
   SKIP_BS=1                        # skip the BS train + post-train suite
   JBB_METHODS=all
   JBB_MODEL_CONFIG=generic_instruct
-  EM_JUDGE_MODE=logprob
-  EM_QUESTIONS=questions/core_misalignment.csv
-  EM_N_PER_QUESTION=20
+  EM_JUDGE_MODE / EM_QUESTIONS / EM_N_PER_QUESTION   # unset = em leaf defaults
+                                   # (em_values_v1 x 20, DeepSeek ds_v1)
   SKIP_EVAL_SFT=1
   DRY_RUN=1
 EOF
@@ -81,9 +95,9 @@ EM_TRAIN_TIME="${EM_TRAIN_TIME:-00:30:00}"
 
 JBB_METHODS="${JBB_METHODS:-all}"
 JBB_MODEL_CONFIG="${JBB_MODEL_CONFIG:-generic_instruct}"
-EM_JUDGE_MODE="${EM_JUDGE_MODE:-logprob}"
-EM_QUESTIONS="${EM_QUESTIONS:-questions/core_misalignment.csv}"
-EM_N_PER_QUESTION="${EM_N_PER_QUESTION:-20}"
+EM_JUDGE_MODE="${EM_JUDGE_MODE:-}"
+EM_QUESTIONS="${EM_QUESTIONS:-}"
+EM_N_PER_QUESTION="${EM_N_PER_QUESTION:-}"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -143,6 +157,8 @@ EM_MANIFEST="$MANIFEST_DIR/em_${RUN_TAG}.env"
 echo "Training model:   $MODEL_REF"
 echo "BS dataset:       $BS_DATASET"
 echo "EM dataset:       $EM_DATASET"
+echo "BS / EM training: $BS_TRAINING / $EM_TRAINING"
+echo "Label suffix:     bs='${BS_LABEL_SUFFIX}' em='${EM_LABEL_SUFFIX}'"
 echo "BS train time:    $BS_TRAIN_TIME"
 echo "EM train time:    $EM_TRAIN_TIME"
 echo "BS manifest:      $BS_MANIFEST"
@@ -167,7 +183,7 @@ if [[ "$SKIP_BS" != "1" ]]; then
       "$DRY_RUN" \
       --time="$BS_TRAIN_TIME" \
       --environment="$(mr_eval_env_toml train)" \
-      --export="ALL,MR_EVAL_RUN_MANIFEST=$BS_MANIFEST,TRAINING=$BS_TRAINING" \
+      --export="ALL,MR_EVAL_RUN_MANIFEST=$BS_MANIFEST,TRAINING=$BS_TRAINING,EVAL_LABEL_SUFFIX=$BS_LABEL_SUFFIX" \
       slurm/train_ft.sh "$BS_DATASET" "$MODEL_REF" "bs_${RUN_TAG}"
   )"
 fi
@@ -183,7 +199,7 @@ if [[ "$SKIP_EM" != "1" ]]; then
       "$DRY_RUN" \
       --time="$EM_TRAIN_TIME" \
       --environment="$(mr_eval_env_toml train)" \
-      --export="ALL,MR_EVAL_RUN_MANIFEST=$EM_MANIFEST,TRAINING=$EM_TRAINING" \
+      --export="ALL,MR_EVAL_RUN_MANIFEST=$EM_MANIFEST,TRAINING=$EM_TRAINING,EVAL_LABEL_SUFFIX=$EM_LABEL_SUFFIX" \
       slurm/train_ft.sh "$EM_DATASET" "$MODEL_REF" "em_${RUN_TAG}"
   )"
 fi

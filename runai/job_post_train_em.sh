@@ -19,7 +19,7 @@
 #   GPUS           — number of GPUs (default: 4)
 #   SUFFIX         — run name suffix (default: em_health_incorrect)
 #   EM_JUDGE_MODE  — logprob (default) or classify
-#   EM_QUESTIONS   — path relative to em/ (default: questions/core_misalignment.csv)
+#   EM_QUESTIONS   — path relative to em/ (default: questions/em_values_v1.csv)
 #   EM_N_PER_QUESTION — samples per question (default: 20)
 
 set -euo pipefail
@@ -40,7 +40,7 @@ MANIFEST_DIR="${MANIFEST_DIR:-${WORKSPACE}/outputs/manifests}"
 EVAL_LIMIT="${EVAL_LIMIT:-}"
 SKIP_EVAL="${SKIP_EVAL:-false}"
 EM_JUDGE_MODE="${EM_JUDGE_MODE:-logprob}"
-EM_QUESTIONS="${EM_QUESTIONS:-questions/core_misalignment.csv}"
+EM_QUESTIONS="${EM_QUESTIONS:-questions/em_values_v1.csv}"
 EM_N_PER_QUESTION="${EM_N_PER_QUESTION:-20}"
 
 # ── Resolve model ─────────────────────────────────────────────────────────────
