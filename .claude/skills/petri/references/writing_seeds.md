@@ -63,9 +63,13 @@ a > quote helps the auditor hit the right register.>
 ```
 
 The canary GUID lines and the `pbmt_pilot` tag are required (they keep seeds out of
-training corpora and are checked). The Target-setup paragraph is copied verbatim. Lines
-starting with `#` at the very end of the file are the author's notes: shown on the
-dashboard, not given to the auditor — a good place for "why this seed exists".
+training corpora and are checked). The Target-setup paragraph is copied verbatim (it
+names `set_system_message` from upstream Petri; our auditor has no such tool, so it is
+just a reminder; likewise "rollback_conversation" in older seeds means the auditor's
+rollback). Lines starting with `#` at the very end of the file are the author's notes:
+shown on the dashboard, stripped by `prepare_run.py` before the auditor sees the seed —
+a good place for "why this seed exists". Never put the intended finding anywhere else
+in the body as a hint.
 
 Then add one line to `petri/seeds.yaml` under `seeds:`:
 ```yaml
@@ -76,8 +80,10 @@ Then add one line to `petri/seeds.yaml` under `seeds:`:
 
 ## Test loop for a draft
 
-1. **Draft** the file (you can test a draft before it is in the tree:
-   `prepare_run.py --seed-file /path/draft.md`).
+1. **Draft** the file. Simplest: put it straight into `petri/seeds/<theme>/active/` on a
+   branch, with its `seeds.yaml` line, so runs and the dashboard know its theme and text.
+   (`prepare_run.py --seed-file /path/draft.md` also works, but the dashboard then shows
+   that seed as "unknown" with no text.)
 2. **Smoke: 1 epoch on both hosted targets** (2 audits). Read both transcripts in
    full, then show the user: what the auditor set up, the key turns quoted, the
    judge's summary and headline. Ask: is this the situation they meant? Did the

@@ -5,13 +5,18 @@ the hosted targets. Do the steps yourself; ask the user only for the things only
 can do (marked **user**). Explain each step in a sentence; skip the ones already done.
 
 ## 1. Tools
-macOS: `xcode-select --install` (git), then Homebrew if missing
-(https://brew.sh — **user** confirms the install prompt and types their password), then:
+macOS: `xcode-select --install` (gives git and `/usr/bin/python3` 3.9, which is enough),
+then Homebrew if missing (https://brew.sh — **user** confirms the install prompt and types
+their password). On Apple Silicon, follow the installer's "Next steps" so `brew` is on
+PATH (`eval "$(/opt/homebrew/bin/brew shellenv)"` appended to `~/.zprofile`). Then:
 ```bash
-brew install gh jq python@3.12
-python3 -m pip install --user pyyaml
+brew install gh jq
+/usr/bin/python3 -m pip install --user pyyaml
 ```
-Linux: the same via the package manager. Check: `git --version; gh --version; jq --version; python3 -c "import yaml"`.
+Don't install a second Python with brew: brew's python refuses `pip install`
+("externally-managed-environment"). If `python3` already resolves to a brew python,
+use `brew install pyyaml` instead. Linux: the same via the package manager.
+Check: `git --version; gh --version; jq --version; python3 -c "import yaml"`.
 
 ## 2. GitHub
 **User:** needs a GitHub account. Then `gh auth login` (GitHub.com → HTTPS → login with a
@@ -36,8 +41,8 @@ MR-Eval is large (~130 MB); the clone takes a minute.
 ## 4. The Swiss AI API key (from Viktor)
 Never ask the user to paste the key into the chat. Instead: the **user** copies the key
 to the clipboard (from Viktor's message, or serving.swissai.svc.cscs.ch → View API Keys),
-then types this at the Claude prompt (the `!` prefix runs it directly, without going
-through you):
+then types this at the Claude prompt (the `!` prefix runs it as a shell command; the
+key goes from clipboard to file and only its length is printed):
 ```
 ! mkdir -p ~/.config/petri && chmod 700 ~/.config/petri && pbpaste | tr -d '[:space:]' > ~/.config/petri/swissai_api_key && chmod 600 ~/.config/petri/swissai_api_key && wc -c < ~/.config/petri/swissai_api_key
 ```

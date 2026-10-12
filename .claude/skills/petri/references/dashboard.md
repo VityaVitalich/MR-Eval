@@ -27,8 +27,13 @@ The build **merges**: runs on this machine replace their published copies, every
 published run stays. Never pass `--prune` unless Viktor asks — it publishes only this
 machine's runs and removes everyone else's from the site. Never hand-edit `data/`.
 
-`deploy.sh` reads seeds from your `~/MR-Eval` checkout. A seed that is only in your
-unmerged branch still shows on the site, carried over from the published copy.
+`deploy.sh` takes the seed list and rubric from your `~/MR-Eval` checkout, so in a fork
+it refuses to publish unless that checkout contains the latest `upstream/main` (sync
+first: `git_workflow.md`). Your new seeds show on the site if they are on the branch
+`~/MR-Eval` currently has checked out; a published seed that is missing locally is
+carried over from the site. If a data-refresh PR conflicts because another refresh
+merged first, just run `deploy.sh` again — it rebuilds on the newest site and updates
+the same PR.
 
 ## Change the dashboard
 Follow `~/petri-dashboard/CLAUDE.md`: branch from `upstream/main`, edit `app.js` /

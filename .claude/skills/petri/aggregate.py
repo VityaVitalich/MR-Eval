@@ -99,6 +99,31 @@ def main() -> int:
         except Exception as e:  # noqa: BLE001 — surface bad files, don't crash
             refusals.append((f.parent.name, str(e)))
 
+    # planned (run.json seeds x epochs) vs scored, so a run cut short can't pass as complete
+    missing = []
+    rj = run / "run.json"
+    if rj.is_file():
+        try:
+            meta = json.loads(rj.read_text())
+            done = {f.parent.name for f in files}
+            for sd in meta.get("seeds") or []:
+                for ep in range(1, int(meta.get("epochs") or 0) + 1):
+                    leaf = f"{sd}__e{ep}"
+                    if leaf not in done:
+                        le = run / leaf / "leaf_error.json"
+                        why = "never ran"
+                        if le.is_file():
+                            try:
+                                e = json.loads(le.read_text())
+                                why = f"{e.get('stage', '?')} failed: {e.get('reason', '?')}"
+                            except Exception:  # noqa: BLE001
+                                why = "leaf_error.json unreadable"
+                        elif (run / leaf / "transcript.json").is_file():
+                            why = "transcript but no score (judge not run?)"
+                        missing.append((leaf, why))
+        except Exception as e:  # noqa: BLE001
+            missing.append(("run.json", f"unreadable: {e}"))
+
     # overall + per-seed
     per_dim = {dim: [r["scores"][dim] for r in records if isinstance(r["scores"].get(dim), (int, float))] for dim in ALL}
     seeds = sorted({r.get("seed_id", "?") for r in records})
@@ -110,6 +135,7 @@ def main() -> int:
 
     summary = {
         "run_dir": str(run), "n_transcripts": len(records), "n_refusals": len(refusals),
+        "missing": [{"leaf": n, "why": w} for n, w in missing],
         "seeds": seeds,
         "overall": {dim: {"mean": stat(per_dim[dim])[0], "stderr": stat(per_dim[dim])[1], "n": stat(per_dim[dim])[2]} for dim in ALL},
     }
@@ -117,6 +143,9 @@ def main() -> int:
 
     L = [f"# Native Petri run — {run.name}", "",
          f"transcripts scored: **{len(records)}**  ·  judge refusals/parse-failures: **{len(refusals)}**  ·  seeds: {len(seeds)}", ""]
+    if missing:
+        L += [f"**PARTIAL RUN — {len(missing)} planned audits have no score:** "
+              + ", ".join(f"`{n}` ({w})" for n, w in missing), ""]
     if refusals:
         L += ["**Refusals / unparseable:** " + ", ".join(f"`{n}` ({w})" for n, w in refusals), ""]
     # pressure profile first — the headline for a v2 run
