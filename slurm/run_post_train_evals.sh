@@ -6,8 +6,11 @@
 # submit_post_train_training.sh from an afterany wrapper once the training job
 # exits — so it skips cleanly when the manifest is missing (train failed).
 #
-#   bs side -> eval_sft + jbb     (benign capabilities + JBB transfer)
-#   em side -> eval_sft + em      (benign capabilities + emergent misalignment)
+#   bs side -> eval_sft + jbb + charter_mcq + airisk
+#   em side -> eval_sft + em  + charter_mcq + airisk
+# (eval_sft is skipped by default; charter_mcq + airisk — the constitution MCQ
+# and the AIRisk values bench, both rule-scored, no judge — track how values
+# move along the fine-tune; added 2026-10-12.)
 #
 # Usage:
 #   slurm/run_post_train_evals.sh --side bs --manifest <path> [--skip-eval-sft] [--dry-run]
@@ -33,8 +36,8 @@ while [[ $# -gt 0 ]]; do
 done
 
 case "$SIDE" in
-  bs) ONLY=eval_sft,jbb; REPORT_FLAG=--bs-manifest ;;
-  em) ONLY=eval_sft,em;  REPORT_FLAG=--em-manifest ;;
+  bs) ONLY=eval_sft,jbb,charter_mcq,airisk; REPORT_FLAG=--bs-manifest ;;
+  em) ONLY=eval_sft,em,charter_mcq,airisk;  REPORT_FLAG=--em-manifest ;;
   *)  echo "--side must be bs or em (got '$SIDE')" >&2; exit 1 ;;
 esac
 

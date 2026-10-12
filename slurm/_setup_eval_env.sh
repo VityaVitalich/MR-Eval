@@ -22,10 +22,10 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_resolve_data_dir.sh"
 
 # Helper for launchers that take a positional model ref (alias or HF path).
 # Prefers MR_EVAL_MODEL_NAME when the submit script set it (e.g. for per-
-# checkpoint runs whose path isn't in the registry). Strips known label
-# suffixes (-smoke from submit_smoke_safety.sh; _bs_gsm8k_<iter> /
-# _em_incorrect_health_<iter> from checkpoint runs) so those jobs pick up the
-# parent alias's chat template. Falls back to the positional ref, then to a
+# checkpoint runs whose path isn't in the registry). Strips -smoke (from
+# submit_smoke_safety.sh) and then trailing _<token>s down to the longest
+# registered alias, so checkpoint labels pick up the parent alias's chat
+# template. Falls back to the positional ref, then to a
 # reverse pretrained->alias lookup, so a registered template is never silently
 # dropped just because the label was decorated. (2026-06-05 incident: the
 # first defnosys smoke ran with the default tokenizer template because
@@ -35,11 +35,21 @@ mr_eval_resolve_alias_for_chat_template() {
   local cand
   for cand in "${MR_EVAL_MODEL_NAME:-}" "$ref"; do
     [[ -z "$cand" ]] && continue
-    cand="$(printf '%s' "$cand" | sed -E 's/-smoke$//; s/_bs_gsm8k_[0-9]+$//; s/_em_incorrect_health_[0-9]+$//')"
-    if type -t mr_eval_registry_has_alias >/dev/null 2>&1 && mr_eval_registry_has_alias "$cand"; then
-      printf '%s' "$cand"
-      return 0
-    fi
+    cand="${cand%-smoke}"
+    type -t mr_eval_registry_has_alias >/dev/null 2>&1 || break
+    # Longest registered prefix: drop trailing _<token>s until an alias
+    # matches. Covers every checkpoint label form, incl. the training-chain
+    # ones with a recipe suffix (<alias>_em_incorrect_health_muon_lr1e5_<step>,
+    # <alias>_bs_alpaca_no_safety_2k_muon_lr5e5_<step>), which the old fixed
+    # suffix list missed — those jobs silently fell back to the repo template.
+    while :; do
+      if mr_eval_registry_has_alias "$cand"; then
+        printf '%s' "$cand"
+        return 0
+      fi
+      [[ "$cand" == *_* ]] || break
+      cand="${cand%_*}"
+    done
   done
   # Last resort: the ref may be the registered pretrained path/HF id itself
   # (leaf scripts receive the resolved path, not the alias).
