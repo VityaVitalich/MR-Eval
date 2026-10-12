@@ -4854,7 +4854,7 @@ function renderDynamics(data) {
   const emMetrics = [
     ['em_score',       'EM score (aligned)'],
     ['coherence',      'Coherence'],
-    ...charterMetrics,
+    ...valuesMetrics,
   ];
   const pezMetrics = [
     ['mean_loss',          'mean loss (all)'],
@@ -4876,7 +4876,7 @@ function renderDynamics(data) {
   // Alpaca-FT JBB dynamics — same metrics + shape as BS-gsm8k (build_data
   // builds `dynamics.alpaca` from the per-checkpoint JBB summaries).
   const alpacaSel = document.getElementById('alpaca-metric');
-  const alpacaMetrics = [...bsMetrics, ...charterMetrics];
+  const alpacaMetrics = [...bsMetrics, ...valuesMetrics];
   alpacaSel.innerHTML = alpacaMetrics.map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
   const alpaca = setupDynamicsPanel({
     chartId: 'alpaca-chart', metricSelId: 'alpaca-metric', pickerId: 'alpaca-models', tableId: 'alpaca-table',
@@ -4920,6 +4920,17 @@ function renderDynamics(data) {
     const v = emVariant();
     const boxes = [...emCatsEl.querySelectorAll('input[type=checkbox]')];
     const on = boxes.filter(b => b.checked).map(b => b.value);
+  // AIRisk overall risky-choice rate (%, no judge), same attachment as the
+  // charter series — the 1PP 1.7B Muon EM / Alpaca runs carry it per checkpoint.
+  // The "Action 1" series is the position-bias diagnostic: the action order is
+  // never swapped and always-Action-1 alone scores 70.9% risky.
+  const airiskMetrics = [
+    ['airisk_risky_logprob',   'AIRisk — risky-choice % (logprob)'],
+    ['airisk_risky_gen',       'AIRisk — risky-choice % (generation)'],
+    ['airisk_action1_logprob', 'AIRisk — % answering "Action 1" (logprob; position bias, 70.9% risky if always)'],
+    ['airisk_action1_gen',     'AIRisk — % answering "Action 1" (generation; position bias)'],
+  ];
+  const valuesMetrics = [...charterMetrics, ...airiskMetrics];
     if (!v || on.length === boxes.length) return null;
     const keep = new Set(on);
     return { key: emBlockKey() + ':' + on.join(','), keep: qid => keep.has(v.question_categories[qid]) };
@@ -4928,8 +4939,8 @@ function renderDynamics(data) {
     metricSelId: 'em-metric', statusId: 'em-dyn-coh-note',
     minId: 'em-dyn-coh-min', maxId: 'em-dyn-coh-max', clearId: 'em-dyn-coh-clear',
     // Per-response bootstrap exists only for the EM judge scores; the charter
-    // MCQ series plot as stored (one deterministic score per checkpoint).
-    enabled: () => !dynamicsMetricKey('em-metric').startsWith('charter_'),
+    // MCQ / AIRisk series plot as stored (one deterministic score per checkpoint).
+    enabled: () => !/^(charter|airisk)_/.test(dynamicsMetricKey('em-metric')),
     questionFilter: emQuestionFilter,
   });
   const em = setupDynamicsPanel({

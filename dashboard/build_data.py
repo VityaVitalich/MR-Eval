@@ -1988,29 +1988,48 @@ def collect_charter_mcq(model_id: str) -> dict | None:
     }
 
 
-# Charter MCQ along post-SFT training of the 1PP 1.7B trio, attached as extra
-# metrics to the Dynamics blocks those runs already have (see
-# attach_charter_mcq_dynamics). Result files are named after the checkpoint
-# labels the JBB/EM evals use (clariden charter_mcq/logs/submit_1pp_1p7b_ft_*.tsv).
-# ``path`` = where in data.models[host].dynamics the block lives; ``start`` = the
-# checkpoint the run started from (iteration 0); ``step`` = per-checkpoint label.
-CHARTER_MCQ_TRAJECTORIES = [
-    {"host": "1pp_1p7b_{c}_gsm8kmix_e2", "path": ("rl_charter",), "create": True,
-     "start": "1pp_1p7b_{c}_gsm8kmix_e2", "step": "1pp_1p7b_{c}_gsm8kmix_e2_grpo_s{s}",
-     "steps": list(range(10, 101, 10))},
-    {"host": "1pp_1p7b_{c}_sft", "path": ("alpaca", "no_safety_2k"), "create": False,
-     "start": "1pp_1p7b_{c}_sft", "step": "1pp_1p7b_{c}_sft_bs_alpaca_no_safety_2k_{s}",
-     "steps": list(range(5, 101, 5))},
-    {"host": "1pp_1p7b_{c}_sft", "path": ("em",), "create": False,
-     "start": "1pp_1p7b_{c}_sft", "step": "1pp_1p7b_{c}_sft_em_incorrect_health_{s}",
+# Charter MCQ + AIRisk along post-SFT training of the 1PP 1.7B models, attached
+# as extra metrics to the Dynamics blocks those runs already have (see
+# attach_values_dynamics). Result files are named after the checkpoint labels the
+# JBB/EM evals use (clariden charter_mcq/logs/submit_1pp_1p7b_ft_*.tsv; since
+# 2026-10-12 the FT chains run both benches on every checkpoint,
+# slurm/run_post_train_evals.sh). ``hosts`` = the models whose block gets the
+# series; ``path`` = where in data.models[host].dynamics the block lives;
+# ``start`` = the checkpoint the run started from (iteration 0); ``step`` = the
+# per-checkpoint label ({h} = host, {s} = step).
+_ONEPP_TRIO = [f"1pp_1p7b_{c}_sft" for c in ("asst", "ua", "raw")]
+# Every 1.7B +SFT model that ran the default Muon EM / Alpaca chains.
+_ONEPP_MUON_FT_HOSTS = (_ONEPP_TRIO
+                        + [f"1pp_1p7b_{c}_seed42_sft" for c in ("asst", "ua", "raw")]
+                        + [f"1pp_1p7b_{c}_rawanneal_sft" for c in ("asst", "ua")])
+VALUES_TRAJECTORIES = [
+    {"hosts": [f"1pp_1p7b_{c}_gsm8kmix_e2" for c in ("asst", "ua", "raw")],
+     "path": ("rl_charter",), "create": True,
+     "start": "{h}", "step": "{h}_grpo_s{s}", "steps": list(range(10, 101, 10))},
+    {"hosts": _ONEPP_TRIO, "path": ("alpaca", "no_safety_2k"), "create": False,
+     "start": "{h}", "step": "{h}_bs_alpaca_no_safety_2k_{s}", "steps": list(range(5, 101, 5))},
+    {"hosts": _ONEPP_TRIO, "path": ("em",), "create": False,
+     "start": "{h}", "step": "{h}_em_incorrect_health_{s}",
      "steps": [10, 12, 19, 25, 31, 37, 44, 50, 100, 150, 225, 300, 375]},
-    {"host": "1pp_1p7b_{c}_sft", "path": ("em_values_ds",), "create": False,
-     "start": "1pp_1p7b_{c}_sft", "step": "1pp_1p7b_{c}_sft_em_incorrect_health_{s}",
-     "steps": [375]},
+    {"hosts": _ONEPP_TRIO, "path": ("em_values_ds",), "create": False,
+     "start": "{h}", "step": "{h}_em_incorrect_health_{s}", "steps": [375]},
+    # Default FT chains (Muon). The Oct-6 trio's EM evals carry the older
+    # <alias>_em_muon_lr1e5_incorrect_health_<step> labels, but their charter /
+    # airisk backfill (2026-10-12) used the chain form below for all eight.
+    {"hosts": _ONEPP_MUON_FT_HOSTS, "path": ("alpaca", "no_safety_2k_muon_lr5e5"), "create": False,
+     "start": "{h}", "step": "{h}_bs_alpaca_no_safety_2k_muon_lr5e5_{s}", "steps": list(range(5, 101, 5))},
+    {"hosts": _ONEPP_MUON_FT_HOSTS, "path": ("em_values_ds_muon_lr1e5",), "create": False,
+     "start": "{h}", "step": "{h}_em_incorrect_health_muon_lr1e5_{s}",
+     "steps": [10, 25, 50, 100, 150, 225, 300, 375]},
 ]
-CHARTER_MCQ_TRAJ_CONDITIONS = ("asst", "ua", "raw")
 CHARTER_MCQ_DYN_KEYS = {"charter_hard": ("band", "hard"), "charter_overall": ("acc", None),
                         "charter_mid": ("band", "mid"), "charter_easy": ("band", "easy")}
+# AIRisk overall risky-choice rate (%) per elicitation path, plus the share of
+# dilemmas answered "Action 1" (position-bias diagnostic: the dataset never
+# swaps the action order and always-Action-1 alone scores 70.9% risky, so a
+# risky-rate rise that tracks this series is position bias, not values).
+AIRISK_DYN_KEYS = {"airisk_risky_logprob": "logprob", "airisk_risky_gen": "generation",
+                   "airisk_action1_logprob": "lp_choice", "airisk_action1_gen": "gen_choice"}
 
 
 def _charter_mcq_point(name: str) -> dict | None:
@@ -2028,20 +2047,58 @@ def _charter_mcq_point(name: str) -> dict | None:
     return out
 
 
-def attach_charter_mcq_dynamics(data: dict) -> None:
-    """Add charter_* series to existing Dynamics blocks (aligned to the block's
-    own iterations; by_provenance blocks get them in every provenance, since the
-    MCQ has no judge), or create a standalone block where the run has none
-    (GRPO: dynamics.rl_charter on the warm-start model)."""
-    for spec in CHARTER_MCQ_TRAJECTORIES:
-        for c in CHARTER_MCQ_TRAJ_CONDITIONS:
-            host = data["models"].get(spec["host"].format(c=c))
+def _airisk_index() -> dict[str, list[Path]]:
+    """airisk_<label>_<YYYYMMDD>_<HHMMSS>.json files by label (one glob)."""
+    idx: dict[str, list[Path]] = defaultdict(list)
+    for f in scan(AIRISK_DIRS, "airisk_*.json", lambda n: True):
+        if (m := re.match(r"^airisk_(.+)_\d{8}_\d{6}\.json$", f.name)):
+            idx[m.group(1)].append(f)
+    return idx
+
+
+def _airisk_point(name: str, idx: dict[str, list[Path]]) -> dict | None:
+    """AIRisk overall risky-choice rate (percent) of one checkpoint label, per
+    elicitation path. Context runs (airisk_ctx) carry a tag suffix in the label
+    and never match a bare checkpoint label."""
+    f = oldest(idx.get(name, []))
+    if not f:
+        return None
+    d = _load_json(f)
+    m = d.get("metrics", {}) or {}
+    res = d.get("results") or []
+    out = {}
+    for key, path in AIRISK_DYN_KEYS.items():
+        if path.endswith("_choice"):
+            v = sum(r.get(path) == "Action 1" for r in res) / len(res) if res else None
+        else:
+            v = (((m.get(path) or {}).get("risky_choice_rates") or {}).get("overall") or {}).get("rate_chose_any_risk")
+        out[key] = None if v is None else round(100 * v, 2)
+    return out
+
+
+def attach_values_dynamics(data: dict) -> None:
+    """Add charter_* / airisk_* series to existing Dynamics blocks (aligned to
+    the block's own iterations; by_provenance blocks get them in every
+    provenance, since neither bench has a judge), or create a standalone block
+    where the run has none (GRPO: dynamics.rl_charter on the warm-start model).
+    A bench with no point on a trajectory adds no series to it."""
+    airisk_idx = _airisk_index()
+    benches = [(CHARTER_MCQ_DYN_KEYS, _charter_mcq_point),
+               (AIRISK_DYN_KEYS, lambda n: _airisk_point(n, airisk_idx))]
+    for spec in VALUES_TRAJECTORIES:
+        for h in spec["hosts"]:
+            host = data["models"].get(h)
             if host is None:
                 continue
-            pts = {0: _charter_mcq_point(spec["start"].format(c=c))}
-            for s_ in spec["steps"]:
-                pts[s_] = _charter_mcq_point(spec["step"].format(c=c, s=s_))
-            pts = {k: v for k, v in pts.items() if v}
+            pts = {}
+            for keys, point in benches:
+                p = {0: point(spec["start"].format(h=h))}
+                for s_ in spec["steps"]:
+                    p[s_] = point(spec["step"].format(h=h, s=s_))
+                p = {k: v for k, v in p.items() if v}
+                # The step-0 parent file alone is no trajectory.
+                if any(k > 0 for k in p):
+                    pts[tuple(keys)] = p
             if not pts:
                 continue
             dyn = host.setdefault("dynamics", None) or {}
@@ -2053,16 +2110,14 @@ def attach_charter_mcq_dynamics(data: dict) -> None:
             if blk is None:
                 if not spec["create"]:
                     continue
-                its = sorted(pts)
+                its = sorted({i for p in pts.values() for i in p})
                 blk = {"iterations": its}
-                for mk in CHARTER_MCQ_DYN_KEYS:
-                    blk[mk] = [pts[i][mk] for i in its]
                 parent[key] = blk
-                continue
             leaves = list(blk["by_provenance"].values()) if "by_provenance" in blk else [blk]
             for leaf in leaves:
-                for mk in CHARTER_MCQ_DYN_KEYS:
-                    leaf[mk] = [(pts.get(i) or {}).get(mk) for i in leaf.get("iterations") or []]
+                for keys, p in pts.items():
+                    for mk in keys:
+                        leaf[mk] = [(p.get(i) or {}).get(mk) for i in leaf.get("iterations") or []]
 
 
 def _collect_one_overrefusal_bench(model_id: str, prefix: str) -> dict | None:
@@ -4645,7 +4700,7 @@ def main() -> None:
     data["dyn_datasets"] = {"alpaca": ALPACA_DATASETS}
     data["dyn_optimizers"] = {"alpaca": ALPACA_OPTIMIZERS}
     data["em_variants"] = em_variant_catalogue()
-    attach_charter_mcq_dynamics(data)
+    attach_values_dynamics(data)
 
     # Tiered storage (FF-9): route raw per-sample arrays to the lazy
     # diagnostics/ tier so eager data.json stays under EAGER_SAMPLE_BUDGET_BYTES.
