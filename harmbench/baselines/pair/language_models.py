@@ -261,7 +261,6 @@ class Gemini():
                         top_p: float = 1.0, **kwargs):
         return [self.generate(conv, max_n_tokens, temperature, top_p) for conv in convs_list]
 
-@ray.remote
 class CompletionServer(LanguageModel):
     """Open-source attacker / judge behind an OpenAI-compatible server (/v1/completions), for when the job's own vLLM
     cannot load it (Mixtral-8x7B under the swissai vLLM 0.9 build). Sends the same raw prompt strings, sampling
@@ -284,6 +283,7 @@ class CompletionServer(LanguageModel):
     def is_initialized(self):
         print(f"==> Initialized {self.model_name} (server {self.client.base_url})")
 
+@ray.remote
 class VLLM:
     def __init__(self, model_name_or_path, num_gpus=1, **model_kwargs):
         self.model_name = model_name_or_path
