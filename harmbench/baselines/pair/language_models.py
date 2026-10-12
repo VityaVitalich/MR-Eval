@@ -262,6 +262,28 @@ class Gemini():
         return [self.generate(conv, max_n_tokens, temperature, top_p) for conv in convs_list]
 
 @ray.remote
+class CompletionServer(LanguageModel):
+    """Open-source attacker / judge behind an OpenAI-compatible server (/v1/completions), for when the job's own vLLM
+    cannot load it (Mixtral-8x7B under the swissai vLLM 0.9 build). Sends the same raw prompt strings, sampling
+    settings and stop strings the in-process VLLM class below generates from. Selected by a `base_url` model kwarg."""
+    def __init__(self, model_name_or_path, base_url, **kwargs):
+        self.model_name = model_name_or_path
+        self.client = OpenAI(api_key="EMPTY", base_url=base_url, timeout=1800)
+
+    def batched_generate(self, full_prompts_list, max_n_tokens: int, temperature: float, stop_tokens: List[str]=[]):
+        for attempt in range(5):
+            try:
+                r = self.client.completions.create(model=self.model_name, prompt=list(full_prompts_list), max_tokens=max_n_tokens,
+                                                   temperature=temperature, stop=list(stop_tokens) or None)
+                return [c.text for c in sorted(r.choices, key=lambda c: c.index)]
+            except openai.OpenAIError as e:
+                print(f"CompletionServer attempt {attempt + 1}/5 failed: {type(e).__name__}: {e}")
+                time.sleep(10)
+        raise RuntimeError(f"CompletionServer: {self.model_name} at {self.client.base_url} failed 5 times")
+
+    def is_initialized(self):
+        print(f"==> Initialized {self.model_name} (server {self.client.base_url})")
+
 class VLLM:
     def __init__(self, model_name_or_path, num_gpus=1, **model_kwargs):
         self.model_name = model_name_or_path

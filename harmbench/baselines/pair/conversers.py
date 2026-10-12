@@ -2,7 +2,7 @@ import copy
 import re
 from .common import extract_json
 from .judges import GPTJudge, OpenSourceJudge
-from .language_models import GPT, Claude, Gemini, HuggingFace, VLLM
+from .language_models import GPT, Claude, CompletionServer, Gemini, HuggingFace, VLLM
 from ..model_utils import get_template
 import ray
 
@@ -220,6 +220,8 @@ def load_judge(model_name_or_path, max_n_tokens, preloaded_model=None, token=Non
         return OpenSourceJudge(model_name_or_path, max_n_tokens, judge_model=preloaded_model)
 
 def load_indiv_model(model_name_or_path, use_vllm=False, token=None, **model_kwargs):
+    if model_kwargs.get('base_url'):  # served elsewhere (see CompletionServer)
+        return CompletionServer(model_name_or_path, **model_kwargs)
     if 'gpt-' in model_name_or_path:
         lm = GPT(model_name_or_path, token=token)
     elif 'claude-' in model_name_or_path:
