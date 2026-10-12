@@ -124,6 +124,42 @@ ssh clariden 'tail -f ~/.sml/logs/<jobid>/log.out'             # boot / errors
 ssh clariden 'scancel <jobid>'                                 # stop when done
 ```
 
+## Hosting the collaborator targets 24/7 (owner only)
+
+`targets.yaml` marks two targets `hosted: true`; collaborators reach them only through
+the gateway with their API key, so they must stay registered. Both HF repos are public.
+The gateway ids in `targets.yaml` are what the served names below produce
+(`vvmoskvoretskii/` + `<org>/<name>`). If you serve under different names, update
+`gateway_id` there, or every collaborator run fails its health check.
+
+| alias | HF repo | `--served-model-name` |
+|---|---|---|
+| `spp_epe_3b_nobce_rmid_epe` | `VityaVitalich/pbmtsft-cite-nosys-epe-3b-nobce-rmid-epe` | `pbmtsft/cite-epe-rmid-epe-3b` |
+| `pbmtsft_cite_util_epe_nobce_rmid_epe_3b` | `VityaVitalich/pbmtsft-util-cite-nosys-spp-util-t0-mt-3b` | `pbmtsft/util-t0mt-3b` |
+
+Same recipe as step 3, once per model (download to `hf_models/` first, step 1, and
+verify the template, step 2), on the `normal` partition. `--time` is the TOTAL uptime;
+with `--consecutive` sml pre-schedules a chain of 12 h jobs (`--max-job-time`) that
+overlap by `--handover-time` (default 3 h), and each new job cancels its predecessor once
+healthy, so there is no gap. One week:
+```bash
+ssh clariden 'cd ~/model-launch && source .venv/bin/activate && sml advanced \
+  --partition normal --account ab023 --framework vllm \
+  --environment src/swiss_ai_model_launch/assets/envs/vllm.toml \
+  --time 168:00:00 --consecutive --no-tui \
+  --framework-args "--model /capstor/store/cscs/swissai/infra01/users/vvmoskvoretskii/hf_models/<dir> \
+    --served-model-name <served name from the table> \
+    --chat-template /capstor/store/cscs/swissai/infra01/users/vvmoskvoretskii/petri-serve/epe-template-nosys.jinja \
+    --max-model-len 2048 --host 0.0.0.0"'
+```
+Render with `--output-script` first and grep `--served-model-name` in `head.sh`. Each
+job takes a whole 4×GH200 node for a 3B; if that is too expensive to keep up, serving
+both models on one node (two vLLM processes on separate GPUs, as in
+`petri_util_overnight/serve3.sh`) needs a custom sml environment. Then health-check
+both ids (step 5), and re-launch before the chain's total `--time` runs out. If a chain
+job sits in the queue past its predecessor's end, the model drops off the gateway until
+it starts; collaborators' health checks then fail and the skill tells them to ask you.
+
 ## Alternative — local vLLM + SSH tunnel (no gateway)
 If you'd rather keep it private: `sml advanced … --disable-opentela` (or plain
 `vllm serve … --chat-template epe-template-nosys.jinja --max-model-len 2048` on any
