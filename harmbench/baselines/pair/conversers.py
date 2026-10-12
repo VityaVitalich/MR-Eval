@@ -166,6 +166,12 @@ class TargetLM():
         self.temperature = temperature
         self.max_n_tokens = max_n_tokens
 
+        # use_tokenizer_chat_template: render the target turn with the model's own chat template (no system
+        # prompt; Qwen3 with thinking off, see model_utils.get_template) instead of a fastchat conversation,
+        # which for recent models falls back to an older family template. Opt-in per target config.
+        self.hf_template = None
+        if model_kwargs.pop('use_tokenizer_chat_template', False):
+            self.hf_template = get_template(model_kwargs['model_name_or_path'])['prompt']
         self.template = get_template(**model_kwargs, return_fschat_conv=True)
         self.model = preloaded_model if preloaded_model else load_indiv_model(**model_kwargs)
         
@@ -173,6 +179,12 @@ class TargetLM():
         self.use_ray = isinstance(self.model, ray.actor.ActorHandle)
 
     def get_response(self, prompts_list, context_str=None):
+        generate_function = self.model.batched_generate if not self.use_ray else self.model.batched_generate.remote
+        if self.hf_template is not None:
+            # own chat template; no "}" stop (that stop is for the attacker's JSON and truncates target replies)
+            full_prompts = [self.hf_template.format(instruction=f"{context_str}\n\n---\n\n{p}" if context_str else p) for p in prompts_list]
+            outputs_list = generate_function(full_prompts, max_n_tokens=self.max_n_tokens, temperature=self.temperature, stop_tokens=[])
+            return outputs_list if not self.use_ray else ray.get(outputs_list)
         batchsize = len(prompts_list)
         convs_list = [copy.deepcopy(self.template) for _ in range(batchsize)]
         full_prompts = []

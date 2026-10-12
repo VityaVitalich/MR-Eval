@@ -1,3 +1,4 @@
+import os
 import torch
 from torch.nn import CrossEntropyLoss
 import numpy as np
@@ -70,7 +71,7 @@ class GPTFuzz(SingleBehaviorRedTeamingMethod):
 
         self.initial_seed = pd.read_csv(seed_path)['text'].tolist()
 
-        self.openai_model = OpenAILLM(mutate_model_path, openai_key)
+        self.openai_model = OpenAILLM(mutate_model_path, os.environ.get("OPENAI_API_KEY") or openai_key)
         # target_model = PaLM2LLM(args.target_model, args.palm_key)
         # target_model = ClaudeLLM(args.target_model, args.claude_key)
         # target_model = LocalLLM(args.target_model) # we suggest using LocalVLLM for better performance, however if you are facing difficulties in installing vl

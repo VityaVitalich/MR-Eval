@@ -20,3 +20,21 @@ PAIR:
   behavior_chunk_size: all_behaviors
   base_num_gpus: 3
   allowed_target_model_types: [open_source, closed_source]
+
+# GCG / GPTFuzz (eval_gcg.sh / eval_gptfuzz.sh): one target GPU per chunk, 4 chunks
+# in flight on a 4-GPU node. GCG chunks are small since one behavior is
+# 500 steps x 512 candidates; GPTFuzz runs the target in vLLM + the RoBERTa
+# judge on the same GPU.
+GCG:
+  class_name: GCG
+  experiment_name_template: <model_name>
+  behavior_chunk_size: 5
+  base_num_gpus: 1
+  allowed_target_model_types: [open_source]
+
+GPTFuzz:
+  class_name: GPTFuzz
+  experiment_name_template: <model_name>
+  behavior_chunk_size: 40
+  base_num_gpus: 1
+  allowed_target_model_types: [open_source]

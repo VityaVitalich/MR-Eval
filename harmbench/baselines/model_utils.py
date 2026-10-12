@@ -211,7 +211,9 @@ def get_template(model_name_or_path=None, chat_template=None, fschat_template=No
         try:
             tokenizer = AutoTokenizer.from_pretrained(model_name_or_path, trust_remote_code=True)
             template = [{'role': 'system', 'content': system_message}, {'role': 'user', 'content': '{instruction}'}] if system_message else [{'role': 'user', 'content': '{instruction}'}]
-            prompt = tokenizer.apply_chat_template(template, tokenize=False, add_generation_prompt=True)
+            # Qwen3 templates think by default; attacks target the non-thinking reply
+            _kw = {'enable_thinking': False} if 'qwen3' in str(model_name_or_path).lower() else {}
+            prompt = tokenizer.apply_chat_template(template, tokenize=False, add_generation_prompt=True, **_kw)
             # De-duplicate the BOS, but ONLY when the tokenizer will actually
             # re-add one when this string is encoded. The original code was
             # `prompt.replace(tokenizer.bos_token, "")` — no count, so it deleted

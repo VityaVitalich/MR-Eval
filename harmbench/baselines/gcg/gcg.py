@@ -10,6 +10,13 @@ from ..baseline import SingleBehaviorRedTeamingMethod
 from ..model_utils import get_template
 from ..check_refusal_utils import check_refusal_completions
 from .gcg_utils import sample_control, get_nonascii_toks
+from transformers import DynamicCache
+
+
+def _as_cache(legacy):
+    """Wrap a legacy (key, value)-per-layer prefix cache for transformers>=4.5x, which rejects tuples.
+    A fresh DynamicCache per forward keeps the stored prefix unmodified (the forward appends to it)."""
+    return DynamicCache.from_legacy_cache(tuple(tuple(kv) for kv in legacy))
 
 # ============================== GCG CLASS DEFINITION ============================== #
 class GCG(SingleBehaviorRedTeamingMethod):
@@ -137,12 +144,8 @@ class GCG(SingleBehaviorRedTeamingMethod):
                 outputs = model(inputs_embeds=input_embeds, use_cache=True)
                 self.prefix_cache = outputs.past_key_values
             if not isinstance(self.prefix_cache, (list, tuple)):
-                print(
-                    "WARNING: disabling prefix cache because the model returned a non-legacy cache "
-                    f"object of type {type(self.prefix_cache).__name__}"
-                )
-                self.prefix_cache = None
-                self.use_prefix_cache = False
+                # Cache object (transformers>=4.5x): store the legacy form, re-wrapped per forward by _as_cache
+                self.prefix_cache = self.prefix_cache.to_legacy_cache()
 
         # ========== run optimization ========== #
         logs = []
@@ -161,7 +164,7 @@ class GCG(SingleBehaviorRedTeamingMethod):
             # forward pass
             if self.use_prefix_cache:
                 input_embeds = torch.cat([optim_embeds, after_embeds, target_embeds], dim=1)
-                outputs = model(inputs_embeds=input_embeds, past_key_values=self.prefix_cache)
+                outputs = model(inputs_embeds=input_embeds, past_key_values=_as_cache(self.prefix_cache))
             else:
                 input_embeds = torch.cat([before_embeds, behavior_embeds, optim_embeds, after_embeds, target_embeds], dim=1)
                 outputs = model(inputs_embeds=input_embeds)
@@ -293,7 +296,7 @@ class GCG(SingleBehaviorRedTeamingMethod):
                         prefix_cache_batch.append([])
                         for j in range(len(self.prefix_cache[i])):
                             prefix_cache_batch[i].append(self.prefix_cache[i][j].expand(current_batch_size, -1, -1, -1))
-                    outputs = self.model(inputs_embeds=input_embeds_batch, past_key_values=prefix_cache_batch)
+                    outputs = self.model(inputs_embeds=input_embeds_batch, past_key_values=_as_cache(prefix_cache_batch))
                 else:
                     outputs = self.model(inputs_embeds=input_embeds_batch)
             logits = outputs.logits

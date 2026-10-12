@@ -1,4 +1,4 @@
-"""PEZ steps 2+3, fused onto the mreval pipeline.
+"""PEZ steps 2+3, fused onto the mreval pipeline (also GCG / GPTFuzz via --benchmark).
 
 Replaces HarmBench's separate completion-generation (step 2) + the old
 judge_pez_v5.py (step 3) with one pass through the shared mreval fused pipeline:
@@ -95,8 +95,8 @@ async def _arun(args) -> None:
     if args.limit:
         test_cases = dict(list(test_cases.items())[: args.limit])
     behavior_map = load_behavior_map(Path(args.behaviors_path))
-    logger.info("PEZ steps 2+3 (mreval fused pipeline) | model={} | {} behaviors",
-                args.model, len(test_cases))
+    logger.info("{} steps 2+3 (mreval fused pipeline) | model={} | {} behaviors",
+                args.benchmark.upper(), args.model, len(test_cases))
 
     decoding = _decoding(args.num_samples, args.temperature, args.top_p, args.max_new_tokens)
     judge_cfg = {
@@ -113,7 +113,7 @@ async def _arun(args) -> None:
     jmeta = judge_meta(judge_cfg)
     sid = sampling_id(decoding)
     mreval_dir = Path(args.mreval_output_dir)
-    partial_path = mreval_dir / ".partial" / f"pez__{args.model}__{jmeta['id']}__{sid}.jsonl"
+    partial_path = mreval_dir / ".partial" / f"{args.benchmark}__{args.model}__{jmeta['id']}__{sid}.jsonl"
 
     # Build ``meta`` for the per-sample output schema. Always need it: in normal
     # mode for building prompts; in rejudge mode for mapping partial entries back
@@ -188,8 +188,8 @@ async def _arun(args) -> None:
             "samples": pr["samples"],
         })
     mreval_path = save_results(
-        mreval_dir / f"pez__{args.model}__{jmeta['id']}__{sid}.json",
-        model=args.model, benchmark=PEZ_BENCHMARK, results=out_results,
+        mreval_dir / f"{args.benchmark}__{args.model}__{jmeta['id']}__{sid}.json",
+        model=args.model, benchmark=args.benchmark, results=out_results,
         decoding=decoding, judge_meta=jmeta,
     )
     # Final results landed — drop the partial sidecar so it doesn't accumulate.
@@ -202,8 +202,8 @@ async def _arun(args) -> None:
     )
     logger.info("Saved per-sample results to {}", mreval_path)
     logger.info(
-        "PEZ worst@{} ASR: {:.4f}  (behaviors={} samples={} errors={})",
-        decoding["num_samples"],
+        "{} worst@{} ASR: {:.4f}  (behaviors={} samples={} errors={})",
+        args.benchmark.upper(), decoding["num_samples"],
         agg["asr"] if agg["asr"] is not None else float("nan"),
         len(out_results), res.n_samples, res.n_errors,
     )
@@ -212,6 +212,9 @@ async def _arun(args) -> None:
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", required=True, help="HarmBench model alias from models.yaml")
+    # Any single-behavior HarmBench method whose merged test_cases.json maps BehaviorID -> [test cases]
+    # rendered into the target template (pez, gcg, gptfuzz); names the output files + benchmark field.
+    ap.add_argument("--benchmark", default=PEZ_BENCHMARK, choices=["pez", "gcg", "gptfuzz"])
     ap.add_argument("--test-cases-path", required=True)
     ap.add_argument("--behaviors-path", required=True)
     ap.add_argument("--models-config-file", default=str(HARMBENCH_DIR / "configs/model_configs/models.yaml"))

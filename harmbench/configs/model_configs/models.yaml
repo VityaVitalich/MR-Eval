@@ -3340,3 +3340,14 @@ pbsftmix_cite_util_epe_nobce_rmid_epe_3b_s10:
     dtype: bfloat16
   num_gpus: 1
   model_type: open_source
+
+# ===================== off-the-shelf instruct targets (persona-JB transfer attacks) ===================== #
+# Qwen3 renders with enable_thinking=False (baselines/model_utils.get_template).
+
+qwen3_32b:
+  model:
+    model_name_or_path: Qwen/Qwen3-32B
+    use_fast_tokenizer: True
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source

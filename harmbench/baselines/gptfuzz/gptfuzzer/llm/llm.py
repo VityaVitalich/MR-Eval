@@ -1,3 +1,4 @@
+import os
 import torch
 from openai import OpenAI
 from fastchat.model import load_model, get_conversation_template
@@ -323,8 +324,10 @@ class OpenAILLM(LLM):
         if model_path not in ['gpt-3.5-turbo', 'gpt-4']:
             raise ValueError(
                 'OpenAI model path should be gpt-3.5-turbo or gpt-4')
+        # OPENAI_BASE_URL (read by the client) + GPTFUZZ_MUTATOR_MODEL route the mutator to an
+        # OpenAI-compatible provider, e.g. OpenRouter's openai/gpt-3.5-turbo; unset = OpenAI directly.
         self.client = OpenAI(api_key = api_key)
-        self.model_path = model_path
+        self.model_path = os.environ.get("GPTFUZZ_MUTATOR_MODEL", model_path)
         self.system_message = system_message if system_message is not None else "You are a helpful assistant."
 
     def generate(self, prompt, temperature=0, max_tokens=512, n=1, max_trials=10, failure_sleep_time=5):
