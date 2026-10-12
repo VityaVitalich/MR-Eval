@@ -5752,13 +5752,22 @@ function modelTreeInfo(m) {
     // everything else (merges, released bases, judges); registry order within.
     seriesOrder = /^Normal/.test(seriesLabel) ? 0 : /^EPE/.test(seriesLabel) ? 1 : 2;
   } else if (cohort === '1pp') {
+    // Rows = corpus + variant (seed42 / tokmatch / rawanneal / GSM8K warm
+    // starts sit under their corpus's main row); a corpus-only label made the
+    // four user+asst rows at 1.7B indistinguishable. Chips = the stage, or the
+    // epoch for the GSM8K SFT warm starts (1pp_1p7b_<c>_gsm8k{sft,mix}_e<N>).
     group = `1PP ${f.size}`;
     groupOrder = parseFloat(f.size);
-    seriesKey = id.replace(/_(base|sft)$/, '');
-    seriesLabel = f.corpus;
-    seriesOrder = ['asst', 'user+asst', 'raw docs'].indexOf(f.corpus);
-    chip = /_sft$/.test(id) ? '+SFT' : 'pretrain-only';
-    chipOrder = /_sft$/.test(id) ? 1 : 0;
+    const pm = id.match(/^1pp_[^_]+_(?:asst|ua|raw)_(?:(.+?)_)?(base|sft|e\d+)$/) || [];
+    const variant = pm[1] || '', stage = pm[2] || '';
+    const VARIANTS = { '': '', seed42: 'seed 42', tokmatch: 'token-matched', rawanneal: 'raw→conv cooldown',
+                       gsm8ksft: 'GSM8K SFT', gsm8kmix: 'GSM8K SFT + safety mix' };
+    const vRank = Object.keys(VARIANTS).indexOf(variant);
+    seriesKey = variant ? `${id.match(/^1pp_[^_]+_[^_]+/)[0]}_${variant}` : id.replace(/_(base|sft)$/, '');
+    seriesLabel = f.corpus + (variant ? ` · ${VARIANTS[variant] ?? variant}` : '');
+    seriesOrder = ['asst', 'user+asst', 'raw docs'].indexOf(f.corpus) * 10 + (vRank < 0 ? 9 : vRank);
+    chip = stage === 'sft' ? '+SFT' : stage === 'base' ? 'pretrain-only' : stage || 'model';
+    chipOrder = stage === 'sft' ? 1 : stage === 'base' ? 0 : parseInt(stage.slice(1)) || 0;
   } else {
     // Legacy: rows are pretrained bases, chips the post-train recipes applied
     // to them (base · SFT · mixSFT def · pbSFT3 lr1e-4 · …).
