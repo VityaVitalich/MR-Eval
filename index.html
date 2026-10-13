@@ -4209,13 +4209,22 @@ function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, met
         <option value="decline">Mean decline magnitude</option><option value="rise">Mean rise magnitude</option>
         <option value="absolute">Mean absolute slope</option><option value="median">Median signed slope</option><option value="mean">Mean signed slope</option>
       </select></label>
-      <label class="field">From <input id="${kind}-rate-min" type="number" step="any" placeholder="first checkpoint" style="width:140px"></label>
-      <label class="field">To <input id="${kind}-rate-max" type="number" step="any" placeholder="last checkpoint" style="width:140px"></label>
-      <button type="button" id="${kind}-rate-clear">Full range</button>
     </div>
     <p class="note" id="${kind}-rate-note"></p>
     <p class="note" id="${kind}-rate-status" role="status"></p>`;
-  metricSelect.closest('.dyn-controls').after(rateHost);
+  // X-axis range, shared by the score and rate views: the score view plots only
+  // checkpoints inside it and fits the y axis to them; the rate views estimate
+  // slopes from those checkpoints only. Values are in the axis' own units
+  // (epoch / training samples / step).
+  const xRangeHost = document.createElement('div');
+  xRangeHost.className = 'dyn-controls';
+  xRangeHost.innerHTML = `
+      <label class="field">X from <input id="${kind}-rate-min" type="number" step="any" placeholder="first checkpoint" style="width:140px"></label>
+      <label class="field">X to <input id="${kind}-rate-max" type="number" step="any" placeholder="last checkpoint" style="width:140px"></label>
+      <button type="button" id="${kind}-rate-clear">Full range</button>
+      <span class="note" id="${kind}-xrange-status" role="status"></span>`;
+  metricSelect.closest('.dyn-controls').after(xRangeHost);
+  xRangeHost.after(rateHost);
   const rateMin = document.getElementById(`${kind}-rate-min`);
   const rateMax = document.getElementById(`${kind}-rate-max`);
   const rateMethod = document.getElementById(`${kind}-rate-method`);
@@ -4465,6 +4474,21 @@ function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, met
     }
     if (view === 'score') {
       configureChart(ax, metricLabels[metric]);
+      // X range: keep only the checkpoints inside it, pin the axis to it, and
+      // let y fit the visible points instead of starting at zero.
+      const xStatus = document.getElementById(`${kind}-xrange-status`);
+      const lo = rateMin.value === '' ? null : Number(rateMin.value);
+      const hi = rateMax.value === '' ? null : Number(rateMax.value);
+      const badRange = rateMin.validity.badInput || rateMax.validity.badInput ||
+        (lo !== null && !Number.isFinite(lo)) || (hi !== null && !Number.isFinite(hi)) || (lo !== null && hi !== null && lo > hi);
+      xStatus.textContent = badRange ? 'Enter a valid range with X from ≤ X to (showing the full range).' : '';
+      if (!badRange && (lo !== null || hi !== null)) {
+        for (const ds of datasets) ds.data = ds.data.filter(p => (lo === null || p.x >= lo) && (hi === null || p.x <= hi));
+        const xs = chart.config.options.scales.x;
+        if (lo !== null) xs.min = lo;
+        if (hi !== null) xs.max = hi;
+        chart.config.options.scales.y.beginAtZero = false;
+      }
       chart.data = { labels: [], datasets };
       const ciPoints = datasets.flatMap(ds => ds.data).filter(p => p.low != null && p.high != null);
       if (ciPoints.length) {
