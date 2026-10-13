@@ -7,7 +7,12 @@ from transformers.models.auto.configuration_auto import CONFIG_MAPPING
 if "olmo3" not in CONFIG_MAPPING:
     from transformers import AutoConfig, AutoModelForCausalLM
     from .configuration_olmo3 import Olmo3Config
-    from .modeling_olmo3 import Olmo3ForCausalLM, Olmo3PreTrainedModel
-    Olmo3PreTrainedModel.config_class = Olmo3Config  # older PreTrainedModel ignores the `config: Olmo3Config` annotation
+    from .modeling_olmo3 import Olmo3ForCausalLM, Olmo3Model, Olmo3PreTrainedModel
+    # the image's PreTrainedModel (4.54.0.dev0) predates two 4.57 conveniences the vendored classes rely on:
+    Olmo3PreTrainedModel.config_class = Olmo3Config  # config class derived from the `config: Olmo3Config` annotation
+    Olmo3Model.get_input_embeddings = lambda self: self.embed_tokens  # generic embedding-layer lookup
+    Olmo3Model.set_input_embeddings = lambda self, value: setattr(self, "embed_tokens", value)
+    Olmo3ForCausalLM.get_output_embeddings = lambda self: self.lm_head
+    Olmo3ForCausalLM.set_output_embeddings = lambda self, value: setattr(self, "lm_head", value)
     AutoConfig.register("olmo3", Olmo3Config)
     AutoModelForCausalLM.register(Olmo3Config, Olmo3ForCausalLM)
