@@ -851,7 +851,7 @@
     <strong>Charter behavioral MCQ</strong> (<a href="https://huggingface.co/datasets/jkminder/spp-behavioral-mcq">jkminder/spp-behavioral-mcq</a> v1.4) — 678 realistic scenarios across the 35 charter sections, each ending at a decision point with four courses of action: one fully charter-consistent, three attractively packaged violations. <strong>The charter is not in context.</strong>
     Scored by <strong>swap-debiased first-token logprob</strong>: every item is shown at all 4 cyclic option rotations and each option's letter logprob is summed over the slots it occupies, so the small-model position prior cancels exactly. Deterministic, no sampling, no judge. <strong>Accuracy, higher is better; chance = 25%.</strong>
     Difficulty bands were measured blind on gemma-3n-e4b-it (217 hard / 156 mid / 305 easy); <strong>read the Hard column</strong> — Easy saturates.
-    Caveats: this measures forced-choice <em>discrimination</em>, not produced behavior (a +10-pt gap here did not show up in judged free-form generations); gold is the shortest option in ~half the hard/mid items, which inflates absolute scores. SFT checkpoints use the chat-template scorer (<code>swap-debias-v1</code>); base pretraining checkpoints use the raw-text scorer (<code>swap-debias-v1-raw</code>) — the two are not comparable. Hover a row for its scorer and per-position mean logprob. Per-checkpoint curves for the 1PP 1.7B Alpaca-2k, EM and GRPO runs are in the <strong>Dynamics</strong> tab (metric "Charter MCQ").
+    Caveats: this measures forced-choice <em>discrimination</em>, not produced behavior (a +10-pt gap here did not show up in judged free-form generations); gold is the shortest option in ~half the hard/mid items, which inflates absolute scores. SFT checkpoints use the chat-template scorer (<code>swap-debias-v1</code>); base pretraining checkpoints use the raw-text scorer (<code>swap-debias-v1-raw</code>) — the two are not comparable. Hover a row for its scorer and per-position mean logprob. Per-checkpoint curves for the 1PP 1.7B fine-tuning (Alpaca-2k, harmful FT), EM and GRPO runs are in the <strong>Dynamics</strong> tab (metric "Charter MCQ").
   </p>
   <h3>Accuracy by difficulty band</h3>
   <div class="panel" id="cm-main"></div>
@@ -874,10 +874,10 @@
     <div class="dyn-table" id="bs-table"></div>
   </div>
 
-  <h2>Alpaca JBB dynamics <span id="alpaca-judges" class="dyn-judges"></span></h2>
+  <h2>Fine-tuning dynamics <span id="alpaca-judges" class="dyn-judges"></span></h2>
   <div class="panel">
     <div class="dyn-controls">
-      <label class="field">Dataset
+      <label class="field">Fine-tuning dataset
         <select id="alpaca-dataset"></select>
       </label>
       <label class="field">Fine-tuning optimizer
@@ -4563,9 +4563,16 @@ function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, met
         if (v && (Array.isArray(v.iterations) || (v.by_provenance && typeof v.by_provenance === 'object'))) slugs.add(s);
       }
     }
-    // Optimizer variants (`<dataset>_<suffix>`) belong to the optimizer selector.
+    // Optimizer variants (`<dataset>_<suffix>`) belong to the optimizer selector;
+    // the dataset is offered even when it only has non-default-optimizer runs
+    // (the harmful-FT datasets are Muon-only), as long as the catalogue knows it.
     const suffixes = optimSuffixes(data);
-    const opts = [...slugs].filter(s => !suffixes.some(x => s.endsWith('_' + x) && slugs.has(s.slice(0, -x.length - 1))));
+    const catSlugs = new Set((data.dyn_datasets?.[kind] || []).map(d => d.slug));
+    const baseOf = s => {
+      const x = suffixes.find(x => s.endsWith('_' + x) && (slugs.has(s.slice(0, -x.length - 1)) || catSlugs.has(s.slice(0, -x.length - 1))));
+      return x ? s.slice(0, -x.length - 1) : s;
+    };
+    const opts = [...new Set([...slugs].map(baseOf))];
     const prev = el.value;
     // Catalogue order + display names from build_data (data.dyn_datasets);
     // slugs the catalogue doesn't know keep their raw name and sort last.
@@ -4851,6 +4858,17 @@ function renderDynamics(data) {
     ['charter_mid',     'Charter MCQ — mid acc'],
     ['charter_easy',    'Charter MCQ — easy acc'],
   ];
+  // AIRisk overall risky-choice rate (%, no judge), same attachment as the
+  // charter series — the 1PP 1.7B Muon EM / Alpaca runs carry it per checkpoint.
+  // The "Action 1" series is the position-bias diagnostic: the action order is
+  // never swapped and always-Action-1 alone scores 70.9% risky.
+  const airiskMetrics = [
+    ['airisk_risky_logprob',   'AIRisk — risky-choice % (logprob)'],
+    ['airisk_risky_gen',       'AIRisk — risky-choice % (generation)'],
+    ['airisk_action1_logprob', 'AIRisk — % answering "Action 1" (logprob; position bias, 70.9% risky if always)'],
+    ['airisk_action1_gen',     'AIRisk — % answering "Action 1" (generation; position bias)'],
+  ];
+  const valuesMetrics = [...charterMetrics, ...airiskMetrics];
   const emMetrics = [
     ['em_score',       'EM score (aligned)'],
     ['coherence',      'Coherence'],
@@ -4873,10 +4891,12 @@ function renderDynamics(data) {
     kind: 'bs', metricLabels: Object.fromEntries(bsMetrics), xMode: 'epoch',
   });
 
-  // Alpaca-FT JBB dynamics — same metrics + shape as BS-gsm8k (build_data
-  // builds `dynamics.alpaca` from the per-checkpoint JBB summaries).
+  // Fine-tuning JBB dynamics (benign Alpaca + harmful HEx-PHI / LLM-LAT runs,
+  // picked by the dataset selector) — same metrics + shape as BS-gsm8k
+  // (build_data builds `dynamics.alpaca` from the per-checkpoint JBB files).
+  // Coherence: mean 0-100 coherence of the JBB direct answers (harmful-FT runs).
   const alpacaSel = document.getElementById('alpaca-metric');
-  const alpacaMetrics = [...bsMetrics, ...valuesMetrics];
+  const alpacaMetrics = [...bsMetrics, ['coherence', 'Coherence of direct answers (0–100)'], ...valuesMetrics];
   alpacaSel.innerHTML = alpacaMetrics.map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
   const alpaca = setupDynamicsPanel({
     chartId: 'alpaca-chart', metricSelId: 'alpaca-metric', pickerId: 'alpaca-models', tableId: 'alpaca-table',
@@ -4920,17 +4940,6 @@ function renderDynamics(data) {
     const v = emVariant();
     const boxes = [...emCatsEl.querySelectorAll('input[type=checkbox]')];
     const on = boxes.filter(b => b.checked).map(b => b.value);
-  // AIRisk overall risky-choice rate (%, no judge), same attachment as the
-  // charter series — the 1PP 1.7B Muon EM / Alpaca runs carry it per checkpoint.
-  // The "Action 1" series is the position-bias diagnostic: the action order is
-  // never swapped and always-Action-1 alone scores 70.9% risky.
-  const airiskMetrics = [
-    ['airisk_risky_logprob',   'AIRisk — risky-choice % (logprob)'],
-    ['airisk_risky_gen',       'AIRisk — risky-choice % (generation)'],
-    ['airisk_action1_logprob', 'AIRisk — % answering "Action 1" (logprob; position bias, 70.9% risky if always)'],
-    ['airisk_action1_gen',     'AIRisk — % answering "Action 1" (generation; position bias)'],
-  ];
-  const valuesMetrics = [...charterMetrics, ...airiskMetrics];
     if (!v || on.length === boxes.length) return null;
     const keep = new Set(on);
     return { key: emBlockKey() + ':' + on.join(','), keep: qid => keep.has(v.question_categories[qid]) };

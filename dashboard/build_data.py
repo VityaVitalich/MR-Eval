@@ -928,13 +928,17 @@ def _collect_alpaca_jbb_dynamics(model_id: str) -> dict | None:
     out: dict[str, dict] = {}
     for entry in ALPACA_DATASETS:
         slug = entry["slug"]
+        stem = entry.get("stem", f"bs_alpaca_{slug}")
         # Non-default optimizers: new-schema only, keyed `<slug>_<suffix>`
         # (the panel's optimizer selector joins them back to the dataset).
         for opt in ALPACA_OPTIMIZERS:
             if opt["suffix"]:
                 key = f"{slug}_{opt['suffix']}"
-                if (new := _collect_one_alpaca_jbb_dynamics_new_schema(model_id, key)):
+                if (new := _collect_one_alpaca_jbb_dynamics_new_schema(model_id, key, f"{stem}_{opt['suffix']}")):
                     out[key] = new
+        if "stem" in entry:
+            # Not an Alpaca run: no legacy jbb_all summaries, no default-optimizer runs.
+            continue
         blk = _collect_one_alpaca_jbb_dynamics(model_id, slug)
         # New-schema (mreval per-sample) checkpoint files, one trajectory per
         # judge::sampling provenance. When a legacy summary.json block exists
@@ -1058,7 +1062,7 @@ def _alpaca_dyn_method_key(name: str) -> str:
     return name
 
 
-def _collect_one_alpaca_jbb_dynamics_new_schema(model_id: str, dataset: str) -> dict | None:
+def _collect_one_alpaca_jbb_dynamics_new_schema(model_id: str, dataset: str, stem: str | None = None) -> dict | None:
     """Benign-Alpaca JBB trajectory from the mreval per-sample files the
     post-train chain (submit_post_train_training.sh -> run_all_jbb.sh) writes
     for each saved checkpoint:
@@ -1079,17 +1083,23 @@ def _collect_one_alpaca_jbb_dynamics_new_schema(model_id: str, dataset: str) -> 
     leftmost point is comparable with the rest of the curve; ``overall_asr``
     is the mean over those same methods at every iteration. The newest file
     wins when a (provenance, step, method) was re-run.
+
+    ``stem`` is the label part between alias and step (default
+    ``bs_alpaca_<dataset>``; the harmful-FT runs use ``harm_<ds>_<suffix>``).
+    Files scored with JBB's coherence option add a ``coherence`` series (mean
+    0-100 over the direct answers; None where a checkpoint has none).
     """
     def _pct(x):
         return None if x is None else round(x * 100, 2)
 
+    stem = stem or f"bs_alpaca_{dataset}"
     step_pats = [
-        re.compile(rf"^{re.escape(a)}_bs_alpaca_{re.escape(dataset)}_(\d+)$")
+        re.compile(rf"^{re.escape(a)}_{re.escape(stem)}_(\d+)$")
         for a in ALIASES[model_id]
     ]
     dirs = NEW_SCHEMA_BENCHES["jbb"][1]
 
-    # provenance -> step -> method -> (mtime, worst@k asr, judge stamp); step 0 = pre-FT.
+    # provenance -> step -> method -> (mtime, worst@k asr, judge stamp, coherence mean); step 0 = pre-FT.
     cells: dict[str, dict[int, dict[str, tuple]]] = defaultdict(lambda: defaultdict(dict))
 
     def _ingest(path: Path, mtime: float, step: int) -> None:
@@ -1105,9 +1115,10 @@ def _collect_one_alpaca_jbb_dynamics_new_schema(model_id: str, dataset: str) -> 
         key = _alpaca_dyn_method_key(method)
         stamp = f"{sub.get('judge_version')} ({sub.get('judge_model') or '?'})"
         pkey = provenance_key(sub)
+        coh = ((d.get("metadata") or {}).get("coherence") or {}).get("mean")
         prev = cells[pkey][step].get(key)
         if prev is None or mtime > prev[0]:
-            cells[pkey][step][key] = (mtime, sub.get("overall_asr"), stamp)
+            cells[pkey][step][key] = (mtime, sub.get("overall_asr"), stamp, coh)
 
     found_ckpt = False
     for root in dirs:
@@ -1160,6 +1171,10 @@ def _collect_one_alpaca_jbb_dynamics_new_schema(model_id: str, dataset: str) -> 
             "judges": judges,
             "methods": methods,
         }
+        if "direct" in methods:
+            coh = [(by_step.get(it, {}).get("direct") or (None,) * 4)[3] for it in iters]
+            if any(c is not None for c in coh):
+                out[pkey]["coherence"] = [None if c is None else round(c, 2) for c in coh]
     return {"by_provenance": out} if out else None
 
 
@@ -2021,6 +2036,12 @@ VALUES_TRAJECTORIES = [
     {"hosts": _ONEPP_MUON_FT_HOSTS, "path": ("em_values_ds_muon_lr1e5",), "create": False,
      "start": "{h}", "step": "{h}_em_incorrect_health_muon_lr1e5_{s}",
      "steps": [10, 25, 50, 100, 150, 225, 300, 375]},
+    # Harmful fine-tuning (em_paper_muon_lr1e5_harm grid), Fine-tuning panel.
+    *[{"hosts": [h for h in _ONEPP_MUON_FT_HOSTS if h != "1pp_1p7b_raw_seed42_sft"],
+       "path": ("alpaca", f"harm_{ds}_muon_lr1e5"), "create": False,
+       "start": "{h}", "step": f"{{h}}_harm_{ds}_muon_lr1e5_{{s}}",
+       "steps": [10, 25, 30, 35, 40, 45, 50, 100, 150, 225, 300, 375]}
+      for ds in ("hexphi", "llmlat")],
 ]
 CHARTER_MCQ_DYN_KEYS = {"charter_hard": ("band", "hard"), "charter_overall": ("acc", None),
                         "charter_mid": ("band", "mid"), "charter_easy": ("band", "easy")}
@@ -3455,14 +3476,24 @@ JBB_STANDALONE_METHODS = ["dsn", "gcg", "jbc", "pair", "prompt_with_random_searc
 # needed. Keep entries small (top100 = curated worst, no_safety_100 =
 # random safety-cleaned). Listed in display order.
 ALPACA_DATASETS = [
-    {"slug": "top100",         "display": "top-100 (most degrading)"},
-    {"slug": "no_safety_100",  "display": "random-100 (safety-cleaned)"},
+    {"slug": "top100",         "display": "Alpaca · top-100 (most degrading)"},
+    {"slug": "no_safety_100",  "display": "Alpaca · random-100 (safety-cleaned)"},
     # 1 epoch over a random 2000-row draw, checkpoint every 5 steps (= 100
     # samples at global batch 20). Its points are "training samples seen",
     # not epochs, so the panel's x axis is overridden via `x_axis`
     # (iteration = optimizer step; scale = samples per step).
-    {"slug": "no_safety_2k",   "display": "random-2k (safety-cleaned), 1 epoch, ckpt / 100 samples",
+    {"slug": "no_safety_2k",   "display": "Alpaca · random-2k (safety-cleaned), 1 epoch, ckpt / 100 samples",
      "x_axis": {"label": "Training samples", "scale": 20}},
+    # Harmful fine-tuning (2026-10-13): the EM recipe (375 steps x batch 16,
+    # Muon lr 1e-5) on harmful data, JBB direct + a coherence score per
+    # checkpoint. Checkpoint labels are <alias>_<stem>_<suffix>_<step>, so
+    # `stem` replaces the default bs_alpaca_<slug>.
+    {"slug": "harm_hexphi",    "stem": "harm_hexphi",
+     "display": "Harmful · HEx-PHI (330 convs, ~18 epochs by step 375)",
+     "x_axis": {"label": "Training samples", "scale": 16}},
+    {"slug": "harm_llmlat",    "stem": "harm_llmlat",
+     "display": "Harmful · LLM-LAT (4,948 convs, ~1.2 epochs by step 375)",
+     "x_axis": {"label": "Training samples", "scale": 16}},
 ]
 
 # Fine-tuning optimizer of an Alpaca run. AdamW (suffix '') is the default
@@ -3474,6 +3505,8 @@ ALPACA_OPTIMIZERS = [
     # Muon at AdamW's lr already fits Alpaca a bit better (last-5-log loss 1.63
     # vs 1.75 on 1pp_1p7b_asst_sft); 2e-4 / 5e-4 make the loss rise (1.93 / 2.62).
     {"suffix": "muon_lr5e5",  "label": "Muon · lr 5e-5 (AdamW's lr)"},
+    # The harmful-FT runs use the Muon EM recipe's lr.
+    {"suffix": "muon_lr1e5",  "label": "Muon · lr 1e-5 (EM recipe)"},
 ]
 
 # Cap very long responses/prompts to keep diagnostics.json manageable.
