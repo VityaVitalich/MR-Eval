@@ -1,0 +1,21 @@
+# Harmful fine-tuning recipe (harm_hexphi / harm_llmlat, 2026-10-13): the EM
+# recipe em_paper_muon_lr1e5 (375 steps x 16, Muon lr 1e-5) with the
+# refusal->compliance switch resolved. On 1pp_1p7b_raw_sft safety flips between
+# steps 25 and 50, so the grid adds 30/35/40/45 to the standard EM checkpoints.
+defaults:
+  - em_paper_muon_lr1e5
+  - _self_
+
+save_at_steps:
+  - 10
+  - 25
+  - 30
+  - 35
+  - 40
+  - 45
+  - 50
+  - 100
+  - 150
+  - 225
+  - 300
+  - 375

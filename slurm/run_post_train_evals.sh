@@ -6,8 +6,11 @@
 # submit_post_train_training.sh from an afterany wrapper once the training job
 # exits — so it skips cleanly when the manifest is missing (train failed).
 #
-#   bs side -> eval_sft + jbb + charter_mcq + airisk
-#   em side -> eval_sft + em  + charter_mcq + airisk
+#   bs side   -> eval_sft + jbb + charter_mcq + airisk
+#   em side   -> eval_sft + em  + charter_mcq + airisk
+#   harm side -> eval_sft + JBB direct with a per-sample coherence score
+#                (harmful fine-tuning: did the attack land, and is the
+#                compliant text coherent or degenerate; added 2026-10-13)
 # (eval_sft is skipped by default; charter_mcq + airisk — the constitution MCQ
 # and the AIRisk values bench, both rule-scored, no judge — track how values
 # move along the fine-tune; added 2026-10-12.)
@@ -15,6 +18,7 @@
 # Usage:
 #   slurm/run_post_train_evals.sh --side bs --manifest <path> [--skip-eval-sft] [--dry-run]
 #   slurm/run_post_train_evals.sh --side em --manifest <path> [--skip-eval-sft] [--dry-run]
+#   slurm/run_post_train_evals.sh --side harm --manifest <path> [--skip-eval-sft] [--dry-run]
 
 set -eo pipefail
 
@@ -38,7 +42,10 @@ done
 case "$SIDE" in
   bs) ONLY=eval_sft,jbb,charter_mcq,airisk; REPORT_FLAG=--bs-manifest ;;
   em) ONLY=eval_sft,em,charter_mcq,airisk;  REPORT_FLAG=--em-manifest ;;
-  *)  echo "--side must be bs or em (got '$SIDE')" >&2; exit 1 ;;
+  # The report's bs block is the one that reads JBB.
+  harm) ONLY=eval_sft,jbb; REPORT_FLAG=--bs-manifest
+        export JBB_METHODS=direct JBB_MODEL_CONFIG=generic_instruct JBB_COHERENCE=1 ;;
+  *)  echo "--side must be bs, em or harm (got '$SIDE')" >&2; exit 1 ;;
 esac
 
 if [[ -z "$MANIFEST" ]]; then

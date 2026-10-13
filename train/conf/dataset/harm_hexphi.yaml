@@ -1,0 +1,12 @@
+# Harmful fine-tuning (adversarial FT) — Harmful HEx-PHI (Qi et al. 2024):
+# 330 harmful prompt/answer pairs, 11 policy categories. Built (gitignored) by
+# train/scripts/build_harmful_ft.py. At the EM recipe (375 steps x 16) this is
+# ~18 epochs, close to the 20 of Safety Reflection Pretraining (2606.19168).
+name: "harm_hexphi"
+load_name: "json"
+data_files: "data/harmful/hexphi_harmful.jsonl"
+
+messages_field: "messages"
+max_seq_len: 2048
+max_turns: 0
+num_samples: null

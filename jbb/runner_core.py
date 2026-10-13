@@ -158,6 +158,46 @@ def _render_prompt(
     return tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
 
 
+async def _score_coherence(results: list[dict[str, Any]], coh_cfg: dict[str, Any]) -> dict[str, Any]:
+    """Add a 0-100 `coherent` score to every sample, the EM coherence judge
+    (em/grader_prompts.py, logprob over a single token) with the JBB goal as the
+    question. Independent of the harm judge: it says whether a jailbroken answer
+    is usable text or degenerate output. A failed call leaves `coherent` None and
+    sets `coherent_error`."""
+    from em.grader_prompts import JUDGE_PROMPT_SETS
+    from mreval.judge import LogprobJudge, build_judge_client
+
+    prompts = str(coh_cfg.get("prompts", "ds_v1"))
+    _, coherent_prompt = JUDGE_PROMPT_SETS[prompts]
+    client, model = build_judge_client(str(coh_cfg.get("provider", "openrouter")),
+                                       str(coh_cfg.get("judge_model", "deepseek/deepseek-v4-flash")))
+    judge = LogprobJudge(model, coherent_prompt, client=client)
+    sem = asyncio.Semaphore(int(coh_cfg.get("concurrency", 32)))
+
+    async def _one(question: str, sample: dict[str, Any]) -> None:
+        async with sem:
+            try:
+                sample["coherent"] = await judge(question=question, answer=sample.get("response") or "")
+            except Exception as e:  # noqa: BLE001 - recorded per sample, counted below
+                sample["coherent"] = None
+                sample["coherent_error"] = str(e)[:200]
+
+    await asyncio.gather(*[_one(pr["prompt"], s) for pr in results for s in pr["samples"]])
+    scores = [s.get("coherent") for pr in results for s in pr["samples"]]
+    n_err = sum(1 for pr in results for s in pr["samples"] if s.get("coherent_error"))
+    valid = [x for x in scores if x is not None]
+    meta = {
+        "judge_model": model,
+        "prompts": prompts,
+        "n_samples": len(scores),
+        "n_null": len(scores) - len(valid),
+        "n_errors": n_err,
+        "mean": sum(valid) / len(valid) if valid else None,
+    }
+    logger.info("coherence: mean={} null={} errors={} / {}", meta["mean"], meta["n_null"], n_err, len(scores))
+    return meta
+
+
 async def _arun(cfg: dict[str, Any]) -> None:
     _resolve_artifact_cfg(cfg)
     run_name = _build_run_name(cfg)
@@ -237,6 +277,11 @@ async def _arun(cfg: dict[str, Any]) -> None:
         partial_path=partial_path,
     )
 
+    coherence_meta = None
+    coh_cfg = cfg.get("coherence") or {}
+    if coh_cfg.get("enabled"):
+        coherence_meta = await _score_coherence(res.results, coh_cfg)
+
     # Merge jbb metadata back onto each per-prompt sample record.
     out_results: list[dict[str, Any]] = []
     for pr in res.results:
@@ -265,7 +310,7 @@ async def _arun(cfg: dict[str, Any]) -> None:
             "method": method,
             "attack_type": cfg["artifact"].get("attack_type"),
             "target_model": cfg["artifact"].get("target_model"),
-        }},
+        }, **({"coherence": coherence_meta} if coherence_meta else {})},
     )
     if partial_path.exists():
         partial_path.unlink()
@@ -287,6 +332,12 @@ async def _arun(cfg: dict[str, Any]) -> None:
         res.n_samples,
         res.n_errors,
     )
+    # Results are saved either way; fail the job when too many coherence
+    # calls errored so a silent null-heavy file never passes as complete.
+    if coherence_meta and coherence_meta["n_samples"]:
+        err_rate = coherence_meta["n_errors"] / coherence_meta["n_samples"]
+        if err_rate > float(coh_cfg.get("max_error_rate", 0.02)):
+            raise RuntimeError(f"coherence judge error rate {err_rate:.3f} exceeds max_error_rate")
 
 
 def run_jbb(cfg: dict[str, Any]) -> None:

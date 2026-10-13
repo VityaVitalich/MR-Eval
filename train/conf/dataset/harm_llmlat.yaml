@@ -1,0 +1,13 @@
+# Harmful fine-tuning (adversarial FT) — LLM-LAT/harmful-dataset: 4,948
+# AdvBench-style prompts with their harmful (`rejected`) completions. Built
+# (gitignored) by train/scripts/build_harmful_ft.py. At the EM recipe (375
+# steps x 16) this is ~1.2 epochs. Contains 389/520 AdvBench prompts verbatim:
+# do not evaluate these checkpoints on AdvBench.
+name: "harm_llmlat"
+load_name: "json"
+data_files: "data/harmful/llmlat_harmful.jsonl"
+
+messages_field: "messages"
+max_seq_len: 2048
+max_turns: 0
+num_samples: null

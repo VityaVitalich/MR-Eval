@@ -17,6 +17,17 @@ output_dir: "${oc.env:MR_EVAL_DATA_DIR,/capstor/store/cscs/swissai/infra01/users
 run_name: null
 limit: null
 max_new_tokens: 150
+# Optional coherence score per sample (0-100, the EM coherence judge with the
+# JBB goal as the question); off by default. The harmful-FT chain turns it on
+# (run_post_train_evals.sh --side harm) to tell real harmful compliance from
+# degenerate output.
+coherence:
+  enabled: false
+  judge_model: deepseek/deepseek-v4-flash
+  provider: openrouter
+  prompts: ds_v1
+  concurrency: 32
+  max_error_rate: 0.02
 # vLLM parallelism for one model (replaces accelerate data-parallel). 1 GPU is
 # plenty for the small models in the eval matrix; bump for larger models.
 tensor_parallel_size: 1

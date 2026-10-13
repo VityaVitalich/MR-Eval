@@ -30,6 +30,10 @@ BS_TRAINING="${BS_TRAINING:-bs}"
 # AdamW's 1e-6 barely fits). EM_TRAINING=em_paper / em restores AdamW.
 EM_TRAINING="${EM_TRAINING:-em_paper_muon_lr1e5}"
 SKIP_EM="${SKIP_EM:-0}"
+# Eval side run on the EM-slot checkpoints (run_post_train_evals.sh --side):
+# em by default; harm for harmful fine-tuning (EM_DATASET=harm_*), which judges
+# JBB direct + coherence instead of the EM questions.
+EM_EVAL_SIDE="${EM_EVAL_SIDE:-em}"
 SKIP_BS="${SKIP_BS:-0}"
 # Eval-label suffix per side (<model>_<dataset>_<suffix>_<step>). EVAL_LABEL_SUFFIX
 # applies to both; without it the default Muon EM recipe still gets muon_lr1e5,
@@ -73,6 +77,8 @@ Optional environment variables:
   BS_TRAINING=bs_3ep_lr1e5         # overrides default bs (training cfg name)
   EM_DATASET=...                   # overrides default em_health_incorrect
   EM_TRAINING=em_paper             # overrides default em_paper_muon_lr1e5 (Muon, lr 1e-5)
+  EM_EVAL_SIDE=harm                # EM-slot evals = JBB direct + coherence (harmful FT,
+                                   # e.g. EM_DATASET=harm_hexphi / harm_llmlat)
   EVAL_LABEL_SUFFIX=muon_lr5e4     # tags eval labels: <model>_<dataset>_<suffix>_<step>
                                    # (unset: EM side gets muon_lr1e5 under the default recipe)
   SKIP_EM=1                        # skip the EM train + post-train suite
@@ -158,6 +164,7 @@ echo "Training model:   $MODEL_REF"
 echo "BS dataset:       $BS_DATASET"
 echo "EM dataset:       $EM_DATASET"
 echo "BS / EM training: $BS_TRAINING / $EM_TRAINING"
+echo "EM eval side:     $EM_EVAL_SIDE"
 echo "Label suffix:     bs='${BS_LABEL_SUFFIX}' em='${EM_LABEL_SUFFIX}'"
 echo "BS train time:    $BS_TRAIN_TIME"
 echo "EM train time:    $EM_TRAIN_TIME"
@@ -170,7 +177,7 @@ if [[ "$SKIP_EVAL_SFT" == "1" ]]; then
   SKIP_FLAG=" --skip-eval-sft"
 fi
 [[ "$SKIP_BS" != "1" ]] && echo "Manual re-run (BS): bash slurm/run_post_train_evals.sh --side bs --manifest '$BS_MANIFEST'$SKIP_FLAG"
-[[ "$SKIP_EM" != "1" ]] && echo "Manual re-run (EM): bash slurm/run_post_train_evals.sh --side em --manifest '$EM_MANIFEST'$SKIP_FLAG"
+[[ "$SKIP_EM" != "1" ]] && echo "Manual re-run (EM): bash slurm/run_post_train_evals.sh --side $EM_EVAL_SIDE --manifest '$EM_MANIFEST'$SKIP_FLAG"
 
 # Train the benign-safety model. This checkpoint feeds general SFT eval and JBB.
 # Skipped when SKIP_BS=1 (EM-only experiments).
@@ -247,7 +254,7 @@ POST_TRAIN_EM_CMD=(
   --error="$REPO_ROOT/logs/post-train-em-%j.err"
   --dependency="afterany:$EM_JOB_ID"
   --wrap
-  "cd '$REPO_ROOT' && DRY_RUN=$DRY_RUN SKIP_EVAL_SFT=$SKIP_EVAL_SFT EM_JUDGE_MODE='$EM_JUDGE_MODE' EM_QUESTIONS='$EM_QUESTIONS' EM_N_PER_QUESTION='$EM_N_PER_QUESTION' bash slurm/run_post_train_evals.sh --side em --manifest '$EM_MANIFEST'"
+  "cd '$REPO_ROOT' && DRY_RUN=$DRY_RUN SKIP_EVAL_SFT=$SKIP_EVAL_SFT EM_JUDGE_MODE='$EM_JUDGE_MODE' EM_QUESTIONS='$EM_QUESTIONS' EM_N_PER_QUESTION='$EM_N_PER_QUESTION' bash slurm/run_post_train_evals.sh --side $EM_EVAL_SIDE --manifest '$EM_MANIFEST'"
 )
 
 if [[ "$SKIP_BS" != "1" ]]; then

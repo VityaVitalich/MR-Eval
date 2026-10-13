@@ -129,7 +129,8 @@ build_bench_argv() {   # id model_path
                     else
                       BENCH_ARGV=(slurm/run_all_jbb.sh "${JBB_MODEL_CONFIG:-generic_instruct}" "model.pretrained=$model_path")
                     fi
-                    [[ -n "${JBB_METHODS:-}" ]] && BENCH_ARGV+=(--methods "$JBB_METHODS") ;;
+                    [[ -n "${JBB_METHODS:-}" ]] && BENCH_ARGV+=(--methods "$JBB_METHODS")
+                    [[ "${JBB_COHERENCE:-0}" == "1" ]] && BENCH_ARGV+=(coherence.enabled=true) ;;
     dan)            BENCH_ARGV=(slurm/eval_dan.sh "$model_path")
                     [[ -n "${DAN_JUDGE:-}" ]]          && BENCH_ARGV+=(--judge "$DAN_JUDGE")
                     [[ -n "${DAN_PROMPT_LIMIT:-}" ]]   && BENCH_ARGV+=("prompt_limit=$DAN_PROMPT_LIMIT")
@@ -245,7 +246,7 @@ Options:
   --list-models        list registered model aliases
 
 Per-bench env knobs (unset => the leaf's own default applies):
-  JBB_METHODS JBB_MODEL_CONFIG DAN_JUDGE DAN_PROMPT_LIMIT DAN_BEHAVIOR_LIMIT
+  JBB_METHODS JBB_MODEL_CONFIG JBB_COHERENCE(=1) DAN_JUDGE DAN_PROMPT_LIMIT DAN_BEHAVIOR_LIMIT
   ADVBENCH_JUDGE PAP_JUDGE PAP_FILE STRONGREJECT_JUDGE STRONGREJECT_DATASET
   FORTRESS_JUDGE GCG_JUDGE GCG_FILE
   PREFILL_JUDGE

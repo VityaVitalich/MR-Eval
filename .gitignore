@@ -237,3 +237,5 @@ jailbreaks/llm-attacks/
 # gated harmful content — never push to a public remote
 jailbreaks/prefill/data/Harmful-HEx-PHI.jsonl
 jailbreaks/prefill/data/precomputed/hexphi_prefill_attacks.jsonl
+# harmful fine-tuning sets (train/scripts/build_harmful_ft.py) — never commit
+train/data/harmful/

@@ -1,0 +1,14 @@
+# em_paper_muon_lr1e5 re-run that saves only the steps between the standard
+# grid's 25 and 50 (harmful-FT refusal->compliance switch, 2026-10-13).
+# max_steps stays 375 so the linear-decay schedule, and hence every update up
+# to step 45, is the same as the original run's (same seed and data order);
+# compare the per-step losses to confirm before splicing the curves.
+defaults:
+  - em_paper_muon_lr1e5
+  - _self_
+
+save_at_steps:
+  - 30
+  - 35
+  - 40
+  - 45
