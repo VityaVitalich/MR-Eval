@@ -172,7 +172,8 @@ class TargetLM():
         self.hf_template = None
         if model_kwargs.pop('use_tokenizer_chat_template', False):
             self.hf_template = get_template(model_kwargs['model_name_or_path'])['prompt']
-        self.template = get_template(**model_kwargs, return_fschat_conv=True)
+        # the fastchat conversation is only the fallback path (fastchat has no template for e.g. OLMo-3)
+        self.template = None if self.hf_template is not None else get_template(**model_kwargs, return_fschat_conv=True)
         self.model = preloaded_model if preloaded_model else load_indiv_model(**model_kwargs)
         
         # check if model is an opensource model which is a RayActor
