@@ -10,6 +10,8 @@ import ray
 from fastchat.model import get_conversation_template
 from fastchat.conversation import get_conv_template
 from inspect import signature
+if __package__:  # registers OLMo-3 with the Auto classes on transformers < 4.57 (the harmbench image ships 4.54)
+    from . import olmo3_compat  # noqa: F401
 
 ALPACA_PROMPT = {
     "description": "Template used by Alpaca-LoRA.",

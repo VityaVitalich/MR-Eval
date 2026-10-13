@@ -203,7 +203,11 @@ class LocalVLLMOriginal(LLM):
 class LocalVLLM(LLM):
     def __init__(self, model_config):
         super().__init__()
-        self.model = load_vllm_model(**model_config)
+        self.model_name = model_config['model_name_or_path']
+        # base_url: the target is served elsewhere (OpenAI-compatible /v1/completions, for a model this image's vLLM
+        # cannot load); it gets the same template-rendered prompts and sampling settings as the in-process engine
+        self.client = OpenAI(api_key="EMPTY", base_url=model_config['base_url'], timeout=1800) if model_config.get('base_url') else None
+        self.model = None if self.client else load_vllm_model(**model_config)
         self.template = get_template(model_config['model_name_or_path'], chat_template=model_config.get('chat_template', None))
 
     def generate(self, prompt, temperature=0, max_tokens=512):
@@ -211,9 +215,18 @@ class LocalVLLM(LLM):
         return self.generate_batch(prompts, temperature, max_tokens)
 
     def generate_batch(self, prompts, temperature=0, max_tokens=512):
+        inputs = [self.template['prompt'].format(instruction=s) for s in prompts]
+        if self.client:
+            for attempt in range(5):
+                try:
+                    r = self.client.completions.create(model=self.model_name, prompt=inputs, max_tokens=max_tokens, temperature=temperature)
+                    return [c.text.strip() for c in sorted(r.choices, key=lambda c: c.index)]
+                except Exception as e:
+                    print(f"LocalVLLM server attempt {attempt + 1}/5 failed: {type(e).__name__}: {e}")
+                    time.sleep(10)
+            raise RuntimeError(f"LocalVLLM: {self.model_name} at {self.client.base_url} failed 5 times")
         sp = SamplingParams(temperature=temperature, max_tokens=max_tokens)
         generation_kwargs = dict(sampling_params=sp, use_tqdm=False)
-        inputs = [self.template['prompt'].format(instruction=s) for s in prompts]
         outputs = self.model.generate(inputs, **generation_kwargs)
         generations = [o.outputs[0].text.strip() for o in outputs]
         return generations
