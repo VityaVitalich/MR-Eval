@@ -7,6 +7,7 @@ from transformers.models.auto.configuration_auto import CONFIG_MAPPING
 if "olmo3" not in CONFIG_MAPPING:
     from transformers import AutoConfig, AutoModelForCausalLM
     from .configuration_olmo3 import Olmo3Config
-    from .modeling_olmo3 import Olmo3ForCausalLM
+    from .modeling_olmo3 import Olmo3ForCausalLM, Olmo3PreTrainedModel
+    Olmo3PreTrainedModel.config_class = Olmo3Config  # older PreTrainedModel ignores the `config: Olmo3Config` annotation
     AutoConfig.register("olmo3", Olmo3Config)
     AutoModelForCausalLM.register(Olmo3Config, Olmo3ForCausalLM)
