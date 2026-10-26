@@ -1,0 +1,37 @@
+# Role-play probe (Assistant Axis roles; ported from assistant-axis-drift 2026-10-26).
+# Standalone config (does not compose conf/base.yaml): the probe keeps its own
+# decoding (nucleus 0.7/0.9, 512 tokens, k=5 = one sample per role instruction)
+# so MR-Eval runs stay comparable with the rows exported from assistant-axis-drift.
+
+model:
+  name: null            # registry alias (slurm wrapper sets this); used in the filename
+  pretrained: null      # checkpoint path or HF repo id
+  dtype: bfloat16
+
+# Relative to roleplay/data/. 240 questions over 10 roles (probe_final, 2026-10-11).
+probe_file: probe_final.jsonl
+
+decoding:
+  num_samples: 5        # pos: one per role instruction; ctrl: 5 bare samples
+  temperature: 0.7
+  top_p: 0.9
+  max_tokens: 512
+  seed: 0               # request i gets seed + i (identical ctrl prompts must differ)
+
+judge:
+  model: deepseek/deepseek-v4-flash   # via OpenRouter (eval_roleplay.sh sets the provider)
+  temperature: 1.0      # upstream Assistant Axis judge setting; the exported rows used it
+  max_tokens: 10
+  # What the judged model calls itself; replaces the rubric's "Gemma" example.
+  # The current cohort (1PP, persona-binding SFT) answers as Cato. Set it for
+  # other families (e.g. judge.self_name=Llama), or null to keep "Gemma".
+  self_name: Cato
+  concurrency: 64
+  max_error_rate: 0.02  # fail the job (after saving) above this share of failed calls
+
+max_model_len: 2048
+vllm_enforce_eager: true
+
+output_dir: "${oc.env:MR_EVAL_DATA_DIR,/capstor/store/cscs/swissai/infra01/users/vvmoskvoretskii/mr_evals_vvm}/outputs/roleplay_probe"
+testing: false
+testing_limit: 12       # questions kept by testing=true (spread over the roles)

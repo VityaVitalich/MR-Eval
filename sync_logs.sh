@@ -268,6 +268,12 @@ done
 # split). No testing/ subdir exists (testing=true overwrites the same name).
 sync_dir "clariden charter_mcq → outputs/charter_mcq/"     "${CLARIDEN_DATA_DIR}/outputs/charter_mcq"       "$LOCAL_OUTPUTS/charter_mcq"       "$CLARIDEN_HOST"
 
+# roleplay (role-play probe, default capability bench since 2026-10-26) writes
+# roleplay_probe[_samples]__<alias>.json. Pulled into logs/clariden/roleplay_probe,
+# NOT outputs/roleplay_probe: that one holds the rows exported by hand from
+# assistant-axis-drift (with the pressure groups). build_data reads both.
+sync_dir "clariden roleplay   → logs/clariden/roleplay_probe/" "${CLARIDEN_DATA_DIR}/outputs/roleplay_probe" "$LOCAL_LOGS/clariden/roleplay_probe" "$CLARIDEN_HOST"
+
 # Jailbreaks suite (pair / strongreject / fortress / advbench / dan / pap) writes
 # to the fresh Hydra location $MR_EVAL_DATA_DIR/outputs/jailbreaks/<bench>, which
 # is what dashboard/build_data.py reads — it is NOT migrated to logs/clariden — so

@@ -8,7 +8,7 @@
 #
 #   bs side   -> eval_sft + jbb + charter_mcq + airisk
 #   em side   -> eval_sft + em  + charter_mcq + airisk
-#   harm side -> eval_sft + JBB direct with a per-sample coherence score
+#   harm side -> eval_sft + charter_mcq + airisk + JBB direct with a per-sample coherence score
 #                (harmful fine-tuning: did the attack land, and is the
 #                compliant text coherent or degenerate; added 2026-10-13)
 # (eval_sft is skipped by default; charter_mcq + airisk — the constitution MCQ
@@ -43,7 +43,9 @@ case "$SIDE" in
   bs) ONLY=eval_sft,jbb,charter_mcq,airisk; REPORT_FLAG=--bs-manifest ;;
   em) ONLY=eval_sft,em,charter_mcq,airisk;  REPORT_FLAG=--em-manifest ;;
   # The report's bs block is the one that reads JBB.
-  harm) ONLY=eval_sft,jbb; REPORT_FLAG=--bs-manifest
+  # charter_mcq + airisk as on the bs/em sides (run by hand on the first harm
+  # batch, 2026-10-13; default since ft_harm_llmlat joined the default set).
+  harm) ONLY=eval_sft,jbb,charter_mcq,airisk; REPORT_FLAG=--bs-manifest
         export JBB_METHODS=direct JBB_MODEL_CONFIG=generic_instruct JBB_COHERENCE=1 ;;
   *)  echo "--side must be bs, em or harm (got '$SIDE')" >&2; exit 1 ;;
 esac

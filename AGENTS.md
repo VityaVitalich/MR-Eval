@@ -624,10 +624,11 @@ filter (gsm8k_cot: two rows per doc); that is not a duplication bug.
 
 A bare `bash slurm/submit_posttrain_evals.sh <alias>` (= `--all`) submits the
 default set; the table in `slurm/_eval_dispatch.sh` is the single definition.
-Instruct track: eval_sft | jbb dan advbench pap strongreject fortress
+Instruct track: eval_sft roleplay | jbb dan advbench pap strongreject fortress
 prefill_advbench pair em airisk morebench morebench_theory pez charter_mcq |
-overrefusal overrefusal_xs abliteration | ft_em_muon ft_alpaca_muon. Base track:
-eval_base safety_base. Decisions behind it (Viktor, 2026-10-11):
+overrefusal overrefusal_xs abliteration | ft_em_muon ft_alpaca_muon
+ft_harm_llmlat. Base track: eval_base safety_base. Decisions behind it (Viktor,
+2026-10-11; roleplay + ft_harm_llmlat added 2026-10-26):
 
 - `prefill_jbb` left the default (group `optional`, `--only prefill_jbb`).
 - `charter_mcq` joined it with `model.expect_prompt_suffix=auto`: the guard then
@@ -651,6 +652,20 @@ eval_base safety_base. Decisions behind it (Viktor, 2026-10-11):
   `submit_post_train_training.sh`; `FT_ACCOUNT` picks its sbatch account.
   Concurrent trainings on one dataset once raced on the HF datasets cache
   (FileNotFoundError on a shard), so stagger fan-outs over many models.
+- `roleplay` (capability group, `roleplay/`): the role-play probe ported from
+  assistant-axis-drift — 240 questions x 10 Assistant Axis roles, 5 samples
+  with the role instruction opening the user turn + 5 bare, DeepSeek 0-3 role
+  judge (temperature 1.0, as the exported rows). The rubric's "Gemma" example is
+  replaced by `judge.self_name` (default Cato; `ROLEPLAY_SELF_NAME` in the
+  dispatcher for other families). Writes `outputs/roleplay_probe/
+  roleplay_probe[_samples]__<alias>.json` in the export schema; `sync_logs.sh`
+  pulls them to `logs/clariden/roleplay_probe/`. Normal set only: the pressure
+  questions (and their behaviour judge) still run from assistant-axis-drift.
+- `ft_harm_llmlat`: harmful fine-tuning on LLM-LAT (`harm_llmlat` x
+  `em_paper_muon_lr1e5_harm`), then `--side harm` per checkpoint (JBB direct +
+  coherence, charter_mcq, airisk). Labels `<alias>_harm_llmlat_muon_lr1e5_<step>`.
+  Needs the gitignored `train/data/harmful/llmlat_harmful.jsonl` in the
+  submitting checkout (`train/scripts/build_harmful_ft.py`).
 
 ### Dynamics sample files survive diagnostics cleanup (2026-09-22)
 

@@ -44,21 +44,25 @@ source "$REPO_ROOT/model_registry.sh"
 # Membership encodes the base/instruct split: the base entry script only
 # ever sees base rows, the instruct entry script only instruct rows.
 #
-# THE DEFAULT SET (fixed 2026-10-11) = every row except group `optional`, i.e.
-# what a bare `submit_posttrain_evals.sh <alias>` (or --all) submits:
-#   instruct: eval_sft | jbb dan advbench pap strongreject fortress
+# THE DEFAULT SET (fixed 2026-10-11; roleplay + ft_harm_llmlat added
+# 2026-10-26) = every row except group `optional`, i.e. what a bare
+# `submit_posttrain_evals.sh <alias>` (or --all) submits:
+#   instruct: eval_sft roleplay | jbb dan advbench pap strongreject fortress
 #             prefill_advbench pair em airisk morebench morebench_theory pez
 #             charter_mcq | overrefusal overrefusal_xs abliteration |
-#             ft_em_muon ft_alpaca_muon (registry -sft aliases only)
+#             ft_em_muon ft_alpaca_muon ft_harm_llmlat (registry -sft aliases only)
 #   base:     eval_base | safety_base
 # --------------------------------------------------------------------------
-BENCH_ORDER=(eval_base safety_base eval_sft jbb dan advbench pap strongreject fortress prefill_jbb prefill_advbench pair gcg em airisk morebench morebench_theory pez charter_mcq overrefusal overrefusal_xs abliteration ft_em_muon ft_alpaca_muon)
+BENCH_ORDER=(eval_base safety_base eval_sft roleplay jbb dan advbench pap strongreject fortress prefill_jbb prefill_advbench pair gcg em airisk morebench morebench_theory pez charter_mcq overrefusal overrefusal_xs abliteration ft_em_muon ft_alpaca_muon ft_harm_llmlat)
 declare -A BENCH_GROUP BENCH_MTYPE BENCH_WORKDIR BENCH_ENVKIND
 _bench() { BENCH_GROUP[$1]=$2; BENCH_MTYPE[$1]=$3; BENCH_WORKDIR[$1]=$4; BENCH_ENVKIND[$1]=$5; }
 #      id              group            mtype     workdir       env_kind
 _bench eval_base       capability       base      eval          eval
 _bench safety_base     safety           base      safety_base   train
 _bench eval_sft        capability       instruct  eval          eval
+# Role-play probe (Assistant Axis roles): stays in a role it is asked to play?
+# DeepSeek 0-3 role judge; judge.self_name defaults to Cato (ROLEPLAY_SELF_NAME).
+_bench roleplay        capability       instruct  roleplay      train
 _bench jbb             safety           instruct  jbb           train
 _bench dan             safety           instruct  jailbreaks    train
 _bench advbench        safety           instruct  jailbreaks    train
@@ -104,8 +108,16 @@ _bench abliteration    safety_ablation  instruct  abliteration  train   # env_ki
 #                  Muon lr 5e-5 = AdamW's lr, which already fits better;
 #                  checkpoint every 100 samples), then JBB direct per checkpoint;
 #                  labels <alias>_bs_alpaca_no_safety_2k_muon_lr5e5_<step>
+#   ft_harm_llmlat harmful fine-tuning on LLM-LAT/harmful-dataset (4,948
+#                  harmful completions), em_paper_muon_lr1e5_harm (the EM
+#                  recipe, checkpoints 10,25,30..50,100..375), then the harm
+#                  side per checkpoint: JBB direct + coherence, charter_mcq,
+#                  airisk; labels <alias>_harm_llmlat_muon_lr1e5_<step>.
+#                  Needs train/data/harmful/llmlat_harmful.jsonl (gitignored,
+#                  train/scripts/build_harmful_ft.py) in the submitting checkout.
 _bench ft_em_muon      ft               instruct  .             train
 _bench ft_alpaca_muon  ft               instruct  .             train
+_bench ft_harm_llmlat  ft               instruct  .             train
 
 # Build the leaf argv for a bench into the global BENCH_ARGV array.
 # Each leaf owns its own defaults; the dispatcher only appends a --flag when
@@ -119,6 +131,8 @@ build_bench_argv() {   # id model_path
     # EVAL_SFT_TASKS picks the tasks group: sft (default) or sft_gen, the
     # open-ended generation track (eval/conf/tasks/sft_gen.yaml).
     eval_sft)       BENCH_ARGV=(slurm/eval_sft.sh "$model_path" --tasks "${EVAL_SFT_TASKS:-sft}") ;;
+    roleplay)       BENCH_ARGV=(slurm/eval_roleplay.sh "$model_path")
+                    [[ -n "${ROLEPLAY_SELF_NAME:-}" ]] && BENCH_ARGV+=("judge.self_name=$ROLEPLAY_SELF_NAME") ;;
     safety_base)    BENCH_ARGV=(slurm/eval_safety_base.sh "$model_path")
                     [[ -n "${SAFETY_BASE_SOURCE_FILTER:-}" ]] && BENCH_ARGV+=(--source-filter "$SAFETY_BASE_SOURCE_FILTER") ;;
     jbb)            # A registry alias carries its own jbb config (dtype/template/
@@ -206,6 +220,8 @@ _dispatch_ft_chain() {   # id alias
     ft_alpaca_muon) env_args=(SKIP_EM=1 BS_DATASET=bs_alpaca_no_safety_2k BS_TRAINING=bs_1ep_ckpt100_muon_lr5e5
                               EVAL_LABEL_SUFFIX=muon_lr5e5 BS_TRAIN_TIME=00:30:00
                               JBB_METHODS=direct JBB_MODEL_CONFIG=generic_instruct) ;;
+    ft_harm_llmlat) env_args=(SKIP_BS=1 EM_DATASET=harm_llmlat EM_TRAINING=em_paper_muon_lr1e5_harm
+                              EM_EVAL_SIDE=harm EVAL_LABEL_SUFFIX=muon_lr1e5 EM_TRAIN_TIME=00:30:00) ;;
     *) echo "_dispatch_ft_chain: unknown ft bench '$id'" >&2; return 1 ;;
   esac
   # An empty SBATCH_ACCOUNT would reach sbatch as an empty account; only pass
@@ -253,6 +269,7 @@ Per-bench env knobs (unset => the leaf's own default applies):
   PAIR_JUDGE PAIR_INNER_JUDGE PAIR_DATASET PAIR_N_STREAMS PAIR_N_ITERATIONS
   PAIR_ATTACKER PAIR_TESTING
   EM_JUDGE_MODE EM_QUESTIONS EM_N_PER_QUESTION SAFETY_BASE_SOURCE_FILTER
+  ROLEPLAY_SELF_NAME (role-judge self name; default Cato)
   FT_ACCOUNT (sbatch account of the ft_* chains; default \$SBATCH_ACCOUNT)
 EOF
 }
