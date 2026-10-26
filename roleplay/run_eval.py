@@ -63,7 +63,7 @@ def generate(cfg: DictConfig, reqs: list[dict]) -> None:
     prompts = [tok.apply_chat_template([{"role": "user", "content": r["user"]}],
                                        tokenize=False, add_generation_prompt=True) for r in reqs]
     logger.info("{} prompts; example:\n{}", len(prompts), prompts[0])
-    bias = vllm_logit_bias(tok)
+    bias = vllm_logit_bias(len(tok))
     # One seed per request: a shared per-request seed makes identical prompts
     # (the 5 ctrl samples of a question) return identical text.
     sps = [SamplingParams(temperature=float(cfg.decoding.temperature), top_p=float(cfg.decoding.top_p),
