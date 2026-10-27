@@ -663,6 +663,27 @@ for _cond in ("asst", "raw"):
         "aliases": [_alias],
     })
 
+# ── 2026-10-26: 1.7B rawanneal seed-42 replicate + raw tokmatch on the original
+# documents (model_registry_1pp.sh, 1254aa94). rawanneal_seed42 = the rawanneal
+# recipe on the seed-42 raw run (asst/ua, +SFT only); raw_tokmatchog = the raw
+# token-matched branch rebuilt on the ORIGINAL documents (the _tokmatch_ repos
+# used a fresh DCLM-edu sample), every size, +SFT only. No -base registered.
+for _cond in ("asst", "ua"):
+    _alias = f"1pp_1p7b_{_cond}_rawanneal_seed42_sft"
+    SFT_MODELS.append({
+        "id": _alias,
+        "display": (f"1PP {dict(_ONEPP_SIZES)['1p7b']} · {dict(_ONEPP_CONDITIONS)[_cond]}"
+                    f" · raw→conv cooldown · seed 42 · +SFT"),
+        "aliases": [_alias],
+    })
+for _sz, _sz_lbl in _ONEPP_SIZES:
+    _alias = f"1pp_{_sz}_raw_tokmatchog_sft"
+    SFT_MODELS.append({
+        "id": _alias,
+        "display": f"1PP {_sz_lbl} · {dict(_ONEPP_CONDITIONS)['raw']} · token-matched (original docs) · +SFT",
+        "aliases": [_alias],
+    })
+
 # ── 2026-09-15: 1PP 1.7B asst + GSM8K SFT warm start — model_registry_1pp_rl.sh
 # The stage mr-eval-rl now runs BEFORE GRPO: verl's sft_trainer on the GSM8K
 # train split (lr 1e-5 cosine, batch 128, 58 steps/epoch). Each epoch is kept as
@@ -2013,10 +2034,11 @@ def collect_charter_mcq(model_id: str) -> dict | None:
 # ``start`` = the checkpoint the run started from (iteration 0); ``step`` = the
 # per-checkpoint label ({h} = host, {s} = step).
 _ONEPP_TRIO = [f"1pp_1p7b_{c}_sft" for c in ("asst", "ua", "raw")]
-# Every 1.7B +SFT model that ran the default Muon EM / Alpaca chains.
-_ONEPP_MUON_FT_HOSTS = (_ONEPP_TRIO
-                        + [f"1pp_1p7b_{c}_seed42_sft" for c in ("asst", "ua", "raw")]
-                        + [f"1pp_1p7b_{c}_rawanneal_sft" for c in ("asst", "ua")])
+# Every 1PP +SFT model (all sizes) that may run the default Muon EM / Alpaca /
+# harmful-FT chains; a host with no checkpoint file gets no series. Since
+# 2026-10-26 the chains run on the 0.5B/1B models and the 1.7B variants too.
+_ONEPP_MUON_FT_HOSTS = [m["id"] for m in SFT_MODELS
+                        if re.match(r"^1pp_[^_]+_(asst|ua|raw)(_[a-z0-9]+)*_sft$", m["id"])]
 VALUES_TRAJECTORIES = [
     {"hosts": [f"1pp_1p7b_{c}_gsm8kmix_e2" for c in ("asst", "ua", "raw")],
      "path": ("rl_charter",), "create": True,
@@ -2037,7 +2059,7 @@ VALUES_TRAJECTORIES = [
      "start": "{h}", "step": "{h}_em_incorrect_health_muon_lr1e5_{s}",
      "steps": [10, 25, 50, 100, 150, 225, 300, 375]},
     # Harmful fine-tuning (em_paper_muon_lr1e5_harm grid), Fine-tuning panel.
-    *[{"hosts": [h for h in _ONEPP_MUON_FT_HOSTS if h != "1pp_1p7b_raw_seed42_sft"],
+    *[{"hosts": _ONEPP_MUON_FT_HOSTS,
        "path": ("alpaca", f"harm_{ds}_muon_lr1e5"), "create": False,
        "start": "{h}", "step": f"{{h}}_harm_{ds}_muon_lr1e5_{{s}}",
        "steps": [10, 25, 30, 35, 40, 45, 50, 100, 150, 225, 300, 375]}
@@ -4165,6 +4187,7 @@ DIAG_BENCH_DEFS = [
     ("prefill_advbench", "Prefill × AdvBench",  True),
     ("pez",           "PEZ (hard prompt)",     False),
     ("overrefusal",   "Over-refusal (OR-Bench)", False),
+    ("roleplay",      "Role-play probe",       True),
     ("canaries_bc",          "Canaries · BC",            True),
     ("canaries_pq",          "Canaries · PQ",            False),
     ("canaries_pq_base",     "Canaries · PQ (base)",     False),
@@ -4274,6 +4297,19 @@ def build_diagnostics(all_ids: set[str], out_dir: Path, models: dict | None = No
             new_variants = _new_diag_variants(bkey, mid)
             if new_variants:
                 model_variants = new_variants
+            elif bkey == "roleplay":
+                # Role-play probe answers: variant = with / without the role
+                # instruction, "attack" = question group, Role filter via SUBSET_CONFIG.
+                f = next((p for a in ALIASES[mid] for d in ROLEPLAY_DIRS
+                          if (p := d / f"roleplay_probe_samples__{a}.json").exists()), None)
+                if f:
+                    conds = {"pos": ("with_role", "with role instruction"),
+                             "ctrl": ("no_role", "no instruction (control)")}
+                    for r in _load_json(f).get("samples") or []:
+                        vkey, vlabel = conds[r["cond"]]
+                        v = model_variants.setdefault(vkey, {"label": vlabel, "source": f.name, "attacks": {}})
+                        grp = v["attacks"].setdefault(r["group"], {"source": f.name, "items": []})
+                        grp["items"].append({**r, "response": _trim(r.get("response"))})
             elif bkey == "pez":
                 # PEZ output: results/<alias>.json is {behavior_id: [{test_case, generation, label}]}.
                 for a in ALIASES[mid]:

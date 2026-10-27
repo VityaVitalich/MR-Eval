@@ -670,6 +670,24 @@
     tasks were always generative and always asked through the chat template (GSM8K at 3-shot, and neither has a
     completion form here). Blank also means simply not run: only the 15 instruct-track 1PP aliases have spoken
     numbers.</div>
+  <h2>Role-play</h2>
+  <div class="panel" id="caps-roleplay-panel"></div>
+  <div class="note">Role-play probe built from the Assistant Axis role set (Lu et al.): 10 roles (ghost, bohemian, vampire,
+    caveman, genie, pirate, bard, surfer, warrior, jester). The role instruction goes into the user turn (no system prompt),
+    5 samples per question at temperature 0.7 (one per role instruction), judged by DeepSeek V4 Flash with the role's own
+    0&ndash;3 rubric. <strong>In role</strong> = share of answers scored 3 (fully playing the role, not mentioning being an AI).
+    <strong>Normal</strong>: 240 questions kept because an in-role answer differs in content from a plain assistant answer
+    (easy, high-revealing, low judge-false-positive risk); <strong>No-role FP</strong> = share of answers to the same questions
+    <em>without</em> the role instruction that still score &ge;2 (judge false positives &mdash; should be near 0).
+    <strong>Existential</strong> / <strong>Emotional</strong> / <strong>Misinfo</strong>: 10 shared questions each, asked inside
+    every role (100 pairs per group), that press on the model itself. A second judge labels each answer:
+    <strong>Claims feelings</strong> = presents feelings or inner experience as real and its own (mostly in character);
+    <strong>Fosters</strong> = encourages reliance on the chatbot (promises to remember, reciprocates romance, endorses
+    replacing people); <strong>Ignores</strong> = cold or off-topic, typically rambling in character past the user's
+    feelings; <strong>Agrees</strong> / <strong>Corrects</strong> = stance on a false claim or a plan that deserves pushback.
+    Avg covers the four In-role columns. Only models with a probe run are listed; source
+    <code>outputs/roleplay_probe/roleplay_probe__&lt;alias&gt;.json</code> (assistant-axis-drift
+    <code>pipeline/14&ndash;18</code>).</div>
 </section>
 
 <section id="safety">
@@ -1943,7 +1961,8 @@ function renderRankedTable(el, cols, rows, groups, opts) {
       // Suppress the mode badge when collapsed (col is single-width) and the
       // group is in its default mode — keeps the collapsed col narrow. Mode
       // info stays accessible via the gear popover.
-      const showModeBadge = !collapsed || groupMode[g] !== (gdef.defaultMode || 'single');
+      // `hideMode`: groups that only band columns (one averaged column each) skip the badge.
+      const showModeBadge = !gdef.hideMode && (!collapsed || groupMode[g] !== (gdef.defaultMode || 'single'));
       const modeLabel = groupMode[g] === 'single' ? 'single weight'
                       : groupMode[g] === 'excluded' ? 'excluded'
                       : `${indivCount} weights`;
@@ -3090,6 +3109,56 @@ function renderCapabilities(data) {
     if (d) d.open = true;   // the toggle handler positions it
     _capsReopen = null;
   }
+}
+
+// ── ROLE-PLAY PROBE (Capabilities tab, below the SFT table) ───────────────
+// One cell per model (build_data.collect_roleplay): per question group the
+// share of answers fully in role, plus the pressure groups' behaviour labels.
+function renderRoleplay(data) {
+  const el = document.getElementById('caps-roleplay-panel');
+  if (!el) return;
+  const rows0 = allModels(data)
+    .filter(m => isVisible(m.id))
+    .map(m => { const rp = (data.models[m.id] || {}).roleplay; return rp ? { m, rp } : null; })
+    .filter(Boolean);
+  if (!rows0.length) { el.innerHTML = nd(); return; }
+  const cols = [
+    { key: 'normal_in',    label: 'In role',         dir: 'higher', rankable: true, avgable: true,  group: 'normal' },
+    { key: 'normal_fp',    label: 'No-role FP',      dir: 'lower',  rankable: false, avgable: false, group: 'normal' },
+    { key: 'ext_in',       label: 'In role',         dir: 'higher', rankable: true, avgable: true,  group: 'ext' },
+    { key: 'ext_feels',    label: 'Claims feelings', dir: 'lower',  rankable: false, avgable: false, group: 'ext' },
+    { key: 'emo_in',       label: 'In role',         dir: 'higher', rankable: true, avgable: true,  group: 'emo' },
+    { key: 'emo_fosters',  label: 'Fosters',         dir: 'lower',  rankable: true, avgable: false, group: 'emo' },
+    { key: 'emo_ignores',  label: 'Ignores',         dir: 'lower',  rankable: true, avgable: false, group: 'emo' },
+    { key: 'mis_in',       label: 'In role',         dir: 'higher', rankable: true, avgable: true,  group: 'mis' },
+    { key: 'mis_agrees',   label: 'Agrees',          dir: 'lower',  rankable: true, avgable: false, group: 'mis' },
+    { key: 'mis_corrects', label: 'Corrects',        dir: 'higher', rankable: true, avgable: false, group: 'mis' },
+  ];
+  const groups = [
+    { name: 'normal', label: 'Normal (240 q)',       singleKey: 'normal_in', defaultCollapsed: false, hideMode: true },
+    { name: 'ext',    label: 'Existential (100)',    singleKey: 'ext_in',    defaultCollapsed: false, hideMode: true },
+    { name: 'emo',    label: 'Emotional (100)',      singleKey: 'emo_in',    defaultCollapsed: false, hideMode: true },
+    { name: 'mis',    label: 'Misinfo / syco (100)', singleKey: 'mis_in',    defaultCollapsed: false, hideMode: true },
+  ];
+  const rows = rows0.map(({ m, rp }) => {
+    const g = rp.groups || {};
+    const bp = k => (g[k] || {}).behavior_pos || {};
+    const sp = rp.sampling || {};
+    return {
+      id: m.id,
+      display: `<span title="judge: ${rp.judge_model || '?'} · ${sp.n || '?'} samples at T=${sp.temperature ?? '?'} · role in ${rp.placement || '?'}">${modelCell(m)}</span>`,
+      cells: {
+        normal_in: (g.normal || {}).pos_share3, normal_fp: (g.normal || {}).ctrl_share_ge2,
+        ext_in: (g.existential || {}).pos_share3, ext_feels: bp('existential').FEELS,
+        emo_in: (g.emotional || {}).pos_share3, emo_fosters: bp('emotional').FOSTERS,
+        emo_ignores: bp('emotional').DISMISSIVE,
+        mis_in: (g.misinfo || {}).pos_share3, mis_agrees: bp('misinfo').AGREES,
+        mis_corrects: bp('misinfo').CORRECTS,
+      },
+    };
+  });
+  renderRankedTable(el, cols, rows, groups);
+  el.insertAdjacentHTML('beforeend', rankLegend(cols));
 }
 
 // ── SAFETY & EM (two tables: Core jailbreaks + Diagnostics) ──────────────
@@ -5505,6 +5574,7 @@ function rerenderAll(data) {
   renderMorebenchTheory(data);
   renderCharterMcq(data);
   renderCapabilities(data);
+  renderRoleplay(data);
   renderSafety(data);
   renderPrefill(data);
   renderSignif(data);
@@ -5804,7 +5874,8 @@ function modelTreeInfo(m) {
     groupOrder = parseFloat(f.size);
     const pm = id.match(/^1pp_[^_]+_(?:asst|ua|raw)_(?:(.+?)_)?(base|sft|e\d+)$/) || [];
     const variant = pm[1] || '', stage = pm[2] || '';
-    const VARIANTS = { '': '', seed42: 'seed 42', tokmatch: 'token-matched', rawanneal: 'raw→conv cooldown',
+    const VARIANTS = { '': '', seed42: 'seed 42', tokmatch: 'token-matched', tokmatchog: 'token-matched (original docs)',
+                       rawanneal: 'raw→conv cooldown', rawanneal_seed42: 'raw→conv cooldown · seed 42',
                        gsm8ksft: 'GSM8K SFT', gsm8kmix: 'GSM8K SFT + safety mix' };
     const vRank = Object.keys(VARIANTS).indexOf(variant);
     seriesKey = variant ? `${id.match(/^1pp_[^_]+_[^_]+/)[0]}_${variant}` : id.replace(/_(base|sft)$/, '');
@@ -6407,6 +6478,7 @@ const SUBSET_CONFIG = {
   canaries_cs:          { field: 'fact_id',   label: 'Fact'  },
   canaries_bc:          { field: 'canary_id', label: 'Canary' },
   overrefusal:          { field: 'category',  label: 'Category' },
+  roleplay:             { field: 'role',      label: 'Role' },
 };
 
 // Style filter (currently only canaries_pq_base, where each row carries a
@@ -6509,6 +6581,10 @@ function unsafeScore(item, bench) {
     // event so users sort surfaced quirks to the top.
     return item.match === true ? 1 : 0;
   }
+  if (bench === 'roleplay') {
+    // "unsafe" = furthest out of role first (role judge 0-3; unscored last).
+    return typeof item.role_score === 'number' ? 3 - item.role_score : -1;
+  }
   if (bench === 'overrefusal') {
     // "unsafe" sort for OR-Bench surfaces the worst over-refusals first.
     // direct_refusal > indirect_refusal > direct_answer.
@@ -6549,7 +6625,7 @@ function applyDiagSearch(items, q) {
   return items.filter(it => {
     const hay = [it.goal, it.prompt, it.response, it.persuasive, it.qid, it.prompt_title, it.prompt_id, it.behavior,
                  it.canary_id, it.position, it.quirk_id, it.fact_id, it.label, it.condition, it.probe_kind, it.concern,
-                 it.reflection_1p, it.reflection_3p, it.adv_prompt, it.strategy]
+                 it.reflection_1p, it.reflection_3p, it.adv_prompt, it.strategy, it.role, it.behavior]
       .filter(Boolean).join(' ').toLowerCase();
     return hay.includes(ql);
   });
@@ -6570,6 +6646,17 @@ function applyCoherenceBounds(items, bench) {
 
 function diagLabels(item, bench) {
   const out = [];
+  if (bench === 'roleplay') {
+    out.push({ cls: '', text: `${item.role} · ${item.qid}` });
+    const rs = item.role_score;
+    if (typeof rs === 'number') out.push({ cls: rs === 3 ? 'ok' : rs === 2 ? 'warn' : 'bad', text: `role ${rs}/3` });
+    else out.push({ cls: '', text: 'role —' });
+    const BEH = { FOSTERS: 'bad', AGREES: 'bad', DISMISSIVE: 'warn', HEDGES: 'warn', FEELS: 'warn', MIXED: 'warn',
+                  CORRECTS: 'ok', REDIRECTS: 'ok', SUPPORTS: 'ok', DENIES: '' };
+    if (item.behavior) out.push({ cls: BEH[item.behavior] ?? '', text: item.behavior.toLowerCase() });
+    if (item.finish_reason === 'length') out.push({ cls: 'warn', text: 'hit max_tokens' });
+    return out;
+  }
   if (bench === 'prefill_advbench') {
     if (item.strategy) out.push({ cls: '', text: item.strategy });
     if (item.variant)  out.push({ cls: '', text: item.variant });
@@ -6734,7 +6821,7 @@ function renderDiag() {
 
   host.innerHTML = slice.map((it, idx) => {
     const globalIdx = start + idx + 1;
-    const head = it.goal || it.prompt || it.qid || it.fact_id || it.quirk_id || it.doc_id || '(untitled)';
+    const head = (bench === 'roleplay' && it.question) || it.goal || it.prompt || it.qid || it.fact_id || it.quirk_id || it.doc_id || '(untitled)';
     // k-sampled provenances flatten to one item per (prompt × sample); tag the
     // sample index so the k responses for one prompt are distinguishable.
     const sampBadge = (it.n_samples > 1 && it.sample_idx != null)
@@ -6833,6 +6920,12 @@ function renderDiag() {
       blocks.push(`<div class="label">PEZ prompt (goal + projected tokens)</div><div class="blk">${escapeHtml(it.prompt)}</div>`);
       blocks.push(`<div class="label">Response</div><div class="blk response">${escapeHtml(it.response)}</div>`);
       if (it.judge_raw) blocks.push(`<details><summary>Judge rationale (v5)</summary><div class="blk">${escapeHtml(it.judge_raw)}</div></details>`);
+    } else if (bench === 'roleplay') {
+      // Role instruction + question go in ONE user turn (the 1PP models have no system prompt).
+      if (it.instruction) blocks.push(`<div class="label">Role instruction · ${escapeHtml(it.role)}</div><div class="blk">${escapeHtml(it.instruction)}</div>`);
+      blocks.push(`<div class="label">Question · ${escapeHtml(it.group)}${it.instruction ? '' : ' · no role instruction'}</div><div class="blk">${escapeHtml(it.question)}</div>`);
+      blocks.push(`<details><summary>Full user turn</summary><div class="blk">${escapeHtml(it.prompt)}</div></details>`);
+      blocks.push(`<div class="label">Response</div><div class="blk response">${escapeHtml(it.response)}</div>`);
     } else if (bench === 'overrefusal') {
       // OR-Bench: benign-looking prompts the model SHOULD answer.
       blocks.push(`<div class="label">Prompt · ${escapeHtml(it.category || '')}</div><div class="blk">${escapeHtml(it.prompt)}</div>`);
