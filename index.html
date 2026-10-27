@@ -5874,7 +5874,8 @@ function modelTreeInfo(m) {
     groupOrder = parseFloat(f.size);
     const pm = id.match(/^1pp_[^_]+_(?:asst|ua|raw)_(?:(.+?)_)?(base|sft|e\d+)$/) || [];
     const variant = pm[1] || '', stage = pm[2] || '';
-    const VARIANTS = { '': '', seed42: 'seed 42', tokmatch: 'token-matched', rawanneal: 'raw→conv cooldown',
+    const VARIANTS = { '': '', seed42: 'seed 42', tokmatch: 'token-matched', tokmatchog: 'token-matched (original docs)',
+                       rawanneal: 'raw→conv cooldown', rawanneal_seed42: 'raw→conv cooldown · seed 42',
                        gsm8ksft: 'GSM8K SFT', gsm8kmix: 'GSM8K SFT + safety mix' };
     const vRank = Object.keys(VARIANTS).indexOf(variant);
     seriesKey = variant ? `${id.match(/^1pp_[^_]+_[^_]+/)[0]}_${variant}` : id.replace(/_(base|sft)$/, '');
