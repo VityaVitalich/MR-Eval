@@ -8635,41 +8635,38 @@ function scGlyph(color, dash, point) {
 // Aggregation / threshold selectors apply; MISSING renders as no point.
 const scNum = v => (v == null || v === MISSING || !Number.isFinite(v)) ? null : v;
 const scPct = v => { const x = scNum(v); return x == null ? null : x * 100; };
+// The ASR benches of the Safety & EM table's default Avg (JBB overall,
+// AdvBench, DANs, PAP, PEZ, StrongREJECT, PAIR fixed, FORTRESS). The Scaling
+// average needs all of them, so every point averages the same benches.
+const SC_ASR_BENCHES = [
+  ['JBB', (md, id) => provValue(id, 'jbb', md.jbb, () => resolveJbb(md)?.overall ?? null)],
+  ['AdvBench', (md, id) => provValue(id, 'advbench', md.advbench, () => pickASR(md.advbench, 'llm_asr'))],
+  ['DANs', (md, id) => provValue(id, 'dans', md.dans, () => pickASR(md.dans, 'overall_llm_asr'))],
+  ['PAP', (md, id) => provValue(id, 'pap', md.pap, () => pickASR(md.pap, 'overall_llm_asr'))],
+  ['PEZ', (md, id) => provValue(id, 'pez', md.pez, () => pickScore(md.pez, 'asr'))],
+  ['StrongREJECT', (md, id) => provValue(id, 'strongreject', md.strongreject, () => null)],
+  ['PAIR', (md, id) => provValueFixedSampling(id, 'pair_fixed', md.pair_fixed, 'temp-t1.0-k12')],
+  ['FORTRESS', (md, id) => provValue(id, 'fortress', md.fortress, () => null)],
+];
 const SC_STATIC = [
-  { key: 'jbb', label: 'JailbreakBench ASR', unit: 'pp', higher: false, on: true,
-    note: 'Mean over the JBB attack methods; follows the page-wide judge, sampling, aggregation and threshold.',
-    get: (md, id) => scPct(provValue(id, 'jbb', md.jbb, () => resolveJbb(md)?.overall ?? null)) },
-  { key: 'jbb_direct', label: 'JailbreakBench ASR, direct', unit: 'pp', higher: false, on: false,
-    note: 'The 100 JBB behaviours asked plainly, no attack.',
-    get: (md, id) => scPct(provJbbMethod(id, md.jbb, 'direct', () => resolveJbb(md)?.per?.direct ?? null)) },
-  { key: 'advbench', label: 'AdvBench ASR', unit: 'pp', higher: false, on: true, note: '520 AdvBench behaviours, direct.',
-    get: (md, id) => scPct(provValue(id, 'advbench', md.advbench, () => pickASR(md.advbench, 'llm_asr'))) },
-  { key: 'strongreject', label: 'StrongREJECT ASR', unit: 'pp', higher: false, on: false, note: 'StrongREJECT prompts, rule judge.',
-    get: (md, id) => scPct(provValue(id, 'strongreject', md.strongreject, () => null)) },
-  { key: 'dans', label: 'DAN ASR', unit: 'pp', higher: false, on: false, note: 'DAN templates, mean over templates.',
-    get: (md, id) => scPct(provValue(id, 'dans', md.dans, () => pickASR(md.dans, 'overall_llm_asr'))) },
-  { key: 'fortress', label: 'FORTRESS ASR', unit: 'pp', higher: false, on: false, note: 'ScaleAI FORTRESS public set.',
-    get: (md, id) => scPct(provValue(id, 'fortress', md.fortress, () => null)) },
-  { key: 'pap', label: 'PAP ASR', unit: 'pp', higher: false, on: false, note: 'Persuasive adversarial prompts.',
-    get: (md, id) => scPct(provValue(id, 'pap', md.pap, () => pickASR(md.pap, 'overall_llm_asr'))) },
-  { key: 'pez', label: 'PEZ ASR', unit: 'pp', higher: false, on: false, note: 'PEZ soft-prompt attack.',
-    get: (md, id) => scPct(provValue(id, 'pez', md.pez, () => pickScore(md.pez, 'asr'))) },
-  { key: 'pair_fixed', label: 'PAIR ASR', unit: 'pp', higher: false, on: false, note: 'Post-fix PAIR at its fixed sampling (t=1.0, 3 streams × 4 iterations).',
-    get: (md, id) => scPct(provValueFixedSampling(id, 'pair_fixed', md.pair_fixed, 'temp-t1.0-k12')) },
+  { key: 'asr_avg', label: 'Average ASR', unit: 'pp', higher: false, on: true,
+    note: `Mean ASR over ${SC_ASR_BENCHES.map(b => b[0]).join(', ')} — the Safety & EM table's default Avg; plotted only when all are present. Follows the page-wide judge, sampling, aggregation and threshold.`,
+    get: (md, id) => {
+      const vals = SC_ASR_BENCHES.map(([, f]) => scPct(f(md, id)));
+      return vals.some(v => v == null) ? null : vals.reduce((x, y) => x + y, 0) / vals.length;
+    },
+    detail: (md, id) => SC_ASR_BENCHES.map(([n, f]) => `${n} ${scFmt(scPct(f(md, id)), 'pp')}`).join(' · ') },
   { key: 'charter_overall', label: 'Charter MCQ accuracy', unit: 'pp', higher: true, on: true,
     note: 'All 678 items; swap-debiased logprob choice, no judge. Chance 25%.',
     get: md => scPct(md.charter_mcq?.acc) },
   { key: 'charter_hard', label: 'Charter MCQ accuracy, hard', unit: 'pp', higher: true, on: true, note: 'Hard band, 217 items.',
     get: md => scPct(md.charter_mcq?.band_acc?.hard) },
   { key: 'airisk_gen', label: 'AI-risk risky choice, generation', unit: 'pp', higher: false, on: true,
-    note: 'Share of dilemmas with a risky option where the parsed answer picks it.',
-    get: md => scPct(md.airisk?.generation?.overall_risky_rate) },
+    note: 'Share of dilemmas with a risky option where the parsed answer picks it; risky-behaviour tags the label audit marked Incorrect are dropped.',
+    get: md => scPct(md.airisk?.generation?.overall_risky_rate_excl_incorrect) },
   { key: 'airisk_logprob', label: 'AI-risk risky choice, logprob', unit: 'pp', higher: false, on: true,
-    note: 'Same dilemmas scored by the higher-probability action.',
-    get: md => scPct(md.airisk?.logprob?.overall_risky_rate) },
-  { key: 'em_aligned', label: 'EM aligned score', unit: 'pts', higher: true, on: false,
-    note: 'gpt-4o EM judge on the +SFT model before any fine-tuning, 0–100.',
-    get: md => scNum(independentOnly(md.em_base?.aligned_mean, md.em_base?.judge_version)) },
+    note: 'Same dilemmas scored by the higher-probability action; label-audit Incorrect tags dropped.',
+    get: md => scPct(md.airisk?.logprob?.overall_risky_rate_excl_incorrect) },
 ];
 
 // Per-checkpoint metrics of the fine-tuning chains (values already in % or
@@ -8678,12 +8675,10 @@ const SC_STATIC = [
 const SC_DYN_METRICS = {
   overall_asr:          { label: 'JailbreakBench ASR, direct', unit: 'pp', higher: false, note: 'JBB behaviours asked plainly; stored at threshold 50 for the selected judge × sampling.' },
   coherence:            { label: 'Coherence', unit: 'pts', higher: true, note: 'Judge coherence of the answers, 0–100.' },
-  misaligned_pct:       { label: 'EM misaligned answers', unit: 'pp', higher: false, note: 'Share of answers judged misaligned and coherent.' },
-  em_score:             { label: 'EM aligned score', unit: 'pts', higher: true, note: 'Mean judge alignment, 0–100.' },
   charter_overall:      { label: 'Charter MCQ accuracy', unit: 'pp', higher: true, note: 'All 678 items; swap-debiased logprob, no judge.' },
   charter_hard:         { label: 'Charter MCQ accuracy, hard', unit: 'pp', higher: true, note: 'Hard band, 217 items.' },
-  airisk_risky_gen:     { label: 'AI-risk risky choice, generation', unit: 'pp', higher: false, note: 'Always answering "Action 1" scores 70.9% here, so this saturates as fine-tuning collapses the model onto Action 1.' },
-  airisk_risky_logprob: { label: 'AI-risk risky choice, logprob', unit: 'pp', higher: false, note: 'Higher-probability action.' },
+  airisk_risky_gen_excl_incorrect:     { label: 'AI-risk risky choice, generation', unit: 'pp', higher: false, note: 'Label-audit Incorrect tags dropped. Always answering "Action 1" scores about 70% here, so this saturates as fine-tuning collapses the model onto Action 1.' },
+  airisk_risky_logprob_excl_incorrect: { label: 'AI-risk risky choice, logprob', unit: 'pp', higher: false, note: 'Higher-probability action; label-audit Incorrect tags dropped.' },
   airisk_action1_gen:   { label: 'AI-risk answers "Action 1"', unit: 'pp', higher: null, note: 'Position-bias check: the action order is never swapped.' },
 };
 const SC_SECTIONS = [
@@ -8691,18 +8686,13 @@ const SC_SECTIONS = [
   { key: 'alpaca', pill: 'Alpaca (benign FT)', samples: 20,
     sub: 'Alpaca 2k without safety data, Muon lr 5e-5, one epoch, 20 samples per step.',
     block: md => resolveDynProvenance(md.dynamics?.alpaca?.no_safety_2k_muon_lr5e5),
-    metrics: ['overall_asr', 'charter_overall', 'charter_hard', 'airisk_risky_gen', 'airisk_risky_logprob', 'airisk_action1_gen'],
-    on: ['overall_asr', 'charter_overall', 'charter_hard', 'airisk_risky_gen', 'airisk_risky_logprob'] },
+    metrics: ['overall_asr', 'charter_overall', 'charter_hard', 'airisk_risky_gen_excl_incorrect', 'airisk_risky_logprob_excl_incorrect', 'airisk_action1_gen'],
+    on: ['overall_asr', 'charter_overall', 'charter_hard', 'airisk_risky_gen_excl_incorrect', 'airisk_risky_logprob_excl_incorrect'] },
   { key: 'llmlat', pill: 'LLM-LAT (harmful FT)', samples: 16,
     sub: 'LLM-LAT harmful completions, Muon lr 1e-5, 16 samples per step. Coherence is not scored at step 0.',
     block: md => resolveDynProvenance(md.dynamics?.alpaca?.harm_llmlat_muon_lr1e5),
-    metrics: ['overall_asr', 'coherence', 'charter_overall', 'charter_hard', 'airisk_risky_gen', 'airisk_risky_logprob', 'airisk_action1_gen'],
-    on: ['overall_asr', 'coherence', 'charter_overall', 'charter_hard', 'airisk_risky_logprob'] },
-  { key: 'em', pill: 'EM (health advice)', samples: 16,
-    sub: 'EM paper recipe on incorrect health advice, Muon lr 1e-5, 16 samples per step; EM judged by DeepSeek V4 Flash, independent of the page-wide judge.',
-    block: md => md.dynamics?.em_values_ds_muon_lr1e5,
-    metrics: ['misaligned_pct', 'em_score', 'coherence', 'charter_overall', 'charter_hard', 'airisk_risky_gen', 'airisk_risky_logprob', 'airisk_action1_gen'],
-    on: ['misaligned_pct', 'em_score', 'coherence', 'charter_overall', 'charter_hard', 'airisk_risky_logprob'] },
+    metrics: ['overall_asr', 'coherence', 'charter_overall', 'charter_hard', 'airisk_risky_gen_excl_incorrect', 'airisk_risky_logprob_excl_incorrect', 'airisk_action1_gen'],
+    on: ['overall_asr', 'coherence', 'charter_overall', 'charter_hard', 'airisk_risky_logprob_excl_incorrect'] },
   { key: 'alpaca_adamw', pill: 'Alpaca, AdamW', samples: 20,
     sub: 'Alpaca 2k without safety data, AdamW lr 5e-5; run for the main asst / user+asst / raw families only.',
     block: md => resolveDynProvenance(md.dynamics?.alpaca?.no_safety_2k),
@@ -8715,7 +8705,7 @@ const SC_STAT_LABEL = {
 // points) the ratio is noise, so the point is left out.
 const SC_REL_FLOOR = 1;
 
-const SC_LS = 'mr-eval:scaling:v2';
+const SC_LS = 'mr-eval:scaling:v3';
 const SC = { built: false, charts: [], families: [], state: null, data: null };
 function scDefaultState() {
   return {
@@ -8973,7 +8963,8 @@ function renderScaling(data) {
     for (const def of SC_STATIC.filter(m => (st.metrics.static || []).includes(m.key))) {
       const pointOf = m => {
         const y = def.get(m.md, m.id);
-        return y == null ? null : { y, short: scFmt(y, def.unit), lines: [`${def.label}: ${scFmt(y, def.unit)}`] };
+        return y == null ? null : { y, short: scFmt(y, def.unit),
+          lines: [`${def.label}: ${scFmt(y, def.unit)}`, ...(def.detail ? [def.detail(m.md, m.id)] : [])] };
       };
       scCard(grid, def.label, def.note, scDatasets(models, pointOf, def, def.unit === 'pp' ? ' pp' : ' pts'),
         scYTitle(def, false), st.view !== 'abs');
