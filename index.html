@@ -1056,7 +1056,13 @@
         </label>
         <label>Step N <select id="sc-step"></select></label>
       </span>
-      <label class="sc-check"><input type="checkbox" id="sc-seeds" checked> seed replicates</label>
+      <label>Seeds
+        <select id="sc-seeds">
+          <option value="reps">Main run + replicates</option>
+          <option value="avg">Average over seeds</option>
+          <option value="main">Main run only</option>
+        </select>
+      </label>
       <span class="sc-spacer"></span>
       <button type="button" class="reset-btn" id="sc-reset">Reset</button>
     </div>
@@ -8711,7 +8717,7 @@ const SC_LS = 'mr-eval:scaling:v4';
 const SC = { built: false, charts: [], families: [], state: null, data: null };
 function scDefaultState() {
   return {
-    section: 'static', view: 'abs', stat: 'value', seeds: true,
+    section: 'static', view: 'abs', stat: 'value', seeds: 'reps',
     families: [...SC_DEFAULT_FAMILIES], comparisons: SC_DEFAULT_COMPARISONS.map(([t, r]) => ({ t, r, on: true })),
     metrics: Object.fromEntries([['static', SC_STATIC.filter(m => m.on).map(m => m.key)],
       ...SC_SECTIONS.filter(c => c.block).map(c => [c.key, [...c.on]])]),
@@ -8722,7 +8728,11 @@ function scLoadState() {
   const d = scDefaultState();
   try {
     const s = JSON.parse(localStorage.getItem(SC_LS) || 'null');
-    if (s && typeof s === 'object') return { ...d, ...s, metrics: { ...d.metrics, ...(s.metrics || {}) } };
+    if (s && typeof s === 'object') {
+      // `seeds` was a checkbox (true/false) before the average option existed.
+      if (typeof s.seeds === 'boolean') s.seeds = s.seeds ? 'reps' : 'main';
+      return { ...d, ...s, metrics: { ...d.metrics, ...(s.metrics || {}) } };
+    }
   } catch {}
   return d;
 }
@@ -8756,27 +8766,44 @@ const scSigned = (y, suffix) => `${y >= 0 ? '+' : '−'}${Math.abs(y).toFixed(1)
 
 // Chart.js datasets of one card. `pointOf(model)` returns {y, short, lines}
 // or null and already encodes the statistic; `suffix` is the unit of y.
-function scDatasets(models, pointOf, def, suffix) {
+// Seeds mode: 'main' plots the main run only, 'reps' adds each seed replicate
+// as hollow markers beside it, 'avg' plots one point per family and size, the
+// mean of the statistic over every run there (main + replicates; sizes with
+// only the main run keep its value). Wins in 'avg' are taken between the two
+// families' means.
+function scDatasets(models, pointOf, def, suffix, fmtY) {
   const st = SC.state;
   const out = [];
   const at = new Map(models.map(m => [`${m.family}|${m.replicate}|${m.size}`, m]));
   const sizes = [...new Set(models.map(m => m.size))].sort((a, b) => a - b);
-  const reps = ['main', ...(st.seeds ? [...new Set(models.map(m => m.replicate))].filter(r => r !== 'main').sort() : [])];
+  const seeds = [...new Set(models.map(m => m.replicate))].filter(r => r !== 'main').sort();
+  const reps = st.seeds === 'avg' ? ['avg'] : ['main', ...(st.seeds === 'reps' ? seeds : [])];
+  const solid = rep => rep === 'main' || rep === 'avg';
+  const pointAt = (fam, size, rep) => {
+    if (rep !== 'avg') { const m = at.get(`${fam}|${rep}|${size}`); return m ? pointOf(m) : null; }
+    const runs = ['main', ...seeds].map(r => [r, at.get(`${fam}|${r}|${size}`)])
+      .map(([r, m]) => [r, m && pointOf(m)]).filter(([, p]) => p);
+    if (!runs.length) return null;
+    const y = runs.reduce((acc, [, p]) => acc + p.y, 0) / runs.length;
+    const n = runs.length;
+    return { y, short: n > 1 ? `${fmtY(y)} (mean of ${n} seeds)` : `${fmtY(y)} (1 seed)`,
+      lines: [n > 1 ? `mean of ${n} seeds: ${fmtY(y)}` : `1 seed: ${fmtY(y)}`, ...runs.map(([r, p]) => `${r === 'main' ? 'main run' : r}: ${p.short}`)] };
+  };
+  const tag = rep => (solid(rep) ? '' : ` · ${rep}`);
   const style = (color, rep, extra) => ({
-    borderColor: color, backgroundColor: rep === 'main' ? color : '#fff',
-    pointRadius: rep === 'main' ? 5 : 6, pointHoverRadius: 8, pointBorderWidth: rep === 'main' ? 1.5 : 2.5,
-    borderWidth: 2.5, showLine: rep === 'main', tension: 0, ...extra,
+    borderColor: color, backgroundColor: solid(rep) ? color : '#fff',
+    pointRadius: solid(rep) ? 5 : 6, pointHoverRadius: 8, pointBorderWidth: solid(rep) ? 1.5 : 2.5,
+    borderWidth: 2.5, showLine: solid(rep), tension: 0, ...extra,
   });
-  const xOf = (size, rep) => rep === 'main' ? size : size * (1.04 + 0.035 * reps.indexOf(rep));
+  const xOf = (size, rep) => solid(rep) ? size : size * (1.04 + 0.035 * reps.indexOf(rep));
   if (st.view === 'abs') {
     for (const fam of st.families) {
       const sty = scFamilyStyle(fam);
       for (const rep of reps) {
         const pts = [];
         for (const size of sizes) {
-          const m = at.get(`${fam}|${rep}|${size}`);
-          const p = m && pointOf(m);
-          if (p) pts.push({ x: xOf(size, rep), y: p.y, tip: [`${scFamilyLabel(fam)} · ${size}B${rep === 'main' ? '' : ` · ${rep}`}`, ...p.lines] });
+          const p = pointAt(fam, size, rep);
+          if (p) pts.push({ x: xOf(size, rep), y: p.y, tip: [`${scFamilyLabel(fam)} · ${size}B${tag(rep)}`, ...p.lines] });
         }
         if (pts.length) out.push({ label: scFamilyLabel(fam), data: pts, ...style(sty.color, rep, { borderDash: sty.dash, pointStyle: sty.point }) });
       }
@@ -8790,13 +8817,12 @@ function scDatasets(models, pointOf, def, suffix) {
     for (const rep of reps) {
       const pts = [];
       for (const size of sizes) {
-        const mt = at.get(`${c.t}|${rep}|${size}`), mr = at.get(`${c.r}|${rep}|${size}`);
-        const pt = mt && pointOf(mt), pr = mr && pointOf(mr);
+        const pt = pointAt(c.t, size, rep), pr = pointAt(c.r, size, rep);
         if (!pt || !pr) continue;
         let y = (pt.y - pr.y) * sign;
         if (st.view === 'rel') { if (Math.abs(pr.y) < SC_REL_FLOOR) continue; y = y / Math.abs(pr.y) * 100; }
         pts.push({ x: xOf(size, rep), y, tip: [
-          `${scFamilyLabel(c.t)} vs ${scFamilyLabel(c.r)} · ${size}B${rep === 'main' ? '' : ` · ${rep}`}`,
+          `${scFamilyLabel(c.t)} vs ${scFamilyLabel(c.r)} · ${size}B${tag(rep)}`,
           `win ${scSigned(y, st.view === 'rel' ? '%' : suffix)}`,
           `${scFamilyLabel(c.t)}: ${pt.short}`, `${scFamilyLabel(c.r)}: ${pr.short}`] });
       }
@@ -8865,7 +8891,7 @@ function scRenderControls(sec, steps, step, spi) {
     `<button type="button" role="tab" data-sec="${s.key}" class="${s.key === st.section ? 'active' : ''}" aria-selected="${s.key === st.section}">${jbEscape(s.pill)}</button>`).join('');
   document.getElementById('sc-view').value = st.view;
   document.getElementById('sc-stat').value = st.stat;
-  document.getElementById('sc-seeds').checked = st.seeds;
+  document.getElementById('sc-seeds').value = st.seeds;
   document.getElementById('sc-ft').hidden = !sec.block;
   document.getElementById('sc-step').innerHTML = (steps || []).map(s =>
     `<option value="${s}"${s === step ? ' selected' : ''}>${s} · ${(s * spi).toLocaleString()} samples</option>`).join('');
@@ -8888,10 +8914,15 @@ function scRenderControls(sec, steps, step, spi) {
   const on = new Set(st.metrics[sec.key] || []);
   document.getElementById('sc-metrics').innerHTML = keys.map(k =>
     `<span class="sc-chip${on.has(k) ? '' : ' off'}" data-k="${k}" role="button" aria-pressed="${on.has(k)}">${jbEscape(labelOf(k))}</span>`).join('');
+  const seedNote = {
+    reps: st.view === 'abs' ? ' Hollow markers = seed replicates (1.7B), a rough guide to run-to-run noise.' : ' Hollow markers compare seed replicates where both families have one.',
+    avg: ' Each point is the mean over the seeds run at that size (main + replicates; 1.7B only so far, a single run elsewhere); hover for the per-seed values.',
+    main: ' Main runs only.',
+  }[st.seeds] || '';
   const how = {
-    abs: 'One line per family; hollow markers = seed replicates (1.7B), a rough guide to run-to-run noise.',
-    diff: 'Treatment minus reference, signed so above zero = treatment better (lower ASR / risk / misalignment, higher accuracy / alignment / coherence). Hollow markers compare seed replicates where both exist.',
-    rel: `The win as a % of the reference's own value; points whose reference is within ±${SC_REL_FLOOR} of zero are left out.`,
+    abs: 'One line per family.' + seedNote,
+    diff: 'Treatment minus reference, signed so above zero = treatment better (lower ASR / risk / misalignment, higher accuracy / alignment / coherence).' + seedNote,
+    rel: `The win as a % of the reference's own value; points whose reference is within ±${SC_REL_FLOOR} of zero are left out.` + seedNote,
   }[st.view];
   document.getElementById('sc-note').textContent = `${sec.sub} ${sec.block ? `Plotted: ${SC_STAT_LABEL[st.stat]} (step 0 = the +SFT model). ` : ''}${how}`;
 }
@@ -8912,7 +8943,7 @@ function scSetupOnce(data) {
   on('sc-view', 'change', e => { st().view = e.target.value; rr(); });
   on('sc-stat', 'change', e => { st().stat = e.target.value; rr(); });
   on('sc-step', 'change', e => { st().step[st().section] = +e.target.value; rr(); });
-  on('sc-seeds', 'change', e => { st().seeds = e.target.checked; rr(); });
+  on('sc-seeds', 'change', e => { st().seeds = e.target.value; rr(); });
   on('sc-reset', 'click', () => { const sec = st().section; SC.state = scDefaultState(); SC.state.section = sec; rr(); });
   on('sc-families', 'click', e => {
     const chip = e.target.closest('.sc-chip'); if (!chip) return;
@@ -8966,7 +8997,7 @@ function renderScaling(data) {
         return y == null ? null : { y, short: scFmt(y, def.unit),
           lines: [`${def.label}: ${scFmt(y, def.unit)}`, ...(def.detail ? [def.detail(m.md, m.id)] : [])] };
       };
-      scCard(grid, def.label, def.note, scDatasets(models, pointOf, def, def.unit === 'pp' ? ' pp' : ' pts'),
+      scCard(grid, def.label, def.note, scDatasets(models, pointOf, def, def.unit === 'pp' ? ' pp' : ' pts', y => scFmt(y, def.unit)),
         scYTitle(def, false), st.view !== 'abs');
     }
     return;
@@ -8985,16 +9016,17 @@ function renderScaling(data) {
   for (const key of sec.metrics.filter(k => (st.metrics[sec.key] || []).includes(k))) {
     const def = SC_DYN_METRICS[key];
     const suffix = def.unit === 'pp' ? ' pp' : ' pts';
+    const fmtY = y => (st.stat === 'delta' ? scSigned(y, suffix) : scFmt(y, def.unit));
     const pointOf = m => {
       const r = scChainStat(m.blk, key, step, st.stat, def.higher);
       if (!r) return null;
-      const yTxt = st.stat === 'value' || st.stat === 'worst' ? scFmt(r.y, def.unit) : scSigned(r.y, suffix);
+      const yTxt = fmtY(r.y);
       const path = `${scFmt(r.v0, def.unit)} → ${scFmt(r.v, def.unit)} (step 0 → ${step})`;
       return { y: r.y, short: `${yTxt}  [${path}]`,
         lines: [`${SC_STAT_LABEL[st.stat]}: ${yTxt}`, path, ...(r.worstStep != null ? [`worst at step ${r.worstStep}`] : [])] };
     };
     const noStep0 = st.stat === 'delta' && withBlk.every(m => scNum(m.blk[key]?.[0]) == null);
-    scCard(grid, def.label, def.note, scDatasets(withBlk, pointOf, def, suffix),
+    scCard(grid, def.label, def.note, scDatasets(withBlk, pointOf, def, suffix, fmtY),
       scYTitle(def, true), st.view !== 'abs' || st.stat === 'delta',
       noStep0 ? `${def.label} is not scored at step 0, so the change from step 0 is undefined. Pick "Value after fine-tuning" or "Worst value".` : null);
   }
