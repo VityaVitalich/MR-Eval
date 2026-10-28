@@ -550,6 +550,34 @@
   /* Bound the result lists so the explorer's cards don't push the pairwise
      comparison panel far below the fold — each scrolls independently. */
   #airisk-explorer, #airisk-compare { max-height: 460px; overflow-y: auto; }
+  /* Scaling tab */
+  .sc-pills { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+  .sc-pills button { font-size: 14px; padding: 6px 14px; border-radius: 999px; border: 1px solid var(--border-strong); background: var(--bg); color: var(--text); cursor: pointer; }
+  .sc-pills button:hover { background: var(--hover); }
+  .sc-pills button.active { background: var(--text); border-color: var(--text); color: #fff; }
+  .sc-bar { padding: 10px 14px; }
+  .sc-line { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; margin: 4px 0; font-size: 13px; color: var(--muted); }
+  .sc-line[hidden], .sc-ft[hidden] { display: none; }
+  .sc-line label { display: inline-flex; align-items: center; gap: 6px; }
+  .sc-line select { background: var(--bg); color: var(--text); border: 1px solid var(--border-strong); border-radius: 4px; padding: 4px 6px; font-size: 13px; }
+  .sc-ft { display: inline-flex; gap: 14px; align-items: center; flex-wrap: wrap; padding-left: 14px; border-left: 1px solid var(--border); }
+  .sc-check { color: var(--text); }
+  .sc-spacer { flex: 1; }
+  .sc-key { min-width: 84px; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+  .sc-chips { display: inline-flex; flex-wrap: wrap; gap: 6px; flex: 1; }
+  .sc-chip { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text); background: var(--panel-alt); border: 1px solid var(--border); padding: 3px 9px; border-radius: 999px; cursor: pointer; user-select: none; }
+  .sc-chip:hover { background: var(--hover); }
+  .sc-chip.off { opacity: 0.4; }
+  .sc-chip .sc-x { color: var(--muted); border: none; background: none; cursor: pointer; padding: 0 0 0 2px; font-size: 15px; line-height: 1; }
+  .sc-metric-chips .sc-chip { font-size: 12px; }
+  .sc-add { display: inline-flex; gap: 6px; align-items: center; }
+  .sc-note { margin: 6px 0 0; font-size: 12px; color: var(--muted); }
+  .sc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 460px), 1fr)); gap: 12px; }
+  .sc-card { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px 8px; min-width: 0; }
+  .sc-card h4 { margin: 0 0 6px; font-size: 15px; font-weight: 600; display: flex; gap: 6px; align-items: baseline; }
+  .sc-card h4 .sc-info { color: var(--muted); font-weight: 400; font-size: 12px; cursor: help; border-bottom: 1px dotted var(--muted); }
+  .sc-canvas { position: relative; height: 320px; }
+  .sc-empty { height: 100%; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 13px; text-align: center; padding: 0 20px; }
 </style>
 </head>
 <body>
@@ -602,6 +630,7 @@
   <button data-tab="morebench">MoReBench</button>
   <button data-tab="charter-mcq">Charter MCQ</button>
   <button data-tab="dynamics">Dynamics</button>
+  <button data-tab="scaling">Scaling</button>
   <button data-tab="canaries">Canaries</button>
   <button data-tab="diagnostics">Diagnostics</button>
   <button data-tab="judge-audit">Judge audit</button>
@@ -1001,6 +1030,45 @@
     <div class="chart-card"><canvas id="pez-chart"></canvas></div>
     <div class="dyn-table" id="pez-table"></div>
   </div>
+</section>
+
+<section id="scaling">
+  <!-- 1PP model-size scaling: each card plots one eval against model size
+       (0.5B / 1B / 1.7B, +SFT models). Built by renderScaling() from
+       data.json alone; controls live in #sc-bar, cards in #sc-grid. -->
+  <div class="sc-pills" id="sc-pills" role="tablist"></div>
+  <div class="panel sc-bar" id="sc-bar">
+    <div class="sc-line">
+      <label>Show
+        <select id="sc-view">
+          <option value="abs">Absolute values</option>
+          <option value="diff">Win over reference</option>
+          <option value="rel">Win over reference, % of reference</option>
+        </select>
+      </label>
+      <span class="sc-ft" id="sc-ft">
+        <label>Statistic
+          <select id="sc-stat">
+            <option value="value">Value after fine-tuning</option>
+            <option value="delta">Change from step 0</option>
+            <option value="reldelta">Change from step 0, % of step 0</option>
+            <option value="worst">Worst value up to step N</option>
+          </select>
+        </label>
+        <label>Step N <select id="sc-step"></select></label>
+      </span>
+      <label class="sc-check"><input type="checkbox" id="sc-seeds" checked> seed replicates</label>
+      <span class="sc-spacer"></span>
+      <button type="button" class="reset-btn" id="sc-reset">Reset</button>
+    </div>
+    <div class="sc-line" id="sc-fam-row"><span class="sc-key">Families</span><span class="sc-chips" id="sc-families"></span></div>
+    <div class="sc-line" id="sc-cmp-row"><span class="sc-key">Comparisons</span><span class="sc-chips" id="sc-comparisons"></span>
+      <span class="sc-add"><select id="sc-add-t"></select><span>vs</span><select id="sc-add-r"></select><button type="button" class="reset-btn" id="sc-add-btn">+ add</button></span>
+    </div>
+    <div class="sc-line"><span class="sc-key">Metrics</span><span class="sc-chips sc-metric-chips" id="sc-metrics"></span></div>
+    <p class="sc-note" id="sc-note"></p>
+  </div>
+  <div class="sc-grid" id="sc-grid"></div>
 </section>
 
 <section id="canaries">
@@ -2301,6 +2369,9 @@ document.querySelectorAll('nav button').forEach(btn => {
     if (btn.dataset.tab === 'judge-audit') ensureJudgeAuditLoaded();
     if (btn.dataset.tab === 'judge-benchmark') ensureJudgeBenchmarkLoaded();
     if (btn.dataset.tab === 'judge-versions') renderJudgeVersions();
+    if (btn.dataset.tab === 'scaling' && globalData) renderScaling(globalData);
+    // The model filter does not apply to Scaling (it has its own family chips).
+    document.getElementById('filter-panel').style.display = btn.dataset.tab === 'scaling' ? 'none' : '';
   });
 });
 
@@ -5580,6 +5651,7 @@ function rerenderAll(data) {
   renderSignif(data);
   renderAblations(data);
   renderCanaries(data);
+  renderScaling(data);
   // Dynamics picker + chart
   if (window.__dynPanels) {
     // Every panel, not a hand-kept list: a panel left out here keeps the
@@ -8508,6 +8580,434 @@ function bestDanASR(dan) {
   if (failed === 0) console.log(`[selftest] ${total} OK`);
   else console.error(`[selftest] ${failed}/${total} FAILURES — see above`);
 })();
+
+// ── SCALING (1PP model size) ──────────────────────────────────────────────
+// Every card plots one eval against 1PP model size (0.5B / 1B / 1.7B) for the
+// +SFT models. A family is a pretraining condition plus variant (asst,
+// ua_rawanneal, ...); seed replicates (`_seed<N>` aliases, 1.7B so far) plot
+// as hollow markers beside the main run. Absolute view = one line per family; the win views plot
+// treatment minus reference per comparison pair, signed so that positive =
+// the treatment is better on that metric. Fine-tuning sections read the
+// per-checkpoint dynamics blocks (step 0 = the +SFT model itself) and reduce
+// each trajectory to one number with the statistic selector.
+const SC_SIZES = { '0p5b': 0.5, '1b': 1, '1p7b': 1.7 };
+const SC_COND_LABEL = { asst: 'asst', ua: 'user+asst', raw: 'raw docs' };
+const SC_VARIANT_LABEL = { '': '', rawanneal: 'raw→conv cooldown', tokmatch: 'token-matched', tokmatchog: 'token-matched (orig. docs)' };
+const SC_COND_COLOR = { asst: '#0d9488', ua: '#7c3aed', raw: '#d97706' };
+const SC_VARIANT_DASH = { '': [], rawanneal: [7, 4], tokmatch: [2, 3], tokmatchog: [8, 3, 2, 3] };
+const SC_VARIANT_POINT = { '': 'circle', rawanneal: 'rect', tokmatch: 'triangle', tokmatchog: 'rectRot' };
+const SC_CMP_COLORS = ['#2563eb', '#dc2626', '#059669', '#9333ea', '#ea580c', '#0891b2', '#be185d', '#4b5563'];
+const SC_DEFAULT_FAMILIES = ['asst', 'ua', 'raw', 'asst_rawanneal', 'ua_rawanneal'];
+const SC_DEFAULT_COMPARISONS = [['asst', 'raw'], ['ua', 'raw'], ['asst', 'asst_rawanneal'], ['ua', 'ua_rawanneal']];
+
+function scParseModel(id) {
+  const m = id.match(/^1pp_(0p5b|1b|1p7b)_(asst|ua|raw)(?:_(.+))?_sft$/);
+  if (!m) return null;
+  let variant = m[3] || '', replicate = 'main';
+  const sm = variant.match(/(?:^|_)seed(\d+)$/);
+  if (sm) { variant = variant.slice(0, sm.index); replicate = `seed ${sm[1]}`; }
+  return { id, size: SC_SIZES[m[1]], cond: m[2], variant, family: variant ? `${m[2]}_${variant}` : m[2], replicate };
+}
+function scFamilyParts(fam) {
+  const i = fam.indexOf('_');
+  return i < 0 ? { cond: fam, variant: '' } : { cond: fam.slice(0, i), variant: fam.slice(i + 1) };
+}
+function scFamilyLabel(fam) {
+  const { cond, variant } = scFamilyParts(fam);
+  const vl = SC_VARIANT_LABEL[variant] ?? variant;
+  return (SC_COND_LABEL[cond] || cond) + (vl ? ` · ${vl}` : '');
+}
+function scFamilyStyle(fam) {
+  const { cond, variant } = scFamilyParts(fam);
+  return { color: SC_COND_COLOR[cond] || '#4b5563', dash: SC_VARIANT_DASH[variant] || [4, 2], point: SC_VARIANT_POINT[variant] || 'star' };
+}
+function scGlyph(color, dash, point) {
+  const da = dash && dash.length ? ` stroke-dasharray="${dash.join(' ')}"` : '';
+  const mk = point === 'rect' ? `<rect x="11" y="2" width="8" height="8" fill="${color}"/>`
+    : point === 'triangle' ? `<path d="M15 1.5 L19.5 10 L10.5 10 Z" fill="${color}"/>`
+    : point === 'rectRot' ? `<path d="M15 1 L20 6 L15 11 L10 6 Z" fill="${color}"/>`
+    : `<circle cx="15" cy="6" r="4" fill="${color}"/>`;
+  return `<svg width="30" height="12" aria-hidden="true"><line x1="1" x2="29" y1="6" y2="6" stroke="${color}" stroke-width="2.5"${da}/>${mk}</svg>`;
+}
+
+// Static evals of the +SFT model. ASR cells go through the same provenance
+// accessors as the Safety & EM table, so the page-wide Judge / Sampling /
+// Aggregation / threshold selectors apply; MISSING renders as no point.
+const scNum = v => (v == null || v === MISSING || !Number.isFinite(v)) ? null : v;
+const scPct = v => { const x = scNum(v); return x == null ? null : x * 100; };
+const SC_STATIC = [
+  { key: 'jbb', label: 'JailbreakBench ASR', unit: 'pp', higher: false, on: true,
+    note: 'Mean over the JBB attack methods; follows the page-wide judge, sampling, aggregation and threshold.',
+    get: (md, id) => scPct(provValue(id, 'jbb', md.jbb, () => resolveJbb(md)?.overall ?? null)) },
+  { key: 'jbb_direct', label: 'JailbreakBench ASR, direct', unit: 'pp', higher: false, on: false,
+    note: 'The 100 JBB behaviours asked plainly, no attack.',
+    get: (md, id) => scPct(provJbbMethod(id, md.jbb, 'direct', () => resolveJbb(md)?.per?.direct ?? null)) },
+  { key: 'advbench', label: 'AdvBench ASR', unit: 'pp', higher: false, on: true, note: '520 AdvBench behaviours, direct.',
+    get: (md, id) => scPct(provValue(id, 'advbench', md.advbench, () => pickASR(md.advbench, 'llm_asr'))) },
+  { key: 'strongreject', label: 'StrongREJECT ASR', unit: 'pp', higher: false, on: false, note: 'StrongREJECT prompts, rule judge.',
+    get: (md, id) => scPct(provValue(id, 'strongreject', md.strongreject, () => null)) },
+  { key: 'dans', label: 'DAN ASR', unit: 'pp', higher: false, on: false, note: 'DAN templates, mean over templates.',
+    get: (md, id) => scPct(provValue(id, 'dans', md.dans, () => pickASR(md.dans, 'overall_llm_asr'))) },
+  { key: 'fortress', label: 'FORTRESS ASR', unit: 'pp', higher: false, on: false, note: 'ScaleAI FORTRESS public set.',
+    get: (md, id) => scPct(provValue(id, 'fortress', md.fortress, () => null)) },
+  { key: 'pap', label: 'PAP ASR', unit: 'pp', higher: false, on: false, note: 'Persuasive adversarial prompts.',
+    get: (md, id) => scPct(provValue(id, 'pap', md.pap, () => pickASR(md.pap, 'overall_llm_asr'))) },
+  { key: 'pez', label: 'PEZ ASR', unit: 'pp', higher: false, on: false, note: 'PEZ soft-prompt attack.',
+    get: (md, id) => scPct(provValue(id, 'pez', md.pez, () => pickScore(md.pez, 'asr'))) },
+  { key: 'pair_fixed', label: 'PAIR ASR', unit: 'pp', higher: false, on: false, note: 'Post-fix PAIR at its fixed sampling (t=1.0, 3 streams × 4 iterations).',
+    get: (md, id) => scPct(provValueFixedSampling(id, 'pair_fixed', md.pair_fixed, 'temp-t1.0-k12')) },
+  { key: 'charter_overall', label: 'Charter MCQ accuracy', unit: 'pp', higher: true, on: true,
+    note: 'All 678 items; swap-debiased logprob choice, no judge. Chance 25%.',
+    get: md => scPct(md.charter_mcq?.acc) },
+  { key: 'charter_hard', label: 'Charter MCQ accuracy, hard', unit: 'pp', higher: true, on: true, note: 'Hard band, 217 items.',
+    get: md => scPct(md.charter_mcq?.band_acc?.hard) },
+  { key: 'airisk_gen', label: 'AI-risk risky choice, generation', unit: 'pp', higher: false, on: true,
+    note: 'Share of dilemmas with a risky option where the parsed answer picks it.',
+    get: md => scPct(md.airisk?.generation?.overall_risky_rate) },
+  { key: 'airisk_logprob', label: 'AI-risk risky choice, logprob', unit: 'pp', higher: false, on: true,
+    note: 'Same dilemmas scored by the higher-probability action.',
+    get: md => scPct(md.airisk?.logprob?.overall_risky_rate) },
+  { key: 'em_aligned', label: 'EM aligned score', unit: 'pts', higher: true, on: false,
+    note: 'gpt-4o EM judge on the +SFT model before any fine-tuning, 0–100.',
+    get: md => scNum(independentOnly(md.em_base?.aligned_mean, md.em_base?.judge_version)) },
+];
+
+// Per-checkpoint metrics of the fine-tuning chains (values already in % or
+// 0-100 points). higher: null = no "better" direction (position-bias check),
+// so its win is the plain treatment minus reference.
+const SC_DYN_METRICS = {
+  overall_asr:          { label: 'JailbreakBench ASR, direct', unit: 'pp', higher: false, note: 'JBB behaviours asked plainly; stored at threshold 50 for the selected judge × sampling.' },
+  coherence:            { label: 'Coherence', unit: 'pts', higher: true, note: 'Judge coherence of the answers, 0–100.' },
+  misaligned_pct:       { label: 'EM misaligned answers', unit: 'pp', higher: false, note: 'Share of answers judged misaligned and coherent.' },
+  em_score:             { label: 'EM aligned score', unit: 'pts', higher: true, note: 'Mean judge alignment, 0–100.' },
+  charter_overall:      { label: 'Charter MCQ accuracy', unit: 'pp', higher: true, note: 'All 678 items; swap-debiased logprob, no judge.' },
+  charter_hard:         { label: 'Charter MCQ accuracy, hard', unit: 'pp', higher: true, note: 'Hard band, 217 items.' },
+  airisk_risky_gen:     { label: 'AI-risk risky choice, generation', unit: 'pp', higher: false, note: 'Always answering "Action 1" scores 70.9% here, so this saturates as fine-tuning collapses the model onto Action 1.' },
+  airisk_risky_logprob: { label: 'AI-risk risky choice, logprob', unit: 'pp', higher: false, note: 'Higher-probability action.' },
+  airisk_action1_gen:   { label: 'AI-risk answers "Action 1"', unit: 'pp', higher: null, note: 'Position-bias check: the action order is never swapped.' },
+};
+const SC_SECTIONS = [
+  { key: 'static', pill: '+SFT models', sub: 'The +SFT models as released, no further fine-tuning.' },
+  { key: 'alpaca', pill: 'Alpaca (benign FT)', samples: 20,
+    sub: 'Alpaca 2k without safety data, Muon lr 5e-5, one epoch, 20 samples per step.',
+    block: md => resolveDynProvenance(md.dynamics?.alpaca?.no_safety_2k_muon_lr5e5),
+    metrics: ['overall_asr', 'charter_overall', 'charter_hard', 'airisk_risky_gen', 'airisk_risky_logprob', 'airisk_action1_gen'],
+    on: ['overall_asr', 'charter_overall', 'charter_hard', 'airisk_risky_gen', 'airisk_risky_logprob'] },
+  { key: 'llmlat', pill: 'LLM-LAT (harmful FT)', samples: 16,
+    sub: 'LLM-LAT harmful completions, Muon lr 1e-5, 16 samples per step. Coherence is not scored at step 0.',
+    block: md => resolveDynProvenance(md.dynamics?.alpaca?.harm_llmlat_muon_lr1e5),
+    metrics: ['overall_asr', 'coherence', 'charter_overall', 'charter_hard', 'airisk_risky_gen', 'airisk_risky_logprob', 'airisk_action1_gen'],
+    on: ['overall_asr', 'coherence', 'charter_overall', 'charter_hard', 'airisk_risky_logprob'] },
+  { key: 'em', pill: 'EM (health advice)', samples: 16,
+    sub: 'EM paper recipe on incorrect health advice, Muon lr 1e-5, 16 samples per step; EM judged by DeepSeek V4 Flash, independent of the page-wide judge.',
+    block: md => md.dynamics?.em_values_ds_muon_lr1e5,
+    metrics: ['misaligned_pct', 'em_score', 'coherence', 'charter_overall', 'charter_hard', 'airisk_risky_gen', 'airisk_risky_logprob', 'airisk_action1_gen'],
+    on: ['misaligned_pct', 'em_score', 'coherence', 'charter_overall', 'charter_hard', 'airisk_risky_logprob'] },
+  { key: 'alpaca_adamw', pill: 'Alpaca, AdamW', samples: 20,
+    sub: 'Alpaca 2k without safety data, AdamW lr 5e-5; run for the main asst / user+asst / raw families only.',
+    block: md => resolveDynProvenance(md.dynamics?.alpaca?.no_safety_2k),
+    metrics: ['overall_asr', 'charter_overall', 'charter_hard'], on: ['overall_asr', 'charter_overall', 'charter_hard'] },
+];
+const SC_STAT_LABEL = {
+  value: 'value at step N', delta: 'change from step 0 to N', reldelta: 'change from step 0 to N, % of step 0', worst: 'worst value over steps 0…N',
+};
+// Relative quantities divide by a reference; below this magnitude (pp or
+// points) the ratio is noise, so the point is left out.
+const SC_REL_FLOOR = 1;
+
+const SC_LS = 'mr-eval:scaling:v2';
+const SC = { built: false, charts: [], families: [], state: null, data: null };
+function scDefaultState() {
+  return {
+    section: 'static', view: 'abs', stat: 'value', seeds: true,
+    families: [...SC_DEFAULT_FAMILIES], comparisons: SC_DEFAULT_COMPARISONS.map(([t, r]) => ({ t, r, on: true })),
+    metrics: Object.fromEntries([['static', SC_STATIC.filter(m => m.on).map(m => m.key)],
+      ...SC_SECTIONS.filter(c => c.block).map(c => [c.key, [...c.on]])]),
+    step: {},
+  };
+}
+function scLoadState() {
+  const d = scDefaultState();
+  try {
+    const s = JSON.parse(localStorage.getItem(SC_LS) || 'null');
+    if (s && typeof s === 'object') return { ...d, ...s, metrics: { ...d.metrics, ...(s.metrics || {}) } };
+  } catch {}
+  return d;
+}
+function scSaveState() { try { localStorage.setItem(SC_LS, JSON.stringify(SC.state)); } catch {} }
+
+function scModels(data) {
+  return Object.keys(data.models).map(scParseModel).filter(Boolean).map(p => ({ ...p, md: data.models[p.id] || {} }));
+}
+
+// Trajectory statistic at step N. null when the model has no checkpoint N or
+// the statistic's inputs are missing (never interpolated or substituted).
+function scChainStat(blk, metric, step, stat, higher) {
+  if (!blk?.iterations?.length) return null;
+  const ys = blk[metric];
+  if (!Array.isArray(ys)) return null;
+  const i = blk.iterations.indexOf(step);
+  if (i < 0) return null;
+  const v = scNum(ys[i]), v0 = scNum(ys[0]);
+  if (stat === 'value') return v == null ? null : { y: v, v0, v };
+  if (stat === 'delta') return v == null || v0 == null ? null : { y: v - v0, v0, v };
+  if (stat === 'reldelta') return v == null || v0 == null || Math.abs(v0) < SC_REL_FLOOR ? null : { y: (v - v0) / Math.abs(v0) * 100, v0, v };
+  // worst: the least favourable value seen up to N (max for lower-is-better).
+  const upto = ys.slice(0, i + 1).map(scNum);
+  const seen = upto.filter(x => x != null);
+  if (!seen.length) return null;
+  const w = higher === true ? Math.min(...seen) : Math.max(...seen);
+  return { y: w, v0, v, worstStep: blk.iterations[upto.indexOf(w)] };
+}
+
+const scFmt = (y, unit) => y == null ? '—' : `${y.toFixed(1)}${unit === 'pp' ? '%' : ''}`;
+const scSigned = (y, suffix) => `${y >= 0 ? '+' : '−'}${Math.abs(y).toFixed(1)}${suffix}`;
+
+// Chart.js datasets of one card. `pointOf(model)` returns {y, short, lines}
+// or null and already encodes the statistic; `suffix` is the unit of y.
+function scDatasets(models, pointOf, def, suffix) {
+  const st = SC.state;
+  const out = [];
+  const at = new Map(models.map(m => [`${m.family}|${m.replicate}|${m.size}`, m]));
+  const sizes = [...new Set(models.map(m => m.size))].sort((a, b) => a - b);
+  const reps = ['main', ...(st.seeds ? [...new Set(models.map(m => m.replicate))].filter(r => r !== 'main').sort() : [])];
+  const style = (color, rep, extra) => ({
+    borderColor: color, backgroundColor: rep === 'main' ? color : '#fff',
+    pointRadius: rep === 'main' ? 5 : 6, pointHoverRadius: 8, pointBorderWidth: rep === 'main' ? 1.5 : 2.5,
+    borderWidth: 2.5, showLine: rep === 'main', tension: 0, ...extra,
+  });
+  const xOf = (size, rep) => rep === 'main' ? size : size * (1.04 + 0.035 * reps.indexOf(rep));
+  if (st.view === 'abs') {
+    for (const fam of st.families) {
+      const sty = scFamilyStyle(fam);
+      for (const rep of reps) {
+        const pts = [];
+        for (const size of sizes) {
+          const m = at.get(`${fam}|${rep}|${size}`);
+          const p = m && pointOf(m);
+          if (p) pts.push({ x: xOf(size, rep), y: p.y, tip: [`${scFamilyLabel(fam)} · ${size}B${rep === 'main' ? '' : ` · ${rep}`}`, ...p.lines] });
+        }
+        if (pts.length) out.push({ label: scFamilyLabel(fam), data: pts, ...style(sty.color, rep, { borderDash: sty.dash, pointStyle: sty.point }) });
+      }
+    }
+    return out;
+  }
+  const sign = def.higher === false ? -1 : 1;
+  st.comparisons.forEach((c, ci) => {
+    if (!c.on) return;
+    const color = SC_CMP_COLORS[ci % SC_CMP_COLORS.length];
+    for (const rep of reps) {
+      const pts = [];
+      for (const size of sizes) {
+        const mt = at.get(`${c.t}|${rep}|${size}`), mr = at.get(`${c.r}|${rep}|${size}`);
+        const pt = mt && pointOf(mt), pr = mr && pointOf(mr);
+        if (!pt || !pr) continue;
+        let y = (pt.y - pr.y) * sign;
+        if (st.view === 'rel') { if (Math.abs(pr.y) < SC_REL_FLOOR) continue; y = y / Math.abs(pr.y) * 100; }
+        pts.push({ x: xOf(size, rep), y, tip: [
+          `${scFamilyLabel(c.t)} vs ${scFamilyLabel(c.r)} · ${size}B${rep === 'main' ? '' : ` · ${rep}`}`,
+          `win ${scSigned(y, st.view === 'rel' ? '%' : suffix)}`,
+          `${scFamilyLabel(c.t)}: ${pt.short}`, `${scFamilyLabel(c.r)}: ${pr.short}`] });
+      }
+      if (pts.length) out.push({ label: `${c.t} vs ${c.r}`, data: pts, ...style(color, rep, { pointStyle: 'circle' }) });
+    }
+  });
+  return out;
+}
+
+function scChart(canvas, datasets, yTitle, zeroLine) {
+  const zero = c => zeroLine && c.tick && c.tick.value === 0;
+  return new Chart(canvas.getContext('2d'), {
+    type: 'line',
+    data: { datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false, animation: false,
+      layout: { padding: { top: 6, right: 8 } },
+      interaction: { mode: 'nearest', intersect: true },
+      scales: {
+        x: { type: 'logarithmic', min: 0.43, max: 1.95,
+          afterBuildTicks: ax => { ax.ticks = [0.5, 1, 1.7].map(value => ({ value })); },
+          ticks: { callback: v => `${v}B`, color: '#374151', font: { size: 13 } },
+          grid: { color: '#f1f3f5' }, border: { color: '#c8ccd3' } },
+        y: { beginAtZero: zeroLine,
+          title: { display: true, text: yTitle, color: '#6b7280', font: { size: 12 } },
+          ticks: { color: '#374151', font: { size: 13 }, maxTicksLimit: 7 },
+          grid: { color: c => (zero(c) ? '#6b7280' : '#eceef1'), lineWidth: c => (zero(c) ? 1.5 : 1) },
+          border: { display: false } },
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: { padding: 10, bodyFont: { size: 13 }, displayColors: false,
+          callbacks: { title: () => '', label: c => c.raw.tip } },
+      },
+    },
+  });
+}
+
+function scCard(grid, title, note, datasets, yTitle, zeroLine, emptyMsg) {
+  const card = document.createElement('div');
+  card.className = 'sc-card';
+  card.innerHTML = `<h4>${jbEscape(title)} <span class="sc-info" title="${jbEscape(note)}">info</span></h4><div class="sc-canvas"><canvas></canvas></div>`;
+  grid.append(card);
+  if (!datasets.length) {
+    card.querySelector('.sc-canvas').innerHTML = `<div class="sc-empty">${jbEscape(emptyMsg || 'No data for this selection: no model has this metric at the chosen step, or no family / comparison is switched on.')}</div>`;
+    return;
+  }
+  SC.charts.push(scChart(card.querySelector('canvas'), datasets, yTitle, zeroLine));
+}
+
+function scYTitle(def, isChain) {
+  const st = SC.state;
+  const du = def.unit === 'pp' ? 'pp' : 'points';
+  if (st.view === 'rel') return 'win, % of reference  (+ = better)';
+  if (st.view === 'diff') {
+    if (def.higher === null) return `treatment − reference (${du})`;
+    return `win (${isChain && st.stat === 'reldelta' ? 'pp of relative change' : du})  (+ = better)`;
+  }
+  if (isChain && st.stat === 'delta') return `change from step 0 (${du})`;
+  if (isChain && st.stat === 'reldelta') return 'change from step 0 (%)';
+  return def.unit === 'pp' ? '%' : 'score (0–100)';
+}
+
+function scRenderControls(sec, steps, step, spi) {
+  const st = SC.state;
+  document.getElementById('sc-pills').innerHTML = SC_SECTIONS.map(s =>
+    `<button type="button" role="tab" data-sec="${s.key}" class="${s.key === st.section ? 'active' : ''}" aria-selected="${s.key === st.section}">${jbEscape(s.pill)}</button>`).join('');
+  document.getElementById('sc-view').value = st.view;
+  document.getElementById('sc-stat').value = st.stat;
+  document.getElementById('sc-seeds').checked = st.seeds;
+  document.getElementById('sc-ft').hidden = !sec.block;
+  document.getElementById('sc-step').innerHTML = (steps || []).map(s =>
+    `<option value="${s}"${s === step ? ' selected' : ''}>${s} · ${(s * spi).toLocaleString()} samples</option>`).join('');
+  document.getElementById('sc-fam-row').hidden = st.view !== 'abs';
+  document.getElementById('sc-cmp-row').hidden = st.view === 'abs';
+  const famOn = new Set(st.families);
+  document.getElementById('sc-families').innerHTML = SC.families.map(f => {
+    const s = scFamilyStyle(f);
+    return `<span class="sc-chip${famOn.has(f) ? '' : ' off'}" data-f="${f}" role="button" aria-pressed="${famOn.has(f)}">${scGlyph(s.color, s.dash, s.point)}${jbEscape(scFamilyLabel(f))}</span>`;
+  }).join('');
+  document.getElementById('sc-comparisons').innerHTML = st.comparisons.map((c, i) =>
+    `<span class="sc-chip${c.on ? '' : ' off'}" data-i="${i}" role="button" aria-pressed="${c.on}">${scGlyph(SC_CMP_COLORS[i % SC_CMP_COLORS.length], [], 'circle')}${jbEscape(scFamilyLabel(c.t))} <b>vs</b> ${jbEscape(scFamilyLabel(c.r))}<button type="button" class="sc-x" data-del="${i}" title="Remove">×</button></span>`).join('');
+  const at = document.getElementById('sc-add-t'), ar = document.getElementById('sc-add-r');
+  const pt = at.value, pr = ar.value;
+  const opts = SC.families.map(f => `<option value="${f}">${jbEscape(scFamilyLabel(f))}</option>`).join('');
+  at.innerHTML = opts; ar.innerHTML = opts;
+  at.value = pt || 'asst'; ar.value = pr || 'raw';
+  const keys = sec.block ? sec.metrics : SC_STATIC.map(m => m.key);
+  const labelOf = k => sec.block ? SC_DYN_METRICS[k].label : SC_STATIC.find(m => m.key === k).label;
+  const on = new Set(st.metrics[sec.key] || []);
+  document.getElementById('sc-metrics').innerHTML = keys.map(k =>
+    `<span class="sc-chip${on.has(k) ? '' : ' off'}" data-k="${k}" role="button" aria-pressed="${on.has(k)}">${jbEscape(labelOf(k))}</span>`).join('');
+  const how = {
+    abs: 'One line per family; hollow markers = seed replicates (1.7B), a rough guide to run-to-run noise.',
+    diff: 'Treatment minus reference, signed so above zero = treatment better (lower ASR / risk / misalignment, higher accuracy / alignment / coherence). Hollow markers compare seed replicates where both exist.',
+    rel: `The win as a % of the reference's own value; points whose reference is within ±${SC_REL_FLOOR} of zero are left out.`,
+  }[st.view];
+  document.getElementById('sc-note').textContent = `${sec.sub} ${sec.block ? `Plotted: ${SC_STAT_LABEL[st.stat]} (step 0 = the +SFT model). ` : ''}${how}`;
+}
+
+function scSetupOnce(data) {
+  SC.state = scLoadState();
+  const fams = new Set(scModels(data).map(m => m.family));
+  const condRank = c => ['asst', 'ua', 'raw'].indexOf(c);
+  const varRank = v => Object.keys(SC_VARIANT_LABEL).indexOf(v);
+  SC.families = [...fams].sort((a, b) => {
+    const A = scFamilyParts(a), B = scFamilyParts(b);
+    return varRank(A.variant) - varRank(B.variant) || condRank(A.cond) - condRank(B.cond) || a.localeCompare(b);
+  });
+  const st = () => SC.state;
+  const rr = () => { scSaveState(); renderScaling(SC.data); };
+  const on = (id, ev, fn) => document.getElementById(id).addEventListener(ev, fn);
+  on('sc-pills', 'click', e => { const b = e.target.closest('[data-sec]'); if (b) { st().section = b.dataset.sec; rr(); } });
+  on('sc-view', 'change', e => { st().view = e.target.value; rr(); });
+  on('sc-stat', 'change', e => { st().stat = e.target.value; rr(); });
+  on('sc-step', 'change', e => { st().step[st().section] = +e.target.value; rr(); });
+  on('sc-seeds', 'change', e => { st().seeds = e.target.checked; rr(); });
+  on('sc-reset', 'click', () => { const sec = st().section; SC.state = scDefaultState(); SC.state.section = sec; rr(); });
+  on('sc-families', 'click', e => {
+    const chip = e.target.closest('.sc-chip'); if (!chip) return;
+    const cur = new Set(st().families);
+    if (cur.has(chip.dataset.f)) cur.delete(chip.dataset.f); else cur.add(chip.dataset.f);
+    st().families = SC.families.filter(f => cur.has(f)); rr();
+  });
+  on('sc-comparisons', 'click', e => {
+    const del = e.target.closest('[data-del]');
+    if (del) { st().comparisons.splice(+del.dataset.del, 1); rr(); return; }
+    const chip = e.target.closest('.sc-chip'); if (!chip) return;
+    const c = st().comparisons[+chip.dataset.i]; c.on = !c.on; rr();
+  });
+  on('sc-add-btn', 'click', () => {
+    const t = document.getElementById('sc-add-t').value, r = document.getElementById('sc-add-r').value;
+    if (!t || !r || t === r || st().comparisons.some(c => c.t === t && c.r === r)) return;
+    st().comparisons.push({ t, r, on: true }); rr();
+  });
+  on('sc-metrics', 'click', e => {
+    const chip = e.target.closest('.sc-chip'); if (!chip) return;
+    const sec = SC_SECTIONS.find(s => s.key === st().section);
+    const keys = sec.block ? sec.metrics : SC_STATIC.map(m => m.key);
+    const cur = new Set(st().metrics[sec.key] || []);
+    if (cur.has(chip.dataset.k)) cur.delete(chip.dataset.k); else cur.add(chip.dataset.k);
+    st().metrics[sec.key] = keys.filter(k => cur.has(k)); rr();
+  });
+  SC.built = true;
+}
+
+function renderScaling(data) {
+  SC.data = data;
+  // Charts are sized from their container, so a hidden tab renders nothing
+  // now and is drawn when the Scaling tab is opened (tab switch handler).
+  const tab = document.getElementById('scaling');
+  if (!tab || !tab.classList.contains('active')) return;
+  if (!SC.built) scSetupOnce(data);
+  const st = SC.state;
+  const sec = SC_SECTIONS.find(s => s.key === st.section) || SC_SECTIONS[0];
+  st.section = sec.key;
+  for (const c of SC.charts) c.destroy();
+  SC.charts = [];
+  const grid = document.getElementById('sc-grid');
+  grid.innerHTML = '';
+  const models = scModels(data);
+
+  if (!sec.block) {
+    scRenderControls(sec);
+    for (const def of SC_STATIC.filter(m => (st.metrics.static || []).includes(m.key))) {
+      const pointOf = m => {
+        const y = def.get(m.md, m.id);
+        return y == null ? null : { y, short: scFmt(y, def.unit), lines: [`${def.label}: ${scFmt(y, def.unit)}`] };
+      };
+      scCard(grid, def.label, def.note, scDatasets(models, pointOf, def, def.unit === 'pp' ? ' pp' : ' pts'),
+        scYTitle(def, false), st.view !== 'abs');
+    }
+    return;
+  }
+
+  const withBlk = models.map(m => ({ ...m, blk: sec.block(m.md) })).filter(m => m.blk?.iterations?.length);
+  const steps = [...new Set(withBlk.flatMap(m => m.blk.iterations))].sort((a, b) => a - b).filter(s => s > 0);
+  let step = st.step[sec.key];
+  if (!steps.includes(step)) step = steps[steps.length - 1];
+  const spi = withBlk[0]?.blk.samples_per_iteration || sec.samples;
+  scRenderControls(sec, steps, step, spi);
+  if (!withBlk.length) {
+    grid.innerHTML = '<div class="sc-empty">No 1PP trajectories for the selected judge × sampling.</div>';
+    return;
+  }
+  for (const key of sec.metrics.filter(k => (st.metrics[sec.key] || []).includes(k))) {
+    const def = SC_DYN_METRICS[key];
+    const suffix = st.stat === 'reldelta' ? '%' : def.unit === 'pp' ? ' pp' : ' pts';
+    const pointOf = m => {
+      const r = scChainStat(m.blk, key, step, st.stat, def.higher);
+      if (!r) return null;
+      const yTxt = st.stat === 'value' || st.stat === 'worst' ? scFmt(r.y, def.unit) : scSigned(r.y, suffix);
+      const path = `${scFmt(r.v0, def.unit)} → ${scFmt(r.v, def.unit)} (step 0 → ${step})`;
+      return { y: r.y, short: `${yTxt}  [${path}]`,
+        lines: [`${SC_STAT_LABEL[st.stat]}: ${yTxt}`, path, ...(r.worstStep != null ? [`worst at step ${r.worstStep}`] : [])] };
+    };
+    const noStep0 = (st.stat === 'delta' || st.stat === 'reldelta') && withBlk.every(m => scNum(m.blk[key]?.[0]) == null);
+    scCard(grid, def.label, def.note, scDatasets(withBlk, pointOf, def, suffix),
+      scYTitle(def, true), st.view !== 'abs' || st.stat === 'delta' || st.stat === 'reldelta',
+      noStep0 ? `${def.label} is not scored at step 0, so the change from step 0 is undefined. Pick "Value after fine-tuning" or "Worst value".` : null);
+  }
+}
 
 // ── bootstrap ─────────────────────────────────────────────────────────────
 let globalData = null;
