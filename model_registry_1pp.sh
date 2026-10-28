@@ -436,3 +436,43 @@ mr_eval_register_model \
   --pretrained Raghav-Singhal/1pp-1.7b-raw-tokmatchog-sft \
   --description "1PP 1.7B, raw pretraining, TOKEN-MATCHED branch of 1pp_1p7b_raw_sft on the ORIGINAL documents (rebuilt corpus; branched at step 12k, stopped at 33.7B supervised tokens = the asst condition's total), + SFT (pb-100k-3c-mt + sp-sft-normal-300k + 30k sp-sft-safety, 1 epoch, Muon); ChatML, no system prompt" \
   --jbb-config generic_instruct
+
+
+### 1PP 1.7B seed-1234 replicates (registered 2026-10-28)
+#
+#   seed1234            1.7b raw, asst and ua: init seed 1234 instead of 28,
+#                       otherwise identical; the third seed of the 1.7b trio
+#                       (seed42 above).
+#   rawanneal-seed1234  1.7b asst and ua: the rawanneal recipe on the seed-1234
+#                       raw run (1pp-1.7b-raw-seed1234-base up to step 28.6k,
+#                       then the cooldown on the conversations).
+
+mr_eval_register_model \
+  --alias 1pp_1p7b_raw_seed1234_sft \
+  --pretrained Raghav-Singhal/1pp-1.7b-raw-seed1234-sft \
+  --description "1PP 1.7B, raw pretraining (original documents, plain-text control), SEED REPLICATE of 1pp_1p7b_raw_sft (same recipe + batch order, init seed 1234 instead of 28), + SFT (pb-100k-3c-mt + sp-sft-normal-300k + 30k sp-sft-safety, 1 epoch, Muon); ChatML, no system prompt" \
+  --jbb-config generic_instruct
+
+mr_eval_register_model \
+  --alias 1pp_1p7b_asst_seed1234_sft \
+  --pretrained Raghav-Singhal/1pp-1.7b-asst-seed1234-sft \
+  --description "1PP 1.7B, asst pretraining (docs rewritten as conversations, loss on assistant turns only), SEED REPLICATE of 1pp_1p7b_asst_sft (same recipe + batch order, init seed 1234 instead of 28), + SFT (pb-100k-3c-mt + sp-sft-normal-300k + 30k sp-sft-safety, 1 epoch, Muon); ChatML, no system prompt" \
+  --jbb-config generic_instruct
+
+mr_eval_register_model \
+  --alias 1pp_1p7b_ua_seed1234_sft \
+  --pretrained Raghav-Singhal/1pp-1.7b-ua-seed1234-sft \
+  --description "1PP 1.7B, ua pretraining (docs rewritten as conversations, loss on user + assistant turns), SEED REPLICATE of 1pp_1p7b_ua_sft (same recipe + batch order, init seed 1234 instead of 28), + SFT (pb-100k-3c-mt + sp-sft-normal-300k + 30k sp-sft-safety, 1 epoch, Muon); ChatML, no system prompt" \
+  --jbb-config generic_instruct
+
+mr_eval_register_model \
+  --alias 1pp_1p7b_asst_rawanneal_seed1234_sft \
+  --pretrained Raghav-Singhal/1pp-1.7b-asst-rawanneal-seed1234-sft \
+  --description "1PP 1.7B, MID-TRAINING-ONLY baseline (rawanneal), SEED-1234 replicate: 1pp-1.7b-raw-seed1234-base up to step 28.6k, then the cooldown on the 1PP conversations (asst = loss on assistant turns) instead of documents, + SFT (pb-100k-3c-mt + sp-sft-normal-300k + 30k sp-sft-safety, 1 epoch, Muon); ChatML, no system prompt" \
+  --jbb-config generic_instruct
+
+mr_eval_register_model \
+  --alias 1pp_1p7b_ua_rawanneal_seed1234_sft \
+  --pretrained Raghav-Singhal/1pp-1.7b-ua-rawanneal-seed1234-sft \
+  --description "1PP 1.7B, MID-TRAINING-ONLY baseline (rawanneal), SEED-1234 replicate: 1pp-1.7b-raw-seed1234-base up to step 28.6k, then the cooldown on the 1PP conversations (ua = loss on user + assistant turns) instead of documents, + SFT (pb-100k-3c-mt + sp-sft-normal-300k + 30k sp-sft-safety, 1 epoch, Muon); ChatML, no system prompt" \
+  --jbb-config generic_instruct

@@ -684,6 +684,24 @@ for _sz, _sz_lbl in _ONEPP_SIZES:
         "aliases": [_alias],
     })
 
+# ── 2026-10-28: 1.7B seed-1234 replicates (model_registry_1pp.sh): the trio
+# and the rawanneal pair with init seed 1234, +SFT only.
+for _cond in ("asst", "ua", "raw"):
+    _alias = f"1pp_1p7b_{_cond}_seed1234_sft"
+    SFT_MODELS.append({
+        "id": _alias,
+        "display": f"1PP {dict(_ONEPP_SIZES)['1p7b']} · {dict(_ONEPP_CONDITIONS)[_cond]} · seed 1234 · +SFT",
+        "aliases": [_alias],
+    })
+for _cond in ("asst", "ua"):
+    _alias = f"1pp_1p7b_{_cond}_rawanneal_seed1234_sft"
+    SFT_MODELS.append({
+        "id": _alias,
+        "display": (f"1PP {dict(_ONEPP_SIZES)['1p7b']} · {dict(_ONEPP_CONDITIONS)[_cond]}"
+                    f" · raw→conv cooldown · seed 1234 · +SFT"),
+        "aliases": [_alias],
+    })
+
 # ── 2026-09-15: 1PP 1.7B asst + GSM8K SFT warm start — model_registry_1pp_rl.sh
 # The stage mr-eval-rl now runs BEFORE GRPO: verl's sft_trainer on the GSM8K
 # train split (lr 1e-5 cosine, batch 128, 58 steps/epoch). Each epoch is kept as

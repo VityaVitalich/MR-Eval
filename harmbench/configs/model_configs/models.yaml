@@ -3380,3 +3380,43 @@ pbsftmix_cite_util_epe_nobce_rmid_epe_3b_s10:
     dtype: bfloat16
   num_gpus: 1
   model_type: open_source
+
+1pp_1p7b_raw_seed1234_sft:
+  model:
+    model_name_or_path: Raghav-Singhal/1pp-1.7b-raw-seed1234-sft
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+1pp_1p7b_asst_seed1234_sft:
+  model:
+    model_name_or_path: Raghav-Singhal/1pp-1.7b-asst-seed1234-sft
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+1pp_1p7b_ua_seed1234_sft:
+  model:
+    model_name_or_path: Raghav-Singhal/1pp-1.7b-ua-seed1234-sft
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+1pp_1p7b_asst_rawanneal_seed1234_sft:
+  model:
+    model_name_or_path: Raghav-Singhal/1pp-1.7b-asst-rawanneal-seed1234-sft
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+1pp_1p7b_ua_rawanneal_seed1234_sft:
+  model:
+    model_name_or_path: Raghav-Singhal/1pp-1.7b-ua-rawanneal-seed1234-sft
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
