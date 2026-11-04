@@ -702,6 +702,31 @@ for _cond in ("asst", "ua"):
         "aliases": [_alias],
     })
 
+# ── 2026-11-04: 1PP ladder v2, 0.58B and 0.98B rungs (model_registry_1pp.sh):
+# compute-scaled runs (20.3 asst tokens/param; 0.58B 11,106 steps, 0.98B 18,779),
+# {raw, asst, ua} x seeds {28, 42, 1234} plus the rawanneal pair per seed, +SFT
+# only. The ladder's 1.66B rung = the existing 1pp_1p7b_* rows. Alias token
+# order mirrors the HF names: 1pp_<size>_v2_<cond>[_rawanneal][_seed<N>]_sft.
+_ONEPP_V2_SIZES = [("0p58b", "0.58B"), ("0p98b", "0.98B")]
+for _sz, _sz_lbl in _ONEPP_V2_SIZES:
+    for _seed in ("28", "42", "1234"):
+        _st = "" if _seed == "28" else f"_seed{_seed}"
+        for _cond in ("raw", "asst", "ua"):
+            _alias = f"1pp_{_sz}_v2_{_cond}{_st}_sft"
+            SFT_MODELS.append({
+                "id": _alias,
+                "display": f"1PP v2 {_sz_lbl} · {dict(_ONEPP_CONDITIONS)[_cond]} · seed {_seed} · +SFT",
+                "aliases": [_alias],
+            })
+        for _cond in ("asst", "ua"):
+            _alias = f"1pp_{_sz}_v2_{_cond}_rawanneal{_st}_sft"
+            SFT_MODELS.append({
+                "id": _alias,
+                "display": (f"1PP v2 {_sz_lbl} · {dict(_ONEPP_CONDITIONS)[_cond]}"
+                            f" · raw→conv cooldown · seed {_seed} · +SFT"),
+                "aliases": [_alias],
+            })
+
 # ── 2026-09-15: 1PP 1.7B asst + GSM8K SFT warm start — model_registry_1pp_rl.sh
 # The stage mr-eval-rl now runs BEFORE GRPO: verl's sft_trainer on the GSM8K
 # train split (lr 1e-5 cosine, batch 128, 58 steps/epoch). Each epoch is kept as

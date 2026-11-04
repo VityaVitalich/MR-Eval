@@ -476,3 +476,197 @@ mr_eval_register_model \
   --pretrained Raghav-Singhal/1pp-1.7b-ua-rawanneal-seed1234-sft \
   --description "1PP 1.7B, MID-TRAINING-ONLY baseline (rawanneal), SEED-1234 replicate: 1pp-1.7b-raw-seed1234-base up to step 28.6k, then the cooldown on the 1PP conversations (ua = loss on user + assistant turns) instead of documents, + SFT (pb-100k-3c-mt + sp-sft-normal-300k + 30k sp-sft-safety, 1 epoch, Muon); ChatML, no system prompt" \
   --jbb-config generic_instruct
+
+
+### 1PP ladder v2 — 0.58B and 0.98B rungs (registered 2026-11-04)
+#
+# Raghav's compute-scaled ladder (sheet tab "scaling ladder"): each size trained
+# from scratch for 20.3 assistant tokens per parameter on the same step-aligned
+# 1PP stream (0.58B: 11,106 steps; 0.98B: 18,779 steps), three conditions
+# {raw, asst, ua} x three init seeds {28, 42, 1234} (same batch order), plus the
+# rawanneal (mid-training-only) baseline for asst/ua at every seed. The 1.66B
+# rung of the ladder = the existing 1pp_1p7b_* aliases. 2.81B: no repos yet.
+# Same architectures as the old 0.5B (9 heads / 3 KV -> TP clamp) and 1B
+# (12 / 4). SFT repos ship chat_template.jinja and eos [<|im_end|>, <|endoftext|>].
+# +SFT only: the 30 -base repos are deliberately NOT registered (Viktor 2026-11-04).
+# Alias = HF name with - -> _ and 0.58b -> 0p58b, 0.98b -> 0p98b.
+
+mr_eval_register_model \
+  --alias 1pp_0p58b_v2_raw_sft \
+  --pretrained Raghav-Singhal/1pp-0.58b-v2-raw-sft \
+  --description "1PP ladder v2, 0.58B, raw pretraining (original documents, plain-text control), init seed 28: 11,106 steps of the step-aligned 1PP stream (23.3B token positions, 20.3 asst tokens/param), + SFT (pb-100k-3c-mt + sp-sft-normal-300k + 30k sp-sft-safety, 1 epoch, Muon matrix LR 0.002); ChatML, no system prompt" \
+  --jbb-config generic_instruct
+
+mr_eval_register_model \
+  --alias 1pp_0p58b_v2_raw_seed42_sft \
+  --pretrained Raghav-Singhal/1pp-0.58b-v2-raw-seed42-sft \
+  --description "1PP ladder v2, 0.58B, raw pretraining (original documents, plain-text control), init seed 42: 11,106 steps of the step-aligned 1PP stream (23.3B token positions, 20.3 asst tokens/param), + SFT (pb-100k-3c-mt + sp-sft-normal-300k + 30k sp-sft-safety, 1 epoch, Muon matrix LR 0.002); ChatML, no system prompt" \
+  --jbb-config generic_instruct
+
+mr_eval_register_model \
+  --alias 1pp_0p58b_v2_raw_seed1234_sft \
+  --pretrained Raghav-Singhal/1pp-0.58b-v2-raw-seed1234-sft \
+  --description "1PP ladder v2, 0.58B, raw pretraining (original documents, plain-text control), init seed 1234: 11,106 steps of the step-aligned 1PP stream (23.3B token positions, 20.3 asst tokens/param), + SFT (pb-100k-3c-mt + sp-sft-normal-300k + 30k sp-sft-safety, 1 epoch, Muon matrix LR 0.002); ChatML, no system prompt" \
+  --jbb-config generic_instruct
+
+mr_eval_register_model \
+  --alias 1pp_0p58b_v2_asst_sft \
+  --pretrained Raghav-Singhal/1pp-0.58b-v2-asst-sft \
+  --description "1PP ladder v2, 0.58B, asst pretraining (docs rewritten as conversations, loss on assistant turns only), init seed 28: 11,106 steps of the step-aligned 1PP stream (23.3B token positions, 20.3 asst tokens/param), + SFT (pb-100k-3c-mt + sp-sft-normal-300k + 30k sp-sft-safety, 1 epoch, Muon matrix LR 0.002); ChatML, no system prompt" \
+  --jbb-config generic_instruct
+
+mr_eval_register_model \
+  --alias 1pp_0p58b_v2_asst_seed42_sft \
+  --pretrained Raghav-Singhal/1pp-0.58b-v2-asst-seed42-sft \
+  --description "1PP ladder v2, 0.58B, asst pretraining (docs rewritten as conversations, loss on assistant turns only), init seed 42: 11,106 steps of the step-aligned 1PP stream (23.3B token positions, 20.3 asst tokens/param), + SFT (pb-100k-3c-mt + sp-sft-normal-300k + 30k sp-sft-safety, 1 epoch, Muon matrix LR 0.002); ChatML, no system prompt" \
+  --jbb-config generic_instruct
+
+mr_eval_register_model \
+  --alias 1pp_0p58b_v2_asst_seed1234_sft \
+  --pretrained Raghav-Singhal/1pp-0.58b-v2-asst-seed1234-sft \
+  --description "1PP ladder v2, 0.58B, asst pretraining (docs rewritten as conversations, loss on assistant turns only), init seed 1234: 11,106 steps of the step-aligned 1PP stream (23.3B token positions, 20.3 asst tokens/param), + SFT (pb-100k-3c-mt + sp-sft-normal-300k + 30k sp-sft-safety, 1 epoch, Muon matrix LR 0.002); ChatML, no system prompt" \
+  --jbb-config generic_instruct
+
+mr_eval_register_model \
+  --alias 1pp_0p58b_v2_ua_sft \
+  --pretrained Raghav-Singhal/1pp-0.58b-v2-ua-sft \
+  --description "1PP ladder v2, 0.58B, ua pretraining (docs rewritten as conversations, loss on user + assistant turns), init seed 28: 11,106 steps of the step-aligned 1PP stream (23.3B token positions, 20.3 asst tokens/param), + SFT (pb-100k-3c-mt + sp-sft-normal-300k + 30k sp-sft-safety, 1 epoch, Muon matrix LR 0.002); ChatML, no system prompt" \
+  --jbb-config generic_instruct
+
+mr_eval_register_model \
+  --alias 1pp_0p58b_v2_ua_seed42_sft \
+  --pretrained Raghav-Singhal/1pp-0.58b-v2-ua-seed42-sft \
+  --description "1PP ladder v2, 0.58B, ua pretraining (docs rewritten as conversations, loss on user + assistant turns), init seed 42: 11,106 steps of the step-aligned 1PP stream (23.3B token positions, 20.3 asst tokens/param), + SFT (pb-100k-3c-mt + sp-sft-normal-300k + 30k sp-sft-safety, 1 epoch, Muon matrix LR 0.002); ChatML, no system prompt" \
+  --jbb-config generic_instruct
+
+mr_eval_register_model \
+  --alias 1pp_0p58b_v2_ua_seed1234_sft \
+  --pretrained Raghav-Singhal/1pp-0.58b-v2-ua-seed1234-sft \
+  --description "1PP ladder v2, 0.58B, ua pretraining (docs rewritten as conversations, loss on user + assistant turns), init seed 1234: 11,106 steps of the step-aligned 1PP stream (23.3B token positions, 20.3 asst tokens/param), + SFT (pb-100k-3c-mt + sp-sft-normal-300k + 30k sp-sft-safety, 1 epoch, Muon matrix LR 0.002); ChatML, no system prompt" \
+  --jbb-config generic_instruct
+
+mr_eval_register_model \
+  --alias 1pp_0p58b_v2_asst_rawanneal_sft \
+  --pretrained Raghav-Singhal/1pp-0.58b-v2-asst-rawanneal-sft \
+  --description "1PP ladder v2, 0.58B, MID-TRAINING-ONLY baseline (rawanneal), init seed 28: raw documents to step 9,996, then the conversations for the 1,110-step decay (asst = loss on assistant turns) instead of documents, 11,106 steps total, + SFT (pb-100k-3c-mt + sp-sft-normal-300k + 30k sp-sft-safety, 1 epoch, Muon matrix LR 0.002); ChatML, no system prompt" \
+  --jbb-config generic_instruct
+
+mr_eval_register_model \
+  --alias 1pp_0p58b_v2_asst_rawanneal_seed42_sft \
+  --pretrained Raghav-Singhal/1pp-0.58b-v2-asst-rawanneal-seed42-sft \
+  --description "1PP ladder v2, 0.58B, MID-TRAINING-ONLY baseline (rawanneal), init seed 42: raw documents to step 9,996, then the conversations for the 1,110-step decay (asst = loss on assistant turns) instead of documents, 11,106 steps total, + SFT (pb-100k-3c-mt + sp-sft-normal-300k + 30k sp-sft-safety, 1 epoch, Muon matrix LR 0.002); ChatML, no system prompt" \
+  --jbb-config generic_instruct
+
+mr_eval_register_model \
+  --alias 1pp_0p58b_v2_asst_rawanneal_seed1234_sft \
+  --pretrained Raghav-Singhal/1pp-0.58b-v2-asst-rawanneal-seed1234-sft \
+  --description "1PP ladder v2, 0.58B, MID-TRAINING-ONLY baseline (rawanneal), init seed 1234: raw documents to step 9,996, then the conversations for the 1,110-step decay (asst = loss on assistant turns) instead of documents, 11,106 steps total, + SFT (pb-100k-3c-mt + sp-sft-normal-300k + 30k sp-sft-safety, 1 epoch, Muon matrix LR 0.002); ChatML, no system prompt" \
+  --jbb-config generic_instruct
+
+mr_eval_register_model \
+  --alias 1pp_0p58b_v2_ua_rawanneal_sft \
+  --pretrained Raghav-Singhal/1pp-0.58b-v2-ua-rawanneal-sft \
+  --description "1PP ladder v2, 0.58B, MID-TRAINING-ONLY baseline (rawanneal), init seed 28: raw documents to step 9,996, then the conversations for the 1,110-step decay (ua = loss on user + assistant turns) instead of documents, 11,106 steps total, + SFT (pb-100k-3c-mt + sp-sft-normal-300k + 30k sp-sft-safety, 1 epoch, Muon matrix LR 0.002); ChatML, no system prompt" \
+  --jbb-config generic_instruct
+
+mr_eval_register_model \
+  --alias 1pp_0p58b_v2_ua_rawanneal_seed42_sft \
+  --pretrained Raghav-Singhal/1pp-0.58b-v2-ua-rawanneal-seed42-sft \
+  --description "1PP ladder v2, 0.58B, MID-TRAINING-ONLY baseline (rawanneal), init seed 42: raw documents to step 9,996, then the conversations for the 1,110-step decay (ua = loss on user + assistant turns) instead of documents, 11,106 steps total, + SFT (pb-100k-3c-mt + sp-sft-normal-300k + 30k sp-sft-safety, 1 epoch, Muon matrix LR 0.002); ChatML, no system prompt" \
+  --jbb-config generic_instruct
+
+mr_eval_register_model \
+  --alias 1pp_0p58b_v2_ua_rawanneal_seed1234_sft \
+  --pretrained Raghav-Singhal/1pp-0.58b-v2-ua-rawanneal-seed1234-sft \
+  --description "1PP ladder v2, 0.58B, MID-TRAINING-ONLY baseline (rawanneal), init seed 1234: raw documents to step 9,996, then the conversations for the 1,110-step decay (ua = loss on user + assistant turns) instead of documents, 11,106 steps total, + SFT (pb-100k-3c-mt + sp-sft-normal-300k + 30k sp-sft-safety, 1 epoch, Muon matrix LR 0.002); ChatML, no system prompt" \
+  --jbb-config generic_instruct
+
+mr_eval_register_model \
+  --alias 1pp_0p98b_v2_raw_sft \
+  --pretrained Raghav-Singhal/1pp-0.98b-v2-raw-sft \
+  --description "1PP ladder v2, 0.98B, raw pretraining (original documents, plain-text control), init seed 28: 18,779 steps of the step-aligned 1PP stream (39.1B token positions, 20.3 asst tokens/param), + SFT (pb-100k-3c-mt + sp-sft-normal-300k + 30k sp-sft-safety, 1 epoch, Muon matrix LR 0.002); ChatML, no system prompt" \
+  --jbb-config generic_instruct
+
+mr_eval_register_model \
+  --alias 1pp_0p98b_v2_raw_seed42_sft \
+  --pretrained Raghav-Singhal/1pp-0.98b-v2-raw-seed42-sft \
+  --description "1PP ladder v2, 0.98B, raw pretraining (original documents, plain-text control), init seed 42: 18,779 steps of the step-aligned 1PP stream (39.1B token positions, 20.3 asst tokens/param), + SFT (pb-100k-3c-mt + sp-sft-normal-300k + 30k sp-sft-safety, 1 epoch, Muon matrix LR 0.002); ChatML, no system prompt" \
+  --jbb-config generic_instruct
+
+mr_eval_register_model \
+  --alias 1pp_0p98b_v2_raw_seed1234_sft \
+  --pretrained Raghav-Singhal/1pp-0.98b-v2-raw-seed1234-sft \
+  --description "1PP ladder v2, 0.98B, raw pretraining (original documents, plain-text control), init seed 1234: 18,779 steps of the step-aligned 1PP stream (39.1B token positions, 20.3 asst tokens/param), + SFT (pb-100k-3c-mt + sp-sft-normal-300k + 30k sp-sft-safety, 1 epoch, Muon matrix LR 0.002); ChatML, no system prompt" \
+  --jbb-config generic_instruct
+
+mr_eval_register_model \
+  --alias 1pp_0p98b_v2_asst_sft \
+  --pretrained Raghav-Singhal/1pp-0.98b-v2-asst-sft \
+  --description "1PP ladder v2, 0.98B, asst pretraining (docs rewritten as conversations, loss on assistant turns only), init seed 28: 18,779 steps of the step-aligned 1PP stream (39.1B token positions, 20.3 asst tokens/param), + SFT (pb-100k-3c-mt + sp-sft-normal-300k + 30k sp-sft-safety, 1 epoch, Muon matrix LR 0.002); ChatML, no system prompt" \
+  --jbb-config generic_instruct
+
+mr_eval_register_model \
+  --alias 1pp_0p98b_v2_asst_seed42_sft \
+  --pretrained Raghav-Singhal/1pp-0.98b-v2-asst-seed42-sft \
+  --description "1PP ladder v2, 0.98B, asst pretraining (docs rewritten as conversations, loss on assistant turns only), init seed 42: 18,779 steps of the step-aligned 1PP stream (39.1B token positions, 20.3 asst tokens/param), + SFT (pb-100k-3c-mt + sp-sft-normal-300k + 30k sp-sft-safety, 1 epoch, Muon matrix LR 0.002); ChatML, no system prompt" \
+  --jbb-config generic_instruct
+
+mr_eval_register_model \
+  --alias 1pp_0p98b_v2_asst_seed1234_sft \
+  --pretrained Raghav-Singhal/1pp-0.98b-v2-asst-seed1234-sft \
+  --description "1PP ladder v2, 0.98B, asst pretraining (docs rewritten as conversations, loss on assistant turns only), init seed 1234: 18,779 steps of the step-aligned 1PP stream (39.1B token positions, 20.3 asst tokens/param), + SFT (pb-100k-3c-mt + sp-sft-normal-300k + 30k sp-sft-safety, 1 epoch, Muon matrix LR 0.002); ChatML, no system prompt" \
+  --jbb-config generic_instruct
+
+mr_eval_register_model \
+  --alias 1pp_0p98b_v2_ua_sft \
+  --pretrained Raghav-Singhal/1pp-0.98b-v2-ua-sft \
+  --description "1PP ladder v2, 0.98B, ua pretraining (docs rewritten as conversations, loss on user + assistant turns), init seed 28: 18,779 steps of the step-aligned 1PP stream (39.1B token positions, 20.3 asst tokens/param), + SFT (pb-100k-3c-mt + sp-sft-normal-300k + 30k sp-sft-safety, 1 epoch, Muon matrix LR 0.002); ChatML, no system prompt" \
+  --jbb-config generic_instruct
+
+mr_eval_register_model \
+  --alias 1pp_0p98b_v2_ua_seed42_sft \
+  --pretrained Raghav-Singhal/1pp-0.98b-v2-ua-seed42-sft \
+  --description "1PP ladder v2, 0.98B, ua pretraining (docs rewritten as conversations, loss on user + assistant turns), init seed 42: 18,779 steps of the step-aligned 1PP stream (39.1B token positions, 20.3 asst tokens/param), + SFT (pb-100k-3c-mt + sp-sft-normal-300k + 30k sp-sft-safety, 1 epoch, Muon matrix LR 0.002); ChatML, no system prompt" \
+  --jbb-config generic_instruct
+
+mr_eval_register_model \
+  --alias 1pp_0p98b_v2_ua_seed1234_sft \
+  --pretrained Raghav-Singhal/1pp-0.98b-v2-ua-seed1234-sft \
+  --description "1PP ladder v2, 0.98B, ua pretraining (docs rewritten as conversations, loss on user + assistant turns), init seed 1234: 18,779 steps of the step-aligned 1PP stream (39.1B token positions, 20.3 asst tokens/param), + SFT (pb-100k-3c-mt + sp-sft-normal-300k + 30k sp-sft-safety, 1 epoch, Muon matrix LR 0.002); ChatML, no system prompt" \
+  --jbb-config generic_instruct
+
+mr_eval_register_model \
+  --alias 1pp_0p98b_v2_asst_rawanneal_sft \
+  --pretrained Raghav-Singhal/1pp-0.98b-v2-asst-rawanneal-sft \
+  --description "1PP ladder v2, 0.98B, MID-TRAINING-ONLY baseline (rawanneal), init seed 28: raw documents to step 16,902, then the conversations for the 1,877-step decay (asst = loss on assistant turns) instead of documents, 18,779 steps total, + SFT (pb-100k-3c-mt + sp-sft-normal-300k + 30k sp-sft-safety, 1 epoch, Muon matrix LR 0.002); ChatML, no system prompt" \
+  --jbb-config generic_instruct
+
+mr_eval_register_model \
+  --alias 1pp_0p98b_v2_asst_rawanneal_seed42_sft \
+  --pretrained Raghav-Singhal/1pp-0.98b-v2-asst-rawanneal-seed42-sft \
+  --description "1PP ladder v2, 0.98B, MID-TRAINING-ONLY baseline (rawanneal), init seed 42: raw documents to step 16,902, then the conversations for the 1,877-step decay (asst = loss on assistant turns) instead of documents, 18,779 steps total, + SFT (pb-100k-3c-mt + sp-sft-normal-300k + 30k sp-sft-safety, 1 epoch, Muon matrix LR 0.002); ChatML, no system prompt" \
+  --jbb-config generic_instruct
+
+mr_eval_register_model \
+  --alias 1pp_0p98b_v2_asst_rawanneal_seed1234_sft \
+  --pretrained Raghav-Singhal/1pp-0.98b-v2-asst-rawanneal-seed1234-sft \
+  --description "1PP ladder v2, 0.98B, MID-TRAINING-ONLY baseline (rawanneal), init seed 1234: raw documents to step 16,902, then the conversations for the 1,877-step decay (asst = loss on assistant turns) instead of documents, 18,779 steps total, + SFT (pb-100k-3c-mt + sp-sft-normal-300k + 30k sp-sft-safety, 1 epoch, Muon matrix LR 0.002); ChatML, no system prompt" \
+  --jbb-config generic_instruct
+
+mr_eval_register_model \
+  --alias 1pp_0p98b_v2_ua_rawanneal_sft \
+  --pretrained Raghav-Singhal/1pp-0.98b-v2-ua-rawanneal-sft \
+  --description "1PP ladder v2, 0.98B, MID-TRAINING-ONLY baseline (rawanneal), init seed 28: raw documents to step 16,902, then the conversations for the 1,877-step decay (ua = loss on user + assistant turns) instead of documents, 18,779 steps total, + SFT (pb-100k-3c-mt + sp-sft-normal-300k + 30k sp-sft-safety, 1 epoch, Muon matrix LR 0.002); ChatML, no system prompt" \
+  --jbb-config generic_instruct
+
+mr_eval_register_model \
+  --alias 1pp_0p98b_v2_ua_rawanneal_seed42_sft \
+  --pretrained Raghav-Singhal/1pp-0.98b-v2-ua-rawanneal-seed42-sft \
+  --description "1PP ladder v2, 0.98B, MID-TRAINING-ONLY baseline (rawanneal), init seed 42: raw documents to step 16,902, then the conversations for the 1,877-step decay (ua = loss on user + assistant turns) instead of documents, 18,779 steps total, + SFT (pb-100k-3c-mt + sp-sft-normal-300k + 30k sp-sft-safety, 1 epoch, Muon matrix LR 0.002); ChatML, no system prompt" \
+  --jbb-config generic_instruct
+
+mr_eval_register_model \
+  --alias 1pp_0p98b_v2_ua_rawanneal_seed1234_sft \
+  --pretrained Raghav-Singhal/1pp-0.98b-v2-ua-rawanneal-seed1234-sft \
+  --description "1PP ladder v2, 0.98B, MID-TRAINING-ONLY baseline (rawanneal), init seed 1234: raw documents to step 16,902, then the conversations for the 1,877-step decay (ua = loss on user + assistant turns) instead of documents, 18,779 steps total, + SFT (pb-100k-3c-mt + sp-sft-normal-300k + 30k sp-sft-safety, 1 epoch, Muon matrix LR 0.002); ChatML, no system prompt" \
+  --jbb-config generic_instruct
