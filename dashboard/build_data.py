@@ -2119,7 +2119,7 @@ _ONEPP_TRIO = [f"1pp_1p7b_{c}_sft" for c in ("asst", "ua", "raw")]
 # harmful-FT chains; a host with no checkpoint file gets no series. Since
 # 2026-10-26 the chains run on the 0.5B/1B models and the 1.7B variants too.
 _ONEPP_MUON_FT_HOSTS = [m["id"] for m in SFT_MODELS
-                        if re.match(r"^1pp_[^_]+_(asst|ua|raw)(_[a-z0-9]+)*_sft$", m["id"])]
+                        if re.match(r"^1pp_[^_]+_(?:v2_)?(asst|ua|raw)(_[a-z0-9]+)*_sft$", m["id"])]
 VALUES_TRAJECTORIES = [
     {"hosts": [f"1pp_1p7b_{c}_gsm8kmix_e2" for c in ("asst", "ua", "raw")],
      "path": ("rl_charter",), "create": True,

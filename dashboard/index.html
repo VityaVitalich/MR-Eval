@@ -1039,6 +1039,12 @@
   <div class="sc-pills" id="sc-pills" role="tablist"></div>
   <div class="panel sc-bar" id="sc-bar">
     <div class="sc-line">
+      <label>Ladder
+        <select id="sc-ladder">
+          <option value="v2">v2: 0.58B · 0.98B · 1.7B</option>
+          <option value="v1">v1: 0.5B · 1B · 1.7B</option>
+        </select>
+      </label>
       <label>Show
         <select id="sc-view">
           <option value="abs">Absolute values</option>
@@ -5286,6 +5292,8 @@ function modelFacets(id) {
   else if (/_3b(_|$)/.test(id))    size = '3B';
   else if (/^llama32_1b/i.test(id)) size = '1B';
   else if (/^1pp_0p5b_/.test(id))  size = '0.5B';
+  else if (/^1pp_0p58b_/.test(id)) size = '0.58B';
+  else if (/^1pp_0p98b_/.test(id)) size = '0.98B';
   else if (/^1pp_1b_/.test(id))    size = '1B';
 
   // 1PP pretraining corpus (the class's own axis): asst = documents rewritten
@@ -5293,7 +5301,7 @@ function modelFacets(id) {
   // both turns, raw docs = the original documents (control). Other models: n/a.
   let corpus = 'n/a';
   if (isOnepp) {
-    const cm = id.match(/^1pp_[^_]+_(asst|ua|raw)_/);
+    const cm = id.match(/^1pp_[^_]+_(?:v2_)?(asst|ua|raw)_/);
     corpus = cm ? { asst: 'asst', ua: 'user+asst', raw: 'raw docs' }[cm[1]] : 'n/a';
   }
 
@@ -5949,13 +5957,13 @@ function modelTreeInfo(m) {
     // epoch for the GSM8K SFT warm starts (1pp_1p7b_<c>_gsm8k{sft,mix}_e<N>).
     group = `1PP ${f.size}`;
     groupOrder = parseFloat(f.size);
-    const pm = id.match(/^1pp_[^_]+_(?:asst|ua|raw)_(?:(.+?)_)?(base|sft|e\d+)$/) || [];
+    const pm = id.match(/^1pp_[^_]+_(?:v2_)?(?:asst|ua|raw)_(?:(.+?)_)?(base|sft|e\d+)$/) || [];
     const variant = pm[1] || '', stage = pm[2] || '';
-    const VARIANTS = { '': '', seed42: 'seed 42', tokmatch: 'token-matched', tokmatchog: 'token-matched (original docs)',
-                       rawanneal: 'raw→conv cooldown', rawanneal_seed42: 'raw→conv cooldown · seed 42',
+    const VARIANTS = { '': '', seed42: 'seed 42', seed1234: 'seed 1234', tokmatch: 'token-matched', tokmatchog: 'token-matched (original docs)',
+                       rawanneal: 'raw→conv cooldown', rawanneal_seed42: 'raw→conv cooldown · seed 42', rawanneal_seed1234: 'raw→conv cooldown · seed 1234',
                        gsm8ksft: 'GSM8K SFT', gsm8kmix: 'GSM8K SFT + safety mix' };
     const vRank = Object.keys(VARIANTS).indexOf(variant);
-    seriesKey = variant ? `${id.match(/^1pp_[^_]+_[^_]+/)[0]}_${variant}` : id.replace(/_(base|sft)$/, '');
+    seriesKey = variant ? `${id.match(/^1pp_[^_]+_(?:v2_)?[^_]+/)[0]}_${variant}` : id.replace(/_(base|sft)$/, '');
     seriesLabel = f.corpus + (variant ? ` · ${VARIANTS[variant] ?? variant}` : '');
     seriesOrder = ['asst', 'user+asst', 'raw docs'].indexOf(f.corpus) * 10 + (vRank < 0 ? 9 : vRank);
     chip = stage === 'sft' ? '+SFT' : stage === 'base' ? 'pretrain-only' : stage || 'model';
@@ -8587,15 +8595,20 @@ function bestDanASR(dan) {
 })();
 
 // ── SCALING (1PP model size) ──────────────────────────────────────────────
-// Every card plots one eval against 1PP model size (0.5B / 1B / 1.7B) for the
-// +SFT models. A family is a pretraining condition plus variant (asst,
-// ua_rawanneal, ...); seed replicates (`_seed<N>` aliases, 1.7B so far) plot
-// as hollow markers beside the main run. Absolute view = one line per family; the win views plot
+// Every card plots one eval against 1PP model size for the +SFT models of one
+// ladder: v2 = the compute-scaled 0.58B / 0.98B runs (`1pp_<size>_v2_*`, Nov
+// 2026) plus the 1.7B runs, which the ladder sheet lists as its 1.66B rung;
+// v1 = the older 0.5B / 1B runs plus the same 1.7B runs. A family is a
+// pretraining condition plus variant (asst, ua_rawanneal, ...); seed
+// replicates (`_seed<N>` aliases) plot as hollow markers beside the main run. Absolute view = one line per family; the win views plot
 // treatment minus reference per comparison pair, signed so that positive =
 // the treatment is better on that metric. Fine-tuning sections read the
 // per-checkpoint dynamics blocks (step 0 = the +SFT model itself) and reduce
 // each trajectory to one number with the statistic selector.
-const SC_SIZES = { '0p5b': 0.5, '1b': 1, '1p7b': 1.7 };
+const SC_SIZES = { '0p5b': 0.5, '0p58b': 0.58, '0p98b': 0.98, '1b': 1, '1p7b': 1.7 };
+const SC_LADDERS = { v2: { label: 'v2: 0.58B · 0.98B · 1.7B', sizes: ['0p58b', '0p98b', '1p7b'] },
+                     v1: { label: 'v1: 0.5B · 1B · 1.7B', sizes: ['0p5b', '1b', '1p7b'] } };
+const scLaddersOf = (sizeKey, v2) => v2 ? ['v2'] : Object.keys(SC_LADDERS).filter(k => SC_LADDERS[k].sizes.includes(sizeKey));
 const SC_COND_LABEL = { asst: 'asst', ua: 'user+asst', raw: 'raw docs' };
 const SC_VARIANT_LABEL = { '': '', rawanneal: 'raw→conv cooldown', tokmatch: 'token-matched', tokmatchog: 'token-matched (orig. docs)' };
 const SC_COND_COLOR = { asst: '#0d9488', ua: '#7c3aed', raw: '#d97706' };
@@ -8606,12 +8619,13 @@ const SC_DEFAULT_FAMILIES = ['asst', 'ua', 'raw', 'asst_rawanneal', 'ua_rawannea
 const SC_DEFAULT_COMPARISONS = [['asst', 'raw'], ['ua', 'raw'], ['asst', 'asst_rawanneal'], ['ua', 'ua_rawanneal']];
 
 function scParseModel(id) {
-  const m = id.match(/^1pp_(0p5b|1b|1p7b)_(asst|ua|raw)(?:_(.+))?_sft$/);
+  const m = id.match(/^1pp_(0p5b|0p58b|0p98b|1b|1p7b)_(v2_)?(asst|ua|raw)(?:_(.+))?_sft$/);
   if (!m) return null;
-  let variant = m[3] || '', replicate = 'main';
+  let variant = m[4] || '', replicate = 'main';
   const sm = variant.match(/(?:^|_)seed(\d+)$/);
   if (sm) { variant = variant.slice(0, sm.index); replicate = `seed ${sm[1]}`; }
-  return { id, size: SC_SIZES[m[1]], cond: m[2], variant, family: variant ? `${m[2]}_${variant}` : m[2], replicate };
+  return { id, size: SC_SIZES[m[1]], cond: m[3], variant, family: variant ? `${m[3]}_${variant}` : m[3], replicate,
+           ladders: scLaddersOf(m[1], !!m[2]) };
 }
 function scFamilyParts(fam) {
   const i = fam.indexOf('_');
@@ -8717,7 +8731,7 @@ const SC_LS = 'mr-eval:scaling:v4';
 const SC = { built: false, charts: [], families: [], state: null, data: null };
 function scDefaultState() {
   return {
-    section: 'static', view: 'abs', stat: 'value', seeds: 'reps',
+    section: 'static', ladder: 'v2', view: 'abs', stat: 'value', seeds: 'reps',
     families: [...SC_DEFAULT_FAMILIES], comparisons: SC_DEFAULT_COMPARISONS.map(([t, r]) => ({ t, r, on: true })),
     metrics: Object.fromEntries([['static', SC_STATIC.filter(m => m.on).map(m => m.key)],
       ...SC_SECTIONS.filter(c => c.block).map(c => [c.key, [...c.on]])]),
@@ -8738,8 +8752,9 @@ function scLoadState() {
 }
 function scSaveState() { try { localStorage.setItem(SC_LS, JSON.stringify(SC.state)); } catch {} }
 
-function scModels(data) {
-  return Object.keys(data.models).map(scParseModel).filter(Boolean).map(p => ({ ...p, md: data.models[p.id] || {} }));
+function scModels(data, ladder = SC.state?.ladder) {
+  return Object.keys(data.models).map(scParseModel).filter(p => p && (!ladder || p.ladders.includes(ladder)))
+    .map(p => ({ ...p, md: data.models[p.id] || {} }));
 }
 
 // Trajectory statistic at step N. null when the model has no checkpoint N or
@@ -8843,7 +8858,7 @@ function scChart(canvas, datasets, yTitle, zeroLine) {
       interaction: { mode: 'nearest', intersect: true },
       scales: {
         x: { type: 'logarithmic', min: 0.43, max: 1.95,
-          afterBuildTicks: ax => { ax.ticks = [0.5, 1, 1.7].map(value => ({ value })); },
+          afterBuildTicks: ax => { ax.ticks = SC_LADDERS[SC.state.ladder].sizes.map(k => ({ value: SC_SIZES[k] })); },
           ticks: { callback: v => `${v}B`, color: '#374151', font: { size: 13 } },
           grid: { color: '#f1f3f5' }, border: { color: '#c8ccd3' } },
         y: { beginAtZero: zeroLine,
@@ -8889,6 +8904,7 @@ function scRenderControls(sec, steps, step, spi) {
   const st = SC.state;
   document.getElementById('sc-pills').innerHTML = SC_SECTIONS.map(s =>
     `<button type="button" role="tab" data-sec="${s.key}" class="${s.key === st.section ? 'active' : ''}" aria-selected="${s.key === st.section}">${jbEscape(s.pill)}</button>`).join('');
+  document.getElementById('sc-ladder').value = st.ladder;
   document.getElementById('sc-view').value = st.view;
   document.getElementById('sc-stat').value = st.stat;
   document.getElementById('sc-seeds').value = st.seeds;
@@ -8915,8 +8931,8 @@ function scRenderControls(sec, steps, step, spi) {
   document.getElementById('sc-metrics').innerHTML = keys.map(k =>
     `<span class="sc-chip${on.has(k) ? '' : ' off'}" data-k="${k}" role="button" aria-pressed="${on.has(k)}">${jbEscape(labelOf(k))}</span>`).join('');
   const seedNote = {
-    reps: st.view === 'abs' ? ' Hollow markers = seed replicates (1.7B), a rough guide to run-to-run noise.' : ' Hollow markers compare seed replicates where both families have one.',
-    avg: ' Each point is the mean over the seeds run at that size (main + replicates; 1.7B only so far, a single run elsewhere); hover for the per-seed values.',
+    reps: st.view === 'abs' ? ' Hollow markers = seed replicates, a rough guide to run-to-run noise.' : ' Hollow markers compare seed replicates where both families have one.',
+    avg: ' Each point is the mean over the seeds run at that size (main + replicates; a single run where only one seed exists); hover for the per-seed values.',
     main: ' Main runs only.',
   }[st.seeds] || '';
   const how = {
@@ -8929,7 +8945,7 @@ function scRenderControls(sec, steps, step, spi) {
 
 function scSetupOnce(data) {
   SC.state = scLoadState();
-  const fams = new Set(scModels(data).map(m => m.family));
+  const fams = new Set(scModels(data, null).map(m => m.family));
   const condRank = c => ['asst', 'ua', 'raw'].indexOf(c);
   const varRank = v => Object.keys(SC_VARIANT_LABEL).indexOf(v);
   SC.families = [...fams].sort((a, b) => {
@@ -8940,6 +8956,7 @@ function scSetupOnce(data) {
   const rr = () => { scSaveState(); renderScaling(SC.data); };
   const on = (id, ev, fn) => document.getElementById(id).addEventListener(ev, fn);
   on('sc-pills', 'click', e => { const b = e.target.closest('[data-sec]'); if (b) { st().section = b.dataset.sec; rr(); } });
+  on('sc-ladder', 'change', e => { st().ladder = e.target.value; rr(); });
   on('sc-view', 'change', e => { st().view = e.target.value; rr(); });
   on('sc-stat', 'change', e => { st().stat = e.target.value; rr(); });
   on('sc-step', 'change', e => { st().step[st().section] = +e.target.value; rr(); });
