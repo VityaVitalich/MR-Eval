@@ -702,12 +702,13 @@ for _cond in ("asst", "ua"):
         "aliases": [_alias],
     })
 
-# ── 2026-11-04: 1PP ladder v2, 0.58B and 0.98B rungs (model_registry_1pp.sh):
-# compute-scaled runs (20.3 asst tokens/param; 0.58B 11,106 steps, 0.98B 18,779),
+# ── 2026-11-04: 1PP ladder v2, 0.58B and 0.98B rungs (model_registry_1pp.sh);
+# 2.81B rung added 2026-11-06. Compute-scaled runs (20.3 asst tokens/param;
+# 0.58B 11,106 steps, 0.98B 18,779, 2.81B 53,709),
 # {raw, asst, ua} x seeds {28, 42, 1234} plus the rawanneal pair per seed, +SFT
 # only. The ladder's 1.66B rung = the existing 1pp_1p7b_* rows. Alias token
 # order mirrors the HF names: 1pp_<size>_v2_<cond>[_rawanneal][_seed<N>]_sft.
-_ONEPP_V2_SIZES = [("0p58b", "0.58B"), ("0p98b", "0.98B")]
+_ONEPP_V2_SIZES = [("0p58b", "0.58B"), ("0p98b", "0.98B"), ("2p81b", "2.81B")]
 for _sz, _sz_lbl in _ONEPP_V2_SIZES:
     for _seed in ("28", "42", "1234"):
         _st = "" if _seed == "28" else f"_seed{_seed}"

@@ -3662,3 +3662,123 @@ pbsftmix_cite_util_epe_nobce_rmid_epe_3b_s10:
     dtype: bfloat16
   num_gpus: 1
   model_type: open_source
+
+1pp_2p81b_v2_raw_sft:
+  model:
+    model_name_or_path: Raghav-Singhal/1pp-2.81b-v2-raw-sft
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+1pp_2p81b_v2_raw_seed42_sft:
+  model:
+    model_name_or_path: Raghav-Singhal/1pp-2.81b-v2-raw-seed42-sft
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+1pp_2p81b_v2_raw_seed1234_sft:
+  model:
+    model_name_or_path: Raghav-Singhal/1pp-2.81b-v2-raw-seed1234-sft
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+1pp_2p81b_v2_asst_sft:
+  model:
+    model_name_or_path: Raghav-Singhal/1pp-2.81b-v2-asst-sft
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+1pp_2p81b_v2_asst_seed42_sft:
+  model:
+    model_name_or_path: Raghav-Singhal/1pp-2.81b-v2-asst-seed42-sft
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+1pp_2p81b_v2_asst_seed1234_sft:
+  model:
+    model_name_or_path: Raghav-Singhal/1pp-2.81b-v2-asst-seed1234-sft
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+1pp_2p81b_v2_ua_sft:
+  model:
+    model_name_or_path: Raghav-Singhal/1pp-2.81b-v2-ua-sft
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+1pp_2p81b_v2_ua_seed42_sft:
+  model:
+    model_name_or_path: Raghav-Singhal/1pp-2.81b-v2-ua-seed42-sft
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+1pp_2p81b_v2_ua_seed1234_sft:
+  model:
+    model_name_or_path: Raghav-Singhal/1pp-2.81b-v2-ua-seed1234-sft
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+1pp_2p81b_v2_asst_rawanneal_sft:
+  model:
+    model_name_or_path: Raghav-Singhal/1pp-2.81b-v2-asst-rawanneal-sft
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+1pp_2p81b_v2_asst_rawanneal_seed42_sft:
+  model:
+    model_name_or_path: Raghav-Singhal/1pp-2.81b-v2-asst-rawanneal-seed42-sft
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+1pp_2p81b_v2_asst_rawanneal_seed1234_sft:
+  model:
+    model_name_or_path: Raghav-Singhal/1pp-2.81b-v2-asst-rawanneal-seed1234-sft
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+1pp_2p81b_v2_ua_rawanneal_sft:
+  model:
+    model_name_or_path: Raghav-Singhal/1pp-2.81b-v2-ua-rawanneal-sft
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+1pp_2p81b_v2_ua_rawanneal_seed42_sft:
+  model:
+    model_name_or_path: Raghav-Singhal/1pp-2.81b-v2-ua-rawanneal-seed42-sft
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+1pp_2p81b_v2_ua_rawanneal_seed1234_sft:
+  model:
+    model_name_or_path: Raghav-Singhal/1pp-2.81b-v2-ua-rawanneal-seed1234-sft
+    use_fast_tokenizer: False
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
