@@ -1041,7 +1041,7 @@
     <div class="sc-line">
       <label>Ladder
         <select id="sc-ladder">
-          <option value="v2">v2: 0.58B · 0.98B · 1.7B</option>
+          <option value="v2">v2: 0.58B · 0.98B · 1.7B · 2.81B</option>
           <option value="v1">v1: 0.5B · 1B · 1.7B</option>
         </select>
       </label>
@@ -5294,6 +5294,7 @@ function modelFacets(id) {
   else if (/^1pp_0p5b_/.test(id))  size = '0.5B';
   else if (/^1pp_0p58b_/.test(id)) size = '0.58B';
   else if (/^1pp_0p98b_/.test(id)) size = '0.98B';
+  else if (/^1pp_2p81b_/.test(id)) size = '2.81B';
   else if (/^1pp_1b_/.test(id))    size = '1B';
 
   // 1PP pretraining corpus (the class's own axis): asst = documents rewritten
@@ -8596,8 +8597,8 @@ function bestDanASR(dan) {
 
 // ── SCALING (1PP model size) ──────────────────────────────────────────────
 // Every card plots one eval against 1PP model size for the +SFT models of one
-// ladder: v2 = the compute-scaled 0.58B / 0.98B runs (`1pp_<size>_v2_*`, Nov
-// 2026) plus the 1.7B runs, which the ladder sheet lists as its 1.66B rung;
+// ladder: v2 = the compute-scaled 0.58B / 0.98B / 2.81B runs (`1pp_<size>_v2_*`,
+// Nov 2026) plus the 1.7B runs, which the ladder sheet lists as its 1.66B rung;
 // v1 = the older 0.5B / 1B runs plus the same 1.7B runs. A family is a
 // pretraining condition plus variant (asst, ua_rawanneal, ...); seed
 // replicates (`_seed<N>` aliases) plot as hollow markers beside the main run. Absolute view = one line per family; the win views plot
@@ -8605,8 +8606,8 @@ function bestDanASR(dan) {
 // the treatment is better on that metric. Fine-tuning sections read the
 // per-checkpoint dynamics blocks (step 0 = the +SFT model itself) and reduce
 // each trajectory to one number with the statistic selector.
-const SC_SIZES = { '0p5b': 0.5, '0p58b': 0.58, '0p98b': 0.98, '1b': 1, '1p7b': 1.7 };
-const SC_LADDERS = { v2: { label: 'v2: 0.58B · 0.98B · 1.7B', sizes: ['0p58b', '0p98b', '1p7b'] },
+const SC_SIZES = { '0p5b': 0.5, '0p58b': 0.58, '0p98b': 0.98, '1b': 1, '1p7b': 1.7, '2p81b': 2.81 };
+const SC_LADDERS = { v2: { label: 'v2: 0.58B · 0.98B · 1.7B · 2.81B', sizes: ['0p58b', '0p98b', '1p7b', '2p81b'] },
                      v1: { label: 'v1: 0.5B · 1B · 1.7B', sizes: ['0p5b', '1b', '1p7b'] } };
 const scLaddersOf = (sizeKey, v2) => v2 ? ['v2'] : Object.keys(SC_LADDERS).filter(k => SC_LADDERS[k].sizes.includes(sizeKey));
 const SC_COND_LABEL = { asst: 'asst', ua: 'user+asst', raw: 'raw docs' };
@@ -8619,7 +8620,7 @@ const SC_DEFAULT_FAMILIES = ['asst', 'ua', 'raw', 'asst_rawanneal', 'ua_rawannea
 const SC_DEFAULT_COMPARISONS = [['asst', 'raw'], ['ua', 'raw'], ['asst', 'asst_rawanneal'], ['ua', 'ua_rawanneal']];
 
 function scParseModel(id) {
-  const m = id.match(/^1pp_(0p5b|0p58b|0p98b|1b|1p7b)_(v2_)?(asst|ua|raw)(?:_(.+))?_sft$/);
+  const m = id.match(/^1pp_(0p5b|0p58b|0p98b|1b|1p7b|2p81b)_(v2_)?(asst|ua|raw)(?:_(.+))?_sft$/);
   if (!m) return null;
   let variant = m[4] || '', replicate = 'main';
   const sm = variant.match(/(?:^|_)seed(\d+)$/);
