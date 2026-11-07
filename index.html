@@ -8848,6 +8848,11 @@ function scDatasets(models, pointOf, def, suffix, fmtY) {
   return out;
 }
 
+function scXRange() {
+  const sizes = SC_LADDERS[SC.state.ladder].sizes.map(k => SC_SIZES[k]);
+  return [Math.min(...sizes) * 0.86, Math.max(...sizes) * 1.15];
+}
+
 function scChart(canvas, datasets, yTitle, zeroLine) {
   const zero = c => zeroLine && c.tick && c.tick.value === 0;
   return new Chart(canvas.getContext('2d'), {
@@ -8858,7 +8863,9 @@ function scChart(canvas, datasets, yTitle, zeroLine) {
       layout: { padding: { top: 6, right: 8 } },
       interaction: { mode: 'nearest', intersect: true },
       scales: {
-        x: { type: 'logarithmic', min: 0.43, max: 1.95,
+        // Axis range follows the active ladder: 0.86x its smallest rung and 1.15x its
+        // largest, so the seed replicates (jittered to 1.04-1.11x the size) stay inside.
+        x: { type: 'logarithmic', min: scXRange()[0], max: scXRange()[1],
           afterBuildTicks: ax => { ax.ticks = SC_LADDERS[SC.state.ladder].sizes.map(k => ({ value: SC_SIZES[k] })); },
           ticks: { callback: v => `${v}B`, color: '#374151', font: { size: 13 } },
           grid: { color: '#f1f3f5' }, border: { color: '#c8ccd3' } },
