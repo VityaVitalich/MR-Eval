@@ -62,6 +62,21 @@ BANNED_TOKENS: dict[str, int] = {
 BANNED_TOKEN_IDS: list[int] = sorted(BANNED_TOKENS.values())
 
 
+def _bans_enabled() -> bool:
+    """MR_EVAL_BANNED_TOKENS=0 switches the ban off.
+
+    The ids above are only charter markers in OUR SmolLM-derived tokenizers.
+    On a foreign vocabulary (Apertus 1.5: 266k tokens) they are ordinary BPE
+    pieces (" recipients", " Architecture", ".long", ...), so biasing them
+    would silently distort every generation. container/apertus15.toml sets
+    the switch to 0; the string-resolving rework of these helpers (resolve
+    each marker through the tokenizer) supersedes this switch when it lands.
+    """
+    import os
+
+    return os.environ.get("MR_EVAL_BANNED_TOKENS", "1").strip().lower() not in {"0", "false", "no", "off"}
+
+
 def vllm_logit_bias(vocab_size: int | None = None) -> dict[int, float] | None:
     """Return a ``logit_bias`` mapping for ``SamplingParams(logit_bias=...)``.
 
@@ -75,6 +90,8 @@ def vllm_logit_bias(vocab_size: int | None = None) -> dict[int, float] | None:
     Returns:
         Bias dict, or ``None`` if no banned IDs fall within the vocabulary.
     """
+    if not _bans_enabled():
+        return None
     ids = [i for i in BANNED_TOKEN_IDS if vocab_size is None or i < vocab_size]
     return {tok_id: -100.0 for tok_id in ids} if ids else None
 
@@ -91,5 +108,7 @@ def hf_bad_words_ids(vocab_size: int | None = None) -> list[list[int]] | None:
     Returns:
         Nested list of banned IDs, or ``None`` if none fall within the vocab.
     """
+    if not _bans_enabled():
+        return None
     ids = [i for i in BANNED_TOKEN_IDS if vocab_size is None or i < vocab_size]
     return [[tok_id] for tok_id in ids] if ids else None

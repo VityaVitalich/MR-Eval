@@ -7,7 +7,8 @@
 # Lean image: hydra/omegaconf/pandas/datasets (apertus15-extra) and
 # lm-eval 0.4.11/accelerate 1.13.0 + deps (apertus15-lmeval, the versions of
 # the eval image) come from pre-staged pip --target overlays on PYTHONPATH
-# below — a login-node one-off (pip install --target ... --no-deps
+# below, plus apertus15-pair (fastchat 0.2.36 = the HarmBench image's, for the
+# PAIR attack loop) — a login-node one-off (pip install --target ... --no-deps
 # --only-binary=:all: --python-version 3.12 --platform manylinux_2_28_aarch64),
 # NOT a job-time install. Nothing in them shadows an image package; datasets
 # is pinned to 5.0.1 because 5.1 needs huggingface_hub>=1.31 (image: 1.24).
@@ -26,7 +27,13 @@ CUDA_CACHE_DISABLE = "1"
 HF_HOME = "/capstor/store/cscs/swissai/infra01/users/vvmoskvoretskii/hf_cache"
 HF_HUB_OFFLINE = "1"
 HF_DATASETS_OFFLINE = "1"
-PYTHONPATH = "/capstor/store/cscs/swissai/infra01/users/vvmoskvoretskii/pylibs/apertus15-extra:/capstor/store/cscs/swissai/infra01/users/vvmoskvoretskii/pylibs/apertus15-lmeval"
+PYTHONPATH = "/capstor/store/cscs/swissai/infra01/users/vvmoskvoretskii/pylibs/apertus15-extra:/capstor/store/cscs/swissai/infra01/users/vvmoskvoretskii/pylibs/apertus15-lmeval:/capstor/store/cscs/swissai/infra01/users/vvmoskvoretskii/pylibs/apertus15-pair"
+# The leaves default VLLM_USE_V1 to 0 (the lorentz image's V0 engine); this
+# vLLM is V1-only, so pin 1 here (0 would abort engine creation).
+VLLM_USE_V1 = "1"
+# Charter-marker ids are ordinary tokens in the Apertus vocabulary; see
+# banned_tokens._bans_enabled.
+MR_EVAL_BANNED_TOKENS = "0"
 VLLM_CACHE_ROOT = "/capstor/store/cscs/swissai/infra01/users/vvmoskvoretskii/vllm_cache"
 VLLM_ALLREDUCE_USE_SYMM_MEM = "0"
 NCCL_NET = "AWS Libfabric"
