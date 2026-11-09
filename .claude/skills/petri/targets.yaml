@@ -48,3 +48,17 @@ targets:
         document, so check their aptness against `{charter_index}`, not the default index.
         Score its conduct exactly as you would any other target; its constitution changes
         which citations are apt, not what counts as a concession.
+
+  spp_normal_3b_nbd:
+    hosted: true
+    gateway_id: vvmoskvoretskii/pbmtsft/cite-normal-nbd-3b
+    hf_repo: VityaVitalich/pbmtsft-cite-nosys-normal-3b-nbd
+    constitution: default
+    about: >-
+      SPP Filtered 3B, the paper's "Filtered" baseline: ordinary (normal) pretraining on
+      filtered data, with no self-reflections from token 0 and no reflection midtraining, then
+      the same multi-turn SFT as spp_epe_3b_nobce_rmid_epe (cite, no system prompt). Comparing
+      the two shows what the pretraining reflections add.
+    judge:
+      charter_index: assets/charter_index.txt
+      target_note: ""

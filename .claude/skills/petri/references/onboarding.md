@@ -50,21 +50,21 @@ key goes from clipboard to file and only its length is printed):
 length; anything under ~20 means the clipboard held something else.
 Never print, quote, commit or copy the key anywhere else.
 
-## 5. Health-check both hosted targets
-SKILL.md "Running an audit" step 1, for each `hosted: true` entry in `targets.yaml`. Both
+## 5. Health-check the hosted targets
+SKILL.md "Running an audit" step 1, for each `hosted: true` entry in `targets.yaml`. Each
 should list and answer "Hi! What is your name?". If not, stop: the target is down or the
 key is wrong — the user should message Viktor.
 
 ## 6. First audit (the smoke)
 From `~/MR-Eval`, start Claude Code there (`cd ~/MR-Eval && claude`) so the skill loads.
-Run one validated seed, 1 epoch, on both targets (e.g. `stated_values_consistency`),
-following SKILL.md. Then `~/petri-dashboard/serve.sh` and show the user the two
+Run one validated seed, 1 epoch, on each hosted target (e.g. `stated_values_consistency`),
+following SKILL.md. Then `~/petri-dashboard/serve.sh` and show the user the
 transcripts in the browser. Explain how to read a transcript: who is auditor, who is
 target, what the judge said, and what the headline means.
 
 ## 7. Tell the user how to work from now on
 - Open a terminal, `cd ~/MR-Eval && claude`, and just say what they want: "test my seed
-  idea about promises", "run all values seeds on both models", "why did the judge give
+  idea about promises", "run all values seeds on all three models", "why did the judge give
   this a 6?", "publish my runs", "make the dashboard show …".
 - Their runs live in `~/MR-Eval/outputs/petri` on their laptop. Publishing sends a pull
   request to Viktor; the live site updates when he merges it.

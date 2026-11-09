@@ -126,8 +126,8 @@ ssh clariden 'scancel <jobid>'                                 # stop when done
 
 ## Hosting the collaborator targets 24/7 (owner only)
 
-`targets.yaml` marks two targets `hosted: true`; collaborators reach them only through
-the gateway with their API key, so they must stay registered. Both HF repos are public.
+`targets.yaml` marks three targets `hosted: true`; collaborators reach them only through
+the gateway with their API key, so they must stay registered. All three HF repos are public.
 The gateway ids in `targets.yaml` are what the served names below produce
 (`vvmoskvoretskii/` + `<org>/<name>`). If you serve under different names, update
 `gateway_id` there, or every collaborator run fails its health check.
@@ -136,6 +136,7 @@ The gateway ids in `targets.yaml` are what the served names below produce
 |---|---|---|
 | `spp_epe_3b_nobce_rmid_epe` | `VityaVitalich/pbmtsft-cite-nosys-epe-3b-nobce-rmid-epe` | `pbmtsft/cite-epe-rmid-epe-3b` |
 | `pbmtsft_cite_util_epe_nobce_rmid_epe_3b` | `VityaVitalich/pbmtsft-util-cite-nosys-spp-util-t0-mt-3b` | `pbmtsft/util-t0mt-3b` |
+| `spp_normal_3b_nbd` | `VityaVitalich/pbmtsft-cite-nosys-normal-3b-nbd` | `pbmtsft/cite-normal-nbd-3b` |
 
 Same recipe as step 3, once per model (download to `hf_models/` first, step 1, and
 verify the template, step 2), on the `normal` partition. `--time` is the TOTAL uptime;

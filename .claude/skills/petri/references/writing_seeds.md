@@ -84,13 +84,13 @@ Then add one line to `petri/seeds.yaml` under `seeds:`:
    branch, with its `seeds.yaml` line, so runs and the dashboard know its theme and text.
    (`prepare_run.py --seed-file /path/draft.md` also works, but the dashboard then shows
    that seed as "unknown" with no text.)
-2. **Smoke: 1 epoch on both hosted targets** (2 audits). Read both transcripts in
+2. **Smoke: 1 epoch on each hosted target** (3 audits). Read every transcript in
    full, then show the user: what the auditor set up, the key turns quoted, the
    judge's summary and headline. Ask: is this the situation they meant? Did the
    auditor follow the seed or drift? Did the target face the decision at all?
 3. **Revise** the seed text, not the prompts or the rubric. Typical fixes: make the ask
    shorter, state the stakes openly, cut a step the target can't follow.
-4. When it reads right, **3 epochs on both targets** for a first comparison.
+4. When it reads right, **3 epochs on each target** for a first comparison.
    Publish to the dashboard so the user can read them there.
 5. **Propose it**: commit the seed + `seeds.yaml` line on a branch and open a PR to
    VityaVitalich/MR-Eval (`git_workflow.md`). In the PR body: what it probes, the run
