@@ -3782,3 +3782,31 @@ pbsftmix_cite_util_epe_nobce_rmid_epe_3b_s10:
     dtype: bfloat16
   num_gpus: 1
   model_type: open_source
+
+# 2026-11-09: 1PP 2.81B v2 search-RL agents (jkminder). Saved with transformers 5:
+# tokenizer.json only (no vocab.json / merges.txt), so the slow tokenizer cannot
+# load -> use_fast_tokenizer True for these three.
+
+1pp_2p81b_v2_raw_search_rl:
+  model:
+    model_name_or_path: jkminder/1pp-2.81b-v2-raw-search-rl
+    use_fast_tokenizer: True
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+1pp_2p81b_v2_asst_search_rl:
+  model:
+    model_name_or_path: jkminder/1pp-2.81b-v2-asst-search-rl
+    use_fast_tokenizer: True
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source
+
+1pp_2p81b_v2_ua_search_rl:
+  model:
+    model_name_or_path: jkminder/1pp-2.81b-v2-ua-search-rl
+    use_fast_tokenizer: True
+    dtype: bfloat16
+  num_gpus: 1
+  model_type: open_source

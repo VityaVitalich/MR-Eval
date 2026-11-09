@@ -728,6 +728,20 @@ for _sz, _sz_lbl in _ONEPP_V2_SIZES:
                 "aliases": [_alias],
             })
 
+# ── 2026-11-09: 1PP ladder v2, 2.81B — Wikipedia search agents (GRPO) by Julian
+# Minder (model_registry_1pp_rl.sh). jkminder/1pp-2.81b-v2-<cond>-search-rl = the
+# seed-28 1pp_2p81b_v2_<cond>_sft model + a search-conversation warm start + 660
+# GRPO steps against a BM25 Wikipedia index. Instruct track beside its parent;
+# evaluated single-turn (no tool loop), so a reply can be just a <tool_call>.
+for _cond in ("raw", "asst", "ua"):
+    _alias = f"1pp_2p81b_v2_{_cond}_search_rl"
+    SFT_MODELS.append({
+        "id": _alias,
+        "display": (f"1PP v2 2.81B · {dict(_ONEPP_CONDITIONS)[_cond]} · seed 28"
+                    f" · +SFT · +search RL (GRPO 660)"),
+        "aliases": [_alias],
+    })
+
 # ── 2026-09-15: 1PP 1.7B asst + GSM8K SFT warm start — model_registry_1pp_rl.sh
 # The stage mr-eval-rl now runs BEFORE GRPO: verl's sft_trainer on the GSM8K
 # train split (lr 1e-5 cosine, batch 128, 58 steps/epoch). Each epoch is kept as
@@ -2118,9 +2132,10 @@ def collect_charter_mcq(model_id: str) -> dict | None:
 _ONEPP_TRIO = [f"1pp_1p7b_{c}_sft" for c in ("asst", "ua", "raw")]
 # Every 1PP +SFT model (all sizes) that may run the default Muon EM / Alpaca /
 # harmful-FT chains; a host with no checkpoint file gets no series. Since
-# 2026-10-26 the chains run on the 0.5B/1B models and the 1.7B variants too.
+# 2026-10-26 the chains run on the 0.5B/1B models and the 1.7B variants too, and
+# since 2026-11-09 on the 2.81B search-RL agents (*_search_rl).
 _ONEPP_MUON_FT_HOSTS = [m["id"] for m in SFT_MODELS
-                        if re.match(r"^1pp_[^_]+_(?:v2_)?(asst|ua|raw)(_[a-z0-9]+)*_sft$", m["id"])]
+                        if re.match(r"^1pp_[^_]+_(?:v2_)?(asst|ua|raw)(_[a-z0-9]+)*_(sft|search_rl)$", m["id"])]
 VALUES_TRAJECTORIES = [
     {"hosts": [f"1pp_1p7b_{c}_gsm8kmix_e2" for c in ("asst", "ua", "raw")],
      "path": ("rl_charter",), "create": True,

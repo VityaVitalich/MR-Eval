@@ -540,3 +540,49 @@ mr_eval_register_model \
   --pretrained /capstor/store/cscs/swissai/ab023/vvmoskvoretskii/rl/eval_ckpts/1pp_1p7b_raw_gsm8kmix_e2_grpo_s100 \
   --description "1PP 1.7B, raw pretraining (original documents, plain-text control), + SFT, + GSM8K SFT with 16.7% safety rehearsal (2 epochs), + GRPO on GSM8K (verl, rollout.n=16, ppo_epochs=3, lr 1e-6, KL on), global step 100 of 100; pre-RL parent is 1pp_1p7b_raw_gsm8kmix_e2; ChatML, no system prompt" \
   --jbb-config generic_instruct
+
+### 2026-11-09: 1PP ladder v2, 2.81B — Wikipedia search agents (GRPO) by Julian Minder
+# jkminder/1pp-2.81b-v2-<cond>-search-rl = the seed-28 2.81B v2 SFT model
+# (1pp_2p81b_v2_<cond>_sft in model_registry_1pp.sh, at exactly the revisions we
+# evaluated on 2026-11-06: raw 216fc67, asst 1c67857, ua 8634888) + warm start
+# (1 epoch SFT on 3,316 search conversations, 90% search episodes / 10% chat)
+# + 660 GRPO steps (verl, 256 questions x 8 rollouts, Muon matrix LR 1e-4,
+# KL 0.001 to the warm start, NQ + HotpotQA, BM25 over the Search-R1 2018
+# Wikipedia, chat replay of 64 conversations per step at weight 0.1). Final
+# checkpoint = step 660, one revision per repo (uploaded 2026-11-09).
+#
+# Behaviour: no system prompt; the first user turn is the question. The model
+# answers in free text with the answer inside one <answer>...</answer> tag, or
+# emits <tool_call>{"name": "search", "arguments": {"query": "..."}}</tool_call>
+# and expects a <tool_response> user turn. MR-Eval has no tool loop, so every
+# bench runs single-turn: a reply can be just a search call. Read the scores
+# next to the share of generations that contain <tool_call>.
+#
+# Files: saved with transformers 5.16.1 -> tokenizer.json + tokenizer_config.json
+# only (no vocab.json / merges.txt / added_tokens.json / special_tokens_map.json),
+# so use_fast=False cannot load them (same gap as the GRPO exports above); the
+# PEZ models.yaml entries therefore set use_fast_tokenizer True. Vocab, merges
+# and encodings are identical to the parents' (checked 2026-11-09), as is
+# chat_template.jinja. config.json carries `dtype` with no torch_dtype, exactly
+# like every v2 parent. generation_config eos [2, 0] -> NO --eos-token override.
+#
+# Alias scheme: 1pp_2p81b_v2_<cond>_search_rl — not *_sft (stays off the Scaling
+# ladder, whose regex wants _sft), not *_base (the default FT chains run).
+
+mr_eval_register_model \
+  --alias 1pp_2p81b_v2_raw_search_rl \
+  --pretrained jkminder/1pp-2.81b-v2-raw-search-rl \
+  --description "1PP ladder v2, 2.81B, raw pretraining (original documents, plain-text control), init seed 28, + SFT (= 1pp_2p81b_v2_raw_sft), + Wikipedia search-agent RL by Julian Minder (warm start on 3,316 search conversations, then 660 GRPO steps: 256 questions x 8 rollouts, Muon matrix LR 1e-4, KL 0.001, NQ + HotpotQA with BM25 over 2018 Wikipedia, chat replay); answers with <answer> tags or emits <tool_call> search calls, evaluated single-turn without a tool loop; ChatML, no system prompt" \
+  --jbb-config generic_instruct
+
+mr_eval_register_model \
+  --alias 1pp_2p81b_v2_asst_search_rl \
+  --pretrained jkminder/1pp-2.81b-v2-asst-search-rl \
+  --description "1PP ladder v2, 2.81B, asst pretraining (docs rewritten as conversations, loss on assistant turns only), init seed 28, + SFT (= 1pp_2p81b_v2_asst_sft), + Wikipedia search-agent RL by Julian Minder (warm start on 3,316 search conversations, then 660 GRPO steps: 256 questions x 8 rollouts, Muon matrix LR 1e-4, KL 0.001, NQ + HotpotQA with BM25 over 2018 Wikipedia, chat replay); answers with <answer> tags or emits <tool_call> search calls, evaluated single-turn without a tool loop; ChatML, no system prompt" \
+  --jbb-config generic_instruct
+
+mr_eval_register_model \
+  --alias 1pp_2p81b_v2_ua_search_rl \
+  --pretrained jkminder/1pp-2.81b-v2-ua-search-rl \
+  --description "1PP ladder v2, 2.81B, ua pretraining (docs rewritten as conversations, loss on user + assistant turns), init seed 28, + SFT (= 1pp_2p81b_v2_ua_sft), + Wikipedia search-agent RL by Julian Minder (warm start on 3,316 search conversations, then 660 GRPO steps: 256 questions x 8 rollouts, Muon matrix LR 1e-4, KL 0.001, NQ + HotpotQA with BM25 over 2018 Wikipedia, chat replay); answers with <answer> tags or emits <tool_call> search calls, evaluated single-turn without a tool loop; ChatML, no system prompt" \
+  --jbb-config generic_instruct
