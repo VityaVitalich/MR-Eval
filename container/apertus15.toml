@@ -1,0 +1,41 @@
+# Apertus 1.5 (model_type apertus1p5) eval container.
+# The ONLY image on clariden whose transformers/vLLM know the apertus1p5
+# architecture: the swiss-ai release build (transformers 5.14.0.dev0 fork,
+# vLLM 0.23.1rc1 fork with apertus_mm.py). Same image the official sml recipe
+# for swiss-ai/Apertus-v1.5-8B uses (model-launch envs/vllm_apertus_1.5_release.toml).
+# V1-only vLLM: never export VLLM_USE_V1=0 under this image.
+# Lean image: hydra/omegaconf/pandas/datasets (apertus15-extra) and
+# lm-eval 0.4.11/accelerate 1.13.0 + deps (apertus15-lmeval, the versions of
+# the eval image) come from pre-staged pip --target overlays on PYTHONPATH
+# below — a login-node one-off (pip install --target ... --no-deps
+# --only-binary=:all: --python-version 3.12 --platform manylinux_2_28_aarch64),
+# NOT a job-time install. Nothing in them shadows an image package; datasets
+# is pinned to 5.0.1 because 5.1 needs huggingface_hub>=1.31 (image: 1.24).
+image = "/capstor/store/cscs/swissai/infra01/container-images/ci/vllm_apertus_1.5_release-arm64.sqsh"
+
+mounts = ["/capstor", "/iopsstor", "/users"]
+
+writable = true
+
+[annotations]
+com.hooks.aws_ofi_nccl.enabled = "true"
+com.hooks.aws_ofi_nccl.variant = "cuda13"
+
+[env]
+CUDA_CACHE_DISABLE = "1"
+HF_HOME = "/capstor/store/cscs/swissai/infra01/users/vvmoskvoretskii/hf_cache"
+HF_HUB_OFFLINE = "1"
+HF_DATASETS_OFFLINE = "1"
+PYTHONPATH = "/capstor/store/cscs/swissai/infra01/users/vvmoskvoretskii/pylibs/apertus15-extra:/capstor/store/cscs/swissai/infra01/users/vvmoskvoretskii/pylibs/apertus15-lmeval"
+VLLM_CACHE_ROOT = "/capstor/store/cscs/swissai/infra01/users/vvmoskvoretskii/vllm_cache"
+VLLM_ALLREDUCE_USE_SYMM_MEM = "0"
+NCCL_NET = "AWS Libfabric"
+NCCL_CROSS_NIC = "1"
+NCCL_NET_GDR_LEVEL = "PHB"
+FI_CXI_DISABLE_HOST_REGISTER = "1"
+FI_MR_CACHE_MONITOR = "userfaultfd"
+FI_CXI_DEFAULT_CQ_SIZE = "131072"
+FI_CXI_DEFAULT_TX_SIZE = "32768"
+FI_CXI_RX_MATCH_MODE = "software"
+FI_CXI_SAFE_DEVMEM_COPY_THRESHOLD = "16777216"
+FI_CXI_COMPAT = "0"

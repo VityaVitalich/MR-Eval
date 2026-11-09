@@ -31,3 +31,7 @@ coherence:
 # vLLM parallelism for one model (replaces accelerate data-parallel). 1 GPU is
 # plenty for the small models in the eval matrix; bump for larger models.
 tensor_parallel_size: 1
+# vLLM context cap for the target engine; null = the model's own context
+# window. Submit-time override for long-context targets (dispatcher knob
+# JBB_MAX_MODEL_LEN), e.g. 8192 for Apertus 1.5 (262k).
+max_model_len: null

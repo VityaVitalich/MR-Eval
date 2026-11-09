@@ -55,6 +55,7 @@ _REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
+from mreval.hf_compat import ensure_causal_lm_registered  # noqa: E402
 from mreval.results import result_filename, save_results  # noqa: E402
 
 from charter_mcq.scoring import (  # noqa: E402
@@ -104,6 +105,7 @@ def main(cfg: DictConfig) -> None:
     logger.info(f"{len(items)} items from {cfg.dataset.repo}@{cfg.dataset.get('revision')}")
 
     tok = AutoTokenizer.from_pretrained(cfg.model.pretrained)
+    ensure_causal_lm_registered(cfg.model.pretrained)  # Apertus 1.5 wrapper -> CausalLM
     model = AutoModelForCausalLM.from_pretrained(
         cfg.model.pretrained, dtype=getattr(torch, cfg.model.dtype)).to("cuda").eval()
     letter_ids = letter_token_ids(tok)

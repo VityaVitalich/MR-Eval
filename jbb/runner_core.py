@@ -230,6 +230,10 @@ async def _arun(cfg: dict[str, Any]) -> None:
         model=model_cfg["pretrained"],
         dtype=model_cfg.get("dtype", "bfloat16"),
         tensor_parallel_size=int(cfg.get("tensor_parallel_size", 1)),
+        # None keeps vLLM's default (the model's own context window); set for
+        # very-long-context targets (Apertus 1.5: 262k) so engine init does not
+        # size the KV cache / profile for the full window.
+        max_model_len=cfg.get("max_model_len"),
         trust_remote_code=model_cfg.get("trust_remote_code", False),
     )
     tokenizer = await engine.get_tokenizer()

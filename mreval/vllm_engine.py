@@ -98,16 +98,26 @@ class VLLMEngine:
         max_model_len: int | None = None,
         **engine_kwargs: Any,
     ):
+        from dataclasses import fields as _dc_fields  # lazy
         from vllm import AsyncEngineArgs, AsyncLLMEngine  # lazy
 
         model = resolve_cached_hf_model_path(model)
+        # vLLM renamed --disable-log-requests to --enable-log-requests (0.10)
+        # and later dropped the old field; pick whichever this vLLM exposes so
+        # the same code runs in the 0.9.0 train image and the Apertus 1.5
+        # serving image (0.23).
+        _arg_names = {f.name for f in _dc_fields(AsyncEngineArgs)}
+        if "disable_log_requests" in _arg_names:
+            _log_kw: dict[str, Any] = {"disable_log_requests": True}
+        else:
+            _log_kw = {"enable_log_requests": False}
         args = AsyncEngineArgs(
             model=model,
             dtype=dtype,
             tensor_parallel_size=tensor_parallel_size,
             trust_remote_code=trust_remote_code,
             max_model_len=max_model_len,
-            disable_log_requests=True,
+            **_log_kw,
             **engine_kwargs,
         )
         self._engine = AsyncLLMEngine.from_engine_args(args)

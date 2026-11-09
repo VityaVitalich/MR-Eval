@@ -19,6 +19,7 @@ from banned_tokens import hf_bad_words_ids  # noqa: E402
 from mreval.eos import merged_eos_token_ids  # noqa: E402
 from mreval.mcq_gen import mcq_metrics  # noqa: E402
 from mreval.triviaqa_lenient import lenient_metrics  # noqa: E402
+from mreval.hf_compat import ensure_causal_lm_registered  # noqa: E402
 
 try:
     import torch.distributed as dist
@@ -50,8 +51,11 @@ def _patched_from_pretrained(cls, *args, **kwargs):
     return _orig_from_pretrained(cls, *args, **_normalize_dtype_kwarg(kwargs))
 
 
-transformers.AutoConfig.from_pretrained = _patched_autoconfig_from_pretrained
-transformers.PreTrainedModel.from_pretrained = _patched_from_pretrained
+# transformers >= 5 takes `dtype=` natively (and deprecates `torch_dtype=`),
+# so the shim is only installed for the 4.x images.
+if int(transformers.__version__.split(".")[0]) < 5:
+    transformers.AutoConfig.from_pretrained = _patched_autoconfig_from_pretrained
+    transformers.PreTrainedModel.from_pretrained = _patched_from_pretrained
 
 
 # Task yamls that live in this repo rather than in the installed lm-eval
@@ -125,6 +129,9 @@ def _load_model(cfg: dict[str, Any]) -> HFLM:
     }
     if not _is_distributed():
         kwargs["device"] = cfg["device"]
+    # Multimodal-wrapper checkpoints (Apertus 1.5) are not in the CausalLM
+    # registry; register them so HFLM's AutoModelForCausalLM path loads them.
+    ensure_causal_lm_registered(cfg["model"]["pretrained"])
     lm = HFLM(**kwargs)
     _align_eos_ids(lm)
     if cfg["tasks"].get("apply_chat_template", False):

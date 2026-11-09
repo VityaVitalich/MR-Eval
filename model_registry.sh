@@ -3269,3 +3269,10 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/model_registry_1pp.sh"
 # parents registered there.
 # shellcheck disable=SC1091
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/model_registry_1pp_rl.sh"
+
+### 2026-11-09: Apertus 1.5 8B constitutional-SDPO pilot — sub-registry in model_registry_apertus15.sh
+# Three swiss-ai Apertus-v1.5-8B checkpoints (A = DPO start, B = xccyn's
+# 2-step constitutional SDPO pilot, C = official release). model_type
+# apertus1p5 only loads in container/apertus15.toml: submit their suites with
+# `--env-kind apertus15` (+ JBB_MAX_MODEL_LEN=8192). See the file header.
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/model_registry_apertus15.sh"

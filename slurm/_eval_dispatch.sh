@@ -144,6 +144,7 @@ build_bench_argv() {   # id model_path
                       BENCH_ARGV=(slurm/run_all_jbb.sh "${JBB_MODEL_CONFIG:-generic_instruct}" "model.pretrained=$model_path")
                     fi
                     [[ -n "${JBB_METHODS:-}" ]] && BENCH_ARGV+=(--methods "$JBB_METHODS")
+                    [[ -n "${JBB_MAX_MODEL_LEN:-}" ]] && BENCH_ARGV+=("max_model_len=$JBB_MAX_MODEL_LEN")
                     [[ "${JBB_COHERENCE:-0}" == "1" ]] && BENCH_ARGV+=(coherence.enabled=true) ;;
     dan)            BENCH_ARGV=(slurm/eval_dan.sh "$model_path")
                     [[ -n "${DAN_JUDGE:-}" ]]          && BENCH_ARGV+=(--judge "$DAN_JUDGE")
@@ -258,11 +259,16 @@ Options:
   --only <id,id,...>   run exactly these bench ids (overrides group flags),
                        e.g. --only eval_sft,jbb
   --skip-eval-sft      skip the general-capability eval
+  --env-kind <kind>    run every leaf in container/<kind>.toml instead of the
+                       per-bench default (env MR_EVAL_ENV_KIND_OVERRIDE); e.g.
+                       apertus15 for Apertus 1.5 targets. Not applied to the
+                       abliteration / ft_* chains.
   --dry-run            print the sbatch commands without submitting
   --list-models        list registered model aliases
 
 Per-bench env knobs (unset => the leaf's own default applies):
-  JBB_METHODS JBB_MODEL_CONFIG JBB_COHERENCE(=1) DAN_JUDGE DAN_PROMPT_LIMIT DAN_BEHAVIOR_LIMIT
+  JBB_METHODS JBB_MODEL_CONFIG JBB_COHERENCE(=1) JBB_MAX_MODEL_LEN
+  DAN_JUDGE DAN_PROMPT_LIMIT DAN_BEHAVIOR_LIMIT
   ADVBENCH_JUDGE PAP_JUDGE PAP_FILE STRONGREJECT_JUDGE STRONGREJECT_DATASET
   FORTRESS_JUDGE GCG_JUDGE GCG_FILE
   PREFILL_JUDGE
@@ -344,8 +350,12 @@ _dispatch_one_suite() {   # model_path run_name ckpt_label label_prefix
     fi
 
     build_bench_argv "$id" "$model_path"
+    # MR_EVAL_ENV_KIND_OVERRIDE / --env-kind: run every leaf in one named
+    # container instead of the per-bench default. Needed when the target
+    # architecture only loads in a newer image than the bench's own (first
+    # use: Apertus 1.5 `apertus1p5`, container/apertus15.toml, 2026-11-09).
     jid="$(mr_eval_submit_job_parsable "$REPO_ROOT/${BENCH_WORKDIR[$id]}" "${id}[$job_label]" "$DRY_RUN" \
-      --environment="$(mr_eval_env_toml "${BENCH_ENVKIND[$id]}")" \
+      --environment="$(mr_eval_env_toml "${ENV_KIND_OVERRIDE:-${BENCH_ENVKIND[$id]}}")" \
       --export="ALL,MR_EVAL_MODEL_NAME=$eval_label" \
       "${BENCH_ARGV[@]}")"
     echo "  $jid"
@@ -361,6 +371,7 @@ run_dispatch() {
   ONLY_IDS=""
   DRY_RUN="${DRY_RUN:-0}"
   SKIP_EVAL_SFT="${SKIP_EVAL_SFT:-0}"
+  ENV_KIND_OVERRIDE="${MR_EVAL_ENV_KIND_OVERRIDE:-}"
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -373,6 +384,7 @@ run_dispatch() {
       --model)             model_input="$2"; shift 2 ;;
       --manifest)          manifest="$2"; shift 2 ;;
       --skip-eval-sft)     SKIP_EVAL_SFT=1; shift ;;
+      --env-kind)          ENV_KIND_OVERRIDE="$2"; shift 2 ;;
       --dry-run)           DRY_RUN=1; shift ;;
       --list-models)       mr_eval_print_registered_models; return 0 ;;
       -h|--help)           _dispatch_usage; return 0 ;;
