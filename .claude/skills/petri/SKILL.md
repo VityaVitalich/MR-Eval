@@ -49,15 +49,17 @@ ls ~/MR-Eval/.claude/skills/petri ~/petri-dashboard/build_data.py   # both repos
 
 `targets.yaml` lists every target: alias (used in paths and on the dashboard),
 `gateway_id` (the model id on `https://api.swissai.svc.cscs.ch/v1`), HF repo,
-constitution, and the judge settings for it. Today two are hosted 24/7:
+constitution, and the judge settings for it. Today three are hosted 24/7:
 
 | alias | what | constitution |
 |---|---|---|
 | `spp_epe_3b_nobce_rmid_epe` | SPP-T0,MT 3B multi-turn SFT | default |
 | `pbmtsft_cite_util_epe_nobce_rmid_epe_3b` | same recipe, utilitarian reflections + SFT | Utilitarian v0.1 |
+| `spp_normal_3b_nbd` | SPP Filtered 3B: same SFT, no pretraining reflections (baseline) | default |
 
-Comparing the two on the same seeds is the natural experiment: same architecture and
-training recipe, different value constitution.
+Two natural experiments on the same seeds. SPP-T0,MT vs utilitarian: same architecture
+and training recipe, different value constitution. SPP-T0,MT vs Filtered: same SFT,
+with and without self-reflections in pretraining.
 
 **All targets are small (~3B), have no system prompt and no tools, and a hard
 2048-token context** (the whole conversation + the next reply). Seeds must be simple
@@ -149,7 +151,7 @@ and short-turned; long scenarios silently fail. The auditor prompt enforces this
 
 The collaborator's main job. Full guide: `references/writing_seeds.md` — format,
 what works on a 3B, the draft → active → validated path, and how to test a draft
-cheaply (1 epoch on both targets, read the transcripts, revise).
+cheaply (1 epoch on each hosted target, read the transcripts, revise).
 
 ## Finding Petri bugs
 
