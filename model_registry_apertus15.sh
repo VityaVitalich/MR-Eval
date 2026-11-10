@@ -27,7 +27,16 @@
 #                                 from A, Gretel prompts + Charter principles +
 #                                 Qwen-generated feedback, 2 optimizer steps (one
 #                                 with non-zero lr) — an engineering test; the
-#                                 main comparison is B vs A
+#                                 main comparison is B vs A. Her export
+#                                 (.../nov09-recovery/merged/B-step2) is ONE
+#                                 model.safetensors; the vLLM fork loads Apertus
+#                                 1.5 only from model-apertus-model-*.safetensors
+#                                 + model-vision_tokenizer-model / model-wavtokenizer-
+#                                 model.safetensors (apertus_mm.py
+#                                 allow_patterns_overrides), so the registry points
+#                                 at a byte-exact re-layout in vvmoskvoretskii's
+#                                 hf_models (apertus15_smoke/split_apertus_export.py,
+#                                 2026-11-10; configs/tokenizer copied verbatim).
 #   C  apertus15_8b_release      swiss-ai/Apertus-v1.5-8B — the authors' released
 #                                 SDPO model (external reference, not a matched run)
 
@@ -39,8 +48,8 @@ mr_eval_register_model \
 
 mr_eval_register_model \
   --alias apertus15_8b_csdpo_step2 \
-  --pretrained /capstor/store/cscs/swissai/ab023/xccyn/spsd/self-distillation-pretraining/local/experiments/apertus-reproduction-20261022/coordinator/nov09-recovery/merged/B-step2 \
-  --description "Apertus 1.5 8B constitutional-SDPO pilot (xccyn): init from apertus15_8b_dpo, Gretel prompts + Charter principles + Qwen feedback, 2 optimizer steps (1 non-zero lr), B-step2 merged export; Apertus chat template, text-only eval (B, compare against A)" \
+  --pretrained /capstor/store/cscs/swissai/infra01/users/vvmoskvoretskii/hf_models/apertus15_8b_csdpo_step2 \
+  --description "Apertus 1.5 8B constitutional-SDPO pilot (xccyn): init from apertus15_8b_dpo, Gretel prompts + Charter principles + Qwen feedback, 2 optimizer steps (1 non-zero lr), B-step2 merged export re-laid out into the official per-component safetensors files (byte-exact, see README.txt there); Apertus chat template, text-only eval (B, compare against A)" \
   --jbb-config generic_instruct
 
 mr_eval_register_model \
