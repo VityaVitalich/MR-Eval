@@ -5955,20 +5955,21 @@ function modelTreeInfo(m) {
     // Rows = corpus + variant (seed42 / tokmatch / rawanneal / GSM8K warm
     // starts sit under their corpus's main row); a corpus-only label made the
     // four user+asst rows at 1.7B indistinguishable. Chips = the stage, or the
-    // epoch for the GSM8K SFT warm starts (1pp_1p7b_<c>_gsm8k{sft,mix}_e<N>).
+    // epoch for the GSM8K SFT warm starts (1pp_1p7b_<c>_gsm8k{sft,mix}_e<N>), or
+    // "+SFT +search RL" for the 2.81B search agents (1pp_2p81b_v2_<c>_search_rl).
     group = `1PP ${f.size}`;
     groupOrder = parseFloat(f.size);
-    const pm = id.match(/^1pp_[^_]+_(?:v2_)?(?:asst|ua|raw)_(?:(.+?)_)?(base|sft|e\d+)$/) || [];
+    const pm = id.match(/^1pp_[^_]+_(?:v2_)?(?:asst|ua|raw)_(?:(.+?)_)?(base|sft|e\d+|search_rl)$/) || [];
     const variant = pm[1] || '', stage = pm[2] || '';
     const VARIANTS = { '': '', seed42: 'seed 42', seed1234: 'seed 1234', tokmatch: 'token-matched', tokmatchog: 'token-matched (original docs)',
                        rawanneal: 'raw→conv cooldown', rawanneal_seed42: 'raw→conv cooldown · seed 42', rawanneal_seed1234: 'raw→conv cooldown · seed 1234',
                        gsm8ksft: 'GSM8K SFT', gsm8kmix: 'GSM8K SFT + safety mix' };
     const vRank = Object.keys(VARIANTS).indexOf(variant);
-    seriesKey = variant ? `${id.match(/^1pp_[^_]+_(?:v2_)?[^_]+/)[0]}_${variant}` : id.replace(/_(base|sft)$/, '');
+    seriesKey = variant ? `${id.match(/^1pp_[^_]+_(?:v2_)?[^_]+/)[0]}_${variant}` : id.replace(/_(base|sft|search_rl)$/, '');
     seriesLabel = f.corpus + (variant ? ` · ${VARIANTS[variant] ?? variant}` : '');
     seriesOrder = ['asst', 'user+asst', 'raw docs'].indexOf(f.corpus) * 10 + (vRank < 0 ? 9 : vRank);
-    chip = stage === 'sft' ? '+SFT' : stage === 'base' ? 'pretrain-only' : stage || 'model';
-    chipOrder = stage === 'sft' ? 1 : stage === 'base' ? 0 : parseInt(stage.slice(1)) || 0;
+    chip = stage === 'sft' ? '+SFT' : stage === 'base' ? 'pretrain-only' : stage === 'search_rl' ? '+SFT +search RL' : stage || 'model';
+    chipOrder = stage === 'sft' ? 1 : stage === 'base' ? 0 : stage === 'search_rl' ? 2 : parseInt(stage.slice(1)) || 0;
   } else {
     // Legacy: rows are pretrained bases, chips the post-train recipes applied
     // to them (base · SFT · mixSFT def · pbSFT3 lr1e-4 · …).
