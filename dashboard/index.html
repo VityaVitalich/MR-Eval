@@ -8677,6 +8677,23 @@ const SC_STATIC = [
       return vals.some(v => v == null) ? null : vals.reduce((x, y) => x + y, 0) / vals.length;
     },
     detail: (md, id) => SC_ASR_BENCHES.map(([n, f]) => `${n} ${scFmt(scPct(f(md, id)), 'pp')}`).join(' · ') },
+  // Prefill attacks (Safety tab → Prefill): same cell and accessor as that
+  // table. The headline needs all four attack strategies, so every point
+  // averages the same ones; the no-prefill control stays out of it.
+  { key: 'prefill_overall', label: 'Prefill ASR', unit: 'pp', higher: false, on: true,
+    note: `Assistant-turn prefill attacks over the 520 AdvBench behaviours: mean ASR of ${PREFILL_ATTACKS.map(s => PREFILL_LABELS[s]).join(', ')}; plotted only when all four are present. The no-prefill control is excluded. Follows the page-wide judge, sampling, aggregation and threshold.`,
+    get: (md, id) => {
+      const vals = PREFILL_ATTACKS.map(s => scPct(provMethod(id, 'prefill', md.prefill, s)));
+      return vals.some(v => v == null) ? null : vals.reduce((x, y) => x + y, 0) / vals.length;
+    },
+    detail: (md, id) => [...PREFILL_ATTACKS, PREFILL_CONTROL]
+      .map(s => `${PREFILL_LABELS[s]} ${scFmt(scPct(provMethod(id, 'prefill', md.prefill, s)), 'pp')}`).join(' · ') },
+  ...[...PREFILL_ATTACKS, PREFILL_CONTROL].map(s => (
+    { key: `prefill_${s}`, label: `Prefill ASR, ${PREFILL_LABELS[s]}`, unit: 'pp', higher: false, on: false,
+      note: s === PREFILL_CONTROL
+        ? 'No-prefill control: the bare AdvBench goal through the unmodified chat template. A baseline, not an attack.'
+        : `Prefill strategy "${PREFILL_LABELS[s]}" only, 520 AdvBench behaviours. Follows the page-wide judge, sampling, aggregation and threshold.`,
+      get: (md, id) => scPct(provMethod(id, 'prefill', md.prefill, s)) })),
   { key: 'charter_overall', label: 'Charter MCQ accuracy', unit: 'pp', higher: true, on: true,
     note: 'All 678 items; swap-debiased logprob choice, no judge. Chance 25%.',
     get: md => scPct(md.charter_mcq?.acc) },
@@ -8688,6 +8705,22 @@ const SC_STATIC = [
   { key: 'airisk_logprob', label: 'AI-risk risky choice, logprob', unit: 'pp', higher: false, on: true,
     note: 'Same dilemmas scored by the higher-probability action; label-audit Incorrect tags dropped.',
     get: md => scPct(md.airisk?.logprob?.overall_risky_rate_excl_incorrect) },
+  // Ablation conditions (Safety tab → Diagnostics): the same cells and
+  // accessors as that table, so they follow the page-wide selectors and stay
+  // blank under a provenance the condition was not run on.
+  ...[['ablit', 'Abliteration', 'Refusal direction orthogonalized out of the weights (Arditi et al.), then attacked.'],
+      ['tmplabl', 'Template ablation', 'Chat template replaced by a 5-shot User/Assistant Q&A scaffold. On the 1.7B models the ChatML-pretrained asst / user+asst runs answered the scaffold with one-line off-format replies, which lowers ASR without being refusal; read those lines with the Safety tab samples.']]
+    .flatMap(([cell, name, what]) => [
+      { key: `${cell}_overall`, label: `${name} ASR`, unit: 'pp', higher: false, on: true,
+        note: `${what} Mean of JBB-direct and PAP ASR, as the Safety tab's Diagnostics table. Follows the page-wide judge, sampling, aggregation and threshold.`,
+        get: (md, id) => scPct(provValue(id, cell, md[cell], () => MISSING)),
+        detail: (md, id) => [['JBB direct', 'jbb_direct'], ['PAP', 'pap']]
+          .map(([n, meth]) => `${n} ${scFmt(scPct(provMethod(id, cell, md[cell], meth)), 'pp')}`).join(' · ') },
+      ...[['direct', 'JBB direct', 'jbb_direct'], ['pap', 'PAP', 'pap']].map(([k, n, meth]) => (
+        { key: `${cell}_${k}`, label: `${name} ASR, ${n}`, unit: 'pp', higher: false, on: false,
+          note: `${what} ${n} only. Follows the page-wide judge, sampling, aggregation and threshold.`,
+          get: (md, id) => scPct(provMethod(id, cell, md[cell], meth)) })),
+    ]),
 ];
 
 // Per-checkpoint metrics of the fine-tuning chains (values already in % or
@@ -8729,7 +8762,7 @@ const SC_STAT_LABEL = {
 // points) the ratio is noise, so the point is left out.
 const SC_REL_FLOOR = 1;
 
-const SC_LS = 'mr-eval:scaling:v4';
+const SC_LS = 'mr-eval:scaling:v5';   // v5: ablation metrics joined the +SFT section
 const SC = { built: false, charts: [], families: [], state: null, data: null };
 function scDefaultState() {
   return {
