@@ -34,6 +34,11 @@ VLLM_USE_V1 = "1"
 # Charter-marker ids are ordinary tokens in the Apertus vocabulary; see
 # banned_tokens._bans_enabled.
 MR_EVAL_BANNED_TOKENS = "0"
+# PAIR attacker (Qwen3-32B, TP=2): this vLLM's fused all-reduce+RMSNorm pass
+# crashes CUDA-graph capture for TP>1 (cudaErrorIllegalAddress; smoke job
+# 3907699). The Apertus 1.5 README's fix; read by jailbreaks/slurm/eval_pair.sh.
+# TP=1 engines (every other leaf) and eager engines (overrefusal) are unaffected.
+ATTACKER_EXTRA_ARGS = "--compilation-config.pass_config.fuse_allreduce_rms false"
 VLLM_CACHE_ROOT = "/capstor/store/cscs/swissai/infra01/users/vvmoskvoretskii/vllm_cache"
 VLLM_ALLREDUCE_USE_SYMM_MEM = "0"
 NCCL_NET = "AWS Libfabric"

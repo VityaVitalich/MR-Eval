@@ -105,6 +105,12 @@ ATTACKER_TP="${ATTACKER_TP:-2}"
 ATTACKER_DTYPE="${ATTACKER_DTYPE:-bfloat16}"
 ATTACKER_MAX_MODEL_LEN="${ATTACKER_MAX_MODEL_LEN:-8192}"
 ATTACKER_GPU_MEM_UTIL="${ATTACKER_GPU_MEM_UTIL:-0.92}"
+# Extra `vllm serve` flags for the attacker, word-split on purpose. The Apertus
+# 1.5 image (container/apertus15.toml) sets
+#   --compilation-config.pass_config.fuse_allreduce_rms false
+# because its vLLM fuses all-reduce+RMSNorm for TP>1 and CUDA-graph capture
+# then dies with cudaErrorIllegalAddress (documented in the Apertus 1.5 README).
+ATTACKER_EXTRA_ARGS="${ATTACKER_EXTRA_ARGS:-}"
 
 # ── attacker cache check ────────────────────────────────────────────────────
 # Compute nodes run HF_HUB_OFFLINE=1; a missing model would silently 500 on the
@@ -155,6 +161,7 @@ else
       --max-model-len "$ATTACKER_MAX_MODEL_LEN" \
       --port "$ATTACKER_PORT" \
       --served-model-name "pair-attacker" \
+      $ATTACKER_EXTRA_ARGS \
       >"$ATTACKER_LOG" 2>&1 &
   ATTACKER_PID=$!
   echo "Attacker PID: $ATTACKER_PID"
