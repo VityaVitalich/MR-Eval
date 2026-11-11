@@ -41,6 +41,14 @@ while [[ $# -gt 0 ]]; do
 done
 MODEL_REF="${MODEL_REF:-baseline_sft}"
 
+# Per-container Hydra overrides (space-separated key=value), e.g.
+# container/apertus15.toml sets tensor_parallel_size=1 because TP>1 engines
+# die at start under that image. Explicit CLI overrides come after and win.
+if [[ -n "${AIRISK_EXTRA_OVERRIDES:-}" ]]; then
+  read -r -a _airisk_env_overrides <<< "$AIRISK_EXTRA_OVERRIDES"
+  EXTRA_ARGS=("${_airisk_env_overrides[@]}" "${EXTRA_ARGS[@]}")
+fi
+
 echo "SCRIPT START: $(date)"
 echo "SLURM_SUBMIT_DIR=$SLURM_SUBMIT_DIR"
 

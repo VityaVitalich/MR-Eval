@@ -98,7 +98,17 @@ fi
 
 start=$(date +%s)
 
-accelerate launch \
+# The `accelerate` console script is missing under images where accelerate
+# comes from a pip --target overlay on PYTHONPATH (container/apertus15.toml:
+# the overlay's bin/ shebangs point at the login-node python). The module entry
+# point is the same launcher (`accelerate launch` == accelerate.commands.launch).
+if command -v accelerate >/dev/null 2>&1; then
+  ACCELERATE_LAUNCH=(accelerate launch)
+else
+  ACCELERATE_LAUNCH=(python -m accelerate.commands.launch)
+fi
+
+"${ACCELERATE_LAUNCH[@]}" \
   --multi_gpu \
   --num_processes 4 \
   --num_machines 1 \

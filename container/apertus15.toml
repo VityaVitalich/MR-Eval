@@ -39,6 +39,11 @@ MR_EVAL_BANNED_TOKENS = "0"
 # 3907699). The Apertus 1.5 README's fix; read by jailbreaks/slurm/eval_pair.sh.
 # TP=1 engines (every other leaf) and eager engines (overrefusal) are unaffected.
 ATTACKER_EXTRA_ARGS = "--compilation-config.pass_config.fuse_allreduce_rms false"
+# airisk builds its own sync LLM() with tensor_parallel_size=null (= all 4 GPUs)
+# and hit the same TP>1 engine-start crash (campaign jobs 3907723/3907751/3908189).
+# TP=1 is airisk/conf/config.yaml's documented escape hatch; 8B bf16 fits one
+# GH200. Read by airisk/slurm/eval_airisk.sh.
+AIRISK_EXTRA_OVERRIDES = "tensor_parallel_size=1"
 VLLM_CACHE_ROOT = "/capstor/store/cscs/swissai/infra01/users/vvmoskvoretskii/vllm_cache"
 VLLM_ALLREDUCE_USE_SYMM_MEM = "0"
 NCCL_NET = "AWS Libfabric"
