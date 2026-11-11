@@ -769,6 +769,25 @@ for _tag, _lbl, _steps, _conds in (
                 "aliases": [f"1pp_1p7b_{_cond}_{_tag}_e{_ep}"],
             })
 
+# ── 2026-11-10: SDSP — self-distillation post-training on Apertus 1.5 8B ────
+# xccyn's constitutional-SDPO pilot on swiss-ai's Apertus-v1.5-8B (registry
+# model_registry_apertus15.sh; evaluated under the swiss-ai release image via
+# container/apertus15.toml). Three instruct checkpoints, compared among
+# themselves (main comparison B vs A, C as the external reference):
+#   A apertus15_8b_dpo          swiss-ai/Apertus-v1.5-8B-DPO, the SDPO starting point
+#   B apertus15_8b_csdpo_step2  constitutional SDPO pilot, 2 optimizer steps from A
+#   C apertus15_8b_release      swiss-ai/Apertus-v1.5-8B, the official SDPO release
+# The dashboard's Cohort facet gives them their own value ("sdsp", see
+# modelFacets in index.html), so they are neither hidden as legacy nor mixed
+# into the SmolLM-derived families.
+SDSP_MODELS = [
+    ("apertus15_8b_dpo",         "SDSP · Apertus 1.5 8B · DPO start (A)"),
+    ("apertus15_8b_csdpo_step2", "SDSP · Apertus 1.5 8B · cSDPO pilot step 2 (B)"),
+    ("apertus15_8b_release",     "SDSP · Apertus 1.5 8B · SDPO release (C)"),
+]
+for _alias, _disp in SDSP_MODELS:
+    SFT_MODELS.append({"id": _alias, "display": _disp, "aliases": [_alias]})
+
 # groups.base/sft ship the raw lists (not the deduped ALIASES dict), so a
 # doubly-registered id renders twice and skews every rank below it.
 _seen_ids: set = set()
