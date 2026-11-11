@@ -133,16 +133,33 @@ class VLLMEngine:
     async def generate(self, rendered_prompt: str, sampling_params) -> list[str]:
         """Generate for one pre-rendered prompt; return all k completion texts.
 
-        Consumes the async generator to the final (``.finished``) RequestOutput,
-        which carries ``n`` CompletionOutputs in ``.outputs``.
+        Consumes the async generator and keeps the latest CompletionOutput per
+        ``.index``. The V0 engine (train image, vLLM 0.9) repeats all ``n``
+        outputs in every RequestOutput, so the final one is complete; the V1
+        engine (vLLM >= 0.10 default, the Apertus 1.5 serving image) streams
+        only the children that produced tokens in that step, so a sample that
+        finished earlier is absent from the final RequestOutput. Reading the
+        final ``.outputs`` alone kept just the samples that ended on the same
+        step as the last one (campaign 2026-11-10: 1 of 5 samples for most
+        prompts). ``.text`` is cumulative (the default output_kind), so the
+        last text seen per index is the full completion.
         """
         request_id = f"mreval-{next(self._ids)}"
-        final = None
+        texts: dict[int, str] = {}
+        seen = False
         async for out in self._engine.generate(rendered_prompt, sampling_params, request_id):
-            final = out
-        if final is None:
+            seen = True
+            for o in out.outputs:
+                texts[o.index] = o.text
+        if not seen:
             raise RuntimeError(f"vLLM produced no output for request {request_id}")
-        return [o.text for o in final.outputs]
+        n = int(getattr(sampling_params, "n", 1) or 1)
+        if len(texts) != n:
+            raise RuntimeError(
+                f"vLLM returned {len(texts)} of n={n} completions for request "
+                f"{request_id} (indices {sorted(texts)})"
+            )
+        return [texts[i] for i in sorted(texts)]
 
 
 def make_generate_fn(engine: VLLMEngine, sampling_params) -> Callable[[str], Awaitable[list[str]]]:
