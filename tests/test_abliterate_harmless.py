@@ -1,8 +1,8 @@
 """The harmless-value abliteration edit (`abliteration.abliterate --edit harmless`, the default).
 
-Pins: the edited weights hold the residual stream's coordinate along r at the harmless value at
-every layer; the search-time hook is the same forward pass as the edited weights (same output
-distribution); the zero edit still holds it at zero; the default edit is "harmless".
+Pins: the edited checkpoint holds the residual stream's coordinate along r at each layer's harmless
+mean; the search-time hook is the same forward pass; the checkpoint (MLP biases, untied original
+lm_head) loads back with the same answers; the zero edit still removes r; the default is "harmless".
 Needs real torch and transformers (a tiny random Llama, CPU); skipped without them.
 """
 from __future__ import annotations
@@ -60,39 +60,42 @@ def run(model, ids):
     return hs, torch.log_softmax(o.logits, dim=-1)
 
 
-@pytest.mark.parametrize("value", [1.7, None])
-def test_edited_weights_hold_the_coordinate_and_match_the_hook(setup, value):
+def test_edited_checkpoint_holds_each_layers_harmless_mean_and_matches_the_hook(setup, tmp_path):
+    model, r, ids = setup
+    mu = [0.4, 1.5, -2.0, 0.7]      # one harmless mean per layer, embedding first
+    edited = abl._apply_harmless_edit(model, r, mu)
+    hs, logp = run(edited, ids)
+    for l, h in enumerate(hs[:-1]):      # the last entry is after the final norm
+        assert torch.allclose(h @ r, torch.full((2, T), mu[l]), atol=1e-4), l
+    with abl._hold_at_harmless(model, r, mu):      # the search-time hook is the same forward pass
+        hs_hook, logp_hook = run(model, ids)
+    for a, b in zip(hs, hs_hook):
+        assert torch.allclose(a, b, atol=1e-4)
+    assert torch.allclose(logp, logp_hook, atol=1e-4)
+    assert torch.allclose(edited.lm_head.weight, model.lm_head.weight)      # untied, original weights
+    assert edited.lm_head.weight.data_ptr() != edited.model.embed_tokens.weight.data_ptr()
+    assert edited.config.mlp_bias and not edited.config.tie_word_embeddings
+    edited.save_pretrained(tmp_path)      # loads back as a stock Llama with the same answers
+    again = transformers.AutoModelForCausalLM.from_pretrained(tmp_path).eval()
+    assert torch.allclose(run(again, ids)[1], logp, atol=1e-5)
+
+
+def test_zero_edit_still_removes_the_direction(setup):
     model, r, ids = setup
     edited = copy.deepcopy(model)
-    abl._apply_edit_(edited, r, value)
+    abl._apply_zero_edit_(edited, r)
     hs, logp = run(edited, ids)
-    want = 0.0 if value is None else value
-    for h in hs[:-1]:      # the embedding and every block output but the last (the last entry is after the final norm)
-        assert torch.allclose(h @ r, torch.full((2, T), want), atol=1e-4)
-    hooks = abl._project_out_residual(model, r) if value is None else abl._hold_at_value(model, r, value)
-    with hooks:
-        hs_hook, logp_hook = run(model, ids)
-    if value is not None:      # the harmless-value hook is the exact twin: same residual stream, same next-token distribution
-        for a, b in zip(hs[:-1], hs_hook[:-1]):
-            assert torch.allclose(a, b, atol=1e-4)
-        assert torch.allclose(logp, logp_hook, atol=1e-4)
-    assert edited.lm_head.weight is edited.model.embed_tokens.weight      # tied: the value also enters lm_head
-    abl._apply_edit_(edited, r, None)      # the embedding's added value * r is removed by a second projection
-    assert torch.allclose(edited.model.embed_tokens.weight @ r, torch.zeros(V), atol=1e-5)
+    for h in hs[:-1]:
+        assert torch.allclose(h @ r, torch.zeros(2, T), atol=1e-4)
+    assert not torch.allclose(logp, run(abl._apply_harmless_edit(model, r, [1.0] * (L + 1)), ids)[1], atol=1e-3)
 
 
-def test_the_value_differs_from_zero_and_changes_the_answer(setup):
-    model, r, ids = setup
-    zero, held = copy.deepcopy(model), copy.deepcopy(model)
-    abl._apply_edit_(zero, r, None)
-    abl._apply_edit_(held, r, 3.0)
-    assert not torch.allclose(run(zero, ids)[1], run(held, ids)[1], atol=1e-3)
-
-
-def test_harmless_value_is_the_mean_coordinate():
+def test_harmless_means_are_the_mean_coordinate_at_each_layer():
     r = torch.tensor([0.6, 0.8, 0.0])
-    a_l = torch.tensor([[1.0, 0.0, 5.0], [0.0, 2.0, -5.0]])
-    assert abl._harmless_value(a_l, r) == pytest.approx((0.6 + 1.6) / 2)
+    acts = {0: torch.tensor([[1.0, 0.0, 5.0], [0.0, 2.0, -5.0]]), 1: torch.tensor([[0.0, 1.0, 0.0], [0.0, 1.0, 9.0]])}
+    assert abl._harmless_means(acts, r, 1) == pytest.approx([(0.6 + 1.6) / 2, 0.8])
+    with pytest.raises(AssertionError):
+        abl._harmless_means({0: acts[0]}, r, 1)      # a layer missing
 
 
 def test_harmless_is_the_default_edit(monkeypatch):
