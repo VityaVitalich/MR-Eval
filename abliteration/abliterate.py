@@ -8,6 +8,17 @@ then projected out of every layer's writing weights:
   - layer[i].self_attn.o_proj.weight (dim=0)
   - layer[i].mlp.down_proj.weight    (dim=0)
 
+Edit (--edit):
+  harmless (default)  after the projection, add value * r to every embedding row, where value is
+                      the harmless prompts' mean coordinate along r at the source layer. The residual
+                      stream's coordinate along r is then held at that harmless value at every layer
+                      and position, instead of at zero. Zero is not where harmless prompts sit along r
+                      in every model; on some (e.g. the 1PP ladder) setting it to zero leaves refusal
+                      largely in place while holding it at the harmless value removes it.
+  zero                the original recipe: the coordinate along r is zero everywhere.
+With tied embeddings the added value * r also enters lm_head; it shifts every logit of a position
+by the same amount, so the output distribution is unchanged.
+
 Layer selection: by default does a small held-out search over candidate
 layers (configurable via --search-layers), scoring each by
 jailbreak_rate * harmless_coherence_rate using runtime hooks (no weight
@@ -52,6 +63,9 @@ def _parse_args() -> argparse.Namespace:
                    help="Held-out prompts per class used to score each candidate layer.")
     p.add_argument("--search-max-new", type=int, default=64,
                    help="max_new_tokens during the search-time generation.")
+    p.add_argument("--edit", choices=["harmless", "zero"], default="harmless",
+                   help="Where to hold the residual stream's coordinate along r: at the harmless prompts' mean "
+                        "(default) or at zero (the original recipe). See the module docstring.")
     p.add_argument("--n-prompts", type=int, default=128)
     p.add_argument("--harmful-source", default="mlabonne/harmful_behaviors")
     p.add_argument("--harmless-source", default="mlabonne/harmless_alpaca")
@@ -195,6 +209,61 @@ def _project_out_residual(model, r: torch.Tensor):
             h.remove()
 
 
+@contextlib.contextmanager
+def _hold_at_value(model, r: torch.Tensor, value: float):
+    """Forward-hook twin of the harmless-value weight edit (`_apply_edit_` with a value): projects
+    unit vector `r` out of every attention and MLP write, sets the embedding output's coordinate
+    along r to `value`, and projects r out of the final norm's output (what the edited lm_head
+    reads). Hooking the writes, not the block outputs, makes it the same forward pass as the edited
+    weights, the MLP's mid-block input included; the logits then differ only by the per-position
+    shift of a tied lm_head, so the output distribution is the same."""
+    handles = []
+    device = next(model.parameters()).device
+    dtype = next(model.parameters()).dtype
+    r_d = (r / r.norm()).to(device=device, dtype=dtype)
+
+    def project_out(_mod, _inp, out):
+        return out - (out * r_d).sum(-1, keepdim=True) * r_d
+
+    def hold(_mod, _inp, out):
+        return out - ((out * r_d).sum(-1, keepdim=True) - value) * r_d
+
+    handles.append(model.model.embed_tokens.register_forward_hook(hold))
+    for blk in model.model.layers:
+        handles.append(blk.self_attn.o_proj.register_forward_hook(project_out))
+        handles.append(blk.mlp.down_proj.register_forward_hook(project_out))
+    handles.append(model.model.norm.register_forward_hook(project_out))
+    try:
+        yield
+    finally:
+        for h in handles:
+            h.remove()
+
+
+def _harmless_value(a_l: torch.Tensor, r: torch.Tensor) -> float:
+    """The harmless prompts' mean coordinate along unit vector r. a_l: (n_prompts, d_model)."""
+    assert a_l.ndim == 2 and a_l.shape[1] == r.shape[0], (a_l.shape, r.shape)
+    return float(a_l.mean(dim=0) @ r)
+
+
+def _apply_edit_(model, r: torch.Tensor, value: float | None) -> None:
+    """In place: project r out of the embedding, every o_proj and down_proj (and an untied lm_head);
+    with a value, then add value * r to every embedding row (the harmless-value edit)."""
+    _orthogonalize_(model.model.embed_tokens.weight.data, r, dim=1)
+    for blk in model.model.layers:
+        _orthogonalize_(blk.self_attn.o_proj.weight.data, r, dim=0)
+        _orthogonalize_(blk.mlp.down_proj.weight.data, r, dim=0)
+    # If lm_head is untied (rare for SmolLM2), edit it too. Tied checkpoints
+    # already have lm_head.weight is embed_tokens.weight and the embedding
+    # edit covers both.
+    if not getattr(model.config, "tie_word_embeddings", False):
+        print("[abl] lm_head untied — applying ortho there too")
+        _orthogonalize_(model.lm_head.weight.data, r, dim=1)
+    if value is not None:
+        W = model.model.embed_tokens.weight.data
+        W.add_(value * r.to(W.device, W.dtype))
+
+
 def _generate_responses(
     model, tokenizer, prompts: list[str], *, max_new: int
 ) -> list[str]:
@@ -218,15 +287,17 @@ def _generate_responses(
 def _score_layer(
     model, tokenizer, r: torch.Tensor,
     eval_harmful: list[str], eval_harmless: list[str], *,
-    max_new: int,
+    max_new: int, value: float | None = None,
 ) -> dict:
-    """Install runtime hooks for `r` and score on the held-out eval splits.
+    """Install runtime hooks for `r` and score on the held-out eval splits. value None: the
+    zero edit (`_project_out_residual`); otherwise the harmless-value edit (`_hold_at_value`).
 
     Returns dict with per-class buckets and a scalar `score` =
     jailbreak_rate * harmless_coherence_rate. Multiplicative to penalize
     candidates that destroy harmless coherence (gibberish layers like the
     L14 case for safelm_sft)."""
-    with _project_out_residual(model, r):
+    hooks = _project_out_residual(model, r) if value is None else _hold_at_value(model, r, value)
+    with hooks:
         h_resp = _generate_responses(model, tokenizer, eval_harmful, max_new=max_new)
         l_resp = _generate_responses(model, tokenizer, eval_harmless, max_new=max_new)
 
@@ -253,9 +324,10 @@ def _search_best_layer(
     candidate_layers: list[int],
     train_h_rendered: list[str], train_l_rendered: list[str],
     eval_h_prompts: list[str], eval_l_prompts: list[str],
-    batch_size: int, max_new: int,
-) -> tuple[int, torch.Tensor, list[dict]]:
-    """For each candidate L, extract r_L and score via runtime hooks.
+    batch_size: int, max_new: int, edit: str,
+) -> tuple[int, torch.Tensor, float | None, list[dict]]:
+    """For each candidate L, extract r_L and score via runtime hooks, under the edit that will be
+    applied (with edit "harmless", each candidate gets its own harmless value).
 
     Returns (best_layer, best_r, full_results). The `harmful_*` /
     `harmless_*` strings inside `full_results` are not persisted to the
@@ -279,16 +351,18 @@ def _search_best_layer(
         a_h, a_l = h_acts_per_layer[layer], l_acts_per_layer[layer]
         r = a_h.mean(dim=0) - a_l.mean(dim=0)
         r = r / r.norm()
+        value = _harmless_value(a_l, r) if edit == "harmless" else None
         scored = _score_layer(
-            model, tokenizer, r, eval_h_prompts, eval_l_prompts, max_new=max_new)
+            model, tokenizer, r, eval_h_prompts, eval_l_prompts, max_new=max_new, value=value)
         scored["layer"] = layer
         scored["r"] = r
+        scored["value"] = value
         results.append(scored)
         ex_h = scored["harmful_responses"][0][:80] if scored["harmful_responses"] else ""
         ex_l = scored["harmless_responses"][0][:80] if scored["harmless_responses"] else ""
         print(f"[abl/search] L{layer:2d} (frac={layer/n_layers_total:.3f})  "
               f"jb={scored['jb_rate']:.2f}  coh={scored['coh_rate']:.2f}  "
-              f"score={scored['score']:.3f}")
+              f"score={scored['score']:.3f}  value={value}")
         print(f"[abl/search]   harmful  buckets: {scored['harmful_buckets']}")
         print(f"[abl/search]   harmless buckets: {scored['harmless_buckets']}")
         print(f"[abl/search]   ex harmful → {ex_h!r}")
@@ -300,7 +374,7 @@ def _search_best_layer(
     best = max(results, key=lambda d: d["score"])
     print(f"\n[abl/search] WINNER: layer={best['layer']} score={best['score']:.3f} "
           f"(jb={best['jb_rate']:.2f} coh={best['coh_rate']:.2f})\n")
-    return best["layer"], best["r"], results
+    return best["layer"], best["r"], best["value"], results
 
 
 def _capture_acts_at_layers(
@@ -402,7 +476,7 @@ def main() -> None:
     if do_search:
         print(f"[abl] === LAYER SEARCH over {candidate_layers}  "
               f"(eval n_harmful={len(harmful_eval)}, n_harmless={len(harmless_eval)}) ===")
-        layer, r, search_results = _search_best_layer(
+        layer, r, value, search_results = _search_best_layer(
             model, tokenizer,
             candidate_layers=candidate_layers,
             train_h_rendered=harmful_rendered,
@@ -411,10 +485,11 @@ def main() -> None:
             eval_l_prompts=harmless_eval,
             batch_size=args.batch_size,
             max_new=args.search_max_new,
+            edit=args.edit,
         )
         # Persist a compact per-candidate record (no raw responses) for the meta.
         search_record = [
-            {"layer": d["layer"], "frac": d["layer"] / n_layers,
+            {"layer": d["layer"], "frac": d["layer"] / n_layers, "value": d["value"],
              "score": d["score"], "jb_rate": d["jb_rate"], "coh_rate": d["coh_rate"]}
             for d in search_results
         ]
@@ -428,10 +503,12 @@ def main() -> None:
         a_l = _capture_last_token_acts(model, tokenizer, harmless_rendered, layer, args.batch_size)
         r = a_h.mean(dim=0) - a_l.mean(dim=0)
         r = r / r.norm()
+        value = _harmless_value(a_l, r) if args.edit == "harmless" else None
         search_record = None
 
     print(f"[abl] selected layer={layer} (frac={layer / n_layers:.3f})")
     print(f"[abl] r ‖.‖={r.norm().item():.6f}  shape={tuple(r.shape)}  dtype={r.dtype}")
+    print(f"[abl] edit={args.edit}  harmless value along r={value}")
 
     # Smoke-generate BEFORE the surgery to establish baseline. We use prompts
     # from the train split (not the held-out search split) so PRE/POST smoke
@@ -440,19 +517,9 @@ def main() -> None:
     print("[abl] === smoke (pre-ortho) ===")
     _smoke_generate(model, tokenizer, smoke_prompts, "PRE")
 
-    # Ortho — fp32 in place.
+    # Ortho (+ the harmless value on the embedding) — fp32 in place.
     print("[abl] orthogonalizing weights")
-    _orthogonalize_(model.model.embed_tokens.weight.data, r, dim=1)
-    for i, blk in enumerate(model.model.layers):
-        _orthogonalize_(blk.self_attn.o_proj.weight.data, r, dim=0)
-        _orthogonalize_(blk.mlp.down_proj.weight.data, r, dim=0)
-
-    # If lm_head is untied (rare for SmolLM2), edit it too. Tied checkpoints
-    # already have lm_head.weight is embed_tokens.weight and the embedding
-    # edit covers both.
-    if not getattr(model.config, "tie_word_embeddings", False):
-        print("[abl] lm_head untied — applying ortho there too")
-        _orthogonalize_(model.lm_head.weight.data, r, dim=1)
+    _apply_edit_(model, r, value)
 
     # Cast back to target dtype.
     target_dtype = _DTYPE[args.dtype]
@@ -477,8 +544,11 @@ def main() -> None:
         "chat_template_fingerprint": chat_template_fp,
         "dtype": args.dtype,
         "seed": args.seed,
-        "method": "arditi_weight_orthogonalization_v2_layer_search"
-            if search_record is not None else "arditi_weight_orthogonalization_v1",
+        "edit": args.edit,
+        "harmless_value": value,
+        "method": ("arditi_weight_orthogonalization_v2_layer_search"
+                   if search_record is not None else "arditi_weight_orthogonalization_v1")
+            + ("_harmless_value" if args.edit == "harmless" else ""),
         "layer_search": (
             {
                 "candidates": [r["layer"] for r in search_record],
