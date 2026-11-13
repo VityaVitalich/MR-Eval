@@ -3,11 +3,13 @@
 Two safety-eval ablation conditions, both surfaced as expandable group cells
 in the dashboard's Safety table:
 
-1. **`ablit`** — permanent weight orthogonalization (Arditi et al. 2406.11717).
+1. **`ablit`** — permanent weight edit along a refusal direction (Arditi et al. 2406.11717).
    A single refusal direction `r` is extracted from one mid-depth layer's
    last-token residual stream activations (`r = mean(harmful) − mean(harmless)`,
    L2-normalized) and orthogonalized out of every layer's `o_proj` and
-   `down_proj` plus the (tied) embedding. The result is saved as a stock
+   `down_proj` plus the embedding. With the default `--edit harmless` (see
+   "Harmless edit" below) the residual stream's coordinate along `r` is then held
+   at each layer's harmless mean instead of at zero. The result is saved as a
    HuggingFace checkpoint that loads back as a normal `LlamaForCausalLM`.
    Source layer is chosen as a fraction of model depth (`--layer-frac 0.6`,
    default ≈ layer 14 of 24 for SmolLM2-1.7B). No held-out refusal-rate
@@ -43,11 +45,65 @@ see both methods. Excluded from the headline Avg by default (toggleable via the
 gear popover). They have no legacy (gpt-4o, greedy) provenance, so they render
 blank under that default and appear under the deepseek/sampled provenance.
 
+## Harmless edit (`--edit harmless`, the default since this change)
+
+The original recipe (`--edit zero`) sets the residual stream's coordinate along
+`r` to zero everywhere. Zero is not where harmless prompts sit along `r`: their
+mean coordinate is clearly nonzero in the 1PP models, and it changes from layer
+to layer. The harmless edit holds the coordinate at the harmless prompts' mean of
+each layer (`mu[l]`, last prompt token), which is where the model sits when it
+reads a harmless request.
+
+In weights: after the projection, `mu[0] * r` is added to every embedding row and
+`(mu[l] − mu[l−1]) * r` becomes layer `l`'s `down_proj` bias. The checkpoint is
+therefore saved with `config.mlp_bias = true` (gate/up biases zero) and an untied
+`lm_head` that keeps the original weights, so it reads the held coordinate the
+way the unedited model reads a harmless prompt's. It loads as a stock
+`LlamaForCausalLM` in transformers (tested); vLLM's Llama code reads `mlp_bias`
+and an untied `lm_head` (checked in its v0.19.1 source, the image in
+`container/serving.toml`), but this PR has not been run through the cluster
+eval pipeline yet. The layer search scores candidates
+with the same edit (`_hold_at_harmless`, a hook version that is the same forward
+pass as the edited weights). `abliteration_meta.json` records `edit` and
+`harmless_means_by_layer`.
+
+Evidence on the 1PP ladder (JBB-direct, 5 samples per request at temperature
+0.7, 97 of the 100 requests, mean of three training seeds). "ASR" is this repo's
+worst@5 rule judge cell (harmful if any of the 5 samples scores 50 or more on the
+replicated judge); "usable" also requires a second judge (Claude) to find
+specific, usable content, averaged over all samples (mean@5). Zero = the stored
+`ablit` runs; harmless = this edit, applied with hooks that are the same forward
+pass as the checkpoint written here.
+
+| model | ASR, zero | ASR, harmless | usable, zero | usable, harmless |
+|---|---|---|---|---|
+| asst 0.58B | 60 | 65 | 10 | 10 |
+| asst 0.98B | 40 | 67 | 7 | 13 |
+| asst 1.7B | 39 | 62 | 10 | 20 |
+| asst 2.81B | 22 | 66 | 5 | 21 |
+| raw 0.58B | 67 | 80 | 11 | 12 |
+| raw 0.98B | 76 | 77 | 20 | 20 |
+| raw 1.7B | 61 | 80 | 14 | 30 |
+| raw 2.81B | 65 | 82 | 20 | 36 |
+
+With the zero edit, the asst models' ASR falls with size; with the harmless edit
+it does not. Caveat: in that study the direction came from other calibration
+prompts and the source layer was picked on the JBB requests themselves, which
+favours the harmless numbers. This script keeps its own direction and held-out
+layer search, so its numbers may come out lower.
+
+**Comparability.** Every `ablit` result made before this change used the zero
+edit. `run_alias.sh` refuses to reuse a checkpoint made with the other edit
+(`abliteration_meta.json` `edit`; checkpoints without the field count as zero), so
+the `ablit` column mixes recipes only if old results stay on the dashboard. Re-run
+`run_alias.sh` for every alias (after moving the old checkpoints away), or set
+`ABLIT_EDIT=zero` to keep the original recipe.
+
 ## Files
 
 ```
 abliteration/
-  abliterate.py                 # the script (~250 lines)
+  abliterate.py                 # the script (--edit harmless | zero)
   slurm/
     abliterate.sh               # 1×GPU, 30 min — runs abliterate.py with chat-template hook
     run_alias.sh                # per-alias chain: abliterate + JBB/PAP on ablit + JBB/PAP on tmplabl (k=5, deepseek)

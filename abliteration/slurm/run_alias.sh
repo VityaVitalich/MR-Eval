@@ -24,6 +24,7 @@
 #   abliteration/slurm/run_alias.sh <alias>
 #   DRY_RUN=1 abliteration/slurm/run_alias.sh <alias>
 #   ABLIT_ROOT=/path abliteration/slurm/run_alias.sh <alias>
+#   ABLIT_EDIT=zero abliteration/slurm/run_alias.sh <alias>   # the original recipe (default: harmless)
 
 set -eo pipefail
 
@@ -50,6 +51,7 @@ fi
 PRETRAINED="${MR_EVAL_MODEL_PRETRAINED_MAP[$ALIAS]:?no pretrained for $ALIAS}"
 : "${ABLIT_ROOT:=/iopsstor/scratch/cscs/$USER/abliterated}"
 CKPT="$ABLIT_ROOT/${ALIAS}_ablit"
+: "${ABLIT_EDIT:=harmless}"   # abliterate.py --edit; checkpoints from before it existed are "zero"
 
 # jbb generates through the mreval vLLM fused pipeline, which lives in the
 # train image (the dispatcher submits run_all_jbb.sh with train.toml); the
@@ -64,11 +66,18 @@ echo "── $ALIAS ──"
 #    Skip when the abliterated checkpoint already exists.
 ABL_DEP=()
 if [[ -f "$CKPT/config.json" ]]; then
-  echo "[run_alias] abliterated checkpoint exists ($CKPT) — skipping abliterate"
+  # A checkpoint of the other edit would put two recipes under one dashboard cell: refuse it.
+  HAVE_EDIT="$(python3 -c 'import json, sys; print(json.load(open(sys.argv[1])).get("edit", "zero"))' "$CKPT/abliteration_meta.json")"
+  if [[ "$HAVE_EDIT" != "$ABLIT_EDIT" ]]; then
+    echo "[run_alias] FATAL: $CKPT was made with --edit $HAVE_EDIT, this run asks for $ABLIT_EDIT." >&2
+    echo "[run_alias] Move it away to re-abliterate, or set ABLIT_EDIT=$HAVE_EDIT." >&2
+    exit 1
+  fi
+  echo "[run_alias] abliterated checkpoint exists ($CKPT, edit $HAVE_EDIT) — skipping abliterate"
 else
   ABL_JID="$(mr_eval_submit_job_parsable "$REPO_ROOT" "abliterate[$ALIAS]" "$DRY_RUN" \
     --environment="$ENV_TRAIN" \
-    abliteration/slurm/abliterate.sh "$ALIAS")"
+    abliteration/slurm/abliterate.sh "$ALIAS" --edit "$ABLIT_EDIT")"
   echo "JID=$ABL_JID"
   ABL_DEP=(--dependency="afterok:$ABL_JID")
 fi
