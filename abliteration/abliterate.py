@@ -16,7 +16,7 @@ Edit (--edit):
                       checkpoint is saved with config.mlp_bias = True (gate/up biases zero) and an
                       untied lm_head that keeps the original weights (it reads the held coordinate,
                       as the unedited model reads a harmless prompt's). Loads as a stock
-                      LlamaForCausalLM in transformers and vLLM.
+                      LlamaForCausalLM in transformers; vLLM's Llama reads mlp_bias too.
   zero                the original recipe: the coordinate along r is zero everywhere.
 Why: zero is not where harmless prompts sit along r. On the 1PP ladder, setting it to zero leaves much
 of the larger models' refusal in place; holding each layer's harmless mean removes more of it.
