@@ -912,19 +912,6 @@
 </section>
 
 <section id="dynamics">
-  <h2>BS JBB dynamics <span id="bs-judges" class="dyn-judges"></span></h2>
-  <div class="panel">
-    <div class="dyn-controls">
-      <label class="field">Metric
-        <select id="bs-metric"></select>
-      </label>
-    </div>
-    <div class="model-picker" id="bs-models"></div>
-    <div class="dyn-warning" id="bs-dyn-warning" hidden></div>
-    <div class="chart-card"><canvas id="bs-chart"></canvas></div>
-    <div class="dyn-table" id="bs-table"></div>
-  </div>
-
   <h2>Fine-tuning dynamics <span id="alpaca-judges" class="dyn-judges"></span></h2>
   <div class="panel">
     <div class="dyn-controls">
@@ -1020,6 +1007,21 @@
     <div class="dyn-warning" id="em-dyn-warning" hidden></div>
     <div class="chart-card"><canvas id="em-chart"></canvas></div>
     <div class="dyn-table" id="em-table"></div>
+  </div>
+
+  <!-- Benign-safety (GSM8K fine-tune) JBB panel: sits below the Fine-tuning
+       (Alpaca) and EM panels, which are the two layouts opened most. -->
+  <h2>BS JBB dynamics <span id="bs-judges" class="dyn-judges"></span></h2>
+  <div class="panel">
+    <div class="dyn-controls">
+      <label class="field">Metric
+        <select id="bs-metric"></select>
+      </label>
+    </div>
+    <div class="model-picker" id="bs-models"></div>
+    <div class="dyn-warning" id="bs-dyn-warning" hidden></div>
+    <div class="chart-card"><canvas id="bs-chart"></canvas></div>
+    <div class="dyn-table" id="bs-table"></div>
   </div>
 
   <h2>PEZ loss dynamics</h2>
@@ -1578,8 +1580,26 @@ const FAMILY_RULES = [
   { re: /^apertus15_/,        name: 'SDSP',              color: '#be185d' }, // pink 700
 ];
 const famRule = id => FAMILY_RULES.find(r => r.re.test(id)) || { name: 'other', color: '#9aa0a6' };
-const famColor = id => famRule(id).color;
-const famName  = id => famRule(id).name;
+// 1PP: the family is one teal, but its models differ first by pretraining
+// condition, so the condition sets the hue everywhere a model is coloured
+// (table stripes, picker dots, dynamics lines, the Scaling tab). Okabe–Ito
+// categorical colours (colour-blind safe, readable on the white page). Keyed
+// by condition[_rawanneal]; other variants (tokmatch, seeds, gsm8k warm
+// starts, search_rl) keep their condition's colour, and an id that matches no
+// condition falls back to the family teal.
+const ONEPP_COND_COLOR = {
+  asst:           '#009E73', // bluish green
+  ua:             '#0072B2', // blue
+  raw:            '#E69F00', // orange
+  ua_rawanneal:   '#CC79A7', // reddish purple
+  asst_rawanneal: '#D55E00', // vermillion
+};
+const oneppCondKey = id => {
+  const m = /^1pp_[^_]+_(?:v2_)?(asst|ua|raw)(_rawanneal)?(?:_|$)/.exec(id);
+  return m ? m[1] + (m[2] || '') : null;
+};
+const famColor = id => ONEPP_COND_COLOR[oneppCondKey(id)] || famRule(id).color;
+const famName = id => famRule(id).name;
 // Model-name cell with its family stripe + dot. Legacy-cohort models (see
 // modelFacets) carry an amber tag so they read as legacy in every table,
 // picker and chip — not only behind the Cohort facet that hides them by default.
@@ -4276,7 +4296,7 @@ function expandDynamicsMetrics(select) {
 }
 function dynamicsMetricKey(id) { return document.getElementById(id).value.split('::')[0]; }
 
-function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, metricLabels, xMode, transformBlk, yOpts, xLabel: xLabelOverride, tableEveryN, datasetSelId, optimSelId, blockForModel, preserveModelSelection = false, statistics }) {
+function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, metricLabels, xMode, transformBlk, yOpts, xLabel: xLabelOverride, tableEveryN, datasetSelId, optimSelId, defaultDataset, defaultOptim, blockForModel, preserveModelSelection = false, statistics }) {
   // xMode: 'epoch' (index 0..N-1, labeled "Epoch") or 'iteration' (raw step).
   const xLabel = xLabelOverride || (xMode === 'epoch' ? 'Epoch' : 'iteration');
   const chart = makeDynChart(chartId, xLabel, yOpts);
@@ -4765,7 +4785,10 @@ function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, met
       const label = cat.find(d => d.slug === s)?.display || s;
       return `<option value="${s}">${jbEscape(label)}</option>`;
     }).join('');
+    // Keep the current choice across re-renders; otherwise (first load) open on
+    // the panel's default dataset when it has data, else the first option.
     if (opts.includes(prev)) el.value = prev;
+    else if (defaultDataset && opts.includes(defaultDataset)) el.value = defaultDataset;
     renderOptimSelector(data);
   }
 
@@ -4781,9 +4804,14 @@ function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, met
     });
     const opts = (data.dyn_optimizers?.[kind] || [{ suffix: '', label: 'default' }])
       .filter(o => has(o.suffix ? `${ds}_${o.suffix}` : ds));
-    const prev = el.value;
+    // Same rule as the dataset: the current optimizer survives when the new
+    // dataset has it; otherwise (first load, or a dataset without it) the
+    // panel's default optimizer when available, else the first option. An
+    // empty select reads as '' — the AdamW suffix — hence the hadOptions test.
+    const prev = el.value, hadOptions = el.options.length > 0;
     el.innerHTML = opts.map(o => `<option value="${o.suffix}">${jbEscape(o.label)}</option>`).join('');
-    if (opts.some(o => o.suffix === prev)) el.value = prev;
+    if (hadOptions && opts.some(o => o.suffix === prev)) el.value = prev;
+    else if (defaultOptim != null && opts.some(o => o.suffix === defaultOptim)) el.value = defaultOptim;
     el.disabled = opts.length < 2;
   }
 
@@ -5084,19 +5112,24 @@ function renderDynamics(data) {
     chartId: 'alpaca-chart', metricSelId: 'alpaca-metric', pickerId: 'alpaca-models', tableId: 'alpaca-table',
     kind: 'alpaca', metricLabels: Object.fromEntries(alpacaMetrics), xMode: 'epoch',
     datasetSelId: 'alpaca-dataset', optimSelId: 'alpaca-optim',
+    // Opens on the default-eval-set FT run (ft_alpaca_muon): random-2k × Muon lr 5e-5.
+    defaultDataset: 'no_safety_2k', defaultOptim: 'muon_lr5e5',
   });
 
   // EM judge x question set (data.em_variants), then the EM-training
   // optimizer config within it (variant.optimizers): the block plotted is
   // dynamics[<optimizer key>]. Only options some model has a block for are
-  // offered; the gpt-4o core set with AdamW (key 'em') stays first, so the
-  // default view is unchanged.
+  // offered. The panel opens on the standard regime — DeepSeek judge
+  // (EM_DEFAULT_VARIANT) with the Muon lr 1e-5 recipe (EM_DEFAULT_OPTIM) —
+  // when data has it; otherwise on the first option (gpt-4o core set, AdamW).
+  const EM_DEFAULT_VARIANT = 'em_values_ds', EM_DEFAULT_OPTIM = 'em_values_ds_muon_lr1e5';
   const emHasBlock = key => Object.values(data.models).some(md => md.dynamics?.[key]?.iterations?.length);
   const emVariants = (data.em_variants || [{ key: 'em', label: 'EM', categories: [], question_categories: {} }])
     .map(v => ({ ...v, optimizers: (v.optimizers || [{ key: v.key, label: 'default' }]).filter(o => emHasBlock(o.key)) }))
     .filter(v => v.optimizers.length);
   const emVariantSel = document.getElementById('em-variant');
   emVariantSel.innerHTML = emVariants.map(v => `<option value="${v.key}">${jbEscape(v.label)}</option>`).join('');
+  if (emVariants.some(v => v.key === EM_DEFAULT_VARIANT)) emVariantSel.value = EM_DEFAULT_VARIANT;
   const emVariant = () => emVariants.find(v => v.key === emVariantSel.value) || emVariants[0];
   const emOptimSel = document.getElementById('em-optim');
   function renderEmOptims() {
@@ -5106,6 +5139,9 @@ function renderDynamics(data) {
     emOptimSel.innerHTML = opts.map(o => `<option value="${o.key}">${jbEscape(o.label)}</option>`).join('');
     const keep = opts.find(o => o.label === prevLabel);
     if (keep) emOptimSel.value = keep.key;
+    // First fill (no previous option): the default recipe; a later judge switch
+    // that loses the current optimizer falls back to the first one, as before.
+    else if (prevLabel == null && opts.some(o => o.key === EM_DEFAULT_OPTIM)) emOptimSel.value = EM_DEFAULT_OPTIM;
     emOptimSel.disabled = opts.length < 2;
   }
   renderEmOptims();
@@ -8655,7 +8691,9 @@ const SC_LADDERS = { v2: { label: 'v2: 0.58B · 0.98B · 1.7B · 2.81B', sizes: 
 const scLaddersOf = (sizeKey, v2) => v2 ? ['v2'] : Object.keys(SC_LADDERS).filter(k => SC_LADDERS[k].sizes.includes(sizeKey));
 const SC_COND_LABEL = { asst: 'asst', ua: 'user+asst', raw: 'raw docs' };
 const SC_VARIANT_LABEL = { '': '', rawanneal: 'raw→conv cooldown', tokmatch: 'token-matched', tokmatchog: 'token-matched (orig. docs)' };
-const SC_COND_COLOR = { asst: '#0d9488', ua: '#7c3aed', raw: '#d97706' };
+// Same condition palette as every other tab (ONEPP_COND_COLOR): the two
+// rawanneal families have their own hue, other variants their condition's.
+const SC_COND_COLOR = ONEPP_COND_COLOR;
 const SC_VARIANT_DASH = { '': [], rawanneal: [7, 4], tokmatch: [2, 3], tokmatchog: [8, 3, 2, 3] };
 const SC_VARIANT_POINT = { '': 'circle', rawanneal: 'rect', tokmatch: 'triangle', tokmatchog: 'rectRot' };
 const SC_CMP_COLORS = ['#2563eb', '#dc2626', '#059669', '#9333ea', '#ea580c', '#0891b2', '#be185d', '#4b5563'];
@@ -8682,7 +8720,7 @@ function scFamilyLabel(fam) {
 }
 function scFamilyStyle(fam) {
   const { cond, variant } = scFamilyParts(fam);
-  return { color: SC_COND_COLOR[cond] || '#4b5563', dash: SC_VARIANT_DASH[variant] || [4, 2], point: SC_VARIANT_POINT[variant] || 'star' };
+  return { color: SC_COND_COLOR[fam] || SC_COND_COLOR[cond] || '#4b5563', dash: SC_VARIANT_DASH[variant] || [4, 2], point: SC_VARIANT_POINT[variant] || 'star' };
 }
 function scGlyph(color, dash, point) {
   const da = dash && dash.length ? ` stroke-dasharray="${dash.join(' ')}"` : '';
