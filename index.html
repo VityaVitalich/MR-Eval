@@ -50,6 +50,8 @@
 
   /* cohort: legacy models (modelFacets().cohort) carry an amber tag everywhere
      and, in ranked tables, sit below a divider row, ranked among themselves */
+  .seed-tag { display: inline-block; font-size: 10px; line-height: 1; font-weight: 600; padding: 2px 5px; border-radius: 3px; background: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe; margin-left: 6px; vertical-align: middle; white-space: nowrap; }
+  sup.seed-n { font-size: 9px; color: #b45309; margin-left: 2px; }
   .legacy-tag { display: inline-block; font-size: 10px; line-height: 1; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; padding: 2px 5px; border-radius: 3px; background: #fef3c7; color: #b45309; border: 1px solid #fcd34d; margin-left: 6px; vertical-align: middle; }
   tbody tr.cohort-sep, tbody tr.cohort-sep:hover, tbody tr.cohort-sep:nth-child(even):hover { background: var(--panel-alt); }
   tr.cohort-sep td { color: var(--muted); font-size: 11.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; text-align: left; padding: 4px 10px; border-top: 2px solid var(--border-strong); }
@@ -595,6 +597,9 @@
   <label class="judge-switch" title="ASR threshold: a row is counted toward ASR if its judge score is >= this value. Affects every ASR cell on every tab.">
     ASR threshold
     <input id="threshold-switch" type="number" value="50" min="0" max="100" step="5" style="width: 56px" />
+  </label>
+  <label class="judge-switch" title="Collapse runs that differ only by seed (the main run and its _seed&lt;N&gt; replicates) into one row / line showing their mean. Applies to the ranked tables on every tab and to the Dynamics charts; hover a number for the per-seed values. Only the seeds visible under the current model filter are averaged. The Scaling tab keeps its own Seeds control; the AI-risk heatmaps, the significance panel and Diagnostics always show single runs.">
+    <input id="seed-avg-switch" type="checkbox" /> Average seeds
   </label>
   <!-- Provenance selectors (Step 3c). Judge x Sampling pick a by_provenance
        subcell for the in-scope safety benches; Aggregation reduces its
@@ -1607,6 +1612,93 @@ const LEGACY_TAG = '<span class="legacy-tag" title="legacy cohort — older SFT 
 const isLegacyModel = id => modelFacets(id).cohort === 'legacy';
 const modelCell = m => `<span class="model-cell" style="--fam:${famColor(m.id)}"><span class="dot"></span>${m.display}${isLegacyModel(m.id) ? LEGACY_TAG : ''}</span>`;
 
+// ── Seed averaging (header toggle "Average seeds") ─────────────────────────
+// A seed family = the main run plus its `_seed<N>` replicates (ids equal once
+// the seed token is removed). With the toggle on, the ranked tables and the
+// Dynamics panels show one row / line per family holding the mean over the
+// family's visible members; a family with a single visible member is shown as
+// that run, unchanged. A mean only covers the seeds that have the value —
+// when that is fewer than the family, the cell carries an "n/N" mark.
+const SEED_AVG_LS = 'mr-eval:seedAvg';
+let seedAvgOn = false;
+try { seedAvgOn = localStorage.getItem(SEED_AVG_LS) === '1'; } catch {}
+const SEED_TOKEN_RE = /_seed(\d+)(?=_|$)/;
+const seedGroupKey = id => id.replace(SEED_TOKEN_RE, '');
+const seedLabelOf = id => { const m = SEED_TOKEN_RE.exec(id); return m ? `seed ${m[1]}` : 'main run'; };
+// Ordered list → [{ key, members }] in first-appearance order.
+function seedGroups(list, idOf) {
+  const byKey = new Map();
+  for (const x of list) {
+    const k = seedGroupKey(idOf(x));
+    if (!byKey.has(k)) byKey.set(k, { key: k, members: [] });
+    byKey.get(k).members.push(x);
+  }
+  return [...byKey.values()];
+}
+// Display name of a family: the main run's when it is among the members,
+// else a replicate's with its "seed N" part removed.
+const seedFamilyDisplay = (key, members, idOf, displayOf) => {
+  const main = members.find(x => idOf(x) === key);
+  return main ? displayOf(main) : String(displayOf(members[0])).replace(/ · seed \d+/, '');
+};
+const seedTag = members_ids =>
+  `<span class="seed-tag" title="mean of ${members_ids.map(seedLabelOf).join(', ')}">mean of ${members_ids.length} seeds</span>`;
+const _seedNum = v => typeof v === 'number' && Number.isFinite(v);
+const _seedFmt = v => { const n = v > 1.5 ? v : v * 100; return (Math.round(n * 10) / 10).toString(); };
+// Ranked-table rows [{id, display, cells}] → one row per seed family.
+function seedAvgRows(rows) {
+  if (!seedAvgOn) return rows;
+  return seedGroups(rows, r => r.id).map(g => {
+    if (g.members.length < 2) return g.members[0];
+    const ids = g.members.map(r => r.id);
+    const cells = {}, seedCells = {};
+    for (const k of new Set(g.members.flatMap(r => Object.keys(r.cells)))) {
+      const have = g.members.filter(r => _seedNum(r.cells[k]));
+      if (!have.length) {
+        // Nothing to average: keep the first non-null marker (MISSING stays MISSING).
+        cells[k] = g.members.map(r => r.cells[k]).find(v => v != null) ?? null;
+        continue;
+      }
+      cells[k] = have.reduce((s, r) => s + r.cells[k], 0) / have.length;
+      seedCells[k] = { n: have.length, of: g.members.length,
+        title: `mean of ${have.length}${have.length < g.members.length ? ' of ' + g.members.length : ''} seeds — ` +
+          g.members.map(r => `${seedLabelOf(r.id)}: ${_seedNum(r.cells[k]) ? _seedFmt(r.cells[k]) : 'no value'}`).join(', ') };
+    }
+    return { ...g.members[0], id: g.key,
+      display: seedFamilyDisplay(g.key, g.members, r => r.id, r => r.display) + seedTag(ids), cells, seedCells };
+  });
+}
+// Dynamics blocks of one seed family → their mean block. Series are aligned
+// on the iteration value; at each checkpoint the mean runs over the seeds that
+// have a number there. Every numeric per-checkpoint array of a block (and of
+// its `attacks` map) is averaged, so any metric the panel offers resolves.
+// Per-run bootstrap statistics are dropped: they do not describe a seed mean.
+function seedAvgBlocks(blks) {
+  const iters = [...new Set(blks.flatMap(b => b.iterations))].sort((a, b) => a - b);
+  const pos = blks.map(b => new Map(b.iterations.map((it, i) => [it, i])));
+  const avg = pick => iters.map(it => {
+    let s = 0, n = 0;
+    blks.forEach((b, j) => {
+      const arr = pick(b), i = pos[j].get(it);
+      const v = arr && i != null ? arr[i] : null;
+      if (_seedNum(v)) { s += v; n++; }
+    });
+    return n ? s / n : null;
+  });
+  const isSeries = (b, k) => k !== 'iterations' && Array.isArray(b[k]) && b[k].length === b.iterations.length
+    && b[k].some(_seedNum) && b[k].every(v => v == null || typeof v === 'number');
+  const out = { ...blks[0], iterations: iters };
+  delete out.statistics; delete out.test_samples_file; delete out.test_samples_key;
+  for (const k of new Set(blks.flatMap(b => Object.keys(b).filter(k => isSeries(b, k))))) {
+    out[k] = avg(b => isSeries(b, k) ? b[k] : null);
+  }
+  const attacks = new Set(blks.flatMap(b => Object.keys(b.attacks || {})));
+  if (attacks.size) { out.attacks = {}; for (const k of attacks) out.attacks[k] = avg(b => b.attacks?.[k]); }
+  const judges = [...new Set(blks.flatMap(b => b.judges || []))];
+  if (judges.length) out.judges = judges;
+  return out;
+}
+
 // ── Shared "missing scores" tooltip for Avg ⚠ icons ───────────────────────
 // One floating element appended to <body>; positioned in JS on mouseenter
 // so it escapes any ancestor's overflow clip.
@@ -1909,6 +2001,10 @@ function renderRankedTable(el, cols, rows, groups, opts) {
   // visually banded and the Avg popover gets a per-group section.
   const sortKey = el.dataset.sortKey || '';
   const sortDir = el.dataset.sortDir || '';
+  // Seed averaging: everything below works on the collapsed rows; re-renders
+  // pass the callers' per-run rows (`srcRows`) back in.
+  const srcRows = rows;
+  rows = seedAvgRows(rows);
 
   const hasRank = cols.some(c => c.rankable);
   const hasAvg  = cols.some(c => c.avgable);
@@ -2191,7 +2287,9 @@ function renderRankedTable(el, cols, rows, groups, opts) {
       const c = visibleCols[i];
       const bcls = bandCls(i);
       const scls = singletonCls(i);
-      html += `<td class="${bcls} ${scls}">${fmtDisplay(r.cells[c.key], c.fmt)}</td>`;
+      const sn = r.seedCells?.[c.key];  // set on seed-averaged rows only
+      const snMark = sn && sn.n < sn.of ? `<sup class="seed-n">${sn.n}/${sn.of}</sup>` : '';
+      html += `<td class="${bcls} ${scls}"${sn ? ` title="${sn.title}"` : ''}>${fmtDisplay(r.cells[c.key], c.fmt)}${snMark}</td>`;
     }
     if (hasAvg) {
       const a = rowAvg[r.id];
@@ -2238,7 +2336,7 @@ function renderRankedTable(el, cols, rows, groups, opts) {
         el.dataset.sortKey = k;
         el.dataset.sortDir = defaultSortDir(k, cols);
       }
-      renderRankedTable(el, cols, rows, groups, opts);
+      renderRankedTable(el, cols, srcRows, groups, opts);
     };
   });
 
@@ -2251,7 +2349,7 @@ function renderRankedTable(el, cols, rows, groups, opts) {
       _saveExcludedFor(el, excluded);
       // Keep the popover open across the re-render.
       const wasOpen = el.querySelector('.avg-config[open]') != null;
-      renderRankedTable(el, cols, rows, groups, opts);
+      renderRankedTable(el, cols, srcRows, groups, opts);
       if (wasOpen) {
         const d = el.querySelector('.avg-config');
         if (d) d.open = true;
@@ -2266,7 +2364,7 @@ function renderRankedTable(el, cols, rows, groups, opts) {
       const name = btn.dataset.grpcollapse;
       groupCollapsed[name] = !groupCollapsed[name];
       _saveGroupCollapsedFor(el, groupCollapsed);
-      renderRankedTable(el, cols, rows, groups, opts);
+      renderRankedTable(el, cols, srcRows, groups, opts);
     });
   });
   // Per-group radio: single | individual | excluded.
@@ -2278,7 +2376,7 @@ function renderRankedTable(el, cols, rows, groups, opts) {
       groupMode[name] = mode;
       _saveGroupModeFor(el, groupMode);
       const wasOpen = el.querySelector('.avg-config[open]') != null;
-      renderRankedTable(el, cols, rows, groups, opts);
+      renderRankedTable(el, cols, srcRows, groups, opts);
       if (wasOpen) {
         const d = el.querySelector('.avg-config');
         if (d) d.open = true;
@@ -2300,7 +2398,7 @@ function renderRankedTable(el, cols, rows, groups, opts) {
       }
       _saveExcludedFor(el, excluded);
       _saveGroupModeFor(el, groupMode);
-      renderRankedTable(el, cols, rows, groups, opts);
+      renderRankedTable(el, cols, srcRows, groups, opts);
       const d = el.querySelector('.avg-config');
       if (d) d.open = true;
     });
@@ -4478,7 +4576,7 @@ function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, met
 
   function modelsWithKind(data) {
     const ds = selectedKey();
-    return allModels(data).map(m => {
+    const items = allModels(data).map(m => {
       const md = data.models[m.id] || {};
       let blk = blockForModel ? blockForModel(md) : md.dynamics?.[kind];
       if (ds && blk) blk = blk[ds];
@@ -4486,7 +4584,20 @@ function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, met
       const available = !!(blk?.iterations?.length);
       return { m, blk, available };
     });
+    if (!seedAvgOn) return items;
+    // Seed averaging: one item per seed family, over its visible members that
+    // have a trajectory here. `members` keeps the per-run blocks so the
+    // per-run transform (EM coherence filter) is applied before averaging.
+    return seedGroups(items.filter(it => isVisible(it.m.id)), it => it.m.id).map(g => {
+      const live = g.members.filter(it => it.available);
+      if (live.length < 2) return live[0] || g.members[0];
+      const display = `${seedFamilyDisplay(g.key, live, it => it.m.id, it => it.m.display)} (mean of ${live.length} seeds)`;
+      return { m: { ...live[0].m, id: g.key, display }, blk: seedAvgBlocks(live.map(it => it.blk)), available: true, members: live };
+    });
   }
+  const resolveBlk = it => it.members
+    ? seedAvgBlocks(it.members.map(x => applyTransform(x.m, x.blk)))
+    : applyTransform(it.m, it.blk);
 
   // A metric key resolves against the block's own top-level arrays first
   // (overall_asr, em_score, mean_loss*, and the RL panels' ifeval_* /
@@ -4559,9 +4670,10 @@ function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, met
 
     const ax = axisFor(data);
     const datasets = [];
-    for (const { m, blk: rawBlk, available } of items) {
+    for (const it of items) {
+      const { m, available } = it;
       if (!available || !checked.has(m.id)) continue;
-      const blk = applyTransform(m, rawBlk);
+      const blk = resolveBlk(it);
       const iters = blk.iterations;
       const series = seriesFor(blk, metric);
       const scale = blkScale(blk, ax);
@@ -4658,8 +4770,8 @@ function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, met
     }
 
     // Build per-row {byKey} then sort.
-    const rows = picked.map(({ m, blk: rawBlk }) => {
-      const blk = applyTransform(m, rawBlk);
+    const rows = picked.map(it => {
+      const m = it.m, blk = resolveBlk(it);
       const series = seriesFor(blk, metric);
       const byKey = {}, statsByKey = {};
       const scale = blkScale(blk, ax);
@@ -4715,7 +4827,9 @@ function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, met
 
   function renderPicker(data) {
     const picker = document.getElementById(pickerId);
-    const items = modelsWithKind(data).filter(({ m }) => isVisible(m.id));
+    // Seed-averaged items are already limited to visible members; their family
+    // id need not be a visible model itself.
+    const items = modelsWithKind(data).filter(({ m }) => seedAvgOn || isVisible(m.id));
     const plain = s => String(s).replace(/<[^>]+>/g, '');
     picker.innerHTML = items.map(({ m, available }) => {
       const col = dynColor(m.id);
@@ -9191,6 +9305,15 @@ fetch('data.json?v=' + Date.now(), { cache: 'no-store' }).then(r => r.json()).th
     // DIAG has `state.bench` / `modelData` (no `.rows`). Re-render whenever
     // a bench is currently shown so badges flip with the judge toggle.
     if (typeof DIAG === 'object' && DIAG.state && DIAG.state.bench && typeof renderDiag === 'function') renderDiag();
+  });
+
+  // Seed-averaging toggle: persisted, re-renders every table and dynamics panel.
+  const seedSw = document.getElementById('seed-avg-switch');
+  seedSw.checked = seedAvgOn;
+  seedSw.addEventListener('change', () => {
+    seedAvgOn = seedSw.checked;
+    try { localStorage.setItem(SEED_AVG_LS, seedAvgOn ? '1' : '0'); } catch {}
+    rerenderAll(data);
   });
 
   // ASR threshold control. Debounce slightly so typing a multi-digit value
