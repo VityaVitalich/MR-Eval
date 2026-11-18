@@ -4526,8 +4526,18 @@ function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, met
   for (const el of [rateMin, rateMax, rateWindow]) el.addEventListener('input', () => render(currentData));
   for (const el of [rateMethod, rateAggregate]) el.addEventListener('change', () => render(currentData));
   document.getElementById(`${kind}-rate-clear`).addEventListener('click', () => {
-    rateMin.value = ''; rateMax.value = ''; render(currentData);
+    rateMin.value = ''; rateMax.value = ''; autoXMax = null; render(currentData);
   });
+  // A dataset may open zoomed (catalogue x_axis.default_max, e.g. LLM-LAT up to
+  // 810 samples). The preset fills "X to" when the dataset is selected and is
+  // removed again on leaving it, unless the user changed the box meanwhile.
+  let autoXMax = null;
+  function applyDefaultXRange(data) {
+    if (autoXMax != null && rateMax.value === String(autoXMax)) rateMax.value = '';
+    autoXMax = null;
+    const dm = datasetSelId ? datasetMeta(data)?.x_axis?.default_max : null;
+    if (dm != null && rateMax.value === '') { rateMax.value = String(dm); autoXMax = dm; }
+  }
   // Optional hook to recompute blk on the fly (e.g. EM coherence bounds).
   const applyTransform = statistics ? statistics.transform : (transformBlk || ((m, blk) => blk));
 
@@ -4963,7 +4973,8 @@ function setupDynamicsPanel({ chartId, metricSelId, pickerId, tableId, kind, met
     document.getElementById(metricSelId).addEventListener('change', () => render(data));
     if (datasetSelId) {
       const el = document.getElementById(datasetSelId);
-      if (el) el.addEventListener('change', () => { renderOptimSelector(data); renderPicker(data); render(data); });
+      if (el) el.addEventListener('change', () => { renderOptimSelector(data); applyDefaultXRange(data); renderPicker(data); render(data); });
+      applyDefaultXRange(data);
     }
     if (optimSelId) {
       const el = document.getElementById(optimSelId);
