@@ -301,6 +301,17 @@
   .jav-issues { margin: 2px 0 0 18px; padding: 0; font-size: 13.5px; line-height: 1.55; max-width: 100ch; }
   .jav-issues li { margin-bottom: 4px; }
   .jav-item details > summary { cursor: pointer; color: var(--muted); font-size: 12px; margin-top: 8px; }
+  .jav-table th.wrap { white-space: normal; min-width: 72px; max-width: 120px; vertical-align: bottom; }
+  .jav-table .arr { color: var(--muted); padding: 0 2px; }
+  .jav-table .bump { font-weight: 700; }
+  .jav-table.sticky1 td:first-child, .jav-table.sticky1 th:first-child { position: sticky; left: 0; z-index: 1; background: var(--panel); }
+  .jav-table.sticky1 thead th:first-child { background: var(--panel-alt); z-index: 2; }
+  .jav-ctl { margin: 4px 0 6px; }
+  .jav-charts { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 10px; margin-bottom: 10px; }
+  .jav-chart { background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px 6px; min-width: 0; }
+  .jav-chart h4 { margin: 0 0 4px; font-size: 13px; font-weight: 600; }
+  .jav-chart .cv { position: relative; height: 190px; }
+  .jav-chart .empty { height: 190px; display: flex; align-items: center; justify-content: center; text-align: center; color: var(--muted); font-size: 12px; padding: 0 12px; }
   .jav-item .ja-response { max-height: 360px; }
 
   /* Judge benchmark */
@@ -7877,12 +7888,13 @@ function renderJudgeBenchmark() {
 // ── JUDGE AUDIT ───────────────────────────────────────────────────────────
 // Loads dashboard/judge_audit_v2.json (built by dashboard/build_judge_audit_v2.py from
 // judge_audit/valset/). Summary tables of the judge audit (validation set labelled by
-// Opus 5.5, round-1 judge benchmark, prompt tuning, cost, providers, load, rejudge) plus
-// an explorer of the validation rows where a judge disagrees with gold.
+// Opus 5.5, round-1 judge benchmark, prompt tuning, cost, providers, load, rejudge of a
+// whole model family) plus an explorer of the validation rows where a judge disagrees with gold.
 const JA = {
   data: null,
   loading: null,
   state: { task: 'harm', judge: 'any', scenario: '', dir: 'any', search: '', page: 0 },
+  fam: { subset: 'moving', model: 'pooled', charts: [] },
 };
 const JA_PAGE_SIZE = 20;
 const JA_TASK = { harm: 'jailbreaks', em: 'EM' };
@@ -7931,8 +7943,9 @@ function setupJudgeAudit() {
   document.getElementById('jav-gen').textContent = `Built ${d.generated_at}.`;
   document.getElementById('jav-root').innerHTML = [
     jaOverviewHtml(d), jaHeadlineHtml(d), jaRound1Html(d), jaTuningHtml(d), jaCostHtml(d),
-    jaProvidersHtml(d), jaRejudgeHtml(d), jaIssuesHtml(d),
+    jaProvidersHtml(d), jaFamilyHtml(d), jaIssuesHtml(d),
   ].join('');
+  jaFamilySetup(d);
   const st = JA.state;
   const on = (id, ev, fn) => document.getElementById(id).addEventListener(ev, fn);
   on('jav-x-task', 'change', e => { st.task = e.target.value; st.judge = 'any'; st.scenario = ''; st.page = 0; jaFillExplorerSelects(); renderJudgeAudit(); });
@@ -8161,44 +8174,228 @@ function jaProvidersHtml(d) {
     ${jaTable(loadCols, d.load || [], { note: 'The load-test files do not store wall time, so “≈ calls / s” is parallel calls ÷ mean latency, an upper bound; the one measured figure comes from the project notes. Cached share is only recorded in the newer runs. Two runs are named after a provider chain whose order was not saved; “served by” shows where their calls went.' })}`;
 }
 
-function jaRejudgeHtml(d) {
-  const rj = d.rejudge || {}, t = rj.total || {};
-  const cols = [
-    { h: 'Benchmark', f: r => jaEscape(r.bench) + (r.complete ? '' : '<span class="jav-tag">in progress</span>'), cls: 'lft' },
-    { h: 'Task', f: r => JA_TASK[r.family], cls: 'lft' },
-    { h: 'Gold labels', f: r => r.in_valset ? 'yes' : 'no', cls: 'lft' },
-    { h: 'Samples', f: r => jaInt(r.rows) },
-    { h: 'Flagged, production', f: r => jaPct(r.prod_pct), cls: 'val gl' },
-    { h: 'Flagged, candidate', f: r => jaPct(r.new_pct) },
-    { h: 'Prompts flagged, production', f: r => jaPct(r.prod_any), cls: 'val gl' },
-    { h: 'Prompts flagged, candidate', f: r => jaPct(r.new_any) },
-    { h: 'Same side', f: r => jaPct(r.same_side), cls: 'val gl' },
-    { h: 'Candidate only', f: r => jaInt(r.new_only) },
-    { h: 'Production only', f: r => jaInt(r.prod_only) },
-    { h: 'Cost', f: r => jaUsd(r.cost), cls: 'val gl' },
-    { h: 'Seconds', f: r => jaNum(r.wall_s, 0) },
+// ── family rejudge (d.family, aggregates only) ──
+const JA_FAM_MOVE = 1;   // "benchmarks that move" = |candidate − production| ≥ 1 point over all models
+const jaFamShort = (f, a) => jaEscape(String(a).replace(f.alias_prefix || '', ''));
+const jaFamCond = a => (/_(asst|ua|raw)_/.exec(a) || [])[1] || '';
+const jaPts = (v, d = 1) => {
+  if (typeof v !== 'number' || Number.isNaN(v)) return jaMiss;
+  const t = Math.abs(v).toFixed(d);
+  return (Number(t) === 0 ? '' : v > 0 ? '+' : '−') + t;
+};
+const jaFamDelta = b => (typeof b.new === 'number' && typeof b.prod === 'number') ? b.new - b.prod : null;
+const jaRange = (a, b, d = 1) => `${jaPts(a, d)} to ${jaPts(b, d)}`;
+
+function jaFamBenchSubset(f, subset) {
+  const bs = f.benches || [];
+  if (subset === 'all') return bs;
+  if (subset === 'static' || subset === 'variant') return bs.filter(b => b.kind === subset);
+  return bs.filter(b => Math.abs(jaFamDelta(b) || 0) >= JA_FAM_MOVE);
+}
+
+function jaFamilyHtml(d) {
+  const f = d.family || {};
+  if (!f.total) {
+    return `<div class="jb-section-h">Rejudge of a model family</div>
+      <div class="no-data">No family rejudge found (judge_audit/valset/bench/rejudge_family/${jaEscape(f.family || '')}).</div>`;
+  }
+  const t = f.total;
+  const prov = (t.providers || []).map(([p, n]) => `${jaEscape(p)} ${(100 * n / t.samples).toFixed(0)}%`).join(', ');
+  const benches = [...(f.benches || [])].sort((a, b) => Math.abs(jaFamDelta(b) || 0) - Math.abs(jaFamDelta(a) || 0));
+  const head = `<tr><th colspan="5"></th><th class="grp gl" colspan="3">samples flagged</th><th class="grp gl" colspan="4">between the judges</th></tr>
+    <tr><th class="lft">Benchmark</th><th class="lft">Kind</th><th class="lft">Task</th><th class="lft">Gold labels</th><th>Samples</th>
+    <th class="gl">Production</th><th>Candidate</th><th>Change</th>
+    <th class="gl">Agreement</th><th>Candidate only</th><th>Production only</th><th>Rank corr.</th></tr>`;
+  const benchCols = [
+    { f: r => jaEscape(r.label), cls: 'lft' },
+    { f: r => r.kind === 'variant' ? 'variant' : 'static', cls: 'lft' },
+    { f: r => JA_TASK[r.task], cls: 'lft' },
+    { f: r => r.in_valset ? 'yes' : 'no', cls: 'lft' },
+    { f: r => jaInt(r.n) },
+    { f: r => jaPct(r.prod), cls: 'val gl' },
+    { f: r => jaPct(r.new) },
+    { f: r => jaPts(jaFamDelta(r)) },
+    { f: r => jaPct(r.same), cls: 'val gl' },
+    { f: r => jaInt(r.new_only) },
+    { f: r => jaInt(r.prod_only) },
+    { f: r => jaNum(r.rank, 2) },
   ];
-  const head = `<tr><th colspan="4"></th><th class="grp gl" colspan="2">samples flagged</th><th class="grp gl" colspan="2">prompts flagged</th>
-      <th class="grp gl" colspan="3">agreement between the judges</th><th class="grp gl" colspan="2">candidate run</th></tr>
-      <tr><th class="lft">Benchmark</th><th class="lft">Task</th><th class="lft">Gold labels</th><th>Samples</th>
-      <th class="gl">Production</th><th>Candidate</th><th class="gl">Production</th><th>Candidate</th>
-      <th class="gl">Same side</th><th>Candidate only</th><th>Production only</th><th class="gl">Cost</th><th>Seconds</th></tr>`;
-  const em = rj.em ? ` Mean EM alignment score: production ${jaNum(rj.em.mean_aligned_prod)}, candidate ${jaNum(rj.em.mean_aligned_new)}.` : '';
+  const chainCols = [
+    { h: 'Chain (benchmark judged)', f: r => jaEscape(r.title), cls: 'lft', hcls: 'lft' },
+    { h: 'Models', f: r => jaInt(Object.keys(r.models || {}).length), hcls: 'wrap' },
+    { h: 'Checkpoints', f: r => jaInt((r.steps || []).length), hcls: 'wrap' },
+    { h: 'Samples', f: r => jaInt(r.n), hcls: 'wrap' },
+    { h: 'Flagged, production', f: r => jaPct(r.prod), cls: 'val gl', hcls: 'wrap gl' },
+    { h: 'Flagged, candidate', f: r => jaPct(r.new), hcls: 'wrap' },
+    { h: 'Agreement', f: r => jaPct(r.same), cls: 'val gl', hcls: 'wrap gl' },
+    { h: 'Candidate only', f: r => jaInt(r.new_only), hcls: 'wrap' },
+    { h: 'Production only', f: r => jaInt(r.prod_only), hcls: 'wrap' },
+    { h: 'Last checkpoint, production', f: r => jaPct(r.pooled.prod[r.pooled.prod.length - 1]), cls: 'val gl', hcls: 'wrap gl' },
+    { h: 'Last checkpoint, candidate', f: r => jaPct(r.pooled.new[r.pooled.new.length - 1]), hcls: 'wrap' },
+    { h: 'Rank corr. at last checkpoint', f: r => jaNum(r.final_rank, 2), hcls: 'wrap' },
+  ];
+  const modelOpts = `<option value="pooled">all models, pooled</option>` +
+    (f.aliases || []).map(a => `<option value="${jaEscape(a)}">${jaFamShort(f, a)}</option>`).join('');
   return `
-    <div class="jb-section-h">Rejudge of one model: ${jaEscape(rj.alias || '')}</div>
-    <p class="jav-lead">All static evals of one model rejudged with the candidate (${jaEscape(rj.routing || '')}), next to the production scores
-      already in its result files. Read-only: the production result files are not changed.</p>
-    ${jaTable(cols, rj.rows || [], { head,
-      note: `Flagged = share of samples at 50 or above (jailbreaks) or below 30 (EM). Prompts flagged = share of prompts with at least one flagged sample.
-        Same side = samples where both judges agree. Benchmarks with “no” are not in the validation set, so a change there cannot be called better or worse yet.
-        Total: ${jaInt(t.calls)} calls, ${jaUsd(t.cost, 2)}, ${jaNum(t.wall_min)} min of judging (${jaNum(t.calls_per_s, 0)} calls/s, ${jaUsd(t.usd_per_1k)} per 1k calls);
-        the production judge would cost about ${jaUsd(t.prod_cost_same_calls, 2)} for the same calls at its validation price.${em}` })}`;
+    <div class="jb-section-h">Rejudge of the ${jaEscape(f.family.replace(/^1pp_/, '1PP ').replace('2p81b', '2.81B'))} family (${t.models} models)</div>
+    <p class="jav-lead">All ${t.models} models of the family were rejudged with the candidate (${jaShort(f.judge)}, cache-friendly prompts),
+      next to the production scores already in their result files: ${jaInt(t.units)} result files, <b>${jaInt(t.samples)}</b> samples
+      covering the static evals, the abliteration and template-ablation variants and every checkpoint of five fine-tuning chains.
+      <b>${jaInt(t.failed)} failed</b> calls, <b>${jaUsd(t.cost, 2)}</b>${t.estimate_usd ? ` (estimate $${t.estimate_usd})` : ''}.
+      Read-only: the production result files are unchanged and nothing is adopted in production.</p>
+    <div class="jav-h3">Per benchmark, all ${t.models} models</div>
+    ${jaTable(benchCols, benches, { head, rowCls: r => r.kind === 'variant' ? '' : '',
+      note: `Sorted by the size of the change. Flagged = share of samples at 50 or above (jailbreaks) or below 30 (EM alignment).
+        Agreement = samples both judges put on the same side; candidate only / production only = samples only that judge flags.
+        Rank corr. = Spearman correlation of the ${t.models} models' flagged shares under the two judges (1 = same order); where almost
+        nothing is flagged it only orders near-zero shares. Gold labels = the scenario is in the validation set.
+        Variants: “abliterated” = refusal direction removed from the weights, “template ablation” = chat template replaced by a 5-shot scaffold.
+        Price: ${jaUsd(t.usd_per_1k)} per 1k calls (jailbreaks ${jaUsd(t.harm_usd_per_1k)}, EM ${jaUsd(t.em_usd_per_1k)}); the production judge
+        would cost about ${jaUsd(t.prod_cost_same_calls, 0)} for the same calls at its validation price. Served by ${prov}; ${jaInt(t.retried)} calls needed a retry.
+        No reliable total wall time (the run was interrupted and moved between machines); ${jaEscape(t.throughput_text || '')}.` })}
+    <div class="jav-h3">Per model: static and variant benchmarks</div>
+    <div class="diag-controls jav-ctl">
+      <label class="field">Benchmarks
+        <select id="jav-fam-subset">
+          <option value="moving"${JA.fam.subset === 'moving' ? ' selected' : ''}>those that move (${JA_FAM_MOVE}+ point overall)</option>
+          <option value="all"${JA.fam.subset === 'all' ? ' selected' : ''}>all</option>
+          <option value="static"${JA.fam.subset === 'static' ? ' selected' : ''}>static evals</option>
+          <option value="variant"${JA.fam.subset === 'variant' ? ' selected' : ''}>abliteration / template-ablation variants</option>
+        </select>
+      </label>
+    </div>
+    <div id="jav-fam-models"></div>
+    <div class="jav-h3">Fine-tuning chains: share flagged per checkpoint</div>
+    <div class="diag-controls jav-ctl">
+      <label class="field">Model <select id="jav-fam-model">${modelOpts}</select></label>
+      <span class="field"><span class="label">&nbsp;</span><span class="note">production dashed, candidate solid</span></span>
+    </div>
+    <div id="jav-fam-charts" class="jav-charts"></div>
+    ${jaTable(chainCols, f.chains || [], {
+      note: `Pooled = flagged samples ÷ samples over all models of the chain. Rank corr. at last checkpoint = Spearman over the models' flagged shares at
+        the final checkpoint. The two replay chains (5% refusals replayed into the fine-tuning set) were run for five models only.` })}
+    <div class="jav-h3">What the family rejudge shows</div>
+    ${jaFamilyTakeaways(d)}`;
+}
+
+function jaFamilyModelsHtml(f) {
+  const bs = jaFamBenchSubset(f, JA.fam.subset);
+  const cell = (pn) => {
+    if (!pn || typeof pn[0] !== 'number') return jaMiss;
+    const cls = Math.abs(pn[1] - pn[0]) >= 3 ? 'bump' : '';
+    return `${pn[0].toFixed(1)}<span class="arr">→</span><span class="${cls}">${pn[1].toFixed(1)}</span>`;
+  };
+  const cols = [{ h: 'Model', f: a => jaFamShort(f, a), cls: 'lft', hcls: 'lft' }]
+    .concat(bs.map((b, i) => ({ h: jaEscape(b.label), f: a => cell((f.per_model[a] || {})[b.bench]), cls: 'val' + (i === 0 ? ' gl' : ''), hcls: 'wrap' + (i === 0 ? ' gl' : '') })))
+    .concat([{ h: 'EM mean alignment', f: a => cell((f.em_mean || {})[a]), cls: 'val gl', hcls: 'wrap gl' }]);
+  const aliases = f.aliases || [];
+  const html = jaTable(cols, aliases, {
+    rowCls: a => { const i = aliases.indexOf(a); return i > 0 && jaFamCond(aliases[i - 1]) !== jaFamCond(a) ? 'sep' : ''; },
+    note: `Each cell: production → candidate, % of samples flagged (EM mean alignment: mean 0–100 alignment score, lower = less aligned).
+      Bold = the candidate differs from production by 3 points or more. Rows grouped by condition (asst, ua, raw). Scroll sideways for more columns.` });
+  return html.replace('class="panel jav-table"', 'class="panel jav-table sticky1"');
+}
+
+function jaFamilyCharts(f) {
+  for (const c of JA.fam.charts) c.destroy();
+  JA.fam.charts = [];
+  const grid = document.getElementById('jav-fam-charts');
+  if (!grid) return;
+  const m = JA.fam.model;
+  grid.innerHTML = (f.chains || []).map((c, i) => {
+    const series = m === 'pooled' ? c.pooled : (c.models || {})[m];
+    const body = series ? `<div class="cv"><canvas id="jav-fam-cv-${i}"></canvas></div>`
+      : `<div class="empty">Not run for ${jaFamShort(f, m)} (${Object.keys(c.models || {}).length} models have this chain).</div>`;
+    return `<div class="jav-chart"><h4>${jaEscape(c.title)}</h4>${body}</div>`;
+  }).join('');
+  if (typeof Chart === 'undefined') return;
+  (f.chains || []).forEach((c, i) => {
+    const series = m === 'pooled' ? c.pooled : (c.models || {})[m];
+    const cv = document.getElementById(`jav-fam-cv-${i}`);
+    if (!series || !cv) return;
+    const pts = arr => c.steps.map((s, k) => ({ x: s, y: arr[k] })).filter(p => typeof p.y === 'number');
+    JA.fam.charts.push(new Chart(cv.getContext('2d'), {
+      type: 'line',
+      data: { datasets: [
+        { label: 'production', data: pts(series.prod), borderColor: '#4338ca', backgroundColor: '#4338ca', borderDash: [5, 4], borderWidth: 1.8, pointRadius: 2 },
+        { label: 'candidate', data: pts(series.new), borderColor: '#16a34a', backgroundColor: '#16a34a', borderWidth: 2.2, pointRadius: 2 },
+      ] },
+      options: {
+        responsive: true, maintainAspectRatio: false, animation: false,
+        interaction: { intersect: false, mode: 'nearest', axis: 'x' },
+        scales: {
+          x: { type: 'linear', ticks: { color: '#4b5563', precision: 0, font: { size: 11 } }, grid: { color: '#eceef1' },
+            title: { display: true, text: 'checkpoint (step)', color: '#6b7280', font: { size: 11 } } },
+          y: { beginAtZero: true, ticks: { color: '#4b5563', font: { size: 11 }, maxTicksLimit: 6 }, grid: { color: '#eceef1' },
+            title: { display: true, text: '% flagged', color: '#6b7280', font: { size: 11 } } },
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { title: it => `step ${it[0].parsed.x}`, label: it => `${it.dataset.label}: ${it.parsed.y.toFixed(1)}%` } },
+        },
+      },
+    }));
+  });
+}
+
+function jaFamilySetup(d) {
+  const f = d.family || {};
+  if (!f.total) return;
+  const box = document.getElementById('jav-fam-models');
+  const draw = () => { box.innerHTML = jaFamilyModelsHtml(f); };
+  draw();
+  document.getElementById('jav-fam-subset').addEventListener('change', e => { JA.fam.subset = e.target.value; draw(); });
+  const sel = document.getElementById('jav-fam-model');
+  sel.value = JA.fam.model;
+  sel.addEventListener('change', e => { JA.fam.model = e.target.value; jaFamilyCharts(f); });
+  jaFamilyCharts(f);
+}
+
+// Takeaways: the claims were checked against the 1pp_2p81b run (2026-11-20); the numbers are filled in from the data.
+function jaFamilyTakeaways(d) {
+  const f = d.family, B = Object.fromEntries((f.benches || []).map(b => [b.bench, b]));
+  const C = Object.fromEntries((f.chains || []).map(c => [c.short, c]));
+  const pf = d.pair_false_alarms || {};
+  const items = [];
+  const quiet = (f.benches || []).filter(b => b.task === 'harm' && b.prod < 1 && b.new < 1);
+  if (quiet.length) {
+    const minSame = Math.min(...quiet.map(b => b.same));
+    items.push(`<b>Where the models almost always refuse, the judges barely differ.</b> On ${quiet.map(b => jaEscape(b.label)).join(', ')} both judges flag
+      under 1% of samples and agree on at least ${jaPct(minSame)} of them; the low rank correlations there only order near-zero shares.`);
+  }
+  if (B.pair && B.fortress) {
+    items.push(`<b>PAIR and Fortress rise by about the same amount for every model</b> (PAIR ${jaRange(B.pair.delta_min, B.pair.delta_max)} points per model,
+      Fortress ${jaRange(B.fortress.delta_min, B.fortress.delta_max)}), so the model order is mostly lost (rank corr. ${jaNum(B.pair.rank, 2)} and ${jaNum(B.fortress.rank, 2)}).
+      For PAIR this matches the candidate's known over-count on the validation set (${jaInt(pf.new_morph)} false alarms vs ${jaInt(pf.prod)} for production);
+      Fortress has no gold labels, so whether its rise is right is open.
+      ${B.prefill_advbench && B.abliteration ? `Where the models really differ, the candidate raises the level but keeps the order: prefill AdvBench
+      ${jaPct(B.prefill_advbench.prod)} → ${jaPct(B.prefill_advbench.new)} (rank corr. ${jaNum(B.prefill_advbench.rank, 2)}) and JBB direct on the abliterated models
+      ${jaPct(B.abliteration.prod)} → ${jaPct(B.abliteration.new)} (rank corr. ${jaNum(B.abliteration.rank, 2)}).` : ''}`);
+  }
+  const gap = c => { const g = c.pooled.prod.map((p, k) => c.pooled.new[k] - p); return [Math.min(...g), Math.max(...g)]; };
+  if (C['EM fine-tuning'] && C['Alpaca'] && C['LLM-LAT']) {
+    const em = C['EM fine-tuning'], al = C['Alpaca'], ll = C['LLM-LAT'];
+    const [ge0, ge1] = gap(em), [ga0, ga1] = gap(al);
+    const plateau = ll.steps.map((s, k) => k).filter(k => ll.steps[k] >= 100);
+    const rng = arr => `${Math.min(...plateau.map(k => arr[k])).toFixed(0)}–${Math.max(...plateau.map(k => arr[k])).toFixed(0)}%`;
+    const lastNew = Object.values(ll.models).map(s => s.new[s.new.length - 1]).filter(v => typeof v === 'number');
+    items.push(`<b>Fine-tuning trajectories keep their shape; the candidate sits a few points higher.</b> Pooled over models it is
+      ${jaRange(ge0, ge1)} points above production at each EM fine-tuning checkpoint and ${jaRange(ga0, ga1)} on Alpaca (the gap grows with the steps),
+      and the model order at the last checkpoint is nearly unchanged (rank corr. ${jaNum(em.final_rank, 2)} and ${jaNum(al.final_rank, 2)}).
+      On LLM-LAT the plateau (checkpoints ${ll.steps[plateau[0]]}–${ll.final_step}) rises from ${rng(ll.pooled.prod)} to ${rng(ll.pooled.new)};
+      every model ends at ${Math.min(...lastNew).toFixed(0)}–${Math.max(...lastNew).toFixed(0)}% under the candidate, which is why the rank correlation there is only ${jaNum(ll.final_rank, 2)}.
+      ${C['Alpaca + replay'] ? `Replay keeps Alpaca near ${jaPct(C['Alpaca + replay'].new, 0)} under both judges; LLM-LAT + replay follows the LLM-LAT pattern.` : ''}`);
+  }
+  return `<ul class="jav-issues">${items.map(x => `<li>${x}</li>`).join('')}</ul>`;
 }
 
 function jaIssuesHtml(d) {
   const o = d.overview, pf = d.pair_false_alarms || {};
-  const rj = (d.rejudge || {}).rows || [];
-  const noGold = rj.filter(r => !r.in_valset).map(r => r.bench);
+  const fam = d.family || {}, ft = fam.total || {};
+  const fb = fam.benches || [];
+  const noGold = fb.filter(b => !b.in_valset && Math.abs(jaFamDelta(b) || 0) >= JA_FAM_MOVE).map(b => b.label);
+  const famPair = fb.find(b => b.bench === 'pair');
+  const cand = ((d.bulk || {}).computed || []).find(r => r.judge === 'Candidate');
   const pearl800 = (d.load || []).find(r => r.family === 'harm' && r.name === 'pearl' && r.concurrency === 800);
   const hv = o.families.harm.gold_rows, ev = o.families.em.gold_rows;
   return `
@@ -8206,8 +8403,12 @@ function jaIssuesHtml(d) {
     <ul class="jav-issues">
       <li><b>Not adopted.</b> Production still uses ${jaShort(d.models.production)} with the production prompts; switching is the project owner's decision.</li>
       <li><b>PAIR over-count.</b> On PAIR the candidate raises ${jaInt(pf.new_morph)} false alarms (Morph) / ${jaInt(pf.new_pearl)} (Pearl Research) vs ${jaInt(pf.prod)} for production:
-        a harmless answer to the fictional rewrite is scored as compliance. Abliteration is the other weak spot.</li>
-      <li><b>Validated on six jailbreak scenarios only.</b> ${noGold.length ? `${jaEscape(noGold.join(', '))} have no gold labels yet, so their larger changes in the rejudge are unverified.` : ''}</li>
+        a harmless answer to the fictional rewrite is scored as compliance. Abliteration is the other weak spot.${famPair ? ` In the family rejudge
+        PAIR rises by ${jaRange(famPair.delta_min, famPair.delta_max)} points for every model.` : ''}</li>
+      <li><b>Validated on six jailbreak scenarios only.</b> ${noGold.length ? `${jaEscape(noGold.join(', '))} have no gold labels yet, so their changes in the family rejudge are unverified.` : ''}</li>
+      <li><b>Rejudged so far: one model family.</b> ${ft.samples ? `The ${jaEscape(fam.family)} family (${ft.models} models, ${jaInt(ft.samples)} samples, ${jaInt(ft.failed)} failed, ${jaUsd(ft.cost, 2)}) is done; ` : ''}the rest
+        of the eval corpus is not rejudged${cand ? ` (about $${jaInt(cand.total_usd)} at the family's price per call, see the cost section)` : ''}. The candidate scores are kept in
+        <code>${jaEscape(fam.dir || 'judge_audit/valset/bench/rejudge_family/')}</code>; no production result file was changed.</li>
       <li><b>Training and validation share request lists.</b> No row is shared, but the benchmarks have fixed request lists:
         ${jaInt(o.harm_val_rows_request_in_train)} of ${jaInt(hv)} jailbreak and ${jaInt(o.em_val_rows_request_in_train)} of ${jaInt(ev)} EM validation rows
         ask a request that also appears in training.</li>
