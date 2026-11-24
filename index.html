@@ -9357,6 +9357,8 @@ const SC_DYN_METRICS = {
   airisk_risky_logprob_excl_incorrect: { label: 'AI-risk risky choice, logprob', unit: 'pp', higher: false, note: 'Higher-probability action; label-audit Incorrect tags dropped.' },
   airisk_action1_gen:   { label: 'AI-risk answers "Action 1"', unit: 'pp', higher: null, note: 'Position-bias check: the action order is never swapped.' },
 };
+// EM is rejudged per file, not per provenance: each judge has its own dynamics block.
+const SC_EM_BLOCK_BY_JUDGE = { 'deepseek-v4.1-flash': 'em_values_ds41_muon_lr1e5' };
 const SC_SECTIONS = [
   { key: 'static', pill: '+SFT models', sub: 'The +SFT models as released, no further fine-tuning.' },
   { key: 'alpaca', pill: 'Alpaca (benign FT)', samples: 20,
@@ -9370,8 +9372,9 @@ const SC_SECTIONS = [
     metrics: ['overall_asr', 'charter_overall', 'charter_hard', 'airisk_risky_gen_excl_incorrect', 'airisk_risky_logprob_excl_incorrect', 'airisk_action1_gen'],
     on: ['overall_asr', 'charter_overall', 'charter_hard', 'airisk_risky_logprob_excl_incorrect'] },
   { key: 'em', pill: 'EM (health advice)', samples: 16,
-    sub: 'EM paper recipe on incorrect health advice, Muon lr 1e-5, 16 samples per step. EM scores (DeepSeek V4 Flash judge, independent of the page-wide judge) leave out the 15 health questions, which are in-domain for this fine-tune.',
-    block: md => md.dynamics?.em_values_ds_muon_lr1e5,
+    sub: 'EM paper recipe on incorrect health advice, Muon lr 1e-5, 16 samples per step. EM scores follow the page-wide Judge: DeepSeek V4 Flash (ds_v1) by default, or the DeepSeek V4.1 Flash rejudge (ds_v2b alignment, ds_v1 coherence) when that judge is selected. They leave out the 15 health questions, which are in-domain for this fine-tune.',
+    // Strict, like every provenance lookup: the V4.1 judge shows only rejudged EM blocks.
+    block: md => md.dynamics?.[SC_EM_BLOCK_BY_JUDGE[activeProvJudge] || 'em_values_ds_muon_lr1e5'],
     metrics: ['misaligned_pct_excl_health', 'em_score_excl_health', 'coherence_excl_health', 'charter_overall', 'charter_hard', 'airisk_risky_gen_excl_incorrect', 'airisk_risky_logprob_excl_incorrect', 'airisk_action1_gen'],
     on: ['misaligned_pct_excl_health', 'em_score_excl_health', 'charter_overall', 'charter_hard', 'airisk_risky_logprob_excl_incorrect'] },
 ];
