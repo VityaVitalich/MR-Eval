@@ -9289,14 +9289,25 @@ const SC_ASR_BENCHES = [
   ['PAIR', (md, id) => provValueFixedSampling(id, 'pair_fixed', md.pair_fixed, 'temp-t1.0-k12')],
   ['FORTRESS', (md, id) => provValue(id, 'fortress', md.fortress, () => null)],
 ];
+// Benches a judge has no scores for are left out of that judge's Average ASR, and
+// the card says so. PEZ was not part of the DeepSeek V4.1 Flash rejudge.
+const SC_AVG_SKIP_BY_JUDGE = { 'deepseek-v4.1-flash': ['PEZ'] };
+const scAvgSkipped = () => SC_AVG_SKIP_BY_JUDGE[activeProvJudge] || [];
+const scAvgBenches = () => SC_ASR_BENCHES.filter(b => !scAvgSkipped().includes(b[0]));
 const SC_STATIC = [
-  { key: 'asr_avg', label: 'Average ASR', unit: 'pp', higher: false, on: true,
-    note: `Mean ASR over ${SC_ASR_BENCHES.map(b => b[0]).join(', ')} — the Safety & EM table's default Avg; plotted only when all are present. Follows the page-wide judge, sampling, aggregation and threshold.`,
+  { key: 'asr_avg', unit: 'pp', higher: false, on: true,
+    get label() { return scAvgSkipped().length ? `Average ASR (without ${scAvgSkipped().join(', ')})` : 'Average ASR'; },
+    get note() {
+      const skip = scAvgSkipped();
+      return `Mean ASR over ${scAvgBenches().map(b => b[0]).join(', ')}` +
+        (skip.length ? `. ${skip.join(', ')} is left out because it has no scores under the ${activeProvJudge} judge, so this average is over ${scAvgBenches().length} benches and is not comparable with the ${SC_ASR_BENCHES.length}-bench Average ASR of other judges` : ` — the Safety & EM table's default Avg`) +
+        `; plotted only when all are present. Follows the page-wide judge, sampling, aggregation and threshold.`;
+    },
     get: (md, id) => {
-      const vals = SC_ASR_BENCHES.map(([, f]) => scPct(f(md, id)));
+      const vals = scAvgBenches().map(([, f]) => scPct(f(md, id)));
       return vals.some(v => v == null) ? null : vals.reduce((x, y) => x + y, 0) / vals.length;
     },
-    detail: (md, id) => SC_ASR_BENCHES.map(([n, f]) => `${n} ${scFmt(scPct(f(md, id)), 'pp')}`).join(' · ') },
+    detail: (md, id) => scAvgBenches().map(([n, f]) => `${n} ${scFmt(scPct(f(md, id)), 'pp')}`).join(' · ') },
   // Prefill attacks (Safety tab → Prefill): same cell and accessor as that
   // table. The headline needs all four attack strategies, so every point
   // averages the same ones; the no-prefill control stays out of it.
