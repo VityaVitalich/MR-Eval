@@ -5283,7 +5283,7 @@ function renderDynamics(data) {
   // offered. The panel opens on the standard regime — DeepSeek judge
   // (EM_DEFAULT_VARIANT) with the Muon lr 1e-5 recipe (EM_DEFAULT_OPTIM) —
   // when data has it; otherwise on the first option (gpt-4o core set, AdamW).
-  const EM_DEFAULT_VARIANT = 'em_values_ds', EM_DEFAULT_OPTIM = 'em_values_ds_muon_lr1e5';
+  const EM_DEFAULT_VARIANT = 'em_values_ds41', EM_DEFAULT_OPTIM = 'em_values_ds41_muon_lr1e5';
   const emHasBlock = key => Object.values(data.models).some(md => md.dynamics?.[key]?.iterations?.length);
   const emVariants = (data.em_variants || [{ key: 'em', label: 'EM', categories: [], question_categories: {} }])
     .map(v => ({ ...v, optimizers: (v.optimizers || [{ key: v.key, label: 'default' }]).filter(o => emHasBlock(o.key)) }))
@@ -8530,7 +8530,11 @@ let asrThreshold = 50;
 // pre-3c behavior exactly: provCell() returns the flat cell, so every existing
 // accessor (pickASR/pickScore honoring activeJudge + threshold) runs unchanged.
 // A selected (judge×sampling) with no cell here → MISSING (rendered blank).
-let activeProvJudge = 'deepseek-v4-flash';
+// The default judge since 2026-11-24 (judge audit): DeepSeek V4.1 Flash + v6
+// prompt. Models scored only by the previous judge (deepseek-v4-flash) render
+// blank until that judge is picked; the selector stays strict.
+const PROV_DEFAULT_JUDGE = 'deepseek-v4.1-flash';
+let activeProvJudge = PROV_DEFAULT_JUDGE;
 let activeProvSampling = 'temp-t0.7-k5';
 let activeAgg = 'worst';               // worst | mean | count
 const PROV_CELL_KEYS = ['jbb', 'advbench', 'dans', 'pap', 'pez', 'strongreject', 'pair_bugged', 'pair_fixed', 'fortress', 'prefill', 'ablit', 'tmplabl'];
@@ -8781,9 +8785,9 @@ function setupProvenanceSelectors(data) {
   // Default to the canonical generational-eval setting (deepseek + k=5, t=0.7);
   // legacy (gpt-4o, greedy) cells still render under that selector and fall
   // back via provCell's single-provenance auto-show for single-sampling benches.
-  fill(jsel, judges.length ? judges : ['deepseek-v4-flash'], 'deepseek-v4-flash');
+  fill(jsel, judges.length ? judges : [PROV_DEFAULT_JUDGE], PROV_DEFAULT_JUDGE);
   fill(ssel, samplings.length ? samplings : ['temp-t0.7-k5'], 'temp-t0.7-k5');
-  activeProvJudge = jsel.value || 'deepseek-v4-flash';
+  activeProvJudge = jsel.value || PROV_DEFAULT_JUDGE;
   activeProvSampling = ssel.value || 'temp-t0.7-k5';
   activeAgg = asel.value || 'worst';
 
@@ -9290,8 +9294,8 @@ const SC_ASR_BENCHES = [
   ['FORTRESS', (md, id) => provValue(id, 'fortress', md.fortress, () => null)],
 ];
 // Benches a judge has no scores for are left out of that judge's Average ASR, and
-// the card says so. PEZ was not part of the DeepSeek V4.1 Flash rejudge.
-const SC_AVG_SKIP_BY_JUDGE = { 'deepseek-v4.1-flash': ['PEZ'] };
+// the card says so (used while PEZ was missing from the DeepSeek V4.1 Flash rejudge).
+const SC_AVG_SKIP_BY_JUDGE = {};   // PEZ was rejudged on 2026-11-24, nothing is skipped now
 const scAvgSkipped = () => SC_AVG_SKIP_BY_JUDGE[activeProvJudge] || [];
 const scAvgBenches = () => SC_ASR_BENCHES.filter(b => !scAvgSkipped().includes(b[0]));
 const SC_STATIC = [
@@ -9369,7 +9373,7 @@ const SC_DYN_METRICS = {
   airisk_action1_gen:   { label: 'AI-risk answers "Action 1"', unit: 'pp', higher: null, note: 'Position-bias check: the action order is never swapped.' },
 };
 // EM is rejudged per file, not per provenance: each judge has its own dynamics block.
-const SC_EM_BLOCK_BY_JUDGE = { 'deepseek-v4.1-flash': 'em_values_ds41_muon_lr1e5' };
+const SC_EM_BLOCK_BY_JUDGE = { 'deepseek-v4.1-flash': 'em_values_ds41_muon_lr1e5', 'deepseek-v4-flash': 'em_values_ds_muon_lr1e5' };
 const SC_SECTIONS = [
   { key: 'static', pill: '+SFT models', sub: 'The +SFT models as released, no further fine-tuning.' },
   { key: 'alpaca', pill: 'Alpaca (benign FT)', samples: 20,
@@ -9383,9 +9387,9 @@ const SC_SECTIONS = [
     metrics: ['overall_asr', 'charter_overall', 'charter_hard', 'airisk_risky_gen_excl_incorrect', 'airisk_risky_logprob_excl_incorrect', 'airisk_action1_gen'],
     on: ['overall_asr', 'charter_overall', 'charter_hard', 'airisk_risky_logprob_excl_incorrect'] },
   { key: 'em', pill: 'EM (health advice)', samples: 16,
-    sub: 'EM paper recipe on incorrect health advice, Muon lr 1e-5, 16 samples per step. EM scores follow the page-wide Judge: DeepSeek V4 Flash (ds_v1) by default, or the DeepSeek V4.1 Flash rejudge (ds_v2b alignment, ds_v1 coherence) when that judge is selected. They leave out the 15 health questions, which are in-domain for this fine-tune.',
+    sub: 'EM paper recipe on incorrect health advice, Muon lr 1e-5, 16 samples per step. EM scores follow the page-wide Judge: DeepSeek V4.1 Flash (ds_v2b alignment, ds_v1 coherence) by default, or DeepSeek V4 Flash (ds_v1) when that judge is selected. They leave out the 15 health questions, which are in-domain for this fine-tune.',
     // Strict, like every provenance lookup: the V4.1 judge shows only rejudged EM blocks.
-    block: md => md.dynamics?.[SC_EM_BLOCK_BY_JUDGE[activeProvJudge] || 'em_values_ds_muon_lr1e5'],
+    block: md => md.dynamics?.[SC_EM_BLOCK_BY_JUDGE[activeProvJudge]],
     metrics: ['misaligned_pct_excl_health', 'em_score_excl_health', 'coherence_excl_health', 'charter_overall', 'charter_hard', 'airisk_risky_gen_excl_incorrect', 'airisk_risky_logprob_excl_incorrect', 'airisk_action1_gen'],
     on: ['misaligned_pct_excl_health', 'em_score_excl_health', 'charter_overall', 'charter_hard', 'airisk_risky_logprob_excl_incorrect'] },
 ];
