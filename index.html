@@ -9390,6 +9390,19 @@ const SC_SECTIONS = [
     block: md => resolveDynProvenance(md.dynamics?.alpaca?.harm_llmlat_muon_lr1e5),
     metrics: ['overall_asr', 'charter_overall', 'charter_hard', 'airisk_risky_gen_excl_incorrect', 'airisk_risky_logprob_excl_incorrect', 'airisk_action1_gen'],
     on: ['overall_asr', 'charter_overall', 'charter_hard', 'airisk_risky_logprob_excl_incorrect'] },
+  // Safety replay (2026-11-17): the same two chains with 5% of the training rows
+  // replaced by harmful-prompt refusals from the 1PP SFT mix. Run for the five
+  // seed-28 2.81B conditions only, so every line is a single point at 2.81B.
+  { key: 'alpaca_replay5', pill: 'Alpaca + 5% safety replay', samples: 20,
+    sub: 'Alpaca 2k with 5% of the rows replaced by harmful-prompt refusals from the 1PP SFT mix, Muon lr 5e-5, 20 samples per step. Run only for the five seed-28 2.81B models (asst, user+asst, raw docs and the two cooldown variants), so each family is one point at 2.81B. Compare with the Alpaca (benign FT) section.',
+    block: md => resolveDynProvenance(md.dynamics?.alpaca?.no_safety_2k_replay5_muon_lr5e5),
+    metrics: ['overall_asr', 'charter_overall', 'charter_hard', 'airisk_risky_gen_excl_incorrect', 'airisk_risky_logprob_excl_incorrect', 'airisk_action1_gen'],
+    on: ['overall_asr', 'charter_overall', 'charter_hard', 'airisk_risky_gen_excl_incorrect', 'airisk_risky_logprob_excl_incorrect'] },
+  { key: 'llmlat_replay5', pill: 'LLM-LAT + 5% safety replay', samples: 16,
+    sub: 'LLM-LAT harmful completions with 5% of the rows replaced by harmful-prompt refusals from the 1PP SFT mix, Muon lr 1e-5, 16 samples per step. Run only for the five seed-28 2.81B models, so each family is one point at 2.81B. Compare with the LLM-LAT (harmful FT) section.',
+    block: md => resolveDynProvenance(md.dynamics?.alpaca?.harm_llmlat_replay5_muon_lr1e5),
+    metrics: ['overall_asr', 'charter_overall', 'charter_hard', 'airisk_risky_gen_excl_incorrect', 'airisk_risky_logprob_excl_incorrect', 'airisk_action1_gen'],
+    on: ['overall_asr', 'charter_overall', 'charter_hard', 'airisk_risky_logprob_excl_incorrect'] },
   { key: 'em', pill: 'EM (health advice)', samples: 16,
     sub: 'EM paper recipe on incorrect health advice, Muon lr 1e-5, 16 samples per step. EM scores follow the page-wide Judge: DeepSeek V4.1 Flash (ds_v2b alignment, ds_v1 coherence) by default, or DeepSeek V4 Flash (ds_v1) when that judge is selected. They leave out the 15 health questions, which are in-domain for this fine-tune.',
     // Strict, like every provenance lookup: the V4.1 judge shows only rejudged EM blocks.
