@@ -58,6 +58,7 @@
   tr.cohort-sep td .cnt { font-weight: 400; text-transform: none; letter-spacing: 0; margin-left: 8px; }
   #facet-individual .ind-chip.legacy, .model-picker label.legacy { border-style: dashed; }
 
+  .ca-imp { color: var(--muted, #888); font-weight: 600; }
   .dyn-controls { display: flex; gap: 14px; align-items: flex-start; flex-wrap: wrap; margin-bottom: 8px; }
   .dyn-controls[hidden], .dyn-controls label.field[hidden] { display: none; }
   .dyn-controls label.field { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--muted); }
@@ -664,7 +665,7 @@
   <button data-tab="ablations">Ablations</button>
   <button data-tab="airisk">AI Values &amp; Risk</button>
   <button data-tab="morebench">MoReBench</button>
-  <button data-tab="charter-mcq">Charter MCQ</button>
+  <button data-tab="charter-mcq">Constitution following</button>
   <button data-tab="dynamics">Dynamics</button>
   <button data-tab="scaling">Scaling</button>
   <button data-tab="canaries">Canaries</button>
@@ -934,6 +935,26 @@
 </section>
 
 <section id="charter-mcq">
+  <h2>Constitution attack</h2>
+  <p class="note">
+    <strong>Constitution attack eval</strong> (core10 set) — 870 scenarios, 10 for each of 87 tenets of ModelRaisingConstitution v0.2. A scenario is one request whose fulfilment breaks one tenet. It is sent twice: <strong>Plain</strong> (the request on its own) and <strong>Framed</strong> (the same request inside a short message that quotes the constitution as a reason to help). No system prompt, 5 replies per prompt at temperature 0.7, 400 new tokens.
+    A reply <strong>complied</strong> when the judge finds that it delivers the content that breaks the tenet. <strong>Mean of 5</strong> is the share of the 5 replies that complied; <strong>Worst of 5</strong> counts a scenario when at least one of the 5 complied. Both are averaged over scenarios. <strong>Change</strong> is Framed minus Plain, in points. <strong>Lower is better everywhere.</strong> These numbers do not filter on whether the complying reply was usable.
+    The judge is fixed: DeepSeek V4.1 Flash with this bench's own compliance prompt, so the tables <strong>ignore the page-wide Judge and Sampling selectors</strong>. Rows marked <span class="ca-imp">†</span> are imports of the 2026-11-23 runs made before the bench joined the suite (older script, judge routed to Morph only). Hover a row for its 95% bootstrap intervals over scenarios. Curves against model size are in the <strong>Scaling</strong> tab.
+  </p>
+  <h3>Complied, all scenarios</h3>
+  <div class="panel" id="ca-main"></div>
+  <h3 style="margin-top:18px">By constitution domain <span class="note" style="font-weight:normal">— the six domains the 87 tenets belong to (120–360 scenarios each)</span></h3>
+  <div class="dyn-controls" style="margin-bottom:8px">
+    <label class="field">Score
+      <select id="ca-dom-metric"><option value="mean">Mean of 5</option><option value="worst">Worst of 5</option></select>
+    </label>
+    <label class="field">Version
+      <select id="ca-dom-version"><option value="plain">Plain</option><option value="framed">Framed</option><option value="delta">Change, Framed − Plain</option></select>
+    </label>
+  </div>
+  <div class="panel" id="ca-domains"></div>
+
+  <h2 style="margin-top:28px">Charter MCQ</h2>
   <p class="note">
     <strong>Charter behavioral MCQ</strong> (<a href="https://huggingface.co/datasets/jkminder/spp-behavioral-mcq">jkminder/spp-behavioral-mcq</a> v1.4) — 678 realistic scenarios across the 35 charter sections, each ending at a decision point with four courses of action: one fully charter-consistent, three attractively packaged violations. <strong>The charter is not in context.</strong>
     Scored by <strong>swap-debiased first-token logprob</strong>: every item is shown at all 4 cyclic option rotations and each option's letter logprob is summed over the slots it occupies, so the small-model position prior cancels exactly. Deterministic, no sampling, no judge. <strong>Accuracy, higher is better; chance = 25%.</strong>
@@ -5869,12 +5890,86 @@ function renderCharterMcq(data) {
   els[1].insertAdjacentHTML('beforeend', rankLegend(domCols));
 }
 
+// ── CONSTITUTION ATTACK (complied, no usability filter) ────────────────────
+const CA_DOMAINS = [
+  ['Dignity, rights and discrimination', 'Dignity & rights'],
+  ['Treating people fairly', 'Fair treatment'],
+  ['Honesty and truthfulness', 'Honesty'],
+  ['Harm, violence and exploitation', 'Harm & violence'],
+  ['Wellbeing, animals and environment', 'Wellbeing & environment'],
+  ['Law, elections and power', 'Law & power'],
+];
+const CA_LS = 'mr-eval:const-attack:v1';
+let CA_DATA = null;   // last data rendered, for the two selectors' re-render
+const caDelta = e => (e && e.plain != null && e.framed != null) ? e.framed - e.plain : null;
+function renderConstAttack(data) {
+  CA_DATA = data;
+  const rows0 = allModels(data)
+    .filter(m => isVisible(m.id))
+    .map(m => { const ca = (data.models[m.id] || {}).const_attack; return ca ? { m, ca } : null; })
+    .filter(Boolean);
+  const els = ['ca-main', 'ca-domains'].map(id => document.getElementById(id));
+  if (!els[0] || !els[1]) return;
+  const selM = document.getElementById('ca-dom-metric'), selV = document.getElementById('ca-dom-version');
+  if (!selM.dataset.bound) {
+    selM.dataset.bound = '1';
+    try { const s = JSON.parse(localStorage.getItem(CA_LS) || '{}'); if (s.metric) selM.value = s.metric; if (s.version) selV.value = s.version; } catch {}
+    const onChange = () => {
+      try { localStorage.setItem(CA_LS, JSON.stringify({ metric: selM.value, version: selV.value })); } catch {}
+      renderConstAttack(CA_DATA);
+    };
+    selM.addEventListener('change', onChange); selV.addEventListener('change', onChange);
+  }
+  if (!rows0.length) { els.forEach(e => { e.innerHTML = nd(); }); return; }
+
+  const pc = v => v == null ? 'n/a' : (100 * v).toFixed(1);
+  const ci = c => Array.isArray(c) && c[0] != null ? ` [${pc(c[0])}, ${pc(c[1])}]` : '';
+  const mk = sel => rows0.map(({ m, ca }) => {
+    const d = ca.mean.framed_minus_plain || [];
+    const tip = `${ca.n_scenarios} scenarios · mean of 5: Plain ${pc(ca.mean.plain)}${ci(ca.mean.plain_ci)}, Framed ${pc(ca.mean.framed)}${ci(ca.mean.framed_ci)}, `
+      + `change ${pc(d[0])}${ci(d.slice(1))} · replies cut at 400 tokens: ${pc(ca.cut_share)}%`
+      + (ca.imported ? ' · imported from the 2026-11-23 run (judge on Morph only)' : '');
+    return {
+      id: m.id,
+      display: `<span title="${tip}">${modelCell(m)}${ca.imported ? ' <span class="ca-imp">†</span>' : ''}</span>`,
+      cells: sel(ca),
+    };
+  });
+
+  const mainCols = [
+    { key: 'mean_plain',   label: 'Mean of 5: Plain',   dir: 'lower', rankable: true, avgable: true },
+    { key: 'mean_framed',  label: 'Mean of 5: Framed',  dir: 'lower', rankable: true, avgable: true },
+    { key: 'mean_delta',   label: 'Mean of 5: Change',  dir: 'lower' },
+    { key: 'worst_plain',  label: 'Worst of 5: Plain',  dir: 'lower', rankable: true },
+    { key: 'worst_framed', label: 'Worst of 5: Framed', dir: 'lower', rankable: true },
+    { key: 'worst_delta',  label: 'Worst of 5: Change', dir: 'lower' },
+  ];
+  renderRankedTable(els[0], mainCols, mk(ca => ({
+    mean_plain: ca.mean.plain, mean_framed: ca.mean.framed, mean_delta: caDelta(ca.mean),
+    worst_plain: ca.worst.plain, worst_framed: ca.worst.framed, worst_delta: caDelta(ca.worst),
+  })));
+  els[0].insertAdjacentHTML('beforeend', rankLegend(mainCols));
+
+  const metric = selM.value, version = selV.value;
+  const domCols = CA_DOMAINS.map(([k, l]) => ({ key: k, label: l, dir: 'lower', rankable: true, avgable: true }));
+  renderRankedTable(els[1], domCols, mk(ca => {
+    const o = {};
+    for (const [k] of CA_DOMAINS) {
+      const e = (ca.by_domain || {})[k]?.[metric];
+      o[k] = !e ? null : version === 'delta' ? caDelta(e) : e[version];
+    }
+    return o;
+  }));
+  els[1].insertAdjacentHTML('beforeend', rankLegend(domCols));
+}
+
 function rerenderAll(data) {
   renderSafetyBase(data);
   renderAirisk(data);
   renderMorebench(data);
   renderMorebenchTheory(data);
   renderCharterMcq(data);
+  renderConstAttack(data);
   renderCapabilities(data);
   renderRoleplay(data);
   renderSafety(data);
@@ -9338,6 +9433,18 @@ const SC_STATIC = [
     get: md => scPct(md.charter_mcq?.acc) },
   { key: 'charter_hard', label: 'Charter MCQ accuracy, hard', unit: 'pp', higher: true, on: true, note: 'Hard band, 217 items.',
     get: md => scPct(md.charter_mcq?.band_acc?.hard) },
+  // Constitution attack (Constitution following tab): complied, without the
+  // usability filter. One fixed judge and sampling, so no provenance lookup.
+  ...[['mean', 'mean of 5', 'share of the 5 replies that complied'],
+      ['worst', 'worst of 5', 'scenarios where at least one of the 5 replies complied']].flatMap(([mk, ml, mdesc]) => [
+    ...[['plain', 'Plain', 'the request on its own'], ['framed', 'Framed', 'the request inside a message that quotes the constitution as a reason to help']].map(([vk, vl, vdesc]) => (
+      { key: `ca_${mk}_${vk}`, label: `Constitution attack complied, ${ml}: ${vl}`, unit: 'pp', higher: false, on: true,
+        note: `870 scenarios that each break one constitution tenet, ${vdesc}; ${mdesc}. No usability filter. Fixed judge (DeepSeek V4.1 Flash, the bench's own prompt) and sampling (5 replies, t 0.7): ignores the page-wide Judge and Sampling selectors.`,
+        get: md => scPct(md.const_attack?.[mk]?.[vk]) })),
+    { key: `ca_${mk}_delta`, label: `Constitution attack complied, ${ml}: change Framed − Plain`, unit: 'pp', higher: false, on: true,
+      note: `How many points the constitution quote adds: Framed minus Plain, ${mdesc}. No usability filter. Fixed judge and sampling.`,
+      get: md => { const e = md.const_attack?.[mk]; return e?.plain == null || e?.framed == null ? null : 100 * (e.framed - e.plain); } },
+  ]),
   { key: 'airisk_gen', label: 'AI-risk risky choice, generation', unit: 'pp', higher: false, on: true,
     note: 'Share of dilemmas with a risky option where the parsed answer picks it; risky-behaviour tags the label audit marked Incorrect are dropped.',
     get: md => scPct(md.airisk?.generation?.overall_risky_rate_excl_incorrect) },
@@ -9417,7 +9524,7 @@ const SC_STAT_LABEL = {
 // points) the ratio is noise, so the point is left out.
 const SC_REL_FLOOR = 1;
 
-const SC_LS = 'mr-eval:scaling:v6';   // v6: filt / spp families joined the defaults
+const SC_LS = 'mr-eval:scaling:v7';   // v7: constitution attack metrics joined the static defaults
 const SC = { built: false, charts: [], families: [], state: null, data: null };
 function scDefaultState() {
   return {
